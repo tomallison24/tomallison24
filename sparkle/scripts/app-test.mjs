@@ -1,4 +1,5 @@
-// Drives Sparkle Kingdom in headless Chromium at iPhone size, as a family would: making a player
+// Drives Sparkle Kingdom in headless Chromium at iPhone size, as a family would (the Tiara Workshop and the
+// Fairy Garden, once the fog lifts, are scenario 7): making a player
 // (with no reading needed to pick one), the story, the kingdom and its quest, the signpost (a wrong
 // sign first, then the right one), a round in Story Tower from the warm-up to the end (a miss first:
 // the hint, then the answer after a second miss), coins, the rainbow bridge (counting planks) and the
@@ -69,7 +70,16 @@ async function phone({ look = 'vintage', scheme = 'light', signed = false, seed 
 const sp = (p, f, a) => p.evaluate(f, a);
 const shot = async (p, n) => { if (SHOTS) await p.screenshot({ path: path.join(SHOTS, n + '.png') }); };
 const coins = p => sp(p, () => { const me = window.sparkle.me || Object.values(window.sparkle.save.players)[0]; return Object.values(me.wallet).reduce((a, w) => a + w.earned - w.spent, 0); });
-const state = p => sp(p, () => { const R = window.sparkle.round; return { screen: window.sparkle.screen, q: R && R.q ? { kind: R.q.kind, answer: R.q.answer, seq: R.q.seq, back: R.q.back, ids: (R.q.choices || []).map(c => c.id) } : null, i: R && R.i, n: R && R.plan.length }; });
+const state = p => sp(p, () => { const R = window.sparkle.round; return { screen: window.sparkle.screen, skill: R && R.skill, q: R && R.q ? Object.assign(JSON.parse(JSON.stringify(R.q)), { ids: (R.q.choices || []).map(c => c.id) }) : null, i: R && R.i, n: R && R.plan.length }; });
+// the games she plays rather than picks: gems in order, pairs, what's missing
+async function solve(p, q, root = '') {
+  if (q.kind === 'build') { await p.waitForSelector(root + ' .tile'); const used = new Set();
+    for (const l of q.word) { const k = q.tiles.findIndex((t, i) => t === l && !used.has(i)); used.add(k); await p.click(`${root} .tile[data-t="${k}"]`); } return true; }
+  if (q.kind === 'match') { const by = {}; q.cards.forEach((c, i) => (by[c.pair] = by[c.pair] || []).push(i));
+    for (const [a, c] of Object.values(by)) { await p.click(`.card[data-k="${a}"]`); await p.click(`.card[data-k="${c}"]`); await p.waitForTimeout(450); } return true; }
+  if (q.kind === 'missing') { await p.waitForSelector('#choices .choice', { timeout: 15000 }); for (const a of q.answers) await p.click(`#choices .choice[data-c="${a}"]`); return true; }
+  return false;
+}
 // answers every question of the round on screen; misses: how many wrong taps before the right one, on the first question
 async function playRound(p, misses = 0) {
   for (let guard = 0; guard < 24; guard++) {
@@ -81,6 +91,7 @@ async function playRound(p, misses = 0) {
       for (const k of st.q.back ? st.q.seq.slice().reverse() : st.q.seq) await p.click(`#show .wand button[data-k="${k}"]`);
       await p.waitForTimeout(700); continue;
     }
+    if (await solve(p, st.q)) { await p.waitForTimeout(900); continue; }
     const wrong = st.q.ids.filter(x => x !== st.q.answer);
     for (let k = 0; k < misses && k < wrong.length; k++) await p.click(`.choice[data-c="${wrong[k]}"]`);
     misses = 0;
@@ -110,7 +121,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.waitForTimeout(300);
   if ((await sp(p, () => window.sparkle.screen)) !== 'world') pr.push('the story does not end in the kingdom');
   if (await p.locator('#quest .qstop').count() !== 3) pr.push("today's quest does not have three stops");
-  if (!(await p.locator('#quest .qstop').first().innerText()).includes('📖')) pr.push("the quest does not start at Story Tower");
+  if ((await sp(p, () => window.sparkle.me.quest.stops[0])) !== 'tower') pr.push("the quest does not start at Story Tower");
   if (!(await p.locator('#mapIn svg.kingdom').count())) pr.push('no kingdom');
   if (!(await p.locator('#rider').count())) pr.push('no princess and unicorn on the map');
   await shot(p, '2-kingdom');
@@ -279,6 +290,55 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   pr.push(...one.errs, ...two.errs);
   report('the family account: a round on one phone, and a second phone signed in has the same player and coins', pr);
   await one.ctx.close(); await two.ctx.close();
+}
+
+// 7. the fog lifts: the Tiara Workshop (its gem door, spelling with gems) and the Fairy Garden (its flower gate, its three memory games)
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.rounds = 3;
+  ava.skills.read = { level: 8, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 8 };
+  ava.known = { 'read/w:wig': '2026-01-01', 'read/w:fan': '2026-01-02' };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava) }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  if (await p.locator('.kingdom .steps').count()) pr.push('the paths to the fogged lands show before the fog lifts');
+  await p.click('#mapIn .place.workshop', { force: true }).catch(() => {}); await p.waitForTimeout(300);
+  if ((await sp(p, () => window.sparkle.screen)) !== 'world' || await p.locator('.gatebox').count()) pr.push('a fogged land could be visited');
+  await sp(p, () => { window.sparkle.startRound('read'); }); await playRound(p);
+  const open = await sp(p, () => window.sparkle.save.players.p1.world.open || {});
+  if (!open.garden || !open.workshop) pr.push('the fog did not lift after her fourth round: ' + JSON.stringify(open));
+  if ((await p.locator('#rewardIn').innerText()).indexOf('fog lifted') < 0) pr.push('the end of the round does not say the fog lifted');
+  await p.click('#mapBtn'); await p.waitForTimeout(300);
+  if (await p.locator('.kingdom .steps').count() !== 2) pr.push('no cloud steps to the two lands');
+  // the gem door: spell the password
+  await sp(p, () => { window.sparkle.travel('workshop'); }); await p.waitForSelector('.gatebox .tile', { timeout: 10000 }).catch(() => pr.push('no gem door on the way to the Tiara Workshop'));
+  await shot(p, '12-gemdoor');
+  const g = await sp(p, () => window.sparkle.gate);
+  const wrongTile = g.tiles.findIndex(t => t !== g.word[0]);
+  if (wrongTile >= 0) { await p.click(`.gatebox .tile[data-t="${wrongTile}"]`); if (await p.locator('.gatebox .slots i.on').count()) pr.push('a wrong gem went into the word'); }
+  await solve(p, g, '.gatebox');
+  await p.waitForFunction(() => window.sparkle.screen === 'round', null, { timeout: 12000 }).catch(() => pr.push('the gem door did not open to the workshop'));
+  let st = await state(p);
+  if (st.skill !== 'spell') pr.push('the Tiara Workshop is not spelling: ' + st.skill);
+  await shot(p, '13-spell');
+  st = await playRound(p);
+  if (st.screen !== 'reward') pr.push('the spelling round did not end');
+  if (!(await sp(p, () => (window.sparkle.save.players.p1.skills.spell || {}).placed))) pr.push('the warm-up did not place her on the spelling ladder');
+  await p.click('#mapBtn'); await p.waitForTimeout(300);
+  // the flower gate, then the garden's three games, one a round
+  await sp(p, () => { window.sparkle.travel('garden'); }); await p.waitForSelector('.gatebox [data-sign]', { timeout: 10000 });
+  const f = await sp(p, () => window.sparkle.gate); await p.click(`.gatebox [data-sign="${f.answer}"]`);
+  await p.waitForFunction(() => window.sparkle.screen === 'round', null, { timeout: 10000 }).catch(() => pr.push('the flower gate did not open to the Fairy Garden'));
+  const games = new Set();
+  for (let k = 0; k < 3; k++) {
+    if (k) { await sp(p, () => { window.sparkle.startRound('garden'); }); await p.waitForTimeout(300); }
+    st = await state(p); games.add(st.skill);
+    await shot(p, '14-garden-' + st.skill);
+    st = await playRound(p);
+    if (st.screen !== 'reward') pr.push(`the ${[...games].pop()} round did not end`);
+    await p.click('#mapBtn'); await p.waitForTimeout(250);
+  }
+  if ([...games].sort().join() !== 'match,missing,recall') pr.push('the garden did not take turns with its three games: ' + [...games]);
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
+  report('the fog lifts after four rounds; the gem door and spelling in the Tiara Workshop; the flower gate and the Fairy Garden\'s three memory games', pr); await ctx.close();
 }
 
 await b.close(); server.close();

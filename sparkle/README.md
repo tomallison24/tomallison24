@@ -13,14 +13,20 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   - the **rainbow bridge** to mend by counting planks, on the way to the Gem Mine,
   - the **crystal door** that opens to a sparkle pattern, on the way to Star Meadow.
   A gate asks once a session. Hidden stars (2 coins each) and four critters for her treasure book are
-  about the islands; the Fairy Garden and the Tiara Workshop are under the fog (a later chapter).
+  about the islands. The Fairy Garden and the Tiara Workshop start under the Grey Fog, which lifts
+  after her 2nd round (the garden) and her 4th (the workshop); then steps of cloud lead to each, past
+  their own gates: a **flower arch** that opens for a rhyme, and a **gem door** that opens for a word
+  spelled. Tapping the fog says it will lift if she keeps learning.
   **Today's quest** is three stops, always starting at Story Tower; finishing it gives a present.
-- **A round** (6 to 8 questions) in a land: Story Tower (reading, Professor Hoot), the Gem Mine
-  (math, Pebble the dragon), Star Meadow (memory, Bloom the fairy). Every question is spoken, and
+- **A round** (6 to 8 questions) in a land: Story Tower (reading, Professor Hoot), the Tiara Workshop
+  (spelling, Gemma the fairy), the Gem Mine (math, Pebble the dragon), Star Meadow (the wand's sparkle
+  sequences, with her own unicorn) and the Fairy Garden (memory, Bloom the fairy: Flower Match, What's
+  Missing and Story Recall, a game a round, the one she's played least first; Flower Match rounds are
+  2 games, the others 5 questions). Every question is spoken, and
   shown in the school letters as it's said; tapping the host says it again. No timers, lives or
   game over: a first miss gets a hint, a second shows the answer kindly.
-- **Getting harder by itself** (`engine.js`): each skill is a ladder (reading 12 levels, math 10,
-  memory 7). 4 right in a row or 9 of her last 10 moves her up; 2 misses in a row on new items or
+- **Getting harder by itself** (`engine.js`): each skill is a ladder (reading 12 levels, spelling 7,
+  math 10, wand 7, Flower Match 7, What's Missing 7, Story Recall 5). 4 right in a row or 9 of her last 10 moves her up; 2 misses in a row on new items or
   6 or fewer of 10 moves her down (a right answer after a hint counts half). The first visit to a
   skill is a 6-question warm-up that finds her level. Words, letter sounds, sight words and math
   facts she misses (or just learned) come back 1, 3 and 7 days later; after 3 different days right
@@ -30,7 +36,13 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   and last sounds, short words, sight words once she can sound words out, sentences, little
   stories, digraphs and blends); math follows the kindergarten standards and goes past them
   (tens, within 20, missing numbers); memory is the wand's sparkle sequence, 3 up to 9, backwards
-  on one level. Pictures are the phone's emoji, only for words nobody would name differently.
+  on one level. Spelling (Tiara Workshop) taps letter gems in order, so no handwriting: a sound to its
+  gem, a word's first letter, building words (then with extra gems), changing one letter to make a new
+  word, sight words, and blends; it practises the words she has met in Story Tower. Flower Match goes
+  from 6 pairs to 15, with learning pairs (a letter and a picture that starts with it, a number and its
+  dots) and the fairy swapping two cards; What's Missing from 4 things to 10, things that move and two
+  gone; Story Recall from "who" to "what came first". Every word picture is drawn
+  (`pictures.js`), and only words a 5-year-old would name that one way are used.
 - **Coins and the castle**: 1 coin a right answer (first or second try), 3 for finishing a round,
   never taken away. In her castle she tries on what she has, and in the Royal Boutique the first
   tap says the price and a second buys. Surprise presents (about one round in four, and the quest),
@@ -52,7 +64,7 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 Everything is drawn in code as SVG (`art.js`, `world.js`): the princess in layers (hair, gown,
 tiara, shoes, cape, necklace, wand, each player's skin, hair colour and style), the unicorn in five
 growth stages with its mane, saddle and horn, the four friends, the kingdom, the backdrops, the
-Boutique's 28 things. Every word she reads is drawn in **school letters** (`letters.js`): ball and
+Boutique's 28 things, and about 100 word pictures (`pictures.js`). Every word she reads is drawn in **school letters** (`letters.js`): ball and
 stick print with the single-storey a and g taught in kindergarten, since the phone's font has the
 other kind and aOS loads no web fonts.
 

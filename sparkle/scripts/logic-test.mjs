@@ -109,7 +109,7 @@ test('merging saves: a player removed on either phone stays removed; settings fo
 
 // ---- every question every level makes ----
 const used = new Set();
-for (const skill of ['read', 'math', 'wand']) {
+for (const skill of ['read', 'math', 'wand', 'spell', 'match', 'missing', 'recall']) {
   for (let level = 1; level <= C.LADDERS[skill]; level++) {
     test(`${skill} ${level} (${C.LEVEL_NAMES[skill][level - 1]}): 300 questions, each well formed`, () => {
       for (let seed = 1; seed <= 300; seed++) {
@@ -118,6 +118,26 @@ for (const skill of ['read', 'math', 'wand']) {
         assert.ok(Array.isArray(q.say) && q.say.length, 'says something');
         for (const part of q.say.concat(q.hint || [], q.tell || [])) assert.ok(typeof part === 'string' || (part && (part.snd || part.rime)), 'a part is a string or a sound: ' + JSON.stringify(part));
         for (const part of q.say.concat(q.hint || [], q.tell || [])) if (part && part.snd) assert.ok(C.LETTERS.includes(part.snd), 'a sound is a letter: ' + part.snd);
+        if (q.kind === 'build') {
+          const need = [...q.word]; const pool = q.tiles.slice();
+          for (const l of need) { const k = pool.indexOf(l); assert.ok(k >= 0, `the tiles for ${q.word} lack ${l}: ${q.tiles}`); pool.splice(k, 1); }
+          assert.ok(q.word.split('').every(l => C.LETTERS.includes(l)), 'only letters: ' + q.word);
+          if (q.show) assert.ok(C.PIC[q.show.w]); continue;
+        }
+        if (q.kind === 'match') {
+          assert.equal(q.cards.length, q.pairs * 2);
+          const byPair = {}; for (const c of q.cards) byPair[c.pair] = (byPair[c.pair] || 0) + 1;
+          assert.ok(Object.values(byPair).every(n => n === 2), 'every pair twice');
+          for (const c of q.cards) if (c.face.kind === 'pic') { assert.ok(C.PIC[c.face.w], c.face.w); used.add(c.face.w); }
+          for (const c of q.cards.filter(c => c.face.kind === 'pic' && q.learn)) assert.equal(c.face.w[0] === 'k' ? 'c' : c.face.w[0], c.pair === 'k' ? 'c' : c.pair, 'a learning pair starts with its letter');
+          continue;
+        }
+        if (q.kind === 'missing') {
+          assert.equal(q.left.length + q.gone.length, q.items.length);
+          for (const g of q.gone) { assert.ok(!q.left.includes(g)); assert.ok(q.choices.some(c => c.id === g)); }
+          for (const c of q.choices) { assert.ok(C.PIC[c.id]); used.add(c.id); if (!q.gone.includes(c.id)) assert.ok(!q.items.includes(c.id), 'a wrong choice was never on the tray'); }
+          continue;
+        }
         if (q.kind === 'wand') { assert.ok(q.seq.length >= 3 && q.seq.length <= 9); assert.ok(q.seq.every(x => x >= 0 && x < q.grid)); assert.ok(q.seq.every((x, i) => x !== q.seq[i - 1]), 'no sparkle twice in a row'); continue; }
         const ids = q.choices.map(c => c.id);
         assert.ok(ids.length >= 2 && ids.length <= 6, 'choices ' + ids.length);
@@ -127,6 +147,7 @@ for (const skill of ['read', 'math', 'wand']) {
         if (q.kind === 'pick' && q.choices.every(c => c.kind === 'num')) for (const c of q.choices) assert.ok(+c.v >= 0, 'no negative numbers');
         if (q.show && q.show.w) assert.ok(C.PIC[q.show.w], 'a picture for ' + q.show.w);
         if (q.text) assert.ok(/^[A-Za-z0-9 .,?!'"+\-=_]+$/.test(q.text), 'shown text uses the school letters only: ' + q.text);
+        if (q.story) assert.ok(q.say.includes(q.story), 'the story is told');
       }
     });
   }
@@ -140,8 +161,13 @@ test('rhymes never offer a second rhyme as a wrong answer, and first sounds neve
     for (const c of f.choices) if (c.id !== f.answer) assert.notEqual(same(c.id[0]), same(f.text), c.id + ' starts with ' + f.text + ' too');
   }
 });
+test('spelling practises the words she has met in reading', () => {
+  let met = 0; for (let seed = 1; seed < 200; seed++) { const q = C.make('spell', 3, E.rng(seed), { words: ['wig', 'fan'] }); if (['wig', 'fan'].includes(q.word)) met++; }
+  assert.ok(met > 100, 'only ' + met + ' of 199 were her words');
+});
 test('review items come back as the same item', () => {
   const r = E.rng(9);
+  assert.equal(C.make('spell', 4, r, {}, 'p:cat').word, 'cat');
   assert.equal(C.make('read', 8, r, {}, 'w:dog').answer, 'dog');
   assert.equal(C.make('read', 5, r, {}, 's:m').answer, 'm');
   assert.equal(C.make('read', 9, r, {}, 'h:said').answer, 'said');
@@ -150,16 +176,18 @@ test('review items come back as the same item', () => {
 });
 test('every word, sound and fact that goes into review comes back as itself', () => {
   let n = 0;
-  for (const skill of ['read', 'math']) for (let level = 1; level <= C.LADDERS[skill]; level++) for (let seed = 1; seed <= 120; seed++) {
+  for (const skill of ['read', 'math', 'spell']) for (let level = 1; level <= C.LADDERS[skill]; level++) for (let seed = 1; seed <= 120; seed++) {
     const q = C.make(skill, level, E.rng(seed * 7 + level), { tries: seed });
     if (!q.key || !C.reviewable(q.key)) continue;
     const back = C.make(skill, level, E.rng(seed), {}, q.key); n++;
-    assert.equal(back.key, q.key, 'came back as ' + back.key); assert.ok(back.choices.some(c => c.id === back.answer));
+    assert.equal(back.key, q.key, 'came back as ' + back.key); assert.ok(back.kind === 'build' ? back.tiles.length >= back.word.length : back.choices.some(c => c.id === back.answer));
   }
   assert.ok(n > 500, 'only ' + n + ' reviewable items');
 });
 test('the kingdom\'s gates make quick questions', () => {
   for (let seed = 1; seed < 100; seed++) {
+    const f = C.gate('flower', {}, E.rng(seed)); assert.ok(f.signs.includes(f.answer) && C.RHYMES.some(s => s.includes(f.answer) && s.includes(f.show)));
+    const t = C.gate('tiara', { spell: seed % 7 + 1 }, E.rng(seed)); assert.equal(t.kind, 'build'); assert.ok(C.CVC.includes(t.word));
     const s = C.gate('sign', { read: seed % 12 + 1 }, E.rng(seed)); assert.equal(s.signs.length, 2); assert.ok(s.signs.includes(s.answer));
     const b = C.gate('bridge', { math: seed % 10 + 1 }, E.rng(seed)); assert.ok(b.n >= 3 && b.n <= 15);
     const d = C.gate('door', { wand: seed % 7 + 1 }, E.rng(seed)); assert.ok(d.seq.length >= 3);

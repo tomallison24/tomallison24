@@ -321,6 +321,53 @@ svg{display:block}
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 76px);z-index:90;transform:translateX(-50%);padding:10px 18px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 4px 0 rgba(0,0,0,.2);font-weight:800;color:var(--k-ink);white-space:nowrap;animation:yay .4s}
 .gatebox{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(75,46,111,.35)}
 .gatebox .gpanel{padding:16px 14px calc(env(safe-area-inset-bottom) + 18px);border-radius:32px 32px 0 0;background:#FFF6FB;box-shadow:inset 0 3px 0 var(--k-ink);display:flex;flex-direction:column;gap:12px;color:var(--k-ink)}
+/* pictures (drawn: pics-*.js) */
+.bigpic .emo{font-size:110px;line-height:1}
+.titem .emo{font-size:52px;line-height:1}
+.card .emo{font-size:40px}
+.show .storybook svg{width:150px;height:150px}
+.show .bigpic svg{width:150px;height:150px}
+.show .bigpic.small svg{width:110px;height:110px}
+.choice.pic svg,.choice .pic{width:78px;height:78px;max-width:none}
+/* spelling: gem tiles into slots */
+.slots{display:flex;gap:8px;justify-content:center;width:100%}
+.slots i{width:58px;height:74px;border-radius:14px;border-bottom:5px solid var(--k-ink);display:grid;place-items:center;background:rgba(183,155,255,.18)}
+.slots i.on{background:#FFF0F8;animation:yay .35s}
+.slots i svg{height:64px;width:auto}
+.tiles{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:4px 0}
+.tile{width:74px;height:84px;border-radius:24px 24px 30px 30px;background:var(--c,#FF8FC7);box-shadow:inset 0 0 0 3.5px var(--k-ink),inset 0 -8px 0 rgba(0,0,0,.12),0 5px 0 rgba(75,46,111,.35);display:grid;place-items:center;color:var(--k-ink);transition:transform .12s,opacity .2s}
+.tile svg{height:62px;width:auto}
+.tile.used{opacity:0;transform:scale(.6);pointer-events:none}
+.tile.wrong{animation:no .4s}
+.tile.hint{box-shadow:inset 0 0 0 3.5px var(--k-ink),0 0 0 5px var(--k-gold),0 5px 0 rgba(75,46,111,.35)}
+/* Flower Match */
+.show.cardsbox{padding:8px;align-items:flex-start}
+.cards{display:grid;gap:7px;width:100%}
+.card{position:relative;aspect-ratio:.82;border-radius:16px;perspective:600px}
+.card .back,.card .face{position:absolute;inset:0;border-radius:16px;display:grid;place-items:center;backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:transform .35s;box-shadow:inset 0 0 0 3px var(--k-ink)}
+.card .back{background:#B5E8D5}
+.card .face{background:#fff;transform:rotateY(180deg)}
+.card.up .back,.card.done .back{transform:rotateY(180deg)}
+.card.up .face,.card.done .face{transform:rotateY(0)}
+.card.done .face{background:#C9F7DF}
+.card .face svg{width:82%;height:82%}
+.card .face .ltr svg,.card .face > svg[aria-label]:not(.pic){width:auto;height:70%}
+.card.swap{animation:swap .7s ease-in-out 2;z-index:2}
+@keyframes swap{50%{transform:translateY(-14px) scale(1.08)}}
+.dots6{display:grid;grid-template-columns:repeat(3,14px);gap:5px}
+.dots6 i{width:14px;height:14px;border-radius:50%;background:var(--k-rose);box-shadow:inset 0 0 0 2px var(--k-ink)}
+/* What's Missing */
+.tray{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:10px;border-radius:24px;background:#F3EAFF;box-shadow:inset 0 0 0 3px var(--k-ink)}
+.titem svg{width:64px;height:64px}
+.cover{position:absolute;inset:0;display:grid;place-items:center;border-radius:30px;background:rgba(255,255,255,.75);animation:yay .5s}
+.cover svg{width:80%}
+.praise.note{display:flex;align-items:center;gap:10px;font-size:17px;text-align:left}
+.praise.note svg{flex:none}
+.qstop svg{width:30px;height:30px}
+@media (prefers-reduced-motion:reduce){
+  .card .back,.card .face{transition:none}
+  .card.swap,.slots i.on,.tile.wrong,.cover{animation:none!important}
+}
 @media (prefers-reduced-motion:reduce){
   .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.fly,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
   .fly{opacity:0}

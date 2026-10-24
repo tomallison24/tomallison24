@@ -71,13 +71,14 @@
 
   // ---- the warm-up ----
   const warmStart = (start = 1) => ({ level: start, asked: 0, misses: 0, done: false });
-  // right: answered right first try. max: the ladder's top. Returns the warm-up, done with .place when over.
-  function warmStep(w, right, max) {
+  // right: answered right first try. max: the ladder's top. len: how many questions at most (a long game,
+  // like Flower Match, warms up in fewer). Returns the warm-up, done with .place when over.
+  function warmStep(w, right, max, len = TUNE.warmMax) {
     w.asked++;
     if (right) w.level = clamp(w.level + (w.asked <= 3 && max >= 10 ? 2 : 1), 1, max);
     else w.misses++;
     if (w.misses >= TUNE.warmMisses) { w.done = true; w.place = clamp(w.level - 1, 1, max); }
-    else if (w.asked >= TUNE.warmMax) { w.done = true; w.place = clamp(right ? w.level : w.level - 1, 1, max); }
+    else if (w.asked >= len) { w.done = true; w.place = clamp(right ? w.level : w.level - 1, 1, max); }
     return w;
   }
 
@@ -105,8 +106,9 @@
   // ---- a round's plan: which level each question comes from ----
   // Returns [{ level, review?: key }]: about a quarter review (keys due for this skill), the rest from
   // her level and the two below, the last one from below her level (a likely win to end on).
-  function plan(sk, max, due, r) {
-    const n = r.int(TUNE.roundMin, TUNE.roundMax);
+  // n: how many questions (a game that takes longer, like Flower Match, has fewer); else 6 to 8.
+  function plan(sk, max, due, r, n) {
+    n = n || r.int(TUNE.roundMin, TUNE.roundMax);
     const out = [];
     const nRev = Math.min(due.length, Math.round(n * TUNE.reviewShare));
     for (let i = 0; i < nRev; i++) out.push({ level: sk.level, review: due[i] });

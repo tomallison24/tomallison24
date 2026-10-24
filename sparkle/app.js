@@ -14,8 +14,19 @@
   const E = window.SparkleEngine, C = window.SparkleContent, A = window.SparkleArt, W = window.SparkleWorld, V = window.SparkleVoice, L = window.SparkleLetters;
   const $ = id => document.getElementById(id), esc = A.esc;
   const KEY = 'sparkle.v1', DEV = 'sparkle.device', API = new URL('../sparkle/api/', location.href).href;
-  const LAND = { tower: 'read', mine: 'math', meadow: 'wand' }, LAND_OF = { read: 'tower', math: 'mine', wand: 'meadow' };
-  const HOST = { read: ['owl', 'Professor Hoot'], math: ['dragon', 'Pebble'], wand: ['fairy', 'Bloom'] };
+  // the lands (a place in the kingdom -> its skill: the Fairy Garden picks one of its three memory games)
+  const LAND = { tower: 'read', mine: 'math', meadow: 'wand', garden: 'garden', workshop: 'spell' };
+  const LAND_OF = { read: 'tower', math: 'mine', wand: 'meadow', spell: 'workshop', match: 'garden', missing: 'garden', recall: 'garden' };
+  const GARDEN = ['match', 'missing', 'recall'];
+  // a skill's land, for the Parent corner's switches and the play time by land
+  const landKey = skill => GARDEN.includes(skill) ? 'garden' : skill;
+  const HOST = { read: ['owl', 'Professor Hoot'], math: ['dragon', 'Pebble'], wand: ['narrator', 'your unicorn'], spell: ['fairy', 'Gemma'], match: ['fairy', 'Bloom'], missing: ['fairy', 'Bloom'], recall: ['fairy', 'Bloom'] };
+  // the rounds that take longer have fewer questions, and a shorter warm-up
+  const ROUND_LEN = { match: 2, missing: 5, recall: 5 }, WARM_LEN = { match: 3, missing: 4, recall: 4 };
+  // the Grey Fog lifts from a land after this many rounds in all
+  const UNFOG = { garden: 2, workshop: 4 };
+  const LAND_NAME = { garden: 'the Fairy Garden', workshop: 'the Tiara Workshop' };
+  const SKILL_NAME = { read: 'Reading', spell: 'Spelling', math: 'Math', wand: 'Wand Sparkle', match: 'Flower Match', missing: "What's Missing", recall: 'Story Recall' };
   const DEFAULTS = { focus: 'more', off: [], rate: 0.9, sfx: true, badge: true, start: {} };
   const NO = () => {};
 
@@ -50,8 +61,11 @@
     go: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M10 20h20M21 11l9 9l-9 9"/></svg>',
     again: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 14a12 12 0 1 0 2 10"/><path d="M31 6v8h-8"/></svg>',
   };
-  const host = (skill, cls = '') => skill === 'read' ? A.owl({ cls }) : skill === 'math' ? A.dragon({ cls }) : A.fairy('bloom', { cls });
-  const emoji = id => esc(C.PIC[id] || '');
+  const host = (skill, cls = '') => skill === 'read' ? A.owl({ cls }) : skill === 'math' ? A.dragon({ cls }) : skill === 'spell' ? A.fairy('gemma', { cls })
+    : skill === 'wand' ? A.unicorn(me ? stageOf(me) : 0, me ? wearing(me) : {}, { mood: 'happy', cls }) : A.fairy('bloom', { cls });
+  // a word's picture: drawn (pics-*.js, SparklePics), or the phone's emoji where there's no drawing yet
+  const PICS = () => window.SparklePics || {};
+  const picture = (id, cls = 'pic') => { const f = PICS()[id]; return f ? A.svg('0 0 100 100', f(A.uid), C.word(id), cls) : `<span class="emo" role="img" aria-label="${esc(C.word(id))}">${esc(C.PIC[id] || '')}</span>`; };
   function toast(text, ms = 2200) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = text; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
   function burst(x, y, n = 10) {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -73,7 +87,7 @@
     for (const s of SCREENS) $(s).hidden = s !== id;
     document.documentElement.classList.toggle('locked', id !== 'picker');
     document.querySelector('.ambient').hidden = id !== 'picker';
-    session.land = id === 'round' ? round && round.skill : id === 'castle' ? 'castle' : 'world';
+    session.land = id === 'round' ? round && landKey(round.skill) : id === 'castle' ? 'castle' : 'world';
   }
 
   // ---- players ----
@@ -115,7 +129,8 @@
   function quest() {
     const d = today();
     if (!me.quest || me.quest.day !== d) {
-      const off = set().off || [], pool = ['mine', 'meadow', 'tower'].filter(x => !off.includes(LAND[x]));
+      const off = set().off || [], open = me.world.open || {};
+      const pool = ['mine', 'meadow', 'tower', 'garden', 'workshop'].filter(x => !off.includes(LAND[x]) && (!W.NODES[x].fog || open[W.NODES[x].fog]));
       const r = E.rng(E.dayNum(d) * 7 + me.created % 997);
       const others = pool.filter(x => x !== 'tower');
       const stops = set().focus === 'most' || !others.length ? ['tower', others.length ? r.pick(others) : 'tower', 'tower'] : ['tower', r.pick(others), r.pick(pool)];
@@ -127,7 +142,7 @@
   const nextStop = () => { const q = quest(); const i = q.done.indexOf(false); if (i >= 0) return q.stops[i];
     const n = { normal: 3, more: 2, most: 1 }[set().focus] || 2, last = session.recent.slice(-n);
     return last.length === n && last.every(s => s !== 'read') ? 'tower' : null; };
-  const STOP_ICON = { tower: '📖', mine: '💎', meadow: '✨' };
+  const STOP_ICON = { tower: 'book', mine: 'gem', meadow: 'star', garden: 'flower', workshop: 'tiara' };
   function paintHud() {
     $('coins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
     $('coins').setAttribute('aria-label', E.coins(me) + ' coins');
@@ -136,12 +151,12 @@
     $('meBtn').innerHTML = A.princess(me.look, wearing(me), { head: true });
     $('castleBtn').innerHTML = ICON.home;
     const q = quest(), nx = nextStop();
-    $('quest').innerHTML = q.stops.map((s, i) => `<span class="qstop ${q.done[i] ? 'done' : ''} ${s === nx && !q.done[i] && q.done.indexOf(false) === i ? 'next' : ''}" aria-hidden="true">${STOP_ICON[s]}</span>`).join('')
+    $('quest').innerHTML = q.stops.map((s, i) => `<span class="qstop ${q.done[i] ? 'done' : ''} ${s === nx && !q.done[i] && q.done.indexOf(false) === i ? 'next' : ''}" aria-hidden="true">${A.icon(STOP_ICON[s], 30)}</span>`).join('')
       + `<span class="qt">${q.done.every(Boolean) ? 'Quest done! Play anywhere.' : "Today's quest"}</span>`;
   }
   function paintMap() {
     const nx = nextStop();
-    $('mapIn').innerHTML = W.kingdom({ at: me.world.at, stars: me.world.stars, critters: me.world.critters, open: session.open, quest: nx })
+    $('mapIn').innerHTML = W.kingdom({ at: me.world.at, stars: me.world.stars, critters: me.world.critters, open: session.open, quest: nx, unfog: me.world.open || {} })
       + `<div id="rider" aria-hidden="true"><div class="wrap"><span class="un">${A.unicorn(stageOf(me), wearing(me), { mood: 'happy' })}</span><span class="pr">${A.princess(me.look, wearing(me), { head: true })}</span></div></div>`;
     place(W.NODES[me.world.at] || W.NODES.castle);
   }
@@ -159,7 +174,8 @@
     show('world'); paintHud(); paintMap();
     requestAnimationFrame(() => centre(W.NODES[me.world.at] || W.NODES.castle, false));
     const nx = nextStop();
-    V.say([nx ? `Hi ${me.name}! ${nx === 'tower' ? "Let's visit Story Tower." : nx === 'mine' ? "Let's go to the Gem Mine." : "Let's go to Star Meadow."} Tap where you want to go.` : `Hi ${me.name}! Where shall we go?`], { who: 'narrator' });
+    const GO = { tower: "Let's visit Story Tower.", mine: "Let's go to the Gem Mine.", meadow: "Let's go to Star Meadow.", garden: "Let's go to the Fairy Garden.", workshop: "Let's go to the Tiara Workshop." };
+    V.say([nx ? `Hi ${me.name}! ${GO[nx]} Tap where you want to go.` : `Hi ${me.name}! Where shall we go?`], { who: 'narrator' });
     sync();
   }
   // where a tap on the map lands, in the kingdom's units
@@ -171,14 +187,17 @@
     if (st) { const id = st.dataset.star; if (!me.world.stars.includes(id)) { me.world.stars.push(id); E.earn(me, device, 2); persist(); V.sfx('sparkle'); burst(e.clientX, e.clientY, 12); st.remove(); toast('You found a star! +2'); paintHud(); V.say(['You found a hidden star!']); } return; }
     const cr = e.target.closest('[data-critter]');
     if (cr) { const c = W.CRITTERS.find(x => x.id === cr.dataset.critter); if (c && !me.world.critters.includes(c.id)) { me.world.critters.push(c.id); persist(); V.sfx('sparkle'); burst(e.clientX, e.clientY); cr.remove(); toast('A new friend for your book!'); V.say([`You found ${c.name}! It's in your treasure book now.`]); } return; }
+    const fog = e.target.closest('[data-fog]');
+    if (fog) { V.say([`The Grey Fog still covers ${LAND_NAME[fog.dataset.fog]}. Keep learning, and it will lift!`]); return; }
     const pl = e.target.closest('.place');
     let to = null;
     if (pl) {
-      const k = ['castle', 'tower', 'mine', 'door', 'signpost', 'garden', 'workshop'].find(c => pl.classList.contains(c));
-      if (k === 'garden' || k === 'workshop') { V.say([`The Grey Fog still covers ${k === 'garden' ? 'the Fairy Garden' : 'the Tiara Workshop'}. Keep learning, and it will lift!`]); return; }
-      to = { castle: 'castle', tower: 'tower', mine: 'mine', door: 'meadow', signpost: 'sign' }[k];
+      const k = ['castle', 'tower', 'mine', 'door', 'signpost', 'garden', 'workshop', 'flowergate', 'gemdoor'].find(c => pl.classList.contains(c));
+      const land = { garden: 'garden', flowergate: 'garden', workshop: 'workshop', gemdoor: 'workshop' }[k];
+      if (land && !(me.world.open || {})[land]) { V.say([`The Grey Fog still covers ${LAND_NAME[land]}. Keep learning, and it will lift!`]); return; }
+      to = { castle: 'castle', tower: 'tower', mine: 'mine', door: 'meadow', signpost: 'sign', garden: 'garden', flowergate: 'garden', workshop: 'workshop', gemdoor: 'workshop' }[k];
     }
-    if (!to) { const [x, y] = toWorld(e); to = W.nearest(x, y); }
+    if (!to) { const [x, y] = toWorld(e); to = W.nearest(x, y, me.world.open || {}); }
     if ((set().off || []).includes(LAND[to])) { V.say(["That land is resting today."]); return; }
     await travel(to);
   });
@@ -189,11 +208,11 @@
   async function travel(to) {
     busy = true;
     try {
-      const path = W.route(me.world.at, to);
+      const path = W.route(me.world.at, to, me.world.open || {});
       if (!path) return;
       for (let i = 1; i < path.length; i++) {
         const a = path[i - 1], b = path[i], g = W.gateOn(a, b);
-        if (g && g !== 'fog' && !session.open[g]) {
+        if (g && !session.open[g]) {
           const ok = await gate(g);
           if (!ok) return;
           session.open[g] = true;
@@ -236,6 +255,12 @@
     const q = C.gate(kind, levels(), r);
     session.gateQ = q;
     if (kind === 'door') return await wandGate(q);
+    if (kind === 'tiara') {   // the gem door: spell the password
+      const g = overlay(`<div class="ask"><span class="host">${A.fairy('gemma')}</span><div class="bubble">${words('Spell the password!')}</div></div><div class="show" id="gbuild"></div><div id="gtiles"></div>`);
+      V.say(q.say, { who: 'fairy' });
+      await buildPlay(g.querySelector('#gbuild'), g.querySelector('#gtiles'), q, { who: 'fairy' });
+      await V.say(['The door opens!'], { who: 'fairy' }); g.remove(); return true;
+    }
     if (kind === 'bridge') {
       const g = overlay(`<div class="ask"><span class="host">${A.dragon()}</span><div class="bubble">${words('Fix the bridge!')}</div></div>
         <div class="bridge"><div class="planks" id="planks">${Array.from({ length: q.n }, () => '<i></i>').join('')}</div><button type="button" class="big" id="plankBtn">+ Plank</button></div>`);
@@ -249,19 +274,21 @@
         };
       });
     }
-    // a signpost: two signs, one is right
-    const g = overlay(`<div class="ask"><span class="host">${A.owl()}</span><div class="bubble" id="gbub"></div></div>
-      <div class="signs">${q.signs.map(s => `<button type="button" class="choice" data-sign="${esc(s)}" aria-label="${esc(s)}">${ltr(s, 70)}</button>`).join('')}</div>`);
+    // a signpost (two signs, one is right), or the flower gate (two pictures, one rhymes)
+    const flower = kind === 'flower', who = flower ? 'fairy' : 'owl';
+    const g = overlay(`<div class="ask"><span class="host">${flower ? A.fairy('bloom') : A.owl()}</span><div class="bubble" id="gbub"></div></div>
+      ${flower ? `<div class="show" style="min-height:120px;flex:none">${picture(q.show, 'bigpic')}</div>` : ''}
+      <div class="signs">${q.signs.map(s => `<button type="button" class="choice ${flower ? 'pic' : ''}" data-sign="${esc(s)}" aria-label="${esc(flower ? C.word(s) : s)}">${flower ? picture(s) : ltr(s, 70)}</button>`).join('')}</div>`);
     g.querySelector('#gbub').innerHTML = words(q.say.map(p => typeof p === 'string' ? p : p.snd || '').join(' '));
-    V.say(q.say, { who: 'owl' });
+    V.say(q.say, { who });
     let tries = 0;
     return await new Promise(done => {
       g.addEventListener('click', async e => {
         const b = e.target.closest('[data-sign]'); if (!b) return;
         if (b.dataset.sign === q.answer) { b.classList.add('right'); V.sfx('right'); burst(...centerOf(b)); await wait(700); g.remove(); done(true); return; }
         tries++; b.classList.add('wrong'); V.sfx('again');
-        if (tries === 1) V.say(q.hint, { who: 'owl' });
-        else { const ok = g.querySelector(`[data-sign="${CSS.escape(q.answer)}"]`); ok.classList.add('hint'); V.say(q.tell, { who: 'owl' }); }
+        if (tries === 1) V.say(q.hint, { who });
+        else { const ok = g.querySelector(`[data-sign="${CSS.escape(q.answer)}"]`); ok.classList.add('hint'); V.say(q.tell, { who }); }
       });
     });
   }
@@ -276,15 +303,16 @@
   const DOTS = n => Array.from({ length: n }, () => '<i></i>').join('');
   function startRound(skill) {
     V.stop();
+    // the Fairy Garden: the memory game she's played least
+    if (skill === 'garden') { const n = k => (me.skills[k] || {}).answers || 0; skill = GARDEN.slice().sort((a, b) => n(a) - n(b) || Math.random() - 0.5)[0]; }
     const sk = me.skills[skill] = me.skills[skill] || E.newSkill(Math.max(1, Math.min(C.LADDERS[skill], (set().start || {})[skill] || 1)));
     const r = E.rng((Date.now() ^ (me.rounds * 2654435761)) >>> 0);
     let plan;
-    if (!sk.placed) { sk.warm = sk.warm && !sk.warm.done ? sk.warm : E.warmStart(sk.level); plan = Array.from({ length: E.TUNE.warmMax }, () => ({ warm: true })); }
-    else plan = E.plan(sk, C.LADDERS[skill], E.dueFor(me.review, today(), skill + '/'), r);
+    if (!sk.placed) { sk.warm = sk.warm && !sk.warm.done ? sk.warm : E.warmStart(sk.level); plan = Array.from({ length: WARM_LEN[skill] || E.TUNE.warmMax }, () => ({ warm: true })); }
+    else plan = E.plan(sk, C.LADDERS[skill], E.dueFor(me.review, today(), skill + '/'), r, ROUND_LEN[skill]);
     round = { skill, sk, r, plan, i: 0, got: 0, coins: 0, hints: 0, kept: 0, longest: 0, start: Date.now(), moved: [], level0: sk.level, wasPlaced: sk.placed };
     show('round');
-    $('roundBd').innerHTML = W.backdrop(skill === 'wand' ? 'math' : skill);
-    if (skill === 'wand') $('roundBd').querySelector('svg rect').setAttribute('fill', '#2E4F6B');
+    $('roundBd').innerHTML = W.backdrop(landKey(skill));
     $('roundBack').innerHTML = ICON.back;
     paintRoundCoins();
     nextQuestion();
@@ -298,7 +326,9 @@
     const p = R.plan[R.i];
     const level = p.warm ? R.sk.warm.level : p.level;
     R.sk.tries = R.sk.tries || {};
-    const q = C.make(R.skill, level, R.r, { tries: R.sk.tries[level] || 0 }, p.review ? p.review.slice(R.skill.length + 1) : null);
+    // spelling practises the words she has met in Story Tower
+    const met = R.skill === 'spell' ? Object.keys(me.known || {}).concat(Object.keys(me.review || {})).filter(k => k.startsWith('read/w:')).map(k => k.slice(7)) : [];
+    const q = C.make(R.skill, level, R.r, { tries: R.sk.tries[level] || 0, words: met }, p.review ? p.review.slice(R.skill.length + 1) : null);
     if (p.review && q.key !== p.review.slice(R.skill.length + 1)) { delete me.review[p.review]; p.review = null; }   // one that can't come back as itself any more
     R.q = q; R.p = p;
     const [who] = HOST[R.skill];
@@ -311,12 +341,14 @@
     });
     const bub = toks.map(t => `<span class="w${t.snd ? ' snd' : ''}" data-k="${t.k}" data-c="${t.c}">${L.svg(t.w, { size: 30, stroke: t.snd ? 11 : 9, color: t.snd ? '#FF5FA8' : 'currentColor' })}</span>`).join('');
     $('stage').innerHTML = `${dots}<div class="ask"><button type="button" class="host" id="hostBtn" aria-label="Say it again">${host(R.skill)}</button><div class="bubble" id="bubble" aria-label="${esc(q.say.map(p => typeof p === 'string' ? p : p.snd || p.rime).join(' '))}">${bub}</div></div>
-      ${q.kind === 'wand' ? '<div class="show" id="show"></div>' : `<div class="show" id="show">${showHtml(q)}</div><div class="choices ${q.choices.length === 2 ? 'two' : q.choices.length >= 4 ? 'four' : ''}" id="choices">${q.choices.map(choiceHtml).join('')}</div>`}`;
+      ${PLAY[q.kind] ? '<div class="show" id="show"></div><div id="choices"></div>' : `<div class="show" id="show">${showHtml(q)}</div><div class="choices ${q.choices.length === 2 ? 'two' : q.choices.length >= 4 ? 'four' : ''}" id="choices">${q.choices.map(choiceHtml).join('')}</div>`}`;
     $('hostBtn').onclick = () => ask(q);
     if (q.kind === 'syll') $('show').insertAdjacentHTML('beforeend', `<button type="button" class="drum" id="drum" aria-label="Tap the drum">${ICON.drum}</button>`);
     if ($('drum')) $('drum').onclick = () => { V.sfx('note', 0); };
     R.tries = 0;
-    if (q.kind === 'wand') { ask(q).then(() => wandPlay($('show'), q, { who }).then(score => answered(score))); return; }
+    // the games she plays rather than picks: the wand, spelling with gems, Flower Match, What's Missing
+    if (PLAY[q.kind]) { const go = () => PLAY[q.kind]($('show'), q, { who, choices: $('choices') }).then(score => { if (round === R && R.q === q) answered(score); });
+      if (q.kind === 'missing' || q.kind === 'match') { V.say(q.say, { who }); go(); } else ask(q).then(go); return; }
     ask(q);
   }
   function ask(q) {
@@ -332,8 +364,9 @@
   function showHtml(q) {
     const s = q.show, parts = [];
     if (q.text) { const long = q.text.length > 9; parts.push(`<div class="read ${long ? 'long' : ''}" aria-label="${esc(q.text)}">${long ? q.text.split(' ').map(w => ltr(w, 52)).join('') : ltr(q.text, 84)}</div>`); }
+    if (q.story) parts.push(`<span class="storybook">${A.icon('book', 150)}</span>`);   // Story Recall: she listens; the book is the picture
     if (!s) return parts.join('');
-    if (s.type === 'pic') parts.unshift(`<span class="bigpic" role="img" aria-label="${esc(C.word(s.w))}">${esc(s.v)}</span>`);
+    if (s.type === 'pic') parts.unshift(`<span class="bigpic">${picture(s.w)}</span>`);
     if (s.type === 'gems') parts.push(`<div class="gems" id="gems">${gemRow(s.n, '#FF8FC7')}</div>`);
     if (s.type === 'on') parts.push(`<div style="display:flex;align-items:center;gap:14px"><div class="tens"><span class="bag" style="width:70px;background:#FF8FC7">${s.a}</span></div><div class="gems" id="gems">${gemRow(s.b, '#8FD3FF')}</div></div>`);
     if (s.type === 'add') parts.push(`<div class="gems" id="gems" ${s.hidden ? 'hidden' : ''}>${gemRow(s.a, '#FF8FC7')}${gemRow(s.b, '#8FD3FF')}</div>`);
@@ -344,7 +377,7 @@
     return parts.join('');
   }
   function choiceHtml(c) {
-    const inner = c.kind === 'pic' ? `<span class="emo" aria-hidden="true">${emoji(c.id)}</span>`
+    const inner = c.kind === 'pic' ? picture(c.id)
       : c.kind === 'cart' ? `<span class="cart" style="max-width:none;min-height:120px;background:none;box-shadow:none">${Array.from({ length: c.v }, () => A.gem('#FFC94A', 30)).join('')}</span>`
       : ltr(c.v, c.kind === 'word' ? 60 : 70);
     return `<button type="button" class="choice ${c.kind}" data-c="${esc(c.id)}" aria-label="${esc(c.label)}">${inner}</button>`;
@@ -394,6 +427,104 @@
     nextQuestion();
   }
 
+  // ---- the games she plays rather than picks; each resolves with her score (1, 0.5 or 0) ----
+  const PLAY = { wand: (box, q, opt) => wandPlay(box, q, opt), build: (box, q, opt) => buildPlay(box, opt.choices, q, opt), match: (box, q, opt) => matchPlay(box, q, opt), missing: (box, q, opt) => missingPlay(box, opt.choices, q, opt) };
+  const scoreOf = misses => misses === 0 ? 1 : misses === 1 ? 0.5 : 0;
+
+  // spelling with gems: tap the letters in order; a wrong gem shakes, the next sound is said, then the gem glows
+  function buildPlay(box, tilesBox, q, opt = {}) {
+    box.innerHTML = `${q.show ? `<span class="bigpic small">${picture(q.show.w)}</span>` : ''}<div class="slots" role="group" aria-label="The word">${[...q.word].map(() => '<i></i>').join('')}</div>`;
+    tilesBox.className = 'tiles';
+    tilesBox.innerHTML = q.tiles.map((l, k) => `<button type="button" class="tile" data-t="${k}" aria-label="${esc(l)}" style="--c:${['#FF8FC7', '#B79BFF', '#7FE0C7', '#8FD3FF', '#FFC94A', '#FF8A7A'][k % 6]}">${ltr(l, 58)}</button>`).join('');
+    const slots = [...box.querySelectorAll('.slots i')];
+    let at = 0, misses = 0;
+    return new Promise(done => {
+      tilesBox.onclick = async e => {
+        const b = e.target.closest('.tile'); if (!b || b.disabled) return;
+        const l = q.tiles[+b.dataset.t], want = q.word[at];
+        if (l === want) {
+          b.disabled = true; b.classList.add('used'); slots[at].innerHTML = ltr(l, 58); slots[at].classList.add('on'); at++;
+          for (const t of tilesBox.querySelectorAll('.tile.hint')) t.classList.remove('hint');
+          V.say([{ snd: l }], { who: opt.who });
+          if (at === q.word.length) { tilesBox.onclick = null; V.sfx('right'); burst(...centerOf(box), 12); await wait(500); await V.say(q.tell || [], { who: opt.who }); done(scoreOf(misses)); }
+          return;
+        }
+        misses++; b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); V.sfx('again');
+        if (misses === 1) V.say(['Listen:', { snd: want }], { who: opt.who });
+        else { const t = [...tilesBox.querySelectorAll('.tile:not(.used)')].find(x => q.tiles[+x.dataset.t] === want); if (t) t.classList.add('hint'); V.say([{ snd: want }], { who: opt.who }); }
+      };
+    });
+  }
+
+  // Flower Match: flip two at a time; matched pairs stay. A swap level: the fairy swaps two face-down cards, where she can see
+  function cardFace(f) {
+    if (f.kind === 'pic') return picture(f.w);
+    if (f.kind === 'dots') return `<span class="dots6">${Array.from({ length: f.n }, () => '<i></i>').join('')}</span>`;
+    return ltr(f.v, 56);
+  }
+  function matchPlay(box, q, opt = {}) {
+    box.classList.add('cardsbox');
+    box.innerHTML = `<div class="cards" style="grid-template-columns:repeat(${q.cols},1fr)">${q.cards.map((c, k) => `<button type="button" class="card" data-k="${k}" aria-label="A flower card"><span class="back">${A.icon('flower', 40)}</span><span class="face">${cardFace(c.face)}</span></button>`).join('')}</div>`;
+    const btns = [...box.querySelectorAll('.card')];
+    let open = [], flips = 0, found = 0, swapped = !q.swap, lock = false;
+    const faceLabel = c => c.face.kind === 'pic' ? C.word(c.face.w) : c.face.kind === 'dots' ? c.face.n + ' dots' : c.face.v;
+    async function swap() {
+      const down = btns.filter(b => !b.classList.contains('up') && !b.classList.contains('done'));
+      if (down.length < 2) return;
+      const [a, b] = [down[0], down[down.length - 1]];
+      lock = true; a.classList.add('swap'); b.classList.add('swap');
+      await V.say(['Bloom swapped two cards! Watch!'], { who: 'fairy' }); await wait(700);
+      const ka = +a.dataset.k, kb = +b.dataset.k; [q.cards[ka], q.cards[kb]] = [q.cards[kb], q.cards[ka]];
+      a.querySelector('.face').innerHTML = cardFace(q.cards[ka].face); b.querySelector('.face').innerHTML = cardFace(q.cards[kb].face);
+      a.classList.remove('swap'); b.classList.remove('swap'); lock = false;
+    }
+    return new Promise(done => {
+      box.onclick = async e => {
+        const b = e.target.closest('.card'); if (!b || lock || b.classList.contains('up') || b.classList.contains('done')) return;
+        const c = q.cards[+b.dataset.k];
+        b.classList.add('up'); b.setAttribute('aria-label', faceLabel(c)); flips++; V.sfx('pop'); open.push(b);
+        if (q.learn || c.face.kind === 'pic') V.say([c.face.kind === 'letter' ? { snd: c.face.v } : faceLabel(c)], { who: opt.who });
+        if (open.length < 2) return;
+        lock = true;
+        const [x, y] = open; open = [];
+        if (q.cards[+x.dataset.k].pair === q.cards[+y.dataset.k].pair) {
+          await wait(350); x.classList.add('done'); y.classList.add('done'); V.sfx('right'); found++; lock = false;
+          if (found === q.pairs) { box.onclick = null; burst(...centerOf(box), 16); await wait(400); box.classList.remove('cardsbox'); done(flips <= q.pairs * 3 ? 1 : flips <= q.pairs * 4.5 ? 0.5 : 0); return; }
+          if (!swapped && found >= 1) { swapped = true; await swap(); }
+          return;
+        }
+        await wait(900); x.classList.remove('up'); y.classList.remove('up'); x.setAttribute('aria-label', 'A flower card'); y.setAttribute('aria-label', 'A flower card'); lock = false;
+      };
+    });
+  }
+
+  // What's Missing: look at the tray, a cloud covers it, then find what's gone (two things on the hardest levels)
+  async function missingPlay(box, choicesBox, q, opt = {}) {
+    const tray = items => `<div class="tray">${items.map(w => `<span class="titem">${picture(w)}</span>`).join('')}</div>`;
+    box.innerHTML = tray(q.items);
+    choicesBox.className = 'choices'; choicesBox.innerHTML = '';
+    await wait(q.look);
+    box.insertAdjacentHTML('beforeend', `<div class="cover">${A.cloud(260)}</div>`); V.sfx('whoosh');
+    await wait(1300);
+    box.innerHTML = tray(q.left);
+    await V.say(q.ask, { who: opt.who });
+    choicesBox.className = 'choices' + (q.choices.length >= 4 ? ' four' : '');
+    choicesBox.innerHTML = q.choices.map(c => `<button type="button" class="choice pic" data-c="${esc(c.id)}" aria-label="${esc(c.label)}">${picture(c.id)}</button>`).join('');
+    let misses = 0; const got = new Set();
+    return new Promise(done => {
+      choicesBox.onclick = async e => {
+        const b = e.target.closest('.choice'); if (!b || b.classList.contains('dim') || b.classList.contains('right')) return;
+        const id = b.dataset.c;
+        if (q.answers.includes(id)) { b.classList.add('right'); got.add(id); V.sfx('right');
+          if (got.size === q.answers.length) { choicesBox.onclick = null; burst(...centerOf(b)); box.innerHTML = tray(q.items); await wait(700); done(scoreOf(misses)); }
+          return; }
+        misses++; b.classList.add('wrong', 'dim'); V.sfx('again');
+        if (misses === 1) V.say(q.hint, { who: opt.who });
+        else { for (const a of q.answers) { const ok = choicesBox.querySelector(`[data-c="${CSS.escape(a)}"]`); if (ok && !got.has(a)) ok.classList.add('hint'); } V.say(q.tell, { who: opt.who }); }
+      };
+    });
+  }
+
   // the wand's sparkle sequence: watch, then tap it back (backwards on some levels)
   const WAND_COLORS = ['#FF8FC7', '#FFC94A', '#7FE0C7', '#8FD3FF', '#B79BFF', '#FF8A7A', '#FFB257', '#7FE0A0', '#D9CCFF'];
   async function wandPlay(box, q, opt = {}) {
@@ -428,6 +559,10 @@
     if (R.skill === 'read') return R.got >= R.plan.length - 1 ? 'You sounded out every word!' : 'You worked so hard on your reading!';
     if (R.skill === 'math') return 'You counted so carefully!';
     if (R.skill === 'wand' && R.longest) return `You remembered ${R.longest} sparkles!`;
+    if (R.skill === 'spell') return R.got >= R.plan.length - 1 ? 'You spelled every word!' : 'You listened for every sound!';
+    if (R.skill === 'match') return 'What a great memory! You found every pair.';
+    if (R.skill === 'missing') return 'Such sharp eyes!';
+    if (R.skill === 'recall') return 'You listened so carefully!';
     return 'You worked so hard!';
   }
   async function endRound() {
@@ -436,6 +571,10 @@
     const stageBefore = stageOf(me);
     E.earn(me, device, E.TUNE.coinRound); R.coins += E.TUNE.coinRound;
     me.rounds = (me.rounds || 0) + 1; session.recent.push(R.skill);
+    // the Grey Fog lifts from a land after enough rounds in all
+    me.world.open = me.world.open || {};
+    const lifted = Object.keys(UNFOG).filter(l => !me.world.open[l] && me.rounds >= UNFOG[l]);
+    for (const l of lifted) me.world.open[l] = Date.now();
     const q = quest(), stop = LAND_OF[R.skill], idx = q.stops.findIndex((s, k) => s === stop && !q.done[k]);
     if (idx >= 0) q.done[idx] = true;
     const questDone = q.done.every(Boolean) && !q.gift;
@@ -446,17 +585,18 @@
     persist(true);
     const grew = stageOf(me) > stageBefore;
     show('reward');
-    $('rewardBd').innerHTML = W.backdrop(R.skill === 'wand' ? 'math' : R.skill);
+    $('rewardBd').innerHTML = W.backdrop(landKey(R.skill));
     const msg = praise(R);
     $('rewardIn').innerHTML = `<div class="cheer dash"><div class="dance">${A.unicorn(stageOf(me), wearing(me), { mood: 'happy' })}</div></div>
       <div class="praise">${esc(msg)}</div>
       <div class="earn">${A.coin(46)}<span>+${R.coins}</span></div>
-      ${R.moved.length ? `<div class="praise" style="font-size:17px">⭐ New sticker! You're ready for harder ones.</div>` : ''}
-      ${grew ? `<div class="praise" style="font-size:17px">🦄 Your unicorn grew!</div>` : ''}
+      ${R.moved.length ? `<div class="praise note">${A.icon('star', 26)}<span>New sticker! You're ready for harder ones.</span></div>` : ''}
+      ${grew ? `<div class="praise note">${A.icon('unicorn', 26)}<span>Your unicorn grew!</span></div>` : ''}
+      ${lifted.map(l => `<div class="praise note">${A.icon(l === 'garden' ? 'flower' : 'tiara', 26)}<span>The fog lifted! ${esc(LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1))} is open.</span></div>`).join('')}
       ${gifts ? `<button type="button" class="giftbox" id="giftBtn" aria-label="Open your surprise">${A.gift()}</button>` : ''}
       <div style="display:flex;gap:12px"><button type="button" class="big mint" id="againBtn" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="mapBtn">${ICON.go}<span>Kingdom</span></button></div>`;
     V.sfx('fanfare');
-    V.say([msg, ...(R.moved.length ? ["You earned a sticker! You're ready for harder ones."] : []), ...(grew ? ['Look! Your unicorn grew!'] : []), ...(gifts ? ['And there is a surprise for you. Tap the present!'] : []), ...(questDone ? ["You finished today's quest!"] : [])], { who: 'narrator' });
+    V.say([msg, ...(R.moved.length ? ["You earned a sticker! You're ready for harder ones."] : []), ...(grew ? ['Look! Your unicorn grew!'] : []), ...(gifts ? ['And there is a surprise for you. Tap the present!'] : []), ...(questDone ? ["You finished today's quest!"] : []), ...lifted.map(l => `Look! The Grey Fog is lifting. ${LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1)} is open! Find it on the map.`)], { who: 'narrator' });
     $('againBtn').onclick = () => startRound(R.skill);
     $('mapBtn').onclick = () => enterWorld();
     if ($('giftBtn')) $('giftBtn').onclick = e => {
@@ -495,7 +635,7 @@
       $('items').innerHTML = `<div class="treasures" style="grid-column:1/-1">
         <div class="trow"><span class="tt">Stars found: ${found.size} of ${W.STARS.length}</span>${W.STARS.map(s => `<span class="tk ${found.has(s.id) ? '' : 'no'}">${A.svg('0 0 40 40', A.star(20, 20, 16, '#FFC94A', 'stroke="#4B2E6F" stroke-width="2.5" stroke-linejoin="round"'))}</span>`).join('')}</div>
         <div class="trow"><span class="tt">Friends found: ${met.size} of ${W.CRITTERS.length}</span>${W.CRITTERS.map(c => `<span class="tk crit ${met.has(c.id) ? '' : 'no'}" aria-label="${esc(met.has(c.id) ? c.name : 'not found yet')}">${A.svg(`${c.x - 30} ${c.y - 50} 60 60`, W.critter(c.id, c.x, c.y))}</span>`).join('')}</div>
-        <div class="trow"><span class="tt">Stickers: ${(me.stickers || []).length}</span>${(me.stickers || []).slice(-24).map(s => `<span class="tk">${s.startsWith('read') ? '📖' : s.startsWith('math') ? '💎' : '✨'}</span>`).join('') || '<span class="tt" style="font-weight:600">Play rounds to earn stickers!</span>'}</div></div>`;
+        <div class="trow"><span class="tt">Stickers: ${(me.stickers || []).length}</span>${(me.stickers || []).slice(-24).map(s => `<span class="tk">${A.icon({ read: 'book', math: 'gem', wand: 'star', spell: 'tiara' }[s.split(':')[0]] || 'flower', 34)}</span>`).join('') || '<span class="tt" style="font-weight:600">Play rounds to earn stickers!</span>'}</div></div>`;
       return;
     }
     const kinds = TAB_KINDS[tab], list = Object.entries(A.ITEMS).filter(([, it]) => kinds.includes(it.kind)).sort((a, b) => a[1].price - b[1].price);
@@ -603,7 +743,7 @@
         <div class="row"><span class="grow">Favor reading<small>How strongly the quest and the map lean to Story Tower</small></span></div>
         <div class="row"><div class="seg" id="sFocus">${[['normal', 'Normal'], ['more', 'More'], ['most', 'Most']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${st.focus === v}">${n}</button>`).join('')}</div></div>
         <div class="row"><span class="grow">Lands open<small>Story Tower is always open</small></span></div>
-        <div class="row"><div class="seg" id="sLands">${[['math', 'Gem Mine'], ['wand', 'Star Meadow']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${!(st.off || []).includes(v)}">${n}</button>`).join('')}</div></div></div>
+        <div class="row"><div class="seg" id="sLands">${[['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['garden', 'Fairy Garden'], ['spell', 'Tiara Workshop']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${!(st.off || []).includes(v)}">${n}</button>`).join('')}</div></div></div>
       <p class="label">Voice and sound</p><div class="group">
         <div class="row"><span class="grow">Voice speed</span><div class="seg" id="sRate">${[[0.75, 'Slow'], [0.9, 'Normal'], [1.05, 'Quick']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${Math.abs(st.rate - v) < 0.01}">${n}</button>`).join('')}</div></div>
         <div class="row"><span class="grow">Sound effects</span><div class="seg" id="sSfx"><button type="button" data-v="1" aria-pressed="${!!st.sfx}">On</button><button type="button" data-v="0" aria-pressed="${!st.sfx}">Off</button></div></div>
@@ -646,17 +786,17 @@
 
   // a player's progress, for a grown-up
   function report(p) {
-    const d = today(), skills = ['read', 'math', 'wand'];
+    const d = today(), skills = ['read', 'spell', 'math', 'wand', 'match', 'missing', 'recall'];
     const levelOn = (sk, day) => { for (let i = 0; i < 60; i++) { const v = ((p.levels || {})[E.addDays(day, -i)] || {})[sk]; if (v) return v; } return null; };
     const rows = skills.filter(k => p.skills[k]).map(k => { const s = p.skills[k], max = C.LADDERS[k], was = levelOn(k, E.addDays(d, -7)), acc = E.accuracy(p, k, 7, d);
-      return `<div class="row" style="display:block"><div class="bar"><span class="bn"><b>${{ read: 'Reading', math: 'Math', wand: 'Memory' }[k]}</b></span><span class="bt"><i style="width:${s.level / max * 100}%"></i></span><span class="bv">${s.level} of ${max}</span></div>
+      return `<div class="row" style="display:block"><div class="bar"><span class="bn"><b>${SKILL_NAME[k]}</b></span><span class="bt"><i style="width:${s.level / max * 100}%"></i></span><span class="bv">${s.level} of ${max}</span></div>
         <small>${esc(C.LEVEL_NAMES[k][s.level - 1])}${s.placed ? '' : ' (still warming up)'} · ${was && was !== s.level ? (s.level > was ? `up ${s.level - was} this week` : `down ${was - s.level} this week`) : 'same as last week'} · ${acc.total ? Math.round(acc.share * 100) + '% right in 7 days (' + acc.total + ' answers)' : 'no answers this week'}</small></div>`; }).join('') || '<div class="row"><small>No rounds played yet.</small></div>';
     const keyName = key => { const k = key.slice(key.indexOf('/') + 1), v = k.slice(2); return { w: v, s: '/' + v + '/', h: '"' + v + '"', f: v.replace('-', ' − ').replace('+', ' + '), o: v, b: v, y: v, r: v, m: v, l: v, x: v, c: v, t: v }[k[0]] || v; };
     const known = Object.keys(p.known || {}), learning = Object.keys(p.review || {});
     const hard = learning.filter(k => (p.review[k].missed || 0) >= 2);
     const days = Array.from({ length: 30 }, (_, i) => E.playedOn(p, E.addDays(d, i - 29))), top = Math.max(60, ...days);
     const week = Array.from({ length: 7 }, (_, i) => E.playedOn(p, E.addDays(d, -i))).reduce((a, b) => a + b, 0);
-    const lands = [['read', 'Story Tower'], ['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['world', 'Exploring'], ['castle', 'Castle']].map(([k, n]) => [n, E.playedIn(p, k)]);
+    const lands = [['read', 'Story Tower'], ['spell', 'Tiara Workshop'], ['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['garden', 'Fairy Garden'], ['world', 'Exploring'], ['castle', 'Castle']].map(([k, n]) => [n, E.playedIn(p, k)]);
     const landTop = Math.max(60, ...lands.map(x => x[1]));
     const s = sheet(p.name, `
       <p class="label">Skills</p><div class="group">${rows}</div>
@@ -669,7 +809,7 @@
         <div class="row"><span class="grow">Learning<small>Coming back for review</small></span><span class="val">${learning.length}</span></div>
         <div class="chips">${learning.map(k => `<span class="${hard.includes(k) ? 'warn' : ''}">${esc(keyName(k))}</span>`).join('') || '<small style="color:var(--muted)">None right now</small>'}</div>
         ${hard.length ? `<div class="row"><span class="grow">Practice together<small>Missed on 2 or more days: try these with her at bedtime</small></span></div><div class="chips">${hard.map(k => `<span class="warn">${esc(keyName(k))}</span>`).join('')}</div>` : ''}</div>
-      <p class="label">Starting levels</p><div class="group">${skills.map(k => `<div class="row"><span class="grow">${{ read: 'Reading', math: 'Math', wand: 'Memory' }[k]}<small>${p.skills[k] ? 'Now ' + p.skills[k].level + ': ' + esc(C.LEVEL_NAMES[k][p.skills[k].level - 1]) : 'Not started: the warm-up finds her level'}</small></span>
+      <p class="label">Starting levels</p><div class="group">${skills.map(k => `<div class="row"><span class="grow">${SKILL_NAME[k]}<small>${p.skills[k] ? 'Now ' + p.skills[k].level + ': ' + esc(C.LEVEL_NAMES[k][p.skills[k].level - 1]) : 'Not started: the warm-up finds her level'}</small></span>
           <div class="seg"><button type="button" data-lv="${k}" data-d="-1" aria-label="One level easier">−</button><button type="button" data-lv="${k}" data-d="1" aria-label="One level harder">+</button></div></div>`).join('')}</div>
       <p class="note">Coins: ${E.coins(p)}. Rounds played: ${p.rounds || 0}. Stickers: ${(p.stickers || []).length}.</p>
       <button type="button" class="cta" id="rEdit">Edit name and look</button>`, { back: () => parent() });

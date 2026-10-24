@@ -35,19 +35,21 @@
     frog: '🐸', star: '⭐', car: '🚗', cake: '🎂', snake: '🐍', moon: '🌙', spoon: '🥄', goat: '🐐', boat: '⛵',
     bear: '🐻', pear: '🍐', chair: '🪑', mouse: '🐭', house: '🏠', crown: '👑', clown: '🤡', bee: '🐝', tree: '🌳', key: '🔑',
     rabbit: '🐰', apple: '🍎', pencil: '✏️', tiger: '🐯', monkey: '🐵', rocket: '🚀', dragon: '🐉', rainbow: '🌈', pumpkin: '🎃', cupcake: '🧁', lemon: '🍋',
-    unicorn: '🦄', butterfly: '🦋', banana: '🍌', dinosaur: '🦕', elephant: '🐘', strawberry: '🍓', octopus: '🐙', kangaroo: '🦘', tomato: '🍅', ladybug: '🐞',
+    unicorn: '🦄', butterfly: '🦋', banana: '🍌', dinosaur: '🦕', elephant: '🐘', strawberry: '🍓', octopus: '🐙', kangaroo: '🦘', tomato: '🍅',
     watermelon: '🍉', helicopter: '🚁', alligator: '🐊', avocado: '🥑', television: '📺',
     sock: '🧦', tent: '⛺', duck: '🦆', fish: '🐟', ring: '💍', nose: '👃', gift: '🎁', juice: '🧃', violin: '🎻', zebra: '🦓',
     yoyo: '🪀', ant: '🐜', egg: '🥚', ox: '🐂', umbrella: '☂️', igloo: '🧊', whale: '🐳', horse: '🐴', lion: '🦁', robot: '🤖',
     ship: '🚢', shell: '🐚', chick: '🐥', crab: '🦀', drum: '🥁', flag: '🚩', sled: '🛷', clock: '🕐', truck: '🚚', plum: '🍑',
+    cup: '☕', fan: '🪭', van: '🚐', net: '🥅', mop: '🧹', pot: '🍲', jet: '✈️', mug: '☕', six: '🎲', wig: '💇',
   };
-  // Some pictures are better said one way: an umbrella is "umbrella", an igloo's ice is "ice".
-  const SAY = { yoyo: 'yo-yo', igloo: 'ice' };
+  // Some words are better said one way.
+  const SAY = { yoyo: 'yo-yo' };
 
   // ---- reading banks ----
-  // (only words whose picture nobody would call something else: a 🐔 is a chicken to a 5-year-old, not a hen)
-  const CVC = ['cat', 'bat', 'hat', 'map', 'can', 'bed', 'web', 'leg', 'gem', 'pen', 'ten', 'pig', 'pin', 'dog', 'fox', 'box', 'log', 'sun', 'bus', 'bug'];
-  const RHYMES = [['cat', 'hat', 'bat'], ['pen', 'ten'], ['dog', 'log', 'frog'], ['fox', 'box'], ['star', 'car'], ['cake', 'snake'],
+  // (only words whose picture nobody would call something else: a hen is a chicken to a 5-year-old)
+  const CVC = ['cat', 'bat', 'hat', 'map', 'can', 'fan', 'van', 'bed', 'web', 'leg', 'gem', 'pen', 'ten', 'net', 'jet', 'pig', 'pin', 'wig',
+    'dog', 'fox', 'box', 'log', 'mop', 'pot', 'sun', 'bus', 'bug', 'cup', 'mug'];
+  const RHYMES = [['cat', 'hat', 'bat'], ['can', 'fan', 'van'], ['pen', 'ten'], ['net', 'jet'], ['dog', 'log', 'frog'], ['fox', 'box'], ['bug', 'mug'], ['star', 'car'], ['cake', 'snake'],
     ['moon', 'spoon'], ['goat', 'boat'], ['bear', 'pear', 'chair'], ['mouse', 'house'], ['crown', 'clown'], ['bee', 'tree', 'key']];
   // syllables: the word, how many, and the parts as the voice says them clearly
   const SYLL = [
@@ -61,10 +63,10 @@
   ];
   // first sounds: words whose first sound is the letter's usual one (no gem, no giraffe)
   const FIRST = {
-    s: ['sun', 'snake', 'sock', 'star'], t: ['tiger', 'tent', 'ten', 'tree'], p: ['pig', 'pen', 'pumpkin', 'pear', 'pin'], m: ['moon', 'map', 'monkey', 'mouse'],
-    b: ['bus', 'bat', 'bee', 'banana', 'bear'], d: ['dog', 'dragon', 'duck', 'dinosaur'], c: ['cat', 'cake', 'car', 'cupcake'], f: ['fox', 'fish', 'frog'],
-    h: ['hat', 'house', 'horse'], r: ['rainbow', 'rocket', 'ring', 'rabbit'], l: ['lemon', 'log', 'leg', 'lion'], n: ['nose'],
-    g: ['goat', 'gift'], w: ['web', 'watermelon', 'whale'], j: ['juice'], v: ['violin'], z: ['zebra'], k: ['key', 'kangaroo'],
+    s: ['sun', 'snake', 'sock', 'star'], t: ['tiger', 'tent', 'ten', 'tree'], p: ['pig', 'pen', 'pumpkin', 'pear', 'pin', 'pot'], m: ['moon', 'map', 'monkey', 'mouse', 'mop', 'mug'],
+    b: ['bus', 'bat', 'bee', 'banana', 'bear'], d: ['dog', 'dragon', 'duck', 'dinosaur'], c: ['cat', 'cake', 'car', 'cupcake', 'cup'], f: ['fox', 'fish', 'frog', 'fan'],
+    h: ['hat', 'house', 'horse'], r: ['rainbow', 'rocket', 'ring', 'rabbit'], l: ['lemon', 'log', 'leg', 'lion'], n: ['nose', 'net'],
+    g: ['goat', 'gift'], w: ['web', 'watermelon', 'whale', 'wig'], j: ['juice', 'jet'], v: ['violin', 'van'], z: ['zebra'], k: ['key', 'kangaroo'],
     a: ['apple', 'ant', 'alligator'], e: ['egg', 'elephant'], i: ['igloo'], o: ['octopus', 'ox'], u: ['umbrella'],
   };
   // letters in teaching order, in small sets (a common order, s a t p i n first)
@@ -76,7 +78,9 @@
   // swaps: change one sound of a word to make another word in the bank
   const SWAPS = [['cat', 'hat', 0, 'h'], ['cat', 'bat', 0, 'b'], ['hat', 'cat', 0, 'c'], ['bat', 'hat', 0, 'h'], ['pen', 'ten', 0, 't'], ['ten', 'pen', 0, 'p'],
     ['dog', 'log', 0, 'l'], ['log', 'dog', 0, 'd'], ['fox', 'box', 0, 'b'], ['box', 'fox', 0, 'f'],
-    ['bus', 'bug', 2, 'g'], ['bug', 'bus', 2, 's'], ['pin', 'pig', 2, 'g'], ['pig', 'pin', 2, 'n']];
+    ['bus', 'bug', 2, 'g'], ['bug', 'bus', 2, 's'], ['pin', 'pig', 2, 'g'], ['pig', 'pin', 2, 'n'],
+    ['can', 'fan', 0, 'f'], ['fan', 'van', 0, 'v'], ['van', 'can', 0, 'c'], ['net', 'jet', 0, 'j'], ['jet', 'net', 0, 'n'], ['bug', 'mug', 0, 'm'], ['mug', 'bug', 0, 'b'],
+    ['pig', 'wig', 0, 'w'], ['wig', 'pig', 0, 'p'], ['mop', 'map', 1, 'a'], ['map', 'mop', 1, 'o']];
   // sight words, a few at a time (high-utility kindergarten words)
   const SIGHT = [['the', 'a', 'I', 'is'], ['it', 'in', 'to', 'and'], ['see', 'can', 'we', 'my'], ['like', 'go', 'you', 'he'], ['she', 'was', 'said', 'of'], ['are', 'look', 'here', 'for', 'have', 'do']];
   const SIGHT_ALL = SIGHT.flat();
@@ -87,11 +91,15 @@
   const ANIMALS = ['cat', 'dog', 'pig', 'fox', 'bug', 'bat'];
   const ADJ = ['big', 'red', 'hot', 'wet', 'sad', 'fun'];
 
-  const LADDERS = { read: 12, math: 10, wand: 7 };
+  const LADDERS = { read: 12, math: 10, wand: 7, spell: 7, match: 7, missing: 7, recall: 5 };
   const LEVEL_NAMES = {
     read: ['Syllables', 'Rhymes', 'First sounds', 'Onset and rime', 'Letter sounds', 'Blending', 'Middle and last sounds', 'Reading short words', 'Sight words', 'Sentences', 'Little stories', 'Digraphs and blends'],
     math: ['Count to 10', 'Count to 20, count on', 'More and fewer', 'Add within 5', 'Take away within 5', 'Make 10', 'Within 10', 'Count by tens', 'Within 20', 'Missing numbers'],
     wand: ['Sequences of 3', 'Sequences of 4', 'Sequences of 5', 'Sequences of 6', 'Backwards', 'Sequences of 7 and 8', 'Sequences of 9'],
+    spell: ['Sound to letter', 'First letter', 'Build a word', 'Build with extra letters', 'Change one letter', 'Spell sight words', 'Blends and digraphs'],
+    match: ['6 pairs', '8 pairs', 'Learning pairs', '10 pairs', '8 pairs, a fairy swap', '12 pairs', '15 pairs, a fairy swap'],
+    missing: ['4 things', '5 things', '6 things', '7 things that move', '8 things that move', '9 things, two missing', '10 things, two missing'],
+    recall: ['Who', 'What', 'Three sentences', 'Four sentences', 'What came first'],
   };
 
   const word = w => SAY[w] || w;
@@ -134,7 +142,7 @@
     // 7 middle and last sounds, or swap one sound
     r => { const x = r();
       if (x < 0.5) { const [from, to, at, l] = r.pick(SWAPS); const wrong = others(r, CVC, 2, [from, to]);
-        return { key: 'x:' + from + to, kind: 'pick', say: [`Change the ${at === 0 ? 'first' : 'last'} sound of ${word(from)} to`, snd(l), '. What do you get?'], show: { type: 'pic', w: from, v: PIC[from] },
+        return { key: 'x:' + from + to, kind: 'pick', say: [`Change the ${['first', 'middle', 'last'][at]} sound of ${word(from)} to`, snd(l), '. What do you get?'], show: { type: 'pic', w: from, v: PIC[from] },
           choices: r.shuffle([to, ...wrong]).map(pic), answer: to, hint: [word(from), '... take away', snd(from[at]), ', put in', snd(l)], tell: [`${word(from)} becomes ${word(to)}!`] }; }
       const w = r.pick(CVC), pos = x < 0.75 ? 1 : 2, l = w[pos], wrong = others(r, pos === 1 ? ['a', 'e', 'i', 'o', 'u'] : LETTERS, 2, [l]);
       return { key: (pos === 1 ? 'm:' : 'l:') + w, kind: 'pick', say: [`What's the ${pos === 1 ? 'middle' : 'last'} sound in ${word(w)}?`], show: { type: 'pic', w, v: PIC[w] },
@@ -222,12 +230,96 @@
     return { key: null, skill: 'wand', level, kind: 'wand', grid, seq, back, say: [back ? 'Watch the sparkles. Then tap them backwards, last one first!' : 'Watch the sparkles, then tap them in the same order.'],
       hint: ['Watch again.'], tell: ['Here it was.'] }; };
 
+  // ---- spelling (the Tiara Workshop): letters are gem tiles, so no handwriting ----
+  // A build: { kind: 'build', word, tiles: [letters, shuffled, with any decoys] }: she taps the tiles in order.
+  const letterChoice = x => ({ id: x, kind: 'letter', v: x, label: x });
+  const decoys = (r, w, n) => others(r, LETTERS.filter(l => !w.includes(l)), n);
+  const build = (r, w, extra, say, pictured = true) => ({ key: 'p:' + w, kind: 'build', word: w, tiles: r.shuffle([...w, ...decoys(r, w, extra)]),
+    say, show: pictured && PIC[w] ? { type: 'pic', w, v: PIC[w] } : null, hint: ['Listen:', ...[...w].map(snd)], tell: [`${word(w)}:`, ...[...w].map(snd)] });
+  // the words she's met in reading (lv.words), else the bank: spelling practises what Story Tower taught
+  const spellWord = (r, lv, list) => { const met = (lv.words || []).filter(w => list.includes(w)); return met.length && r() < 0.7 ? r.pick(met) : r.pick(list); };
+  const SPELL = [
+    // 1 hear a sound, find its gem
+    (r, lv) => { const upto = LETTER_SETS.slice(0, 1 + Math.min(3, Math.floor((lv.tries || 0) / 25))).flat(), l = r.pick(upto);
+      return { key: 's:' + l, kind: 'pick', say: ['Which gem says', snd(l), '?'], choices: r.shuffle([l, ...others(r, LETTERS, 2, [l])]).map(letterChoice), answer: l,
+        hint: [snd(l), ', as in', word(EXAMPLE[l]), '.'], tell: [`This gem, ${l}, says`, snd(l), '.'] }; },
+    // 2 the first letter under a picture: _at
+    (r, lv) => { const w = spellWord(r, lv, CVC), l = w[0];
+      return { key: null, kind: 'pick', say: [`What letter does ${word(w)} start with?`], text: '_' + w.slice(1), show: { type: 'pic', w, v: PIC[w] },
+        choices: r.shuffle([l, ...others(r, LETTERS.filter(x => sound(x) !== sound(l)), 2)]).map(letterChoice), answer: l, hint: ['Say it slowly:', snd(l), { rime: w.slice(1) }], tell: [`${word(w)} starts with ${l}.`] }; },
+    // 3 build a word from exactly its letters
+    (r, lv) => { const w = spellWord(r, lv, CVC); return build(r, w, 0, [`Spell ${word(w)}. Tap the letters in order.`]); },
+    // 4 the same, with extra gems
+    (r, lv) => { const w = spellWord(r, lv, CVC); return build(r, w, 2 + Math.min(2, Math.floor((lv.tries || 0) / 15)), [`Spell ${word(w)}. Some gems don't belong!`]); },
+    // 5 change one letter to make the next word
+    r => { const [from, to, at, l] = r.pick(SWAPS);
+      return { key: null, kind: 'pick', say: [`This says ${word(from)}. Change one gem to make ${word(to)}.`], text: from, show: { type: 'pic', w: to, v: PIC[to] },
+        choices: r.shuffle([l, ...others(r, LETTERS, 2, [l, ...from])]).map(letterChoice), answer: l, hint: [`Which sound is different? ${word(from)}... ${word(to)}...`], tell: [`Change ${from[at]} to ${l}: ${word(to)}!`] }; },
+    // 6 spell a sight word
+    (r, lv) => { const upto = SIGHT.slice(0, 1 + Math.min(SIGHT.length - 1, Math.floor((lv.tries || 0) / 12))).flat().filter(w => w.length >= 2 && w === w.toLowerCase()), w = r.pick(upto);
+      return build(r, w, 1, [`Spell the word "${w}".`], false); },
+    // 7 blends and digraphs
+    (r, lv) => { const w = spellWord(r, lv, BLENDS.filter(x => x.length <= 5)); return build(r, w, 1, [`Spell ${word(w)}.`]); },
+  ];
+
+  // ---- memory games (the Fairy Garden) ----
+  // Flower Match: pairs face down. A learning level pairs a letter with a picture that starts with it, or a
+  // number with that many dots; a swap level has the fairy swap two face-down cards (she sees it happen).
+  const MATCH = [[6], [8], [6, 'learn'], [10], [8, 'swap'], [12], [15, 'swap']];
+  const MATCH_PICS = ['cat', 'dog', 'pig', 'fox', 'frog', 'bee', 'duck', 'fish', 'sun', 'moon', 'star', 'tree', 'apple', 'cake', 'gift', 'crown', 'ring', 'boat', 'car', 'house', 'rainbow', 'unicorn', 'butterfly', 'strawberry'];
+  function match(r, level) {
+    const [pairs, twist] = MATCH[level - 1];
+    let cards;
+    if (twist === 'learn') {
+      const ls = others(r, Object.keys(FIRST).filter(l => l.length === 1 && FIRST[l].length && !'aeiou'.includes(l)), pairs);
+      cards = ls.flatMap((l, i) => i % 2 ? [{ pair: l, face: { kind: 'num', v: String(i + 1) } }, { pair: l, face: { kind: 'dots', n: i + 1 } }]
+        : [{ pair: l, face: { kind: 'letter', v: l } }, { pair: l, face: { kind: 'pic', w: r.pick(FIRST[l]) } }]);
+    } else cards = others(r, MATCH_PICS, pairs).flatMap(w => [{ pair: w, face: { kind: 'pic', w } }, { pair: w, face: { kind: 'pic', w } }]);
+    return { key: null, kind: 'match', pairs, swap: twist === 'swap', learn: twist === 'learn', cols: pairs <= 6 ? 3 : pairs <= 12 ? 4 : 5, cards: r.shuffle(cards),
+      say: [twist === 'learn' ? 'Find the pairs that go together: a letter and a picture that starts with it, or a number and its dots.' : twist === 'swap' ? 'Find the pairs! Watch out: Bloom likes to swap two cards.' : 'Find the pairs! Tap two flowers.'],
+      hint: ['Try to remember where you saw it.'], tell: ['You found them all!'] };
+  }
+  // What's Missing: things on a tray, a cloud covers them, then one (or two) is gone; some levels move them
+  const MISSING = [[4, 1, false], [5, 1, false], [6, 1, false], [7, 1, true], [8, 1, true], [9, 2, true], [10, 2, true]];
+  const TRAY = ['apple', 'cake', 'gift', 'crown', 'ring', 'star', 'moon', 'key', 'hat', 'cup', 'drum', 'clock', 'shell', 'sock', 'egg', 'pear', 'lemon', 'spoon', 'yoyo', 'flag', 'pencil', 'umbrella', 'robot', 'boat'];
+  function missing(r, level) {
+    const [n, gone, move] = MISSING[level - 1], items = others(r, TRAY, n), lost = items.slice(0, gone), left = items.filter(x => !lost.includes(x));
+    const shown = move ? r.shuffle(left) : items.filter(x => !lost.includes(x)), wrong = others(r, TRAY.filter(x => !items.includes(x)), gone === 2 ? 2 : 2);
+    return { key: null, kind: 'missing', items: r.shuffle(items), left: shown, gone: lost, look: 2500 + n * 450,
+      choices: r.shuffle([...lost, ...wrong]).map(pic), answer: lost[0], answers: lost,
+      say: ['Look carefully at everything on the tray!'], ask: [gone === 2 ? 'Two things are missing! Find them both.' : "What's missing?"],
+      hint: ['Think about what was there before.'], tell: [`The ${lost.map(word).join(' and the ')} ${gone === 2 ? 'were' : 'was'} missing.`] };
+  }
+  // Story Recall: Bloom tells a little story, then asks about it
+  const HEROES = ['cat', 'dog', 'pig', 'fox', 'bear', 'frog', 'duck', 'rabbit', 'mouse', 'lion', 'monkey', 'unicorn'];
+  const SPOTS = ['house', 'tree', 'boat', 'bus', 'tent', 'bed', 'ship', 'igloo'];
+  const FINDS = ['hat', 'key', 'cake', 'apple', 'gift', 'star', 'ring', 'crown', 'drum', 'egg', 'shell', 'cupcake', 'banana', 'sock'];
+  const the = w => 'the ' + word(w);
+  function recall(r, level) {
+    const [a, b] = others(r, HEROES, 2), [p, q] = others(r, SPOTS, 2), [t, u, v] = others(r, FINDS, 3), pick3 = (ans, pool) => r.shuffle([ans, ...others(r, pool, 2, [ans])]).map(pic);
+    const Cap = x => x[0].toUpperCase() + x.slice(1);
+    if (level === 1) { const story = `${Cap(the(a))} sat in ${the(p)}.`;
+      return { key: null, kind: 'pick', story, say: ['Listen to the story.', story, `Who sat in ${the(p)}?`], choices: pick3(a, HEROES), answer: a, hint: ['Listen again.', story], tell: [story] }; }
+    if (level === 2) { const story = `${Cap(the(a))} went to ${the(p)}. It found a ${word(t)}.`;
+      return { key: null, kind: 'pick', story, say: ['Listen to the story.', story, `What did ${the(a)} find?`], choices: pick3(t, FINDS), answer: t, hint: ['Listen again.', story], tell: [story] }; }
+    if (level === 3) { const story = `${Cap(the(a))} and ${the(b)} went to ${the(p)}. ${Cap(the(b))} had a ${word(t)}. ${Cap(the(a))} had a ${word(u)}.`;
+      return { key: null, kind: 'pick', story, say: ['Listen to the story.', story, `What did ${the(a)} have?`], choices: r.shuffle([u, t, ...others(r, FINDS, 1, [t, u])]).map(pic), answer: u, hint: ['Listen again.', story], tell: [story] }; }
+    if (level === 4) { const story = `${Cap(the(a))} went to ${the(p)}. It found a ${word(t)}. Then it went to ${the(q)}. It found a ${word(u)}.`, first = r() < 0.5;
+      return { key: null, kind: 'pick', story, say: ['Listen to the story.', story, `What did ${the(a)} find at ${the(first ? p : q)}?`], choices: r.shuffle([t, u, ...others(r, FINDS, 1, [t, u])]).map(pic), answer: first ? t : u, hint: ['Listen again.', story], tell: [story] }; }
+    const story = `First, ${the(a)} found a ${word(t)}. Then it found a ${word(u)}. Last, it found a ${word(v)}.`, ask = r.pick(['first', 'last']);
+    return { key: null, kind: 'pick', story, say: ['Listen to the story.', story, `What did ${the(a)} find ${ask}?`], choices: r.shuffle([t, u, v]).map(pic), answer: ask === 'first' ? t : v, hint: ['Listen again.', story], tell: [story] };
+  }
+
   // One question for a skill at a level. lv: { tries } how many questions she's had at this level (it
   // widens the letter and sight word sets as she goes). A review key brings back that item when it can.
   function make(skill, level, r, lv = {}, review = null) {
     let q;
+    level = Math.max(1, Math.min(LADDERS[skill] || 1, level));
     if (skill === 'wand') return wand(r, level);
-    const list = skill === 'math' ? MATH : READ;
+    if (skill === 'match') return Object.assign({ skill, level }, match(r, level));
+    if (skill === 'missing') return Object.assign({ skill, level, text: null, show: null }, missing(r, level));
+    if (skill === 'recall') return Object.assign({ skill, level, text: null, show: null }, recall(r, level));
+    const list = skill === 'math' ? MATH : skill === 'spell' ? SPELL : READ;
     level = Math.max(1, Math.min(list.length, level));
     if (review) q = fromKey(skill, review, r);
     if (!q) q = list[level - 1](r, lv);
@@ -242,6 +334,8 @@
       return { key, kind: 'pick', say: ['Which letter makes the sound', snd(v), '?'], choices: r.shuffle([v, ...wrong]).map(x => ({ id: x, kind: 'letter', v: x, label: x })), answer: v, hint: [snd(v), ', as in', word(EXAMPLE[v]), '.'], tell: [`This letter, ${v}, says`, snd(v), '.'] }; }
     if (skill === 'read' && k === 'h' && SIGHT_ALL.includes(v)) { const wrong = others(r, SIGHT_ALL, 2, [v]);
       return { key, kind: 'pick', say: [`Find the word "${v}".`], choices: r.shuffle([v, ...wrong]).map(x => ({ id: x, kind: 'word', v: x, label: x })), answer: v, hint: [`"${v}" starts with ${v[0]}.`], hintShow: v, tell: [`This word is "${v}".`] }; }
+    if (skill === 'spell' && k === 'p' && /^[a-z]{2,5}$/.test(v)) return build(r, v, CVC.includes(v) ? 2 : 1, [`Spell ${word(v)}.`], !!PIC[v]);
+    if (skill === 'spell' && k === 's' && LETTERS.includes(v)) return Object.assign(SPELL[0](r, {}), { key }, { say: ['Which gem says', snd(v), '?'], choices: r.shuffle([v, ...others(r, LETTERS, 2, [v])]).map(letterChoice), answer: v, hint: [snd(v), ', as in', word(EXAMPLE[v]), '.'], tell: [`This gem, ${v}, says`, snd(v), '.'] });
     if (skill === 'math' && k === 'f') { const m = /^(\d+)([+-])(\d+)$/.exec(v); if (!m) return null; const a = +m[1], b = +m[3], add = m[2] === '+', ans = add ? a + b : a - b;
       return { key, kind: 'pick', say: [`What is ${a} ${add ? 'plus' : 'take away'} ${b}?`], text: `${a} ${m[2]} ${b} = ?`, show: a + b <= 10 ? { type: add ? 'add' : 'take', a, b, hidden: true } : null,
         choices: nums(r, ans, 0, 20), answer: String(ans), hint: [add ? `Start at ${a} and count on ${b}.` : `Start at ${a} and count back ${b}.`], hintShow: a + b <= 10 ? 'reveal' : null, tell: [`${a} ${add ? 'plus' : 'take away'} ${b} is ${ans}.`] }; }
@@ -259,12 +353,15 @@
       const n = lv <= 2 ? r.int(3, 8) : lv <= 5 ? r.int(4, 10) : r.int(8, 15);
       return { kind: 'bridge', say: [`The bridge needs ${n} planks. Tap ${n} planks to fix it.`], n, tell: [`${n} planks. The bridge is fixed!`] }; }
     if (kind === 'door') { const lv = Math.max(1, (levels.wand || 1) - 1); return Object.assign(wand(r, lv), { kind: 'wand', gate: true }); }
+    if (kind === 'flower') { const set = r.pick(RHYMES), [a, b] = r.shuffle(set), c = r.pick(Object.keys(PIC).filter(w => !set.includes(w) && w.length <= 5));
+      return { kind: 'sign', pics: true, say: [`The flower gate opens for a rhyme. Which one rhymes with ${word(a)}?`], show: a, signs: r.shuffle([b, c]), answer: b, hint: [`Listen to the end: ${word(a)}... ${word(b)}...`], tell: [`${word(a)} and ${word(b)} rhyme!`] }; }
+    if (kind === 'tiara') { const w = r.pick(CVC); return Object.assign(build(r, w, (levels.spell || 1) >= 4 ? 1 : 0, [`The workshop door needs a password. Spell ${word(w)}!`]), { gate: true }); }
     return null;
   }
 
   // the review keys that come back as themselves (fromKey): words, letter sounds, sight words, facts
-  const reviewable = key => /^(w|s|h):/.test(key) || /^f:\d+[+-]\d+$/.test(key);
+  const reviewable = key => /^(w|s|h|p):/.test(key) || /^f:\d+[+-]\d+$/.test(key);
 
-  root.SparkleContent = { PIC, SAY, CVC, RHYMES, SYLL, FIRST, LETTER_SETS, LETTERS, EXAMPLE, SWAPS, SIGHT, SIGHT_ALL, BLENDS, LADDERS, LEVEL_NAMES, READ, MATH, WAND,
+  root.SparkleContent = { MATCH, MISSING, TRAY, HEROES, FINDS, SPOTS, SPELL, PIC, SAY, CVC, RHYMES, SYLL, FIRST, LETTER_SETS, LETTERS, EXAMPLE, SWAPS, SIGHT, SIGHT_ALL, BLENDS, LADDERS, LEVEL_NAMES, READ, MATH, WAND,
     word, make, fromKey, gate, reviewable };
 })(typeof window !== 'undefined' ? window : globalThis);

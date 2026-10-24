@@ -268,5 +268,20 @@
     return princess(look, { ...STARTER, [it.kind]: id }, { mood: 'calm' });
   }
 
-  root.SparkleArt = { C, INK, SKIN, HAIR, STYLES, ITEMS, SLOTS, STARTER, uid, svg, star, twinkle, heart, shade, coin, gem, gift, cloud, princess, unicorn, owl, dragon, fairy, itemCard, esc };
+  // little drawn icons for the quest, stickers and lands (no emoji in the game)
+  function icon(kind, size = 30) {
+    const body = {
+      tower: `<path d="M12 34V10l8-6l8 6v24Z" fill="${C.lav}" ${THIN}/><path d="M10 10L20 1L30 10Z" fill="${C.lilac}" ${THIN}/><path d="M16 34v-7a4 4 0 0 1 8 0v7" fill="${C.berry}" ${THIN}/><circle cx="20" cy="16" r="3.5" fill="${C.gold}" ${THIN}/>`,
+      book: `<path d="M20 9C14 5 8 5 4 7v24c4-2 10-2 16 2c6-4 12-4 16-2V7c-4-2-10-2-16 2Z" fill="#fff" ${THIN}/><path d="M20 9v24" stroke="${INK}" stroke-width="2.5"/><path d="M8 13c3-1 6-1 8 0M8 18c3-1 6-1 8 0M24 13c3-1 6-1 8 0M24 18c3-1 6-1 8 0" stroke="${C.lilac}" stroke-width="2" stroke-linecap="round"/>`,
+      gem: `<path d="M7 15L13 7H27L33 15L20 34Z" fill="${C.pink}" ${THIN}/><path d="M7 15H33M13 7L17 15L20 34L23 15L27 7" fill="none" stroke="${INK}" stroke-width="1.6" opacity=".5"/>`,
+      star: star(20, 21, 15, C.gold, `stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"`),
+      flower: `${[0, 72, 144, 216, 288].map(a => `<circle cx="${20 + 9 * Math.cos((a - 90) * Math.PI / 180)}" cy="${19 + 9 * Math.sin((a - 90) * Math.PI / 180)}" r="7" fill="${C.pink}" ${THIN}/>`).join('')}<circle cx="20" cy="19" r="5.5" fill="${C.gold}" ${THIN}/>`,
+      tiara: `<path d="M6 30L8 12L14 21L20 7L26 21L32 12L34 30Z" fill="${C.gold}" ${THIN}/><circle cx="20" cy="22" r="3.5" fill="${C.rose}" ${THIN}/>`,
+      sparkle: twinkle(20, 20, 16, C.gold) + twinkle(31, 9, 6, C.pink),
+      unicorn: `<path d="M9 34C8 24 11 17 18 14L16 8L21 13C27 13 32 17 33 23C34 27 31 29 28 28C25 27 23 28 22 30C21 32 21 33 22 34Z" fill="#fff" ${THIN}/><path d="M21 13L27 2L26 15Z" fill="${C.gold}" ${THIN}/><circle cx="26" cy="20" r="1.8" fill="${INK}"/>`,
+    }[kind] || '';
+    return svg('0 0 40 40', body, '', 'ico').replace('<svg ', `<svg width="${size}" height="${size}" `);
+  }
+
+  root.SparkleArt = { icon, C, INK, SKIN, HAIR, STYLES, ITEMS, SLOTS, STARTER, uid, svg, star, twinkle, heart, shade, coin, gem, gift, cloud, princess, unicorn, owl, dragon, fairy, itemCard, esc };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -27,26 +27,31 @@
     mine: { x: 790, y: 470, name: 'the Gem Mine', land: 'math' },
     door: { x: 580, y: 900, name: 'the crystal door' },
     meadow: { x: 760, y: 930, name: 'Star Meadow' },
-    garden: { x: 262, y: 1130, name: 'the Fairy Garden', fog: true },
-    workshop: { x: 752, y: 1180, name: 'the Tiara Workshop', fog: true },
+    garden: { x: 262, y: 1130, name: 'the Fairy Garden', land: 'garden', fog: 'garden' },
+    workshop: { x: 752, y: 1180, name: 'the Tiara Workshop', land: 'spell', fog: 'workshop' },
   };
+  // [from, to, its gate, the fog that hides it until that land opens]. The paths to the Fairy Garden and the
+  // Tiara Workshop are steps of cloud across the sky, each with its own gate: a flower arch that opens for a
+  // rhyme, and a gem door that opens for a word spelled.
   const EDGES = [['castle', 'sign'], ['sign', 'tower', 'sign'], ['castle', 'bridgeA'], ['bridgeA', 'bridgeB', 'bridge'], ['bridgeB', 'mine'],
-    ['castle', 'door'], ['door', 'meadow', 'door'], ['castle', 'garden', 'fog'], ['door', 'workshop', 'fog']];
+    ['castle', 'door'], ['door', 'meadow', 'door'], ['castle', 'garden', 'flower', 'garden'], ['door', 'workshop', 'tiara', 'workshop']];
+  const LANDS_FOGGED = ['garden', 'workshop'];
   const STARS = [{ id: 'st1', x: 196, y: 470 }, { id: 'st2', x: 870, y: 400 }, { id: 'st3', x: 610, y: 760 }, { id: 'st4', x: 830, y: 980 }, { id: 'st5', x: 700, y: 870 },
     { id: 'st6', x: 350, y: 300 }, { id: 'st7', x: 402, y: 760 }, { id: 'st8', x: 690, y: 975 }];
   const CRITTERS = [{ id: 'snail', x: 330, y: 470, name: 'a snail in a shell hat' }, { id: 'bunny', x: 840, y: 905, name: 'a bunny in boots' },
     { id: 'ladybug', x: 880, y: 520, name: 'a ladybug with a bow' }, { id: 'frog', x: 418, y: 812, name: 'a frog in a crown' }];
 
   // the shortest walk between two places (breadth first), as a list of node ids
-  function route(from, to) {
+  // open: { garden: true, ... } the lands the fog has lifted from
+  function route(from, to, open = {}) {
     if (from === to) return [from];
-    const next = {}; for (const [a, b, g] of EDGES) { if (g === 'fog') continue; (next[a] = next[a] || []).push(b); (next[b] = next[b] || []).push(a); }
+    const next = {}; for (const [a, b, , fog] of EDGES) { if (fog && !open[fog]) continue; (next[a] = next[a] || []).push(b); (next[b] = next[b] || []).push(a); }
     const prev = { [from]: null }, q = [from];
     while (q.length) { const n = q.shift(); for (const m of next[n] || []) if (!(m in prev)) { prev[m] = n; if (m === to) { const p = [m]; let k = n; while (k) { p.unshift(k); k = prev[k]; } return p; } q.push(m); } }
     return null;
   }
   const gateOn = (a, b) => { const e = EDGES.find(([x, y]) => (x === a && y === b) || (x === b && y === a)); return e ? e[2] || null : null; };
-  const nearest = (x, y, ok = () => true) => Object.entries(NODES).filter(([id, n]) => !n.fog && ok(id)).sort(([, p], [, q]) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y))[0][0];
+  const nearest = (x, y, open = {}) => Object.entries(NODES).filter(([, n]) => !n.fog || open[n.fog]).sort(([, p], [, q]) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y))[0][0];
 
   // ---- pieces of the world ----
   // an island: a grassy top and a rocky underside hanging below, with crystals
@@ -100,9 +105,24 @@
       ${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${x - 25 + (i % 3) * 25}" cy="${y - 70 + Math.floor(i / 3) * 34}" r="7" fill="${[C.pink, C.gold, C.sky, C.mint, C.lilac, C.rose][i]}" ${THIN}/>`).join('')}${twinkle(x + 40, y - 112, 8, C.gold)}</g>`;
   }
   function garden(x, y) { return `<g class="place garden">${[[-60, 0, C.rose], [0, -30, C.gold], [56, -6, C.lilac], [-20, 20, C.sky]].map(([dx, dy, c]) => `<path d="M${x + dx} ${y + dy}V${y + dy - 60}" stroke="#5FBF6A" stroke-width="7"/>${[0, 60, 120, 180, 240, 300].map(a => `<ellipse cx="${x + dx + 16 * Math.cos(a * Math.PI / 180)}" cy="${y + dy - 60 + 16 * Math.sin(a * Math.PI / 180)}" rx="12" ry="9" transform="rotate(${a} ${x + dx + 16 * Math.cos(a * Math.PI / 180)} ${y + dy - 60 + 16 * Math.sin(a * Math.PI / 180)})" fill="${c}" ${THIN}/>`).join('')}<circle cx="${x + dx}" cy="${y + dy - 60}" r="9" fill="${C.gold}" ${THIN}/>`).join('')}</g>`; }
-  function workshop(x, y) { return `<g class="place workshop"><path d="M${x - 80} ${y}L${x - 50} ${y - 110}L${x - 10} ${y - 60}L${x + 20} ${y - 140}L${x + 60} ${y - 70}L${x + 84} ${y}Z" fill="${C.sky}" ${OUT}/>${[[x - 50, y - 30, C.pink], [x + 40, y - 40, C.gold]].map(([gx, gy, c]) => `<path d="M${gx} ${gy}l-10 -18l10 -14l10 14Z" fill="${c}" ${THIN}/>`).join('')}<path d="M${x - 18} ${y}V${y - 34}C${x - 18} ${y - 52} ${x + 18} ${y - 52} ${x + 18} ${y - 34}V${y}Z" fill="${C.lilac}" ${OUT}/></g>`; }
-  function fogCloud(x, y, s = 1) {
-    return `<g class="fog" opacity=".96"><path d="M${x - 150 * s} ${y + 40 * s}C${x - 210 * s} ${y + 30 * s} ${x - 200 * s} ${y - 50 * s} ${x - 130 * s} ${y - 40 * s}C${x - 120 * s} ${y - 110 * s} ${x - 20 * s} ${y - 120 * s} ${x} ${y - 70 * s}C${x + 30 * s} ${y - 130 * s} ${x + 140 * s} ${y - 110 * s} ${x + 130 * s} ${y - 40 * s}C${x + 210 * s} ${y - 40 * s} ${x + 210 * s} ${y + 50 * s} ${x + 150 * s} ${y + 50 * s}C${x + 110 * s} ${y + 110 * s} ${x - 100 * s} ${y + 110 * s} ${x - 150 * s} ${y + 40 * s}Z" fill="#E9E4F2" stroke="#CFC6E0" stroke-width="4"/>
+  function workshop(x, y) {   // the Tiara Workshop: a crystal cave with a giant tiara on top, its gems chiming
+    const crystal = (cx, cy, h, c, r = 0) => `<path d="M${cx} ${cy}l-12 ${-h * 0.6}l12 ${-h * 0.4}l12 ${h * 0.4}Z" transform="rotate(${r} ${cx} ${cy})" fill="${c}" ${THIN}/>`;
+    return `<g class="place workshop"><path d="M${x - 88} ${y}C${x - 84} ${y - 70} ${x - 50} ${y - 112} ${x} ${y - 112}C${x + 50} ${y - 112} ${x + 86} ${y - 70} ${x + 90} ${y}Z" fill="#CFE9F7" ${OUT}/>
+      ${crystal(x - 60, y - 40, 50, C.sky, -14)}${crystal(x + 62, y - 36, 54, C.lilac, 12)}${crystal(x - 30, y - 80, 40, C.mint, -6)}${crystal(x + 34, y - 84, 44, C.pink, 8)}
+      <path d="M${x - 24} ${y}V${y - 34}C${x - 24} ${y - 58} ${x + 24} ${y - 58} ${x + 24} ${y - 34}V${y}Z" fill="${C.lilac}" ${OUT}/>${A.heart(x, y - 30, 6, '#fff')}
+      <path d="M${x - 44} ${y - 112}L${x - 36} ${y - 150}L${x - 18} ${y - 126}L${x} ${y - 166}L${x + 18} ${y - 126}L${x + 36} ${y - 150}L${x + 44} ${y - 112}Z" fill="${C.gold}" ${OUT}/>
+      <circle cx="${x}" cy="${y - 132}" r="7" fill="${C.rose}" ${THIN}/><circle cx="${x - 30}" cy="${y - 128}" r="4" fill="${C.sky}"/><circle cx="${x + 30}" cy="${y - 128}" r="4" fill="${C.mint}"/>${twinkle(x + 52, y - 160, 8, '#fff')}${twinkle(x - 56, y - 140, 6, C.gold)}</g>`;
+  }
+  function flowerArch(x, y) {   // the Fairy Garden's flower gate
+    return `<g class="place flowergate"><path d="M${x - 34} ${y + 10}V${y - 30}C${x - 34} ${y - 74} ${x + 34} ${y - 74} ${x + 34} ${y - 30}V${y + 10}" fill="none" stroke="#5FBF6A" stroke-width="9" stroke-linecap="round"/>
+      ${[[-34, -10], [-30, -46], [-12, -66], [12, -66], [30, -46], [34, -10]].map(([dx, dy], i) => `<circle cx="${x + dx}" cy="${y + dy}" r="9" fill="${[C.pink, C.gold, C.lilac, C.rose, C.sky, C.pink][i]}" ${THIN}/><circle cx="${x + dx}" cy="${y + dy}" r="3" fill="#fff"/>`).join('')}</g>`;
+  }
+  function gemDoor(x, y) {   // the Tiara Workshop's gem door
+    return `<g class="place gemdoor"><path d="M${x - 26} ${y + 10}V${y - 34}L${x} ${y - 62}L${x + 26} ${y - 34}V${y + 10}Z" fill="${C.sky}" ${OUT}/>
+      <path d="M${x - 14} ${y + 10}V${y - 26}L${x} ${y - 44}L${x + 14} ${y - 26}V${y + 10}Z" fill="${C.lav}" ${THIN}/><path d="M${x - 6} ${y - 30}l6 -10l6 10l-6 8Z" fill="${C.pink}" ${THIN}/>${twinkle(x + 30, y - 60, 7, '#fff')}</g>`;
+  }
+  function fogCloud(x, y, s = 1, land = '') {
+    return `<g class="fog" data-fog="${land}" role="button" aria-label="The Grey Fog" opacity=".96"><path d="M${x - 150 * s} ${y + 40 * s}C${x - 210 * s} ${y + 30 * s} ${x - 200 * s} ${y - 50 * s} ${x - 130 * s} ${y - 40 * s}C${x - 120 * s} ${y - 110 * s} ${x - 20 * s} ${y - 120 * s} ${x} ${y - 70 * s}C${x + 30 * s} ${y - 130 * s} ${x + 140 * s} ${y - 110 * s} ${x + 130 * s} ${y - 40 * s}C${x + 210 * s} ${y - 40 * s} ${x + 210 * s} ${y + 50 * s} ${x + 150 * s} ${y + 50 * s}C${x + 110 * s} ${y + 110 * s} ${x - 100 * s} ${y + 110 * s} ${x - 150 * s} ${y + 40 * s}Z" fill="#E9E4F2" stroke="#CFC6E0" stroke-width="4"/>
       <path d="M${x - 90 * s} ${y + 10 * s}q40 -24 80 0q40 -24 80 0" fill="none" stroke="#D6CDE6" stroke-width="5" stroke-linecap="round"/></g>`;
   }
   function critter(id, x, y) {
@@ -114,6 +134,10 @@
 
   // The whole kingdom. st: { at, stars: [found], critters: [found], open: { bridge: true } (gates passed this session), quest: node id to glow }
   function kingdom(st = {}) {
+    const unfog = st.unfog || {};
+    const clouds = (a, b) => { const p = NODES[a], q = NODES[b], n = Math.round(Math.hypot(q.x - p.x, q.y - p.y) / 34);
+      return `<g class="steps">${Array.from({ length: n - 1 }, (_, i) => { const t = (i + 1) / n, x = p.x + (q.x - p.x) * t, y = p.y + (q.y - p.y) * t + Math.sin(t * Math.PI) * 18;
+        return `<ellipse cx="${x}" cy="${y}" rx="22" ry="12" fill="#fff" stroke="#E3D9F5" stroke-width="3"/>`; }).join('')}</g>`; };
     const sky = uid('sky'), path = (a, b, cls = '') => { const p = NODES[a], q = NODES[b]; const mx = (p.x + q.x) / 2 + (q.y - p.y) * 0.12, my = (p.y + q.y) / 2 - (q.x - p.x) * 0.12;
       return `<path class="road ${cls}" d="M${p.x} ${p.y}Q${mx} ${my} ${q.x} ${q.y}" fill="none" stroke="#FFF6E9" stroke-width="22" stroke-linecap="round"/><path d="M${p.x} ${p.y}Q${mx} ${my} ${q.x} ${q.y}" fill="none" stroke="${C.blush}" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 16"/>`; };
     const bA = NODES.bridgeA, bB = NODES.bridgeB, fixed = !!(st.open || {}).bridge;
@@ -138,8 +162,9 @@
       ${CRITTERS.filter(c => !met.has(c.id)).map(c => critter(c.id, c.x, c.y).replace('<g class="critter"', `<g class="critter find" role="button" aria-label="${c.name}"`)).join('')}
       ${towerHouse(282, 392)}${mineHill(800, 468)}${castle(500, 700)}${meadowArch(580, 900)}
       <g class="place signpost"><path d="M372 560V500" stroke="${INK}" stroke-width="10" stroke-linecap="round"/><path d="M372 560V500" stroke="#E9B872" stroke-width="5"/><path d="M372 504H316l-12 12l12 12H372Z" fill="${C.cream}" ${THIN}/><path d="M372 518H426l12 12l-12 12H372Z" fill="${C.cream}" ${THIN}/>${star(334, 516, 5, C.lilac)}${heart(410, 530, 5, C.pink)}</g>
+      ${unfog.garden ? clouds('castle', 'garden') + flowerArch(381, 941) : ''}${unfog.workshop ? clouds('door', 'workshop') + gemDoor(666, 1040) : ''}
       ${garden(262, 1140)}${workshop(752, 1186)}
-      ${fogCloud(262, 1110, 1.15)}${fogCloud(752, 1160, 1.05)}
+      ${unfog.garden ? '' : fogCloud(262, 1110, 1.15, 'garden')}${unfog.workshop ? '' : fogCloud(752, 1160, 1.05, 'workshop')}
       ${st.quest && NODES[st.quest] ? `<g class="glow"><circle cx="${NODES[st.quest].x}" cy="${NODES[st.quest].y}" r="54" fill="${C.gold}" opacity=".25"/><circle cx="${NODES[st.quest].x}" cy="${NODES[st.quest].y}" r="54" fill="none" stroke="${C.gold}" stroke-width="8" stroke-dasharray="4 14" stroke-linecap="round"/></g>` : ''}
     </svg>`;
   }
@@ -158,6 +183,29 @@
         ${[[70, 250, C.rose], [330, 270, C.sky], [300, 420, C.mint]].map(([x, y, c], i) => `<g class="flap" style="animation-delay:${i * .3}s" transform="translate(${x} ${y})"><path d="M0 0L-22 -10L-22 12L0 22Z" fill="${c}" ${THIN}/><path d="M0 0L22 -10L22 12L0 22Z" fill="${shade(c, .3)}" ${THIN}/></g>`).join('')}
       </svg>`;
     }
+    if (land === 'garden') {   // the Fairy Garden: giant flowers that open, fireflies, a mint and pink sky
+      const bloom = (x, y, r, c) => `<g>${[0, 60, 120, 180, 240, 300].map(a => `<ellipse cx="${x + r * Math.cos(a * Math.PI / 180)}" cy="${y + r * Math.sin(a * Math.PI / 180)}" rx="${r * 0.75}" ry="${r * 0.5}" transform="rotate(${a} ${x + r * Math.cos(a * Math.PI / 180)} ${y + r * Math.sin(a * Math.PI / 180)})" fill="${c}" ${THIN}/>`).join('')}<circle cx="${x}" cy="${y}" r="${r * 0.6}" fill="${C.gold}" ${THIN}/></g>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" class="backdrop">
+        <rect width="400" height="800" fill="#2F6E64"/><rect width="400" height="420" fill="#3E8577"/>
+        ${[[60, 120], [330, 80], [200, 40], [370, 300], [30, 360]].map(([x, y], i) => `<g class="tw" style="animation-delay:${i * .4}s"><circle cx="${x}" cy="${y}" r="5" fill="#FFF3A6"/><circle cx="${x}" cy="${y}" r="14" fill="#FFF3A6" opacity=".25"/></g>`).join('')}
+        <path d="M40 800V420M350 800V380M200 800V560" stroke="#5FBF6A" stroke-width="12"/>
+        ${bloom(40, 420, 46, C.pink)}${bloom(350, 380, 40, C.lilac)}${bloom(200, 560, 34, C.rose)}
+        <path d="M0 700C80 660 160 720 240 690C300 668 360 690 400 680V800H0Z" fill="#4FA58A"/>
+        ${[[90, 740, C.gold], [300, 750, C.sky], [180, 770, C.pink]].map(([x, y, c]) => bloom(x, y, 12, c)).join('')}</svg>`;
+    }
+    if (land === 'spell') {   // inside the Tiara Workshop: crystal walls, a tiara on a velvet cushion, gems that chime
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" class="backdrop">
+        <rect width="400" height="800" fill="#3B4F8C"/><path d="M0 0H400V260C330 300 300 220 230 270C160 320 100 230 40 280L0 300Z" fill="#4E66A8"/>
+        ${[[50, 200, C.sky], [340, 220, C.lilac], [300, 120, C.mint], [90, 90, C.pink], [200, 60, C.gold]].map(([x, y, c], i) => `<path d="M${x} ${y}l-16 -34l16 -22l16 22Z" fill="${c}" ${THIN}/><circle cx="${x}" cy="${y - 28}" r="30" fill="${c}" opacity=".18"/>`).join('')}
+        <ellipse cx="200" cy="742" rx="120" ry="34" fill="${C.berry}" ${OUT}/><path d="M150 722L160 682L180 708L200 664L220 708L240 682L250 722Z" fill="${C.gold}" ${OUT}/><circle cx="200" cy="696" r="7" fill="${C.rose}" ${THIN}/>
+        ${[[110, 650], [300, 660], [200, 610]].map(([x, y], i) => `<g class="tw" style="animation-delay:${i * .5}s">${twinkle(x, y, 9, '#fff')}</g>`).join('')}</svg>`;
+    }
+    if (land === 'wand') {   // Star Meadow by night: deep blue sky, stars, soft grass
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" class="backdrop">
+        <rect width="400" height="800" fill="#2A2F6B"/><circle cx="320" cy="110" r="44" fill="#FFF3D1"/><circle cx="338" cy="96" r="40" fill="#2A2F6B"/>
+        ${Array.from({ length: 16 }, (_, i) => [(i * 97) % 380 + 10, (i * 53) % 420 + 30]).map(([x, y], i) => `<g class="tw" style="animation-delay:${(i % 6) * .4}s">${twinkle(x, y, i % 3 ? 5 : 8, i % 2 ? C.gold : '#fff')}</g>`).join('')}
+        <path d="M0 640C90 600 170 660 250 630C320 604 370 626 400 616V800H0Z" fill="#3D6E5E"/><path d="M0 700C100 680 200 720 400 690V800H0Z" fill="#4C8A70"/></svg>`;
+    }
     // the Gem Mine: a deep cave, glowing crystals, candy-striped rails, lanterns
     const cluster = (x, y, s, c) => `<g>${[[-14, 6, -20], [0, 0, 0], [14, 8, 18]].map(([dx, dy, r]) => `<path d="M${x + dx * s} ${y + dy * s}l${-9 * s} ${-26 * s}l${9 * s} ${-14 * s}l${9 * s} ${14 * s}Z" transform="rotate(${r} ${x + dx * s} ${y + dy * s})" fill="${c}" ${THIN}/>`).join('')}<ellipse cx="${x}" cy="${y - 10 * s}" rx="${40 * s}" ry="${30 * s}" fill="${c}" opacity=".18"/></g>`;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" class="backdrop">
@@ -169,5 +217,5 @@
     </svg>`;
   }
 
-  root.SparkleWorld = { W, H, NODES, EDGES, STARS, CRITTERS, route, gateOn, nearest, kingdom, backdrop, critter };
+  root.SparkleWorld = { W, H, NODES, EDGES, LANDS_FOGGED, STARS, CRITTERS, route, gateOn, nearest, kingdom, backdrop, critter };
 })(typeof window !== 'undefined' ? window : globalThis);
