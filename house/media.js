@@ -117,7 +117,7 @@ function mediaFamily(cfg) {
       }
       this.sum = cfg.summary(n);
     },
-    // One card, wherever it is (its own view, or Now Playing on Favorites).
+    // One card, wherever it is (its own view; on Favorites a speaker playing is a Running Now chip).
     shell(p) { return cardHTML(cfg.id + ':' + p.id, `
         <div class="dg-top"><div data-r="hero"></div><div class="dg-info" data-r="info"></div></div>
         <div class="dg-ctl mctl" data-r="ctl"></div>`, 'mcard'); },

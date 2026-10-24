@@ -124,7 +124,7 @@
           'Inside aOS, the unread count goes on Mail\'s icon at the bottom of aOS rather than on aOS\'s Home Screen icon'] },
         travel: { notes: ['Have Ipsy check this trip, on a trip\'s page: Ipsy reads the newest email for each booking still to come (a schedule change too) and updates what changed, or marks it cancelled; each change is marked Check, with Undo. Bookings you edited stay as you typed them',
           'Have Ipsy check these, at the top of To check: the same check for the bookings waiting there'] },
-        house: { notes: ['Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name'] },
+        house: { notes: ['Favorites: a speaker playing music is in Running Now with the other devices that are on, every speaker that plays (grouped ones too), in place of its own big card', 'Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name'] },
       } },
     { v: '1.8', date: '2026-10-21', title: 'Health, with Ipsy',
       highlights: ['Fitness: your Apple Health stats, every day',

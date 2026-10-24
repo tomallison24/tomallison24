@@ -7,9 +7,10 @@
 //     the last person leaves, off when the first is home; AWAY_FLAG in app.js):
 //     "Away from the house", and since when the thermostats have been in Eco.
 //     Home Assistant decides who is home; this only listens.
-//   - Now Playing: a Sonos that is playing (one card per group, its leader's)
 //   - Running Now: every device that is doing something, as chips; a tap
-//     takes you to it and opens its popup
+//     takes you to it and opens its popup. A speaker playing music is one of
+//     them, every one that plays (grouped ones too), rather than a big card
+//     of its own above them (Now Playing, until Tom asked)
 //   - Automations: Goodnight, Evening Lights, Mom's Awake, Report a Bug,
 //     Babysitter, Hatch Green, as Liquid Glass tiles three across (Labs'
 //     design D): each tile carries a glow of its colour behind the glass,
@@ -149,7 +150,6 @@ family({
     const cams = famOf('cams');
     el.classList.add('favs');
     el.innerHTML = `
-      <div class="fnp" data-r="np"></div>
       <div class="runpanel" data-r="run" hidden></div>
       <div class="vsec-h"><span>Automations</span></div>
       <div class="agw wxw" data-r="wxw"><i class="ag-glow"></i><a class="wxpill" data-r="wx" href="../weather/" aria-label="Open Weather"></a></div>
@@ -176,6 +176,9 @@ family({
     for (const y of DYSONS) { const r = dy.read(y); if (r.on) out.push({ name: y.name, word: r.mood === 'heating' ? 'Heating' : r.fauto ? 'Auto' : 'Fan ' + r.spd, view: 'climate', open: () => openDev(dy, y.id) }); }
     for (const u of UNITS) { const r = read(u); if (r.on) out.push({ name: u.name, word: r.mood === 'drying' ? 'Drying' : r.mood === 'full' ? 'Tank full' : 'Holding', view: 'climate', open: () => openUnit(u.id), idle: r.mood !== 'drying' }); }
     for (const v of VACS) { const r = vac.read(v); if (r.mood === 'cleaning' || r.mood === 'returning') out.push({ name: v.name, word: V_WORD[r.mood], view: 'around', open: () => openDev(vac, v.id) }); }
+    // every speaker playing music (not the Arc playing the TV), each grouped one too
+    const sp = famOf('speakers');
+    for (const p of SPEAKERS) { const r = sp.read(p); if (r.playing && !r.tv) out.push({ name: p.name, word: 'Playing', view: 'media', open: () => openDev(sp, p.id) }); }
     return out;
   },
   autoState(a) {
@@ -186,13 +189,6 @@ family({
   },
 
   render() {
-    // Now Playing: one card per playing group, its leader's.
-    const sp = famOf('speakers');
-    const playing = SPEAKERS.filter(p => { const r = sp.read(p); return r.playing && !r.tv && r.group[0] === p.ent; }).slice(0, 2);
-    const np = this.el.querySelector('[data-r="np"]');
-    put(np, playing.map(p => sp.shell(p)).join(''));
-    for (const card of np.querySelectorAll('.dvc')) sp.paint(card, SPEAKERS.find(p => card.dataset.dv === 'speakers:' + p.id));
-
     // The Away pill goes first in the view itself, above the energy strip (which
     // energy.js puts at the start of the same box), so it is the first thing seen.
     const away = favAway(), box = $('g-fav');
@@ -221,7 +217,7 @@ family({
         <button class="ag${s.lit ? ' lit' : ''}${tWaiting(s.d, 'lit') || tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="auto" data-v="${a.id}" aria-pressed="${s.lit}"${s.dis ? ' disabled' : ''}>
         <span class="ag-disc">${svg(a.icon, 24)}</span><span class="ag-name">${esc(name)}</span></button></div>`;
     }).join(''));
-    this.sum = [away ? 'Away' : '', this.run.length ? this.run.length + ' running' : playing.length ? 'Music playing' : away ? '' : 'Nothing running'].filter(Boolean).join(' · ');
+    this.sum = [away ? 'Away' : '', this.run.length ? this.run.length + ' running' : away ? '' : 'Nothing running'].filter(Boolean).join(' · ');
   },
 
   sheet(id) {
