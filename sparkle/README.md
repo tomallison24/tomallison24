@@ -74,7 +74,8 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   voice speed, sound effects, the play timer badge, the design, signing in.
 - **Natural voices**: each friend speaks in a voice of their own (the storyteller Sulafat, Professor
   Hoot Charon, Pebble Puck, Gemma Leda, Bloom Vindemiatrix: Google Cloud Text-to-Speech's Chirp 3: HD
-  voices), made by the family's server (`functions/sparkle/api` speak, with the `GOOGLE_TTS_KEY` secret)
+  voices), made by the family's server (`functions/sparkle/api` speak, with the `GOOGLE_TTS_KEY` secret: a GitHub repository secret, a Google Cloud API key limited to
+  Text-to-Speech, that each release copies to Cloudflare like the others in `.github/workflows/news.yml`)
   for a phone signed in to the family account. Each sentence is made once: kept in Cloudflare's cache and
   on the phone that heard it (Cache Storage `sparkle-voice-v1`), and a chapter's pages are fetched when it
   opens. Signed out, without the key, offline, or switched off in the Parent corner, the phone's own
