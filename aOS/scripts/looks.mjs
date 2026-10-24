@@ -225,8 +225,8 @@ ${BAND}::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:
    PT Sans and Yeseva One, both made for Cyrillic (SIL Open Font License, ../home/fonts). */
 ${['PT Sans:400', 'PT Sans:700', 'Yeseva One:400'].map(f => { const [fam, w] = f.split(':'); return face(fam, w, 'latin', LAT) + '\n' + face(fam, w, 'cyrillic', CYR); }).join('\n')}
 ${HEADS}{font-family:${LOOKS.folk.display};font-weight:400;letter-spacing:0}
-:root{--fk-flower:#1C3F94;--fk-berry:#4E74C7;--fk-leaf:#8FA8DE;--fk-heart:#F5F7FB}
-${darkBoth('--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630')}
+:root{--fk-flower:#1C3F94;--fk-berry:#4E74C7;--fk-leaf:#8FA8DE;--fk-heart:#F5F7FB;--fk-scarf:#1C3F94;--fk-dot:#FFFFFF;--fk-petal:#8FA8DE}
+${darkBoth('--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630;--fk-scarf:#C7261C;--fk-dot:#F6E7C6;--fk-petal:#D9A630')}
 ${SHAPE(1)}{background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:${svgUrl(ROSETTE)} center/contain no-repeat;mask:${svgUrl(ROSETTE)} center/contain no-repeat;border-radius:0;opacity:1}
 ${SHAPE(2)}{background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
 ${SHAPE(3)}{background:var(--fk-leaf);border-radius:100% 0}

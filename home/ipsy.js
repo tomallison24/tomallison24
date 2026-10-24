@@ -95,7 +95,12 @@
       + '<circle class="i-nucleus" cx="128" cy="82" r="13"/>'
       + '<ellipse class="i-gloss" cx="72" cy="82" rx="11" ry="6" transform="rotate(-34 72 82)"/>'
       + '<g class="i-sparks">' + '<circle class="i-spark" cx="100" cy="108" r="5"/>'.repeat(5) + '</g>'
-      + '<g class="i-look"><g class="i-eyes"><ellipse class="i-eye" cx="86" cy="104" rx="6" ry="8.5"/><ellipse class="i-eye" cx="114" cy="104" rx="6" ry="8.5"/></g></g>'
+      + '<g class="i-look"><g class="i-eyes"><ellipse class="i-eye" cx="86" cy="104" rx="6" ry="8.5"/><ellipse class="i-eye" cx="114" cy="104" rx="6" ry="8.5"/></g>'
+      // Night Drive: mirror shades (they follow the eyes); Folk: a matryoshka's headscarf, with a flower (ipsy-neon, ipsy-folk)
+      + '<g class="i-shades"><rect class="i-lens" x="73" y="96" width="25" height="15" rx="6"/><rect class="i-lens" x="102" y="96" width="25" height="15" rx="6"/><path class="i-bridge" d="M98 101h4"/><path class="i-glint" d="M78 107l7-8M107 107l7-8"/></g></g>'
+      + '<g class="i-scarf"><path class="i-hood" d="M44 116C38 62 68 42 100 42s62 20 56 74c-8-26-28-40-56-40s-48 14-56 40z"/>'
+      + '<g class="i-dots"><circle cx="66" cy="74" r="3.2"/><circle cx="134" cy="74" r="3.2"/><circle cx="56" cy="96" r="2.6"/><circle cx="144" cy="96" r="2.6"/></g>'
+      + '<g class="i-flower">' + [0, 72, 144, 216, 288].map(a => '<ellipse cx="100" cy="47" rx="4.6" ry="7.5" transform="rotate(' + a + ' 100 55)"/>').join('') + '<circle class="i-fheart" cx="100" cy="55" r="4"/></g></g>'
       + '<ellipse class="i-cheek" cx="72" cy="120" rx="7" ry="4"/><ellipse class="i-cheek" cx="128" cy="120" rx="7" ry="4"/>'
       + '<path class="i-smile" d="M93 120Q100 127 107 120"/><ellipse class="i-mouth" cx="100" cy="123" rx="6" ry="5"/>'
       + '</g></g></svg>';
@@ -196,6 +201,21 @@
 .ipsy-vintage .ipsy-cell[data-form="neuron"] .i-eye,.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-mouth{fill:#FBF5E9}
 .i-cheek{fill:rgba(214,140,134,.55)}
 .ipsy-vintage .i-cheek{fill:var(--mc-orange,#D8572A)}
+.i-shades,.i-scarf{display:none}
+.ipsy-neon .i-shades{display:inline}
+.ipsy-neon .i-eye{opacity:0}
+.i-lens{fill:#120B1F;stroke:#FF3D9A;stroke-width:2.6}
+.i-bridge{fill:none;stroke:#FF3D9A;stroke-width:2.6;stroke-linecap:round}
+.i-glint{fill:none;stroke:#22D3EE;stroke-width:2.2;stroke-linecap:round;opacity:.9}
+.ipsy-neon .i-cheek{fill:#FF3D9A;opacity:.55}
+.ipsy-folk .i-scarf{display:inline}
+.ipsy-folk .i-nucleus,.ipsy-folk .i-gloss{opacity:0}
+.i-hood{fill:var(--fk-scarf,#C7261C)}
+.i-dots circle{fill:var(--fk-dot,#F6E7C6)}
+.i-flower ellipse{fill:var(--fk-petal,#D9A630)}
+.i-fheart{fill:var(--fk-scarf,#C7261C)}
+.ipsy-folk .i-cheek{fill:#E0412F;opacity:.85}
+.ipsy-folk .ipsy-cell:not([data-form="stem"]) .i-scarf{opacity:0;transition:opacity .2s}
 .ipsy-vintage .ipsy-cell[data-form="neuron"] .i-cheek{fill:var(--mc-mustard,#E3A72F)}
 .i-smile{fill:none;stroke:#1E2A2C;stroke-width:3.2;stroke-linecap:round}
 .ipsy-vintage .i-smile{stroke:var(--mc-on-mustard,#2B2522)}
