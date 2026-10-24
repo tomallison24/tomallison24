@@ -356,13 +356,18 @@
     <div class="fbody" id="${id}" hidden>${body}</div>`;
   const unfold = (b, on) => { if (!b) return; on = on == null ? b.getAttribute('aria-expanded') !== 'true' : on; b.setAttribute('aria-expanded', String(on)); const x = $(b.getAttribute('aria-controls')); if (x) x.hidden = !on; };
   const THEME_NAME = t => (W.theme.list.find(([v]) => v === t) || [, 'Automatic'])[1];
-  const looksLine = () => `${THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]}`;
+  // Language: English or Russian, for aOS and every app (../home/lang.js); each named in its own language, so it can always be found
+  const LANGS = window.aosLang ? aosLang.list : [['en', 'English']];
+  const langNow = () => (window.aosLang ? aosLang.get() : 'en');
+  const looksLine = () => `${THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
   function acctPage(at) {
     const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
       <div class="group acct">
         ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div>
+          <p class="lnote">Language</p>
+          <div class="seg" id="lang" translate="no">${LANGS.map(([l, n]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${n}</button>`).join('')}</div>
           <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>`, 'lookSub')}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
@@ -376,6 +381,7 @@
       if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS }))
         .then(() => { el.querySelector('#looks').innerHTML = lookOpts(); $('lookSub').textContent = looksLine(); });
       if (t) $('lookSub').textContent = looksLine();
+      const lg = ev.target.closest('[data-lang]'); if (lg && window.aosLang) aosLang.set(lg.dataset.lang);   // aOS and every open app are drawn again in it
       if (ev.target.closest('[data-replay]')) W.play();
       onPlanTap(ev);
     });

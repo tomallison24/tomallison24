@@ -6,7 +6,7 @@ const CACHE = 'weather-v62';
 // slide.js is Home's, shared by every app (the switches' sliding thumb); design.js too (Vintage or
 // Standard). Not sky.js: Weather draws its own Vintage sky, from the forecast. The glass icons carry
 // the page's own ?v=, which design.js keeps when it swaps the icon.
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=5', 'icon-512.png?v=5', 'icon-glass-180.png?v=5', 'icon-glass-512.png?v=5', '../home/slide.js', '../home/welcome.js', 'data.js', '../home/design.js'];
+const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=5', 'icon-512.png?v=5', 'icon-glass-180.png?v=5', 'icon-glass-512.png?v=5', '../home/slide.js', '../home/welcome.js', 'data.js', '../home/design.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/weather.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

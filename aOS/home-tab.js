@@ -127,6 +127,7 @@
       if (id === 'aos') {
         try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|folk)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
         if (W.theme) W.theme.set(W.theme.read());
+        try { const lg = localStorage.getItem('aos.lang'); if (window.aosLang && lg && lg !== aosLang.get()) aosLang.set(lg); } catch {}   // the language came from another device: drawn again in it
         pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
       } else if (frames[id]) { const f = frames[id].firstChild; if (f.moving) { f.moving = false; point(f, `../${id}/`); } }
     }

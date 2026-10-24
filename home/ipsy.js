@@ -512,8 +512,8 @@
       log.scrollTop = log.scrollHeight;
     }
     function item(v, i) {
-      if (v.t === 'me') return '<div class="ipsy-msg ipsy-me">' + esc(v.text) + '</div>';
-      if (v.t === 'it') return '<div class="ipsy-msg ipsy-it">' + rich(v.text) + (v.src && v.src.length ? '<div class="ipsy-src">' + v.src.map(s => '<a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + esc(s.title || s.url) + '</a>').join('') + '</div>' : '') + '</div>';
+      if (v.t === 'me') return '<div class="ipsy-msg ipsy-me" translate="no">' + esc(v.text) + '</div>';
+      if (v.t === 'it') return '<div class="ipsy-msg ipsy-it" translate="no">' + rich(v.text) + (v.src && v.src.length ? '<div class="ipsy-src">' + v.src.map(s => '<a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + esc(s.title || s.url) + '</a>').join('') + '</div>' : '') + '</div>';
       if (v.t === 'act') return '<div class="ipsy-act">' + esc(v.text) + '</div>';
       if (v.t === 'change') return '<div class="ipsy-change' + (v.undone ? ' undone' : '') + '"><span>' + esc(v.text) + '</span>' + (!v.undone && undos.has(v.id) ? '<button class="ipsy-undo" type="button" data-undo="' + esc(v.id) + '">Undo</button>' : '') + '</div>';
       if (v.t === 'err') return '<div class="ipsy-err" role="alert">' + esc(v.text) + '</div>';
@@ -632,7 +632,8 @@
       busy = true; sendBtn.disabled = true;
       const mark = messages.length;          // where this question starts, to go back to if it fails
       let ctx = ''; try { ctx = o.context ? o.context() : ''; } catch {}
-      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ']' }, { type: 'text', text }] });
+      const ru = window.aosLang && aosLang.get() === 'ru' ? ' The person has aOS in Russian: answer in Russian.' : '';   // ../home/lang.js
+      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ru + ']' }, { type: 'text', text }] });
       add({ t: 'me', text });
       let failed = null;
       try {

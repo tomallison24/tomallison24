@@ -752,6 +752,9 @@ body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
 </style>
 <script src="../home/design.js" data-app="weather" data-was="weathervintage" data-keys="wxv.places=wx.places,wxv.here=wx.here,wxv.cache=wx.cache,wxv.units=wx.units,wxv.view=wx.view"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn. Weather draws its own Vintage sky (app.js), so no ../home/sky.js -->
+<script src="../home/lang.js"></script>   <!-- English or Russian, from aOS's Appearance: before the page is drawn -->
+<script src="../home/lang/ru/shared.js"></script>
+<script src="../home/lang/ru/weather.js"></script>
 </head>
 <body>
 <div id="sky" class="w3-fx" aria-hidden="true"></div>

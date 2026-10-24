@@ -42,6 +42,7 @@
     { id: 'mail.hint', key: 'mail.hint', app: 'mail', quiet: true },
     { id: 'mail.token.ever', key: 'mail.token.ever', app: 'mail', quiet: true },
     { id: 'aos.look', key: 'aos.look', app: 'aos' },
+    { id: 'aos.lang', key: 'aos.lang', app: 'aos', blank: v => v === 'en' },
     { id: 'aos.home.picks', key: 'aos.home.picks', app: 'aos' },
     { id: 'home.settings#theme', key: 'home.settings', field: 'theme', app: 'aos', blank: v => v === '"auto"' },
   ];
