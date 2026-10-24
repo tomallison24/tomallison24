@@ -14,7 +14,7 @@ const ROOT = path.resolve(new URL('../..', import.meta.url).pathname);
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.css': 'text/css' };
 const ALL = ['aos', 'calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
 // stays in Latin letters in Russian too: names of things and services, units
-export const KEEP = /^(aOS|Allison|AllisonOS|Google|Gmail|iCloud|iPhone|iPad|iOS|Android|Safari|Chrome|Face ID|Touch ID|Home Assistant|Wi-?Fi|Sonos|Apple|Amazon|Walmart|Target|Costco|Kroger|Uber|Lyft|NWS|NOAA|Open-Meteo|OpenStreetMap|Leaflet|CARTO|RSS|PDF|CSV|URL|USB|AM|PM|kW|kWh|mph|km|mi|ft|°F|°C|ID|OK|GPS|AI|Signal|Futura|English|Pro\+?|Plus|Siri|AirPlay|Bluetooth|HomeKit|Zigbee|Matter|Spotify|YouTube|Apple Podcasts|Fitbit|Strava|Gemini|Claude)$/;
+export const KEEP = /^(aOS|Allison|AllisonOS|Google|Gmail|iCloud|iPhone|iPad|iOS|Android|Safari|Chrome|Face ID|Touch ID|Home Assistant|Wi-?Fi|Sonos|Apple|Amazon|Walmart|Target|Costco|Kroger|Uber|Lyft|NWS|NOAA|Open-Meteo|OpenStreetMap|Leaflet|CARTO|RSS|PDF|CSV|URL|USB|AM|PM|kW|kWh|mph|km\/h|km|mi|ft|in|mm|cm|kg|lb|lbs|oz|ml|°F|°C|ID|OK|GPS|AI|Signal|Futura|English|Pro\+?|Plus|Siri|AirPlay|Bluetooth|HomeKit|Zigbee|Matter|Spotify|YouTube|Apple Podcasts|Fitbit|Strava|Gemini|Claude)$/;
 const json = process.argv.includes('--json');
 const want = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const apps = want.length ? want : ALL;
