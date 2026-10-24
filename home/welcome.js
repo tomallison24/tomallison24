@@ -1455,6 +1455,9 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .v-mark.grow .v-halo { animation: v-halo 1.6s cubic-bezier(.2,.8,.2,1) .45s forwards; }
 @keyframes v-halo { 0% { opacity: 0; transform: scale(.2); } 35% { opacity: 1; transform: scale(1.35); } 100% { opacity: .55; transform: scale(1); } }
 #aos-welcome .c-body h2 sup { white-space: nowrap; }
+/* the new .x's characters are clipped text: they need a line box of their own, or a page's sup { line-height: 0 }
+   (aOS's) leaves them nothing to paint */
+#aos-welcome .v-new i, #aos-welcome .h-new { line-height: 1.15; }
 #aos-welcome .h-new { display: inline-block; background: var(--w-hot); -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent; animation: h-new .8s cubic-bezier(.34,1.7,.5,1) .35s both; }
 @keyframes h-new { 0% { opacity: 0; transform: translateY(.5em) scale(.4); } 100% { opacity: 1; transform: none; } }
