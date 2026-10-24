@@ -88,6 +88,14 @@ Boutique's 30 things, three castle rooms and their 44 pieces (`rooms.js`), and a
 stick print with the single-storey a and g taught in kindergarten, since the phone's font has the
 other kind and aOS loads no web fonts.
 
+## iPad
+
+The layout follows the screen's size, not the device: on a big screen (700 by 600 points or more;
+an iPhone, even sideways, is never that tall) everything is drawn bigger, and sideways a round puts
+the question across the top, what to look at on the left and the answers on the right; Flower Match
+and the wand take the whole stage, the kingdom fills the width, and the castle's room or princess
+sits beside its shelf. An iPad in Split View gets whichever layout its half fits.
+
 ## Two designs
 
 Vintage (the default) and Standard (Sea glass), in the Parent corner > Design, dress the frame:

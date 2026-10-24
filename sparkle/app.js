@@ -355,8 +355,10 @@
       let c = 0; for (const w of part.split(/\s+/).filter(Boolean)) { const at = part.indexOf(w, c); toks.push({ k, w, c: at }); c = at + w.length; }
     });
     const bub = toks.map(t => `<span class="w${t.snd ? ' snd' : ''}" data-k="${t.k}" data-c="${t.c}">${L.svg(t.w, { size: 30, stroke: t.snd ? 11 : 9, color: t.snd ? '#FF5FA8' : 'currentColor' })}</span>`).join('');
+    $('stage').className = 'stage k-' + q.kind;
     $('stage').innerHTML = `${dots}<div class="ask"><button type="button" class="host" id="hostBtn" aria-label="Say it again">${host(R.skill)}</button><div class="bubble" id="bubble" aria-label="${esc(q.say.map(p => typeof p === 'string' ? p : p.snd || p.rime).join(' '))}">${bub}</div></div>
       ${PLAY[q.kind] ? '<div class="show" id="show"></div><div id="choices"></div>' : `<div class="show" id="show">${showHtml(q)}</div><div class="choices ${q.choices.length === 2 ? 'two' : q.choices.length >= 4 ? 'four' : ''}" id="choices">${q.choices.map(choiceHtml).join('')}</div>`}`;
+    if (!PLAY[q.kind] && !$('show').innerHTML.trim()) $('stage').classList.add('noshow');   // only heard: the answers take the room
     $('hostBtn').onclick = () => ask(q);
     if (q.kind === 'syll') $('show').insertAdjacentHTML('beforeend', `<button type="button" class="drum" id="drum" aria-label="Tap the drum">${ICON.drum}</button>`);
     if ($('drum')) $('drum').onclick = () => { V.sfx('note', 0); };
@@ -555,7 +557,9 @@
   }
   function matchPlay(box, q, opt = {}) {
     box.classList.add('cardsbox');
-    box.innerHTML = `<div class="cards" style="grid-template-columns:repeat(${q.cols},1fr)">${q.cards.map((c, k) => `<button type="button" class="card" data-k="${k}" aria-label="A flower card"><span class="back">${A.icon('flower', 40)}</span><span class="face">${cardFace(c.face)}</span></button>`).join('')}</div>`;
+    // sideways on a big screen (index.html): more across than down
+    const n = q.cards.length, wide = [2, 3, 4, 5, 6, 7, 8].map(c => [c, Math.abs(c / Math.ceil(n / c) - 1.6) + (c * Math.ceil(n / c) - n) * 0.3]).sort((a, b) => a[1] - b[1])[0][0];
+    box.innerHTML = `<div class="cards" style="grid-template-columns:repeat(${q.cols},1fr);--wide:${wide}">${q.cards.map((c, k) => `<button type="button" class="card" data-k="${k}" aria-label="A flower card"><span class="back">${A.icon('flower', 40)}</span><span class="face">${cardFace(c.face)}</span></button>`).join('')}</div>`;
     const btns = [...box.querySelectorAll('.card')];
     let open = [], flips = 0, found = 0, swapped = !q.swap, lock = false;
     const faceLabel = c => c.face.kind === 'pic' ? C.word(c.face.w) : c.face.kind === 'dots' ? c.face.n + ' dots' : c.face.v;

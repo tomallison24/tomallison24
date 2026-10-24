@@ -8,7 +8,7 @@
 // timer badge, the starting levels, the design), everything kept after a reload, and the family
 // account through the real functions/sparkle/api route (on an in-memory Workers KV with a real
 // session): a second phone gets the same player, coins and all.
-// Both designs (../home/design.js): Vintage, the default (the sky held at day, aos.sky), and Standard
+// An iPad sideways gets its own layout (scenario 10). Both designs (../home/design.js): Vintage, the default (the sky held at day, aos.sky), and Standard
 // (Sea glass), light and dark; nothing may trip the page's Content Security Policy.
 // The phone's voice is stood in for (it would take seconds a sentence here): every sentence ends at once.
 //
@@ -41,8 +41,8 @@ const b = await chromium.launch();
 let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
 
-async function phone({ look = 'vintage', scheme = 'light', signed = false, seed = null } = {}) {
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block', reducedMotion: 'reduce', locale: 'en-US' });
+async function phone({ look = 'vintage', scheme = 'light', signed = false, seed = null, size = [390, 844] } = {}) {
+  const ctx = await b.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block', reducedMotion: 'reduce', locale: 'en-US' });
   await ctx.route('**/*', async route => {
     const u = new URL(route.request().url());
     if (u.origin !== BASE) return route.abort();
@@ -430,7 +430,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (!(await sp(p, () => (window.sparkle.save.players.p1.demos || {})['read:3']))) pr.push('the demo was not remembered');
   if (await p.locator('#demoVeil, #hand').count()) pr.push('the demo did not clear away');
   st = await playRound(p);
-  await sp(p, () => { window.sparkle.startRound('read'); }); await p.waitForTimeout(400);
+  await sp(p, () => { window.sparkle.save.players.p1.skills.read.level = 3; window.sparkle.startRound('read'); }); await p.waitForTimeout(400);   // (a round all right moves her up, and a new level shows how again)
   if (await p.locator('#demoVeil').count()) pr.push('the demo came again at the same level');
   // the ? button, then Skip
   await state(p); await p.click('#howBtn');
@@ -447,6 +447,44 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   }
   pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
   report('how to play: her friend explains and a hand shows one before a new game (no coins), then her turn; the ? button; Skip', pr); await ctx.close();
+}
+
+// 10. an iPad, sideways: a round's answers beside the question, Flower Match all on the screen, the kingdom the
+// full width, the castle's room beside its shelf; nothing wider than the screen
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.rounds = 5; ava.world.open = { garden: 1, workshop: 1 };
+  ava.skills.read = { level: 3, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 3 };
+  ava.skills.match = { level: 3, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 3 };
+  ava.demos = { 'read:3': 1, 'match:3': 1 };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava), size: [1180, 820] }); const pr = [];
+  const wide = () => sp(p, () => document.documentElement.scrollWidth > innerWidth + 1);
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(400);
+  const map = await sp(p, () => document.getElementById('mapIn').getBoundingClientRect().width);
+  if (map < 1179) pr.push('the kingdom does not fill the width: ' + map);
+  await sp(p, () => { window.sparkle.startRound('read'); }); await state(p);
+  const lay = await sp(p, () => { const s = document.getElementById('show').getBoundingClientRect(), c = document.getElementById('choices').getBoundingClientRect(); return { beside: c.left >= s.right - 1, inside: c.bottom <= innerHeight }; });
+  if (!lay.beside || !lay.inside) pr.push('the answers are not beside the question: ' + JSON.stringify(lay));
+  await shot(p, '21-ipad-read');
+  await sp(p, () => { window.sparkle.startRound('match'); }); await state(p); await p.waitForTimeout(300);
+  const cards = await sp(p, () => [...document.querySelectorAll('.card')].every(c => { const r = c.getBoundingClientRect(); return r.bottom <= innerHeight && r.right <= innerWidth && r.height > 60; }));
+  if (!cards) pr.push('Flower Match runs off the screen');
+  await shot(p, '22-ipad-match');
+  if (await wide()) pr.push('the round is wider than the screen');
+  await sp(p, () => window.sparkle.openCastle()); await p.click('[data-tab="rooms"]'); await p.waitForTimeout(200);
+  const castle = await sp(p, () => { const d = document.getElementById('dress').getBoundingClientRect(), sh = document.querySelector('.shelf').getBoundingClientRect(); return sh.left >= d.right - 1; });
+  if (!castle) pr.push('the castle\'s shelf is not beside the room');
+  await shot(p, '23-ipad-castle');
+  if (await wide()) pr.push('the castle is wider than the screen');
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
+  report('an iPad sideways: answers beside the question, Flower Match on the screen, the kingdom full width, the room beside its shelf', pr); await ctx.close();
+}
+// ...and an iPhone sideways keeps the phone's layout (it is wide but short)
+{
+  const { ctx, p, errs } = await phone({ seed: seedOf(AVA), size: [844, 390] }); const pr = [];
+  const grid = await sp(p, () => getComputedStyle(document.getElementById('stage')).display);
+  if (grid === 'grid') pr.push('an iPhone sideways got the iPad layout');
+  pr.push(...errs);
+  report('an iPhone sideways keeps the phone layout', pr); await ctx.close();
 }
 
 await b.close(); server.close();

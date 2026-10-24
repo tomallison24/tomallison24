@@ -163,7 +163,7 @@ svg{display:block}
 .timer svg{width:22px;height:22px}
 #map{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none}
 #map::-webkit-scrollbar{display:none}
-#mapIn{position:relative;width:min(1000px,160vw);aspect-ratio:2/3}
+#mapIn{position:relative;width:max(100vw,min(1000px,160vw));aspect-ratio:2/3}
 #mapIn > svg{width:100%;height:100%}
 #rider{position:absolute;left:0;top:0;width:15%;pointer-events:none;transform-origin:50% 100%;z-index:3;transition:none}
 #rider .wrap{position:relative;transform:translate(-50%,-92%)}
@@ -215,6 +215,7 @@ svg{display:block}
 .bubble .w.lit svg{color:var(--k-rose)}
 .bubble .w.lit{transform:translateY(-2px)}
 .show{flex:1;min-height:150px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:10px;border-radius:30px;background:rgba(255,255,255,.95);box-shadow:inset 0 0 0 3px var(--k-ink),0 4px 0 rgba(0,0,0,.18);position:relative}
+.show:empty{background:none;box-shadow:none}
 .show .read svg{width:auto;height:84px;max-width:100%;color:var(--k-ink)}
 .show .read.long svg{height:52px}
 .show .read.long{display:flex;flex-wrap:wrap;gap:4px 14px;justify-content:center}
@@ -404,6 +405,70 @@ svg{display:block}
 .chrow button.no{opacity:.35}
 .praise.note svg{flex:none}
 .qstop svg{width:30px;height:30px}
+/* ---- iPad and other big screens (an iPhone, even sideways, is never this tall): the same game, bigger ---- */
+@media (min-width:700px) and (min-height:600px){
+  #picker{max-width:780px}
+  #picker h1{font-size:40px}
+  .players{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;margin-top:40px}
+  .pcard{width:230px;min-height:270px}
+  .pcard .face{width:160px;height:196px}
+  .host{width:124px;height:124px}
+  .bubble{min-height:90px;padding:14px 20px}
+  .bubble .w svg{height:42px}
+  .show .read svg{height:130px}
+  .show .read.long svg{height:72px}
+  .show .bigpic svg{width:230px;height:230px}
+  .show .bigpic.small svg{width:150px;height:150px}
+  .show .gems,.frame10{grid-template-columns:repeat(5,68px)}
+  .show .gems svg,.frame10 i{width:68px;height:68px}
+  .frame10 i svg{width:54px;height:54px}
+  .tens .bag{width:72px;height:90px;font-size:24px}
+  .cart svg{width:40px;height:40px}
+  .choice{min-height:130px}
+  .choice svg{height:96px}
+  .choice.word svg{height:70px}
+  .tile{width:96px;height:108px}
+  .tile svg{height:80px}
+  .slots i{width:76px;height:96px}
+  .slots i svg{height:84px}
+  .titem svg{width:96px;height:96px}
+  .drum{width:96px;height:96px}
+  .drum svg{width:60px;height:60px}
+  .wand{max-width:min(560px,calc(100dvh - 330px))}
+  .story,.praise{max-width:600px;font-size:24px}
+  .chtitle{font-size:22px}
+  .howcard{left:50%;right:auto;width:min(600px,90vw);transform:translate(-50%,-50%);font-size:24px}
+  .howcard .hh{height:180px}
+  .gatebox .gpanel{width:min(760px,100%);margin:0 auto}
+  .hand{width:76px}
+  .items{grid-template-columns:repeat(4,1fr)}
+}
+/* sideways: the question across the top, what to look at on the left, the answers on the right; Flower Match
+   and the wand take the whole stage; the castle's room on the left and its shelf on the right */
+@media (min-width:900px) and (min-height:600px) and (orientation:landscape){
+  #round .stage{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);gap:14px 24px;padding:calc(env(safe-area-inset-top) + 80px) max(28px,calc((100vw - 1280px) / 2)) calc(env(safe-area-inset-bottom) + 24px)}
+  #round .stage > .dots,#round .stage > .ask{grid-column:1/-1}
+  #round .stage > .show{min-height:0}
+  #round .stage > #choices{align-self:center}
+  #round .choices,#round .choices.two{grid-template-columns:1fr;gap:14px}
+  #round .choices.four{grid-template-columns:repeat(2,1fr)}
+  #round .choices .choice{min-height:150px}
+  #round .tiles{gap:14px}
+  #round .stage.k-match > .show,#round .stage.k-wand > .show{grid-column:1/-1}
+  #round .stage.k-match > #choices,#round .stage.k-wand > #choices{display:none}
+  #round .stage.noshow > .show{display:none}
+  #round .stage.noshow > #choices{grid-column:1/-1;align-self:start;margin-top:4vh}
+  #round .stage.noshow .choices{grid-template-columns:repeat(3,1fr)}
+  #round .stage.noshow .choices .choice{min-height:220px}
+  #round .stage.noshow .choice svg{height:130px}
+  .stage.k-match .show{padding:12px}
+  .stage.k-match .cards{height:100%;grid-template-columns:repeat(var(--wide),1fr)!important;grid-auto-rows:minmax(0,1fr)}
+  .stage.k-match .card{aspect-ratio:auto}
+  .dress{top:calc(env(safe-area-inset-top) + 76px);bottom:24px;right:50%;height:auto;align-items:center}
+  .shelf{left:50%;top:calc(env(safe-area-inset-top) + 76px);height:auto;border-radius:30px 0 0 0;box-shadow:inset 3px 3px 0 var(--k-ink)}
+  .items{grid-template-columns:repeat(3,1fr)}
+  .charts,.intro-art{height:40vh}
+}
 @media (prefers-reduced-motion:reduce){
   .card .back,.card .face{transition:none}
   .card.swap,.slots i.on,.tile.wrong,.cover{animation:none!important}
