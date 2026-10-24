@@ -369,7 +369,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (!after.owned.includes('library-owl-lamp')) pr.push('the present of chapter 5 was not given');
   if (after.rank !== 1) pr.push('her rank was not kept: ' + after.rank);
   if (!(await p.locator('#chapterIn .reveal svg').count())) pr.push('the present is not shown');
-  await p.click('#mapBtn'); await p.waitForTimeout(300);
+  await p.click('#chMap'); await p.waitForTimeout(300);
   const sat2 = await sp(p, () => { const f = document.querySelector('.kingdom [data-tint="read"]'); const m = f && document.getElementById(f.getAttribute('filter').slice(5, -1)).querySelector('feColorMatrix'); return m ? +m.getAttribute('values') : 1; });
   if (!(sat2 > sat)) pr.push('Story Tower did not get more colour after the chapter');
   // no chapter twice: the next round in Story Tower brings none (chapter 6 is at 12 rounds)

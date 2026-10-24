@@ -649,11 +649,11 @@
         ${gift ? `<div class="reveal">${giftArt(gift)}</div>` : `<div class="cheer"><div class="dance">${host(ch.land)}</div></div>`}
         <div class="praise">${esc(msg)}</div>
         <div style="display:flex;gap:12px">${replay ? `<button type="button" class="big pink" id="chBack">${ICON.back}<span>Castle</span></button>`
-          : `<button type="button" class="big mint" id="againBtn" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="mapBtn">${ICON.go}<span>Kingdom</span></button>`}</div>`;
+          : `<button type="button" class="big mint" id="chAgain" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="chMap">${ICON.go}<span>Kingdom</span></button>`}</div>`;
       V.sfx(gift || ch.n === 10 ? 'fanfare' : 'sparkle'); if (gift) burst(innerWidth / 2, innerHeight / 2.5, 18);
       V.say([msg], { who: 'narrator' });
       if (replay) $('chBack').onclick = () => { V.stop(); show('castle'); paintCastle(); };
-      else { $('againBtn').onclick = () => { V.stop(); startRound(skill); }; $('mapBtn').onclick = () => { V.stop(); enterWorld(); }; }
+      else { $('chAgain').onclick = () => { V.stop(); startRound(skill); }; $('chMap').onclick = () => { V.stop(); enterWorld(); }; }
     };
     page();
   }
