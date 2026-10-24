@@ -2,10 +2,14 @@
 
 // Sparkle Kingdom's voice and sounds.
 //
-//   say(parts, { who, onPart, onWord })  speaks a question's parts in order (content.js): a string with the
-//                                 phone's own voice; { snd: 't' } the letter's sound; { rime: 'at' } the
-//                                 end of a word. Resolves when it's done (or stopped). who: the host
-//                                 speaking ('owl', 'dragon', 'narrator'), which sets the pitch.
+//   say(parts, { who, onPart, onWord })  speaks a question's parts in order (content.js): a string in the
+//                                 speaker's natural voice, or the phone's own; { snd: 't' } the letter's
+//                                 sound; { rime: 'at' } the end of a word. Resolves when it's done (or
+//                                 stopped). who: the one speaking ('narrator', 'owl', 'dragon', 'gemma',
+//                                 'bloom'), which picks the natural voice, or the phone voice's pitch.
+//   natural                       set by app.js: { ok(), url(who, text, rate), headers() } to ask the family's
+//                                 server for natural voices (functions/sparkle/api speak), or null.
+//   prefetch(parts, who)          fetches the natural voice for lines about to be said (a chapter's pages).
 //   stop()                        stops speaking.
 //   unlock()                      call from a tap: an iPhone only lets a page speak after one.
 //   sfx(name)                     a little sound made in code (no files): right, again, coin, sparkle,
@@ -26,7 +30,8 @@
   const SOUND = { s: 'sss', m: 'mmm', f: 'fff', n: 'nnn', l: 'lll', r: 'rrr', z: 'zzz', v: 'vvv', h: 'huh', t: 'tuh', p: 'puh', c: 'kuh', k: 'kuh', b: 'buh',
     d: 'duh', g: 'guh', j: 'juh', w: 'wuh', y: 'yuh', x: 'ks', q: 'kwuh', a: 'ah', e: 'eh', i: 'ih', o: 'aw', u: 'uh' };
   const RIME = { og: 'awg', ox: 'ox', eb: 'ebb', eg: 'egg', em: 'em', us: 'uss', ug: 'ugg', ig: 'igg', ap: 'app', at: 'at', an: 'an', ed: 'ed', en: 'en', un: 'un', in: 'in' };
-  const PITCH = { owl: 0.85, dragon: 1.25, narrator: 1.08, fairy: 1.35 };
+  const PITCH = { owl: 0.85, dragon: 1.25, narrator: 1.08, fairy: 1.35, gemma: 1.35, bloom: 1.35 };
+  const SPEAKER = { owl: 'owl', dragon: 'dragon', narrator: 'narrator', fairy: 'bloom', gemma: 'gemma', bloom: 'bloom' };
 
   function pickVoice() {
     if (!synth) return null;
@@ -37,7 +42,8 @@
   if (synth) { voice = pickVoice(); try { synth.addEventListener('voiceschanged', () => { voice = pickVoice(); }); } catch {} }
 
   const wait = ms => new Promise(r => setTimeout(r, ms));
-  function speakOne(text, who, onWord) {
+  // the phone's own voice
+  function speakPhone(text, who, onWord) {
     return new Promise(done => {
       if (!synth || !text.trim()) return done();
       const u = new SpeechSynthesisUtterance(text);
@@ -51,9 +57,61 @@
       synth.speak(u);
     });
   }
+
+  // ---- natural voices: each sentence made once by the family's server (Google's Chirp 3: HD voices) and kept
+  // on this phone (Cache Storage); the phone's voice when there's none (signed out, no key yet, offline) ----
+  const VOICES = 'sparkle-voice-v1';
+  let natural = null, restUntil = 0, player = null, endPlay = null, unlocked = false;
+  const SILENT = 'data:audio/wav;base64,UklGRsQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+  // one audio element, unlocked by a tap: an iPhone plays later sounds on it without one
+  const getPlayer = () => player || (player = root.Audio ? new Audio() : null);
+  async function clipFor(who, text) {
+    if (!natural || Date.now() < restUntil || !natural.ok()) return null;
+    const url = natural.url(SPEAKER[who] || 'narrator', text, rate);
+    try {
+      const box = root.caches ? await caches.open(VOICES).catch(() => null) : null;
+      let res = box && await box.match(url);
+      if (!res) {
+        const ac = new AbortController(), t = setTimeout(() => ac.abort(), 4000);
+        try { res = await fetch(url, { headers: natural.headers(), signal: ac.signal }); } finally { clearTimeout(t); }
+        // not set up, signed out or failing: the phone's voice for a while, then try again
+        if (!res.ok) { if (res.status !== 400) restUntil = Date.now() + (res.status === 503 || res.status === 401 ? 600000 : 60000); return null; }
+        if (box) await box.put(url, res.clone()).catch(() => {});
+      }
+      return URL.createObjectURL(await res.blob());
+    } catch { restUntil = Date.now() + 60000; return null; }
+  }
+  // play it, lighting each word about when it's said (the audio's time shared out by the letters)
+  function playNatural(url, text, onWord) {
+    return new Promise(done => {
+      const a = getPlayer(); if (!a) { URL.revokeObjectURL(url); return done(false); }
+      const starts = [...text.matchAll(/\S+/g)].map(m => m.index);
+      let over = false, last = -1, played = false;
+      const end = () => { if (over) return; over = true; endPlay = null; clearTimeout(t); a.onended = a.onerror = a.ontimeupdate = a.onplaying = null; URL.revokeObjectURL(url); done(played); };
+      endPlay = () => { try { a.pause(); } catch {} end(); };
+      a.onended = end; a.onerror = end; a.onplaying = () => { played = true; };
+      if (onWord) a.ontimeupdate = () => { if (!a.duration || !isFinite(a.duration)) return; const at = a.currentTime / a.duration * text.length, w = starts.filter(i => i <= at).pop();
+        if (w !== undefined && w !== last) { last = w; onWord(w); } };
+      const t = setTimeout(end, 3000 + text.length * 160);
+      a.src = url;
+      const p = a.play(); if (p && p.catch) p.catch(end);
+    });
+  }
+  async function speakOne(text, who, onWord) {
+    if (!text || !text.trim()) return;
+    const me = token, url = await clipFor(who, text);
+    if (me !== token) { if (url) URL.revokeObjectURL(url); return; }
+    if (url && await playNatural(url, text, onWord)) return;
+    if (me === token) await speakPhone(text, who, onWord);
+  }
+  // fetch lines about to be said, so each page of a chapter starts at once
+  function prefetch(parts, who) { for (const p of [].concat(parts || [])) if (typeof p === 'string' && p.trim()) clipFor(who, p).then(u => u && URL.revokeObjectURL(u)); }
+
   function playClip(url) {
     return new Promise(done => {
-      try { const a = new Audio(url); a.onended = a.onerror = () => done(); const p = a.play(); if (p && p.catch) p.catch(() => done()); setTimeout(done, 3000); }
+      try { const a = getPlayer() || new Audio(); let over = false; const end = () => { if (!over) { over = true; endPlay = null; a.onended = a.onerror = null; done(); } };
+        endPlay = () => { try { a.pause(); } catch {} end(); };
+        a.onended = a.onerror = end; a.src = url; const p = a.play(); if (p && p.catch) p.catch(end); setTimeout(end, 3000); }
       catch { done(); }
     });
   }
@@ -70,8 +128,12 @@
       if (part && part.rime) { await speakOne(RIME[part.rime] || part.rime, opt.who); continue; }
     }
   }
-  function stop() { token++; try { synth && synth.cancel(); } catch {} }
-  function unlock() { try { if (synth && !synth.speaking) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } } catch {} ctx(); }
+  function stop() { token++; try { synth && synth.cancel(); } catch {} if (endPlay) endPlay(); }
+  function unlock() {
+    try { if (synth && !synth.speaking) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } } catch {}
+    try { const a = getPlayer(); if (a && !unlocked && !endPlay) { unlocked = true; a.src = SILENT; const p = a.play(); if (p && p.catch) p.catch(() => { unlocked = false; }); } } catch {}
+    ctx();
+  }
 
   // ---- sounds made in code ----
   let ac = null;
@@ -111,11 +173,12 @@
   }
 
   root.SparkleVoice = {
-    say, stop, unlock, sfx, SOUND,
+    say, stop, unlock, sfx, prefetch, SOUND,
+    get natural() { return natural; }, set natural(v) { natural = v || null; restUntil = 0; },
     get rate() { return rate; }, set rate(v) { rate = Math.max(0.6, Math.min(1.2, +v || 0.9)); },
     get sounds() { return sounds; }, set sounds(v) { sounds = !!v; },
     available: () => !!synth,
     clips: { has: l => !!clips[l], all: () => ({ ...clips }), set(l, url) { if (url) clips[l] = url; else delete clips[l]; saveClips(); },
-      load(obj) { if (obj && typeof obj === 'object') { clips = { ...obj }; saveClips(); } }, record, play: l => clips[l] ? playClip(clips[l]) : speakOne(SOUND[l] || l) },
+      load(obj) { if (obj && typeof obj === 'object') { clips = { ...obj }; saveClips(); } }, record, play: l => clips[l] ? playClip(clips[l]) : speakPhone(SOUND[l] || l) },
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -36,6 +36,12 @@ const m = new Map();
 const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { m.set(k, String(v)); }, delete: async k => { m.delete(k); }, list: async ({ prefix }) => ({ keys: [...m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }) };
 await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: 1 });
 const TOKEN = await issue(db, 'O1');
+const ENV = { ACCOUNTS: db };
+// Google's text-to-speech, stood in for: every sentence is a moment of silence (a real WAV), and each request is counted
+const SPOKEN = [], SILENCE = (() => { const n = 80, w = Buffer.alloc(44 + n * 2); w.write('RIFF', 0); w.writeUInt32LE(36 + n * 2, 4); w.write('WAVEfmt ', 8); w.writeUInt32LE(16, 16); w.writeUInt16LE(1, 20); w.writeUInt16LE(1, 22); w.writeUInt32LE(8000, 24); w.writeUInt32LE(16000, 28); w.writeUInt16LE(2, 32); w.writeUInt16LE(16, 34); w.write('data', 36); w.writeUInt32LE(n * 2, 40); return w.toString('base64'); })();
+const realFetch = globalThis.fetch;
+globalThis.fetch = async (url, init) => { if (String(url).startsWith('https://texttospeech.googleapis.com/')) { const b = JSON.parse(init.body); SPOKEN.push({ voice: b.voice.name, text: b.input.text });
+  return new Response(JSON.stringify({ audioContent: SILENCE }), { headers: { 'Content-Type': 'application/json' } }); } return realFetch(url, init); };
 
 const b = await chromium.launch();
 let failed = 0;
@@ -47,7 +53,7 @@ async function phone({ look = 'vintage', scheme = 'light', signed = false, seed 
     const u = new URL(route.request().url());
     if (u.origin !== BASE) return route.abort();
     if (u.pathname.startsWith('/sparkle/api/')) { const rq = route.request();
-      const res = await onRequest({ request: new Request(u.href, { method: rq.method(), headers: rq.headers(), body: rq.method() === 'POST' ? rq.postData() : undefined }), params: { route: u.pathname.slice(13).split('/') }, env: { ACCOUNTS: db } });
+      const res = await onRequest({ request: new Request(u.href, { method: rq.method(), headers: rq.headers(), body: rq.method() === 'POST' ? rq.postData() : undefined }), params: { route: u.pathname.slice(13).split('/') }, env: ENV });
       return route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() }); }
     if (u.pathname.includes('/api/')) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
     return route.continue();
@@ -485,6 +491,35 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (grid === 'grid') pr.push('an iPhone sideways got the iPad layout');
   pr.push(...errs);
   report('an iPhone sideways keeps the phone layout', pr); await ctx.close();
+}
+
+// 11. natural voices: signed in, with the Google key set, each friend speaks in their own voice from the server; a
+// sentence heard once is kept on the phone and not asked for again; signed out (or no key), the phone's voice
+{
+  ENV.GOOGLE_TTS_KEY = 'test-key'; SPOKEN.length = 0;
+  const ava = JSON.parse(JSON.stringify(AVA));
+  ava.skills.read = { level: 3, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 3 }; ava.demos = { 'read:3': 1 };
+  const { ctx, p, errs } = await phone({ signed: true, seed: seedOf(ava) }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(800);
+  const greet = SPOKEN.filter(x => x.voice.endsWith('Sulafat') && x.text.startsWith('Hi Ava'));
+  if (!greet.length) pr.push('the storyteller did not greet her in a natural voice: ' + JSON.stringify(SPOKEN.slice(0, 3)));
+  await sp(p, () => { window.sparkle.startRound('read'); }); await state(p); await p.waitForTimeout(600);
+  if (!SPOKEN.some(x => x.voice.endsWith('Charon'))) pr.push('Professor Hoot did not ask in his own voice');
+  const kept = await sp(p, async () => (await (await caches.open('sparkle-voice-v1')).keys()).length);
+  if (kept < 2) pr.push('the sentences were not kept on the phone: ' + kept);
+  const asked = SPOKEN.length;
+  await sp(p, () => window.sparkle.enterWorld()); await p.waitForTimeout(800);
+  if (SPOKEN.length !== asked) pr.push('a sentence heard before was asked for again: ' + JSON.stringify(SPOKEN.slice(asked)));
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
+  await ctx.close();
+  // signed out: nothing asked of the server, the phone's own voice
+  SPOKEN.length = 0;
+  const two = await phone({ seed: seedOf(ava) });
+  await two.p.click('[data-player="p1"]'); await two.p.waitForTimeout(800);
+  if (SPOKEN.length) pr.push('a signed-out phone asked for natural voices');
+  pr.push(...two.errs); await two.ctx.close();
+  delete ENV.GOOGLE_TTS_KEY;
+  report('natural voices: each friend in their own voice when signed in, kept on the phone once heard; the phone\'s voice signed out', pr);
 }
 
 await b.close(); server.close();

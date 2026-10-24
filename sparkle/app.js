@@ -20,14 +20,14 @@
   const GARDEN = ['match', 'missing', 'recall'];
   // a skill's land, for the Parent corner's switches and the play time by land
   const landKey = skill => GARDEN.includes(skill) ? 'garden' : skill;
-  const HOST = { read: ['owl', 'Professor Hoot'], math: ['dragon', 'Pebble'], wand: ['narrator', 'your unicorn'], spell: ['fairy', 'Gemma'], match: ['fairy', 'Bloom'], missing: ['fairy', 'Bloom'], recall: ['fairy', 'Bloom'] };
+  const HOST = { read: ['owl', 'Professor Hoot'], math: ['dragon', 'Pebble'], wand: ['narrator', 'your unicorn'], spell: ['gemma', 'Gemma'], match: ['bloom', 'Bloom'], missing: ['bloom', 'Bloom'], recall: ['bloom', 'Bloom'] };
   // the rounds that take longer have fewer questions, and a shorter warm-up
   const ROUND_LEN = { match: 2, missing: 5, recall: 5 }, WARM_LEN = { match: 3, missing: 4, recall: 4 };
   // the Grey Fog lifts from a land after this many rounds in all
   const UNFOG = { garden: 2, workshop: 4 };
   const LAND_NAME = { garden: 'the Fairy Garden', workshop: 'the Tiara Workshop' };
   const SKILL_NAME = { read: 'Reading', spell: 'Spelling', math: 'Math', wand: 'Wand Sparkle', match: 'Flower Match', missing: "What's Missing", recall: 'Story Recall' };
-  const DEFAULTS = { focus: 'more', off: [], rate: 0.9, sfx: true, badge: true, start: {} };
+  const DEFAULTS = { focus: 'more', off: [], rate: 0.9, sfx: true, badge: true, natural: true, start: {} };
   const NO = () => {};
 
   // ---- this phone, the save ----
@@ -266,9 +266,9 @@
     if (kind === 'door') return await wandGate(q);
     if (kind === 'tiara') {   // the gem door: spell the password
       const g = overlay(`<div class="ask"><span class="host">${A.fairy('gemma')}</span><div class="bubble">${words('Spell the password!')}</div></div><div class="show" id="gbuild"></div><div id="gtiles"></div>`);
-      V.say(q.say, { who: 'fairy' });
-      await buildPlay(g.querySelector('#gbuild'), g.querySelector('#gtiles'), q, { who: 'fairy' });
-      await V.say(['The door opens!'], { who: 'fairy' }); g.remove(); return true;
+      V.say(q.say, { who: 'gemma' });
+      await buildPlay(g.querySelector('#gbuild'), g.querySelector('#gtiles'), q, { who: 'gemma' });
+      await V.say(['The door opens!'], { who: 'gemma' }); g.remove(); return true;
     }
     if (kind === 'bridge') {
       const g = overlay(`<div class="ask"><span class="host">${A.dragon()}</span><div class="bubble">${words('Fix the bridge!')}</div></div>
@@ -284,7 +284,7 @@
       });
     }
     // a signpost (two signs, one is right), or the flower gate (two pictures, one rhymes)
-    const flower = kind === 'flower', who = flower ? 'fairy' : 'owl';
+    const flower = kind === 'flower', who = flower ? 'bloom' : 'owl';
     const g = overlay(`<div class="ask"><span class="host">${flower ? A.fairy('bloom') : A.owl()}</span><div class="bubble" id="gbub"></div></div>
       ${flower ? `<div class="show" style="min-height:120px;flex:none"><span class="bigpic small">${picture(q.show)}</span></div>` : ''}
       <div class="signs">${q.signs.map(s => `<button type="button" class="choice ${flower ? 'pic' : ''}" data-sign="${esc(s)}" aria-label="${esc(flower ? C.word(s) : s)}">${flower ? picture(s) : ltr(s, 70)}</button>`).join('')}</div>`);
@@ -303,7 +303,7 @@
   }
   async function wandGate(q) {
     const g = overlay(`<div class="ask"><span class="host">${A.fairy('bloom')}</span><div class="bubble">${words('Open the crystal door!')}</div></div><div id="gwand"></div>`);
-    const score = await wandPlay(g.querySelector('#gwand'), q, { who: 'fairy' });
+    const score = await wandPlay(g.querySelector('#gwand'), q, { who: 'bloom' });
     g.remove(); return score >= 0;
   }
 
@@ -568,7 +568,7 @@
       if (down.length < 2) return;
       const [a, b] = [down[0], down[down.length - 1]];
       lock = true; a.classList.add('swap'); b.classList.add('swap');
-      await V.say(['Bloom swapped two cards! Watch!'], { who: 'fairy' }); await wait(700);
+      await V.say(['Bloom swapped two cards! Watch!'], { who: 'bloom' }); await wait(700);
       const ka = +a.dataset.k, kb = +b.dataset.k; [q.cards[ka], q.cards[kb]] = [q.cards[kb], q.cards[ka]];
       a.querySelector('.face').innerHTML = cardFace(q.cards[ka].face); b.querySelector('.face').innerHTML = cardFace(q.cards[kb].face);
       a.classList.remove('swap'); b.classList.remove('swap'); lock = false;
@@ -643,7 +643,7 @@
       tries++; V.sfx('again');
       if (tries === 1) await V.say(['Oops! Watch again.'], { who: opt.who });
       else if (tries === 2) await V.say(['Watch slowly this time.'], { who: opt.who });
-      else { if (opt.who === 'fairy' && q.gate) { await V.say(['The door opens for trying so hard!'], { who: opt.who }); return 0; } return 0; }
+      else { if (opt.who === 'gemma' && q.gate) { await V.say(['The door opens for trying so hard!'], { who: opt.who }); return 0; } return 0; }
     }
   }
 
@@ -714,7 +714,7 @@
   // skill: the round it came after (to play again), or none when it's read again from the castle's Stories
   function tell(ch, skill) {
     const replay = !skill, lines = ch.lines.map(t => Ch.line(t, me.name)), where = cap(Ch.LAND[ch.land]);
-    show('chapter'); $('chapterBd').innerHTML = W.backdrop(ch.land);
+    show('chapter'); $('chapterBd').innerHTML = W.backdrop(ch.land); V.prefetch(lines, Ch.WHO[ch.land]);
     let i = 0;
     const page = () => {
       $('chapterIn').innerHTML = `<div class="chtitle"><small>${esc(where)} · Chapter ${ch.n}</small>${esc(ch.title)}</div>
@@ -924,19 +924,25 @@
         <div class="row"><span class="grow">Voice speed</span><div class="seg" id="sRate">${[[0.75, 'Slow'], [0.9, 'Normal'], [1.05, 'Quick']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${Math.abs(st.rate - v) < 0.01}">${n}</button>`).join('')}</div></div>
         <div class="row"><span class="grow">Sound effects</span><div class="seg" id="sSfx"><button type="button" data-v="1" aria-pressed="${!!st.sfx}">On</button><button type="button" data-v="0" aria-pressed="${!st.sfx}">Off</button></div></div>
         <div class="row"><span class="grow">Play timer on screen<small>Minutes played this session. The game never stops play: you're in charge of screen time.</small></span><div class="seg" id="sBadge"><button type="button" data-v="1" aria-pressed="${!!st.badge}">Show</button><button type="button" data-v="0" aria-pressed="${!st.badge}">Hide</button></div></div>
+        <div class="row"><span class="grow">Natural voices<small>Each friend speaks in a real-sounding voice of their own, made by Google over the internet${token() ? '' : '. Sign in below to use them'}; otherwise the phone's voice</small></span><div class="seg" id="sNatural"><button type="button" data-v="1" aria-pressed="${st.natural !== false}">On</button><button type="button" data-v="0" aria-pressed="${st.natural === false}">Off</button></div></div>
+        <button type="button" class="row" id="sVoices"><span class="grow">Hear the voices<small>The storyteller, Professor Hoot, Pebble, Gemma and Bloom</small></span><span class="val">▶</span></button>
         <button type="button" class="row" id="sTest"><span class="grow">Test the voice<small>Hear how this phone says some letter sounds</small></span><span class="val">▶</span></button></div>
       <p class="label">Letter sounds</p><div class="group"><div class="row"><span class="grow"><small>Phone voices say letter names well and letter sounds poorly. Record each sound once (tap a letter, say the sound, tap again): the game plays your voice instead. Say just the sound: "mmm" for m, "t" (short, no "uh") for t, "a" as in apple.</small></span></div>
         <div class="clips" id="clips"></div></div>
       <p class="label">Design</p><div class="group" id="sDesign">${window.aosDesign ? aosDesign.picker() : ''}</div>
       <p class="label">Family account</p><div class="group">${user ? `<div class="row"><span class="grow">Signed in as ${esc(user.name)}<small>Players and their progress follow you to every family phone signed in here.</small></span></div>`
         : `<button type="button" class="row" id="sSign"><span class="grow">Sign in with Face ID<small>Keep players and their progress on every family phone.</small></span><span class="val">›</span></button>`}</div>
-      <p class="note">Sparkle Kingdom keeps everything on this phone and, signed in, in your family account. Nothing goes anywhere else.</p>`, { onClose: () => { V.rate = set().rate; V.sounds = set().sfx; save.settingsAt = Date.now(); persist(true); paintPicker(); sync(); } });
+      <p class="note">Sparkle Kingdom keeps everything on this phone and, signed in, in your family account. With natural voices on, the sentences the game says (a player's name among them) go to Google to be spoken; nothing else goes anywhere else.</p>`, { onClose: () => { V.rate = set().rate; V.sounds = set().sfx; save.settingsAt = Date.now(); persist(true); paintPicker(); sync(); } });
     const seg = (id, fn) => s.querySelector('#' + id).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; fn(b.dataset.v, b); for (const x of s.querySelectorAll('#' + id + ' button')) x.setAttribute('aria-pressed', String(x === b)); save.settingsAt = Date.now(); persist(); });
     seg('sFocus', v => { st.focus = v; });
     s.querySelector('#sLands').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; const off = new Set(st.off || []); off.has(b.dataset.v) ? off.delete(b.dataset.v) : off.add(b.dataset.v); st.off = [...off]; b.setAttribute('aria-pressed', String(!off.has(b.dataset.v))); save.settingsAt = Date.now(); persist(); });
     seg('sRate', v => { st.rate = +v; V.rate = +v; });
     seg('sSfx', v => { st.sfx = v === '1'; V.sounds = st.sfx; });
     seg('sBadge', v => { st.badge = v === '1'; });
+    seg('sNatural', v => { st.natural = v === '1'; V.natural = V.natural; });
+    s.querySelector('#sVoices').onclick = async () => { V.unlock();
+      for (const [who, line] of [['narrator', 'Once upon a time, in Sparkle Kingdom.'], ['owl', "Hoo hoo! I'm Professor Hoot."], ['dragon', "Hi! I'm Pebble. Let's count gems!"], ['gemma', "I'm Gemma. Let's spell a word!"], ['bloom', "I'm Bloom. Let's find the flowers!"]]) {
+        if (!document.body.contains(s)) return; await V.say([line], { who }); } };
     s.querySelector('#sTest').onclick = () => V.say(['Here are some sounds.', { snd: 'm' }, { snd: 't' }, { snd: 'a' }, 'c, a, t, cat.']);
     if (window.aosDesign) aosDesign.bind(s.querySelector('#sDesign'));
     s.querySelector('[data-new]').onclick = () => { s.close(); creator(); };
@@ -1020,6 +1026,9 @@
     let j = null; try { j = await r.json(); } catch {}
     return { status: r.status, ok: r.ok, j };
   };
+  // natural voices (voice.js), from this server, for a phone signed in to the family account
+  V.natural = { ok: () => set().natural !== false && !!token(), headers: () => ({ 'X-Sparkle': '1', Authorization: 'Bearer ' + token() }),
+    url: (who, text, r) => API + 'speak?' + new URLSearchParams({ v: who, t: text, r: (Math.round(r * 20) / 20).toFixed(2) }) };
   let syncing = null, lastSent = '';
   function sync(force) {
     if (!token() || !navigator.onLine) return Promise.resolve();

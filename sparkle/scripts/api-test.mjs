@@ -1,12 +1,13 @@
 // Checks functions/sparkle/api/[[route]].js in plain Node, on an in-memory stand-in for Workers KV
 // with real sessions from server/auth.js: the header guard, signing in, each account's own save
 // (never another's), a stale save answered 409 with the newer copy, which merges (engine.js) and goes
-// through, bad saves and clips refused, and that a save is one write.
+// through, bad saves and clips refused, that a save is one write, and the natural voices (speak): only
+// signed in, only its voices and short sentences, the request Google gets, and each sentence made once.
 //   node sparkle/scripts/api-test.mjs
 import assert from 'assert/strict';
 import fs from 'fs';
 import vm from 'vm';
-import { onRequest, okSave, okClips } from '../../functions/sparkle/api/[[route]].js';
+import { onRequest, okSave, okClips, speak, VOICES } from '../../functions/sparkle/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
 vm.runInThisContext(fs.readFileSync(new URL('../engine.js', import.meta.url), 'utf8'));
@@ -73,5 +74,34 @@ await test('letter sounds: kept per account, only short audio for a single lette
 await test('anything else is unknown', async () => {
   assert.equal((await call('nothing', { token: tom })).status, 404);
   assert.equal((await call('save', { token: tom, method: 'DELETE' })).status, 404);
+});
+// speak: a sentence in a character's voice (Google Cloud Text-to-Speech, faked here)
+await test('natural voices: signed in only, its voices, short sentences, the request Google gets, each sentence made once', async () => {
+  const say = (q, token = tom) => onRequest({ request: new Request('https://x.test/sparkle/api/speak?' + new URLSearchParams(q), { headers: { 'X-Sparkle': '1', ...(token ? { Authorization: 'Bearer ' + token } : {}) } }), params: { route: ['speak'] }, env });
+  assert.equal((await say({ v: 'owl', t: 'Hoo hoo!' }, null)).status, 401, 'signed out: no voice');
+  assert.equal((await say({ v: 'owl', t: 'Hoo hoo!' })).status, 503, 'no key yet: 503, and the phone speaks itself');
+  const sent = [], store = new Map();
+  globalThis.caches = { default: { match: async k => { const b = store.get(k.url); return b ? new Response(b, { headers: { 'Content-Type': 'audio/mpeg' } }) : null; }, put: async (k, r) => { store.set(k.url, await r.arrayBuffer()); } } };
+  const google = async (url, init) => { const b = JSON.parse(init.body); sent.push({ url, key: init.headers['X-Goog-Api-Key'], b });
+    if (b.audioConfig.speakingRate === 0.75) return new Response('{"error":{}}', { status: 400 });
+    return new Response(JSON.stringify({ audioContent: Buffer.from('ID3fake-mp3').toString('base64') }), { headers: { 'Content-Type': 'application/json' } }); };
+  const kenv = { GOOGLE_TTS_KEY: 'k123' }, u = q => new URL('https://x.test/sparkle/api/speak?' + new URLSearchParams(q));
+  assert.equal((await speak(kenv, u({ v: 'unicorn', t: 'Hi' }), google)).status, 400, 'only its voices');
+  assert.equal((await speak(kenv, u({ v: 'owl', t: 'x'.repeat(401) }), google)).status, 400, 'short sentences only');
+  assert.equal((await speak(kenv, u({ v: 'owl', t: '  ' }), google)).status, 400, 'something to say');
+  let r = await speak(kenv, u({ v: 'owl', t: 'Hoo hoo! Welcome to Story Tower.', r: '0.9' }), google);
+  assert.equal(r.status, 200); assert.equal(r.headers.get('Content-Type'), 'audio/mpeg');
+  assert.equal(Buffer.from(await r.arrayBuffer()).toString(), 'ID3fake-mp3');
+  assert.equal(sent.length, 1); assert.equal(sent[0].url, 'https://texttospeech.googleapis.com/v1/text:synthesize'); assert.equal(sent[0].key, 'k123');
+  assert.deepEqual(sent[0].b, { input: { text: 'Hoo hoo! Welcome to Story Tower.' }, voice: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-' + VOICES.owl }, audioConfig: { audioEncoding: 'MP3', speakingRate: 0.9 } });
+  r = await speak(kenv, u({ v: 'owl', t: 'Hoo hoo! Welcome to Story Tower.', r: '0.9' }), google);
+  assert.equal(r.status, 200); assert.equal(sent.length, 1, 'the same sentence again comes from the cache');
+  await speak(kenv, u({ v: 'dragon', t: 'Hoo hoo! Welcome to Story Tower.', r: '0.9' }), google);
+  assert.equal(sent.length, 2, 'another voice is another sentence');
+  r = await speak(kenv, u({ v: 'gemma', t: 'Tap the gems.', r: '0.75' }), google);
+  assert.equal(r.status, 200); assert.equal(sent.length, 4); assert.equal(sent[3].b.audioConfig.speakingRate, undefined, 'a refused speed: asked again without one');
+  const bad = async () => new Response('{}', { status: 403 });
+  assert.equal((await speak(kenv, u({ v: 'bloom', t: 'Pop!' }), bad)).status, 502, 'Google refusing: 502, and the phone speaks itself');
+  delete globalThis.caches;
 });
 console.log(n + ' passed');

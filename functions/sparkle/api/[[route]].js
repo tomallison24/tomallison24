@@ -9,17 +9,29 @@
 //                                                   merges (sparkle/engine.js merge) and sends again
 //   GET  clips                   -> { clips }       the letter sounds a grown-up recorded
 //   POST clips  { clips }        -> { ok }          { letter: 'data:audio/...;base64,...' }, each short
+//   GET  speak?v=&t=&r=          -> audio/mpeg      a sentence (t) in a character's own voice (v: VOICES)
+//                                                   at a speed (r), from Google Cloud Text-to-Speech's
+//                                                   Chirp 3: HD voices with the GOOGLE_TTS_KEY secret;
+//                                                   503 { error: 'no-voice' } until that secret is set,
+//                                                   and the phone speaks with its own voice instead
 //
 // KV (the accounts' Workers KV, server/auth.js): sparkle:<user id> { save, rev, at } and
 // sparkle:clips:<user id> { clips, at }. The phone writes a save at the end of a round and when the
 // game is put away, never once per answer, and only when it changed: the free plan's writes are scarce.
 // Kept when someone is removed from the family, like the rest of their data (functions/aOS/api remove).
 //
+// Speech costs money past Google's free million characters a month, so it's for signed-in family only, the
+// voices and the length are fixed, and each sentence is made once: kept in Cloudflare's cache here, and on
+// the phone that asked (sparkle/voice.js). Nothing is kept in KV.
+//
 // The X-Sparkle header stops other web pages calling this (as X-Drinks does).
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
 
-export const SAVE_MAX = 256 * 1024, CLIPS_MAX = 1536 * 1024, CLIP_MAX = 96 * 1024;
+export const SAVE_MAX = 256 * 1024, CLIPS_MAX = 1536 * 1024, CLIP_MAX = 96 * 1024, SPEAK_MAX = 400;
+// each character's voice (Chirp 3: HD, en-US): the narrator and her unicorn, Professor Hoot, Pebble, Gemma, Bloom
+export const VOICES = { narrator: 'Sulafat', owl: 'Charon', dragon: 'Puck', gemma: 'Leda', bloom: 'Vindemiatrix' };
+const TTS = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 const LETTER = /^[a-z]$/;
 const AUDIO = /^data:audio\/[a-z0-9.+-]+(;[a-z0-9=.+-]+)*;base64,[A-Za-z0-9+/]+=*$/i;
 
@@ -35,6 +47,31 @@ export function okClips(c) {
   if (!c || typeof c !== 'object' || Array.isArray(c)) return false;
   for (const [k, v] of Object.entries(c)) if (!LETTER.test(k) || typeof v !== 'string' || v.length > CLIP_MAX || !AUDIO.test(v)) return false;
   return true;
+}
+
+// a sentence's audio: from the cache, else made by Google and kept
+export async function speak(env, url, fetcher = fetch) {
+  const v = url.searchParams.get('v'), t = (url.searchParams.get('t') || '').trim();
+  const r = Math.round(Math.min(1.2, Math.max(0.6, +url.searchParams.get('r') || 0.9)) * 20) / 20;
+  if (!VOICES[v] || !t || t.length > SPEAK_MAX) return reply({ error: 'bad-speak' }, 400);
+  if (!env.GOOGLE_TTS_KEY) return reply({ error: 'no-voice' }, 503);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v + '|' + r + '|' + t));
+  const key = new Request('https://sparkle-voice.invalid/' + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('') + '.mp3');
+  const cache = typeof caches !== 'undefined' && caches.default;
+  const hit = cache && await cache.match(key).catch(() => null);
+  if (hit) return hit;
+  const ask = rate => fetcher(TTS, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.GOOGLE_TTS_KEY },
+    body: JSON.stringify({ input: { text: t }, voice: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-' + VOICES[v] }, audioConfig: Object.assign({ audioEncoding: 'MP3' }, rate ? { speakingRate: rate } : {}) }) });
+  let g = await ask(r);
+  if (g.status === 400) g = await ask(0);   // Google's docs disagree on whether these voices take a speed
+  if (!g.ok) return reply({ error: 'voice-failed', status: g.status }, 502);
+  const j = await g.json().catch(() => ({}));
+  if (!j.audioContent) return reply({ error: 'voice-failed' }, 502);
+  const bin = atob(j.audioContent), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const res = new Response(bytes, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=31536000, immutable' } });
+  if (cache) await cache.put(key, new Response(bytes, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=31536000, immutable' } })).catch(() => {});
+  return res;
 }
 
 async function body(request, max) {
@@ -63,6 +100,7 @@ export async function onRequest({ request, params, env }) {
       await putJSON(db, 'sparkle:' + me.id, { save: b.save, rev: rev + 1, at: Date.now() });
       return reply({ ok: true, rev: rev + 1 });
     }
+    if (route === 'speak' && method === 'GET') return await speak(env, new URL(request.url));
     if (route === 'clips' && method === 'GET') {
       const v = await getJSON(db, 'sparkle:clips:' + me.id);
       return reply({ clips: (v && v.clips) || {} });

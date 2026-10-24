@@ -7,7 +7,7 @@
 // {name} is the player's name.
 (function (root) {
   const AT = [1, 2, 4, 6, 9, 12, 16, 20, 25, 30];
-  const WHO = { read: 'owl', math: 'dragon', wand: 'narrator', garden: 'fairy', spell: 'fairy' };
+  const WHO = { read: 'owl', math: 'dragon', wand: 'narrator', garden: 'bloom', spell: 'gemma' };
   const FRIEND = { read: 'Professor Hoot', math: 'Pebble', wand: 'your unicorn', garden: 'Bloom', spell: 'Gemma' };
   const LAND = { read: 'Story Tower', math: 'the Gem Mine', wand: 'Star Meadow', garden: 'the Fairy Garden', spell: 'the Tiara Workshop' };
 

@@ -72,6 +72,14 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   week, accuracy, words known and learning, words to **practice together** (missed on 2 or more
   days), play time (today, the week, 30 days, by land), her rank and chapters by land, starting levels; Favor reading, lands open,
   voice speed, sound effects, the play timer badge, the design, signing in.
+- **Natural voices**: each friend speaks in a voice of their own (the storyteller Sulafat, Professor
+  Hoot Charon, Pebble Puck, Gemma Leda, Bloom Vindemiatrix: Google Cloud Text-to-Speech's Chirp 3: HD
+  voices), made by the family's server (`functions/sparkle/api` speak, with the `GOOGLE_TTS_KEY` secret)
+  for a phone signed in to the family account. Each sentence is made once: kept in Cloudflare's cache and
+  on the phone that heard it (Cache Storage `sparkle-voice-v1`), and a chapter's pages are fetched when it
+  opens. Signed out, without the key, offline, or switched off in the Parent corner, the phone's own
+  voice speaks instead. Google's first million characters a month are free; a family's play is a small
+  part of that.
 - **Letter sounds**: a phone's voice says letter names well and letter sounds poorly, so a grown-up
   records each sound once in the Parent corner (`voice.js`); the game plays those, and otherwise
   the voice's best try.
@@ -119,7 +127,8 @@ A child is never asked to sign in.
 - `node sparkle/scripts/logic-test.mjs`: the ladder, the warm-up, review, a round's plan, coins,
   merging, the story's chapters and colour, and thousands of questions from every level, each well formed.
 - `node sparkle/scripts/letters-test.mjs`: the school letters.
-- `node sparkle/scripts/api-test.mjs`: the server route on an in-memory KV.
+- `node sparkle/scripts/api-test.mjs`: the server route on an in-memory KV, and the natural voices
+  against a stand-in for Google.
 - `node sparkle/scripts/app-test.mjs [repo] [screenshots]`: the whole game in Chromium at iPhone
   size, in both designs, through to a second phone signed in to the same account.
 - `node sparkle/scripts/make-icons.mjs`: draws the icons from `icon.svg` (Vintage) and
