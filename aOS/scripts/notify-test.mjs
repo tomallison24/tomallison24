@@ -131,7 +131,7 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
   if (r.words > 20) pr.push('a line is ' + r.words + ' words: updates should be simple');
   // an app's own page tells it the same way: the highlights, not the details
   await p.evaluate(() => document.querySelector('.page .close').click()); await p.waitForTimeout(500);
-  await p.click('[data-tab="search"]'); await p.click('#found [data-app="news"]');
+  await p.fill('#hq', 'news'); await p.click('#hfound .hinfo[data-app="news"]');   // found in the Ipsy bar, its i
   await p.waitForSelector('.wn li', { timeout: 5000 });
   const wn = await p.evaluate(() => { const r = AllisonOS.welcome.data.RELEASES.find(x => !x.silent && x.apps && x.apps.news); const e = AllisonOS.welcome.data.entry(r.apps.news); return { shown: document.querySelectorAll('.wn li').length, want: (e.highlights.length ? e.highlights : e.notes).slice(0, 5).length, notes: e.notes.length }; });
   if (await p.locator('[data-hist]').count()) pr.push('an app page offers Version History: only the latest version is told');

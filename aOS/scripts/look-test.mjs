@@ -48,7 +48,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'vintage') pr.push('not Vintage to begin with');
-  if (await css(p, '.quick', 'backgroundColor') !== WALNUT) pr.push('the apps along the bottom are not on walnut: ' + await css(p, '.quick', 'backgroundColor'));
+  if (await css(p, '.quick', 'backgroundColor') !== WALNUT) pr.push('the Home button along the bottom is not on walnut: ' + await css(p, '.quick', 'backgroundColor'));
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
   const names = await p.locator('#looks .dopt b').allInnerTexts();
@@ -63,7 +63,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   await openLook(p); await p.click('#looks [data-look="glass"]');
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'glass') pr.push('Sea glass did not apply');
   if (await selected(p) !== 'glass') pr.push('the picker does not show Sea glass picked');
-  if (await css(p, '.quick', 'backgroundColor') === WALNUT) pr.push('the apps along the bottom are still on walnut in Sea glass');
+  if (await css(p, '.quick', 'backgroundColor') === WALNUT) pr.push('the Home button along the bottom is still on walnut in Sea glass');
   if (!/#EEF2F0/i.test(await tint(p))) pr.push('the status bar tint is not mist in Sea glass: ' + await tint(p));
   if (await p.evaluate(() => localStorage.getItem('aos.look')) !== 'glass') pr.push('the choice is not kept');
   // a reload: the look is in place before the page runs (look.js is in the head), and the family icon is the glass one
@@ -71,7 +71,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   await p.reload(); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   const early = await p.evaluate(() => window.__look);
   if (early !== 'glass/not all') pr.push('on a reload the look at DOMContentLoaded was ' + early);
-  if (await css(p, '.quick', 'backgroundColor') === WALNUT) pr.push('after a reload the apps along the bottom are on walnut');
+  if (await css(p, '.quick', 'backgroundColor') === WALNUT) pr.push('after a reload the Home button along the bottom is on walnut');
   if (!await p.locator('#famhero #fam-g').count()) pr.push('the family icon is not the glass one');
   await openLook(p); await p.click('#looks [data-look="vintage"]');
   if (await css(p, '.quick', 'backgroundColor') !== WALNUT) pr.push('Vintage did not come back');

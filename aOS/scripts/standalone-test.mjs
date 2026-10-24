@@ -6,7 +6,8 @@
 // the accounts API (/aOS/api/), Drinks' summary for signed-in Fitness/Calendar
 // (/drinks/api/), Calendar's iCloud bridge for Travel (/calendar/api/: a server
 // function, not the Calendar app; Travel switches it off when the site has none),
-// Weather's forecast code for Home (/weather/data.js), and the app icons aOS shows.
+// Weather's forecast code for Home (/weather/data.js), Calendar's .ics reader for aOS Home's
+// Calendar widget (/calendar/ical.js: code, not Calendar's data), and the app icons aOS shows.
 //   node aOS/scripts/standalone-test.mjs [repo root]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -38,7 +39,7 @@ await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom
 const tok = await issue(db, 'O1');
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];   // and the old Vintage apps' addresses, which open the app itself
 const b = await chromium.launch();
-const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/sheet\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
+const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/sheet\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || p === '/calendar/ical.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
 const DESIGN_OF = Object.fromEntries(APPS.filter(a => /vintage$/.test(a)).map(a => [a, a.replace(/vintage$/, '')]));   // newsvintage -> news
 const out = [];
 for (const app of APPS) for (const signed of [false, true]) {
