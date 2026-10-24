@@ -8,7 +8,7 @@ import path from 'path';
 import vm from 'vm';
 
 const DIR = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
-for (const f of ['engine.js', 'content.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
+for (const f of ['engine.js', 'content.js', 'pictures.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
 const E = globalThis.SparkleEngine, C = globalThis.SparkleContent;
 
 let n = 0;
@@ -191,6 +191,19 @@ test('the kingdom\'s gates make quick questions', () => {
     const s = C.gate('sign', { read: seed % 12 + 1 }, E.rng(seed)); assert.equal(s.signs.length, 2); assert.ok(s.signs.includes(s.answer));
     const b = C.gate('bridge', { math: seed % 10 + 1 }, E.rng(seed)); assert.ok(b.n >= 3 && b.n <= 15);
     const d = C.gate('door', { wand: seed % 7 + 1 }, E.rng(seed)); assert.ok(d.seq.length >= 3);
+  }
+});
+test('every word that can be shown has a drawing, and each is well formed', () => {
+  const P = globalThis.SparklePics; let k = 0; const uid = p => p + 'x' + (++k);
+  for (const w of Object.keys(C.PIC)) {
+    assert.equal(typeof P[w], 'function', 'no drawing for ' + w);
+    const m = P[w](uid); assert.ok(m.length > 80 && !/<svg|undefined|NaN/.test(m), 'a bad drawing for ' + w);
+    const stack = [];
+    for (const [, end, tag, self] of m.matchAll(/<(\/?)([a-zA-Z]+)\b[^>]*?(\/?)>/g)) {
+      if (self) continue;
+      if (!end) stack.push(tag); else assert.equal(stack.pop(), tag, 'a tag closed out of order in ' + w);
+    }
+    assert.equal(stack.length, 0, 'an unclosed tag in ' + w);
   }
 });
 console.log(`${n} passed; ${used.size} pictures used`);

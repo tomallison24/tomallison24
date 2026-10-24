@@ -277,7 +277,7 @@
     // a signpost (two signs, one is right), or the flower gate (two pictures, one rhymes)
     const flower = kind === 'flower', who = flower ? 'fairy' : 'owl';
     const g = overlay(`<div class="ask"><span class="host">${flower ? A.fairy('bloom') : A.owl()}</span><div class="bubble" id="gbub"></div></div>
-      ${flower ? `<div class="show" style="min-height:120px;flex:none">${picture(q.show, 'bigpic')}</div>` : ''}
+      ${flower ? `<div class="show" style="min-height:120px;flex:none"><span class="bigpic small">${picture(q.show)}</span></div>` : ''}
       <div class="signs">${q.signs.map(s => `<button type="button" class="choice ${flower ? 'pic' : ''}" data-sign="${esc(s)}" aria-label="${esc(flower ? C.word(s) : s)}">${flower ? picture(s) : ltr(s, 70)}</button>`).join('')}</div>`);
     g.querySelector('#gbub').innerHTML = words(q.say.map(p => typeof p === 'string' ? p : p.snd || '').join(' '));
     V.say(q.say, { who });
