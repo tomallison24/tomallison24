@@ -89,9 +89,9 @@
     ', then': ', затем',
     'Share': 'Поделиться',
     'Scroll down, tap': 'Прокрутите вниз и нажмите',
-    'Keep': 'Не выключайте',
+    'Keep': 'Оставьте',
     'Open as Web App': 'Открыть как веб-приложение',
-    'on, tap': 'и нажмите',
+    'on, tap': 'включённым и нажмите',
     'It\'s on your Home Screen': 'Готово: значок на экране «Домой»',
     'Use the': 'Нажмите',
     'button in this view, then': 'в этом окне, затем',
@@ -99,8 +99,8 @@
     'at the top to go back to aOS.': 'вверху, чтобы вернуться в aOS.',
     'On older iOS, tap Share in the toolbar first.': 'В старых версиях iOS сначала нажмите «Поделиться» на панели.',
     // Safari, drawn
-    'Add to Bookmarks': 'Добавить в закладки',
-    'Add to Favorites': 'Добавить в Избранное',
+    'Add to Bookmarks': 'В закладки',
+    'Add to Favorites': 'В Избранное',
     'Find on Page': 'Найти на странице',
     'Reader': 'Режим чтения',
     'Messages': 'Сообщения',
@@ -360,6 +360,7 @@
     'Thinking…': 'Думает…',
     'Searching the web': 'Ищу в интернете',
     'Reading a web page': 'Читаю веб-страницу',
+    'Changing the language': 'Меняю язык',
     'This chat was too long to keep whole: a new question starts afresh.': 'Этот чат был слишком длинным, чтобы сохранить его целиком: новый вопрос начнётся с чистого листа.',
     'Sign in with Face ID to chat with Ipsy.': 'Войдите с Face ID, чтобы поговорить с Ипси.',
     'Family sign-in isn’t switched on yet, so Ipsy can’t be used.': 'Семейный вход ещё не включён, поэтому Ипси недоступен.',
@@ -828,8 +829,9 @@
     [/^What's new in (.+)$/, m => 'Что нового в ' + inApp(m[1])],
     [/^Everything in aOS([\d.]+)$/, m => 'Всё новое в aOS' + m[1]],
     // aOS's own lists: "aOS2 · Every app, one home", "Mail: Mail.Controlled."
-    [/^· (.+)$/, m => '· ' + T(m[1])],
-    [new RegExp('^(' + APPS + '): (.+)$'), m => T(m[1]) + ': ' + T(m[2])],
+    // (only a value from this file: anything else, maybe what the family wrote, is left whole)
+    [/^· (.+)$/, m => (m[1] in W ? '· ' + W[m[1]] : m[0])],
+    [new RegExp('^(' + APPS + '): (.+)$'), m => (m[2] in W && /[\s.]/.test(m[2]) ? T(m[1]) + ': ' + W[m[2]] : m[0])],   // an app's tagline, not one word
 
     // ---- the family's plan ended ----
     [new RegExp('^(' + APPS + '|aOS) is off$'), m => (m[1] === 'aOS' ? 'aOS' : 'Приложение «' + T(m[1]) + '»') + ' выключено'],
