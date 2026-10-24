@@ -25,6 +25,11 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   2 games, the others 5 questions). Every question is spoken, and
   shown in the school letters as it's said; tapping the host says it again. No timers, lives or
   game over: a first miss gets a hint, a second shows the answer kindly.
+- **How to play**: before a round whose game is new to her (a skill's level she hasn't played: a new
+  kind of question, a longer sparkle pattern, more flowers), the land's friend says in a sentence
+  what to do, then a hand plays one sample question on the real game while she watches (her taps are
+  held back; a grown-up can Skip), then it's her turn. The sample earns nothing and isn't counted.
+  It's shown once a level; the **?** button in a round shows it again.
 - **Getting harder by itself** (`engine.js`): each skill is a ladder (reading 12 levels, spelling 7,
   math 10, wand 7, Flower Match 7, What's Missing 7, Story Recall 5). 4 right in a row or 9 of her last 10 moves her up; 2 misses in a row on new items or
   6 or fewer of 10 moves her down (a right answer after a hint counts half). The first visit to a

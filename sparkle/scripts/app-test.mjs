@@ -70,7 +70,8 @@ async function phone({ look = 'vintage', scheme = 'light', signed = false, seed 
 const sp = (p, f, a) => p.evaluate(f, a);
 const shot = async (p, n) => { if (SHOTS) await p.screenshot({ path: path.join(SHOTS, n + '.png') }); };
 const coins = p => sp(p, () => { const me = window.sparkle.me || Object.values(window.sparkle.save.players)[0]; return Object.values(me.wallet).reduce((a, w) => a + w.earned - w.spent, 0); });
-const state = p => sp(p, () => { const R = window.sparkle.round; return { screen: window.sparkle.screen, skill: R && R.skill, q: R && R.q ? Object.assign(JSON.parse(JSON.stringify(R.q)), { ids: (R.q.choices || []).map(c => c.id) }) : null, i: R && R.i, n: R && R.plan.length }; });
+// a round's question, once any how-to-play demo before it is over
+const state = async p => { await p.waitForFunction(() => { const R = window.sparkle.round; return !R || !R.demo; }, null, { timeout: 40000 }).catch(() => {}); return sp(p, () => { const R = window.sparkle.round; return { screen: window.sparkle.screen, skill: R && R.skill, q: R && R.q ? Object.assign(JSON.parse(JSON.stringify(R.q)), { ids: (R.q.choices || []).map(c => c.id) }) : null, i: R && R.i, n: R && R.plan.length }; }); };
 // the games she plays rather than picks: gems in order, pairs, what's missing
 async function solve(p, q, root = '') {
   if (q.kind === 'build') { await p.waitForSelector(root + ' .tile'); const used = new Set();
@@ -407,6 +408,45 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if ((await coins(p)) !== c0 || (await sp(p, () => window.sparkle.save.players.p1.owned.includes('tiara-rainbow')))) pr.push('a story present could be bought');
   pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
   report('the story: a chapter after rounds in a land, its colour on the map, a present at chapter 5, her rank, the Stories shelf, the rooms to decorate (Sea glass)', pr); await ctx.close();
+}
+
+// 9. how to play: before a game that's new to her, her friend explains and a hand plays one (for no coins), then
+// it's her turn; not again at that level; the ? button shows it again; Skip ends it
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.rounds = 1;
+  ava.skills.read = { level: 3, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 3 };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava) }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  const c0 = await coins(p);
+  await sp(p, () => { window.sparkle.startRound('read'); });
+  if (!(await p.waitForSelector('#howCard', { timeout: 3000 }).catch(() => null))) pr.push('no explanation before a game new to her');
+  if (!(await p.waitForSelector('#hand:not([hidden])', { timeout: 8000 }).catch(() => null))) pr.push('no hand showing how');
+  await shot(p, '19-demo');
+  const blocked = await sp(p, () => { const v = document.getElementById('demoVeil'), r = document.getElementById('stage').getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height * 0.75); return !!(v && v.contains(el)); });
+  if (!blocked) pr.push('her taps are not held back while the hand shows how');
+  let st = await state(p);
+  if (st.screen !== 'round' || !st.q || st.i !== 0) pr.push('her own round did not start after the demo: ' + JSON.stringify({ s: st.screen, i: st.i }));
+  if ((await coins(p)) !== c0) pr.push('the demo earned coins');
+  if (!(await sp(p, () => (window.sparkle.save.players.p1.demos || {})['read:3']))) pr.push('the demo was not remembered');
+  if (await p.locator('#demoVeil, #hand').count()) pr.push('the demo did not clear away');
+  st = await playRound(p);
+  await sp(p, () => { window.sparkle.startRound('read'); }); await p.waitForTimeout(400);
+  if (await p.locator('#demoVeil').count()) pr.push('the demo came again at the same level');
+  // the ? button, then Skip
+  await state(p); await p.click('#howBtn');
+  if (!(await p.waitForSelector('#demoSkip', { timeout: 3000 }).catch(() => null))) pr.push('the ? button does not show how');
+  else { await p.click('#demoSkip'); st = await state(p); if (!st.q || await p.locator('#demoVeil').count()) pr.push('Skip did not go back to her round'); }
+  // the memory games and the wand show how too, each with its own game
+  for (const skill of ['wand', 'match', 'missing']) {
+    await sp(p, s => { window.sparkle.startRound(s); }, skill);
+    const ok = await p.waitForSelector('#hand:not([hidden])', { timeout: 10000 }).catch(() => null);
+    if (!ok) pr.push('no demo for ' + skill);
+    st = await state(p);
+    if (!st.q || st.skill !== skill) pr.push(`after the ${skill} demo, no ${skill} question`);
+    if (skill === 'match') await shot(p, '20-demo-match');
+  }
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
+  report('how to play: her friend explains and a hand shows one before a new game (no coins), then her turn; the ? button; Skip', pr); await ctx.close();
 }
 
 await b.close(); server.close();

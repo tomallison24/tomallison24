@@ -198,6 +198,7 @@
     out.chapters = maxMap(a.chapters, b.chapters);
     out.rounds = Math.max(a.rounds || 0, b.rounds || 0);
     out.rank = Math.max(a.rank || 0, b.rank || 0);
+    out.demos = maxMap(a.demos, b.demos);
     out.gifts = Math.max(a.gifts || 0, b.gifts || 0);
     out.play = {}; for (const d of union(Object.keys(a.play || {}), Object.keys(b.play || {}))) out.play[d] = maxMap((a.play || {})[d], (b.play || {})[d]);
     out.lands = {}; for (const l of union(Object.keys(a.lands || {}), Object.keys(b.lands || {}))) out.lands[l] = maxMap((a.lands || {})[l], (b.lands || {})[l]);

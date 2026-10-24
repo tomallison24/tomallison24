@@ -59,6 +59,7 @@
     clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
     drum: '<svg viewBox="0 0 48 48" fill="none" stroke="#4B2E6F" stroke-width="3" stroke-linejoin="round"><ellipse cx="24" cy="18" rx="16" ry="6" fill="#fff"/><path d="M8 18v14c0 3 7 6 16 6s16-3 16-6V18" fill="#FFC94A"/><path d="M8 18l8 18M24 24v14M40 18l-8 18"/></svg>',
     go: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M10 20h20M21 11l9 9l-9 9"/></svg>',
+    how: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 15a5 5 0 1 1 7 4.6c-1.3.6-2 1.8-2 3.2V24"/><circle cx="20" cy="30" r="1.2" fill="currentColor"/></svg>',
     again: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 14a12 12 0 1 0 2 10"/><path d="M31 6v8h-8"/></svg>',
   };
   const host = (skill, cls = '') => skill === 'read' ? A.owl({ cls }) : skill === 'math' ? A.dragon({ cls }) : skill === 'spell' ? A.fairy('gemma', { cls })
@@ -321,12 +322,14 @@
     round = { skill, sk, r, plan, i: 0, got: 0, coins: 0, hints: 0, kept: 0, longest: 0, start: Date.now(), moved: [], level0: sk.level, wasPlaced: sk.placed };
     show('round');
     $('roundBd').innerHTML = W.backdrop(landKey(skill));
-    $('roundBack').innerHTML = ICON.back;
+    $('roundBack').innerHTML = ICON.back; $('howBtn').innerHTML = ICON.how;
     paintRoundCoins();
-    nextQuestion();
+    const level = sk.placed ? sk.level : sk.warm.level;
+    if (!(me.demos || {})[skill + ':' + level]) demo(level); else nextQuestion();
   }
   const paintRoundCoins = () => { $('roundCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`; };
-  $('roundBack').addEventListener('click', () => { V.stop(); round = null; persist(true); enterWorld(); });
+  $('roundBack').addEventListener('click', () => { V.stop(); demoClear(); round = null; persist(true); enterWorld(); });
+  $('howBtn').addEventListener('click', () => { const R = round; if (!R || R.demo) return; V.stop(); demo(R.q ? R.q.level : R.sk.level); });
 
   function nextQuestion() {
     const R = round; if (!R || screen !== 'round') return;
@@ -334,13 +337,17 @@
     const p = R.plan[R.i];
     const level = p.warm ? R.sk.warm.level : p.level;
     R.sk.tries = R.sk.tries || {};
-    // spelling practises the words she has met in Story Tower
-    const met = R.skill === 'spell' ? Object.keys(me.known || {}).concat(Object.keys(me.review || {})).filter(k => k.startsWith('read/w:')).map(k => k.slice(7)) : [];
-    const q = C.make(R.skill, level, R.r, { tries: R.sk.tries[level] || 0, words: met }, p.review ? p.review.slice(R.skill.length + 1) : null);
+    const q = C.make(R.skill, level, R.r, { tries: R.sk.tries[level] || 0, words: metWords(R.skill) }, p.review ? p.review.slice(R.skill.length + 1) : null);
     if (p.review && q.key !== p.review.slice(R.skill.length + 1)) { delete me.review[p.review]; p.review = null; }   // one that can't come back as itself any more
     R.q = q; R.p = p;
+    draw(R, q);
+  }
+  // spelling practises the words she has met in Story Tower
+  const metWords = skill => skill === 'spell' ? Object.keys(me.known || {}).concat(Object.keys(me.review || {})).filter(k => k.startsWith('read/w:')).map(k => k.slice(7)) : [];
+  // a question on the stage, and its game started (a demo's sample too)
+  function draw(R, q) {
     const [who] = HOST[R.skill];
-    const dots = `<div class="dots" aria-label="Question ${R.i + 1} of ${R.plan.length}">${R.plan.map((_, k) => `<i class="${k < R.i ? 'on' : k === R.i ? 'now' : ''}"></i>`).join('')}</div>`;
+    const dots = R.demo ? '<div class="dots"></div>' : `<div class="dots" aria-label="Question ${R.i + 1} of ${R.plan.length}">${R.plan.map((_, k) => `<i class="${k < R.i ? 'on' : k === R.i ? 'now' : ''}"></i>`).join('')}</div>`;
     // what she hears, shown as words too (each lights up as it's said)
     const toks = [];
     q.say.forEach((part, k) => {
@@ -356,8 +363,8 @@
     R.tries = 0;
     // the games she plays rather than picks: the wand, spelling with gems, Flower Match, What's Missing
     if (PLAY[q.kind]) { const go = () => PLAY[q.kind]($('show'), q, { who, choices: $('choices') }).then(score => { if (round === R && R.q === q) answered(score); });
-      if (q.kind === 'missing' || q.kind === 'match') { V.say(q.say, { who }); go(); } else ask(q).then(go); return; }
-    ask(q);
+      if (q.kind === 'missing' || q.kind === 'match') { R.asked = V.say(q.say, { who }); go(); } else (R.asked = ask(q)).then(go); return; }
+    R.asked = ask(q);
   }
   function ask(q) {
     const [who] = HOST[round.skill];
@@ -414,6 +421,7 @@
   }
   function answered(score) {
     const R = round; if (!R) return;
+    if (R.demo) return demoDone(R);
     const q = R.q, p = R.p, day = today(), sk = R.sk, max = C.LADDERS[R.skill];
     if (score > 0) { const coins = E.TUNE.coinRight; E.earn(me, device, coins); R.coins += coins; V.sfx('coin'); paintRoundCoins(); }
     if (score === 1) R.got++;
@@ -433,6 +441,81 @@
     persist();
     R.i++;
     nextQuestion();
+  }
+
+  // ---- how to play: before a round whose game (a skill's level) is new to her, and from the ? button ----
+  // Her friend says what to do, then a hand plays one sample question on the real stage while she watches
+  // (her taps are held back; Skip ends it), then it's her turn. A sample's answer counts for nothing.
+  const HOW = q => q.story ? 'Listen to a little story, then answer a question about it.'
+    : { pick: 'Listen to the question, then tap the right answer. You can tap me to hear it again.',
+      syll: 'Listen to the word, and tap the drum for each part. Then tap how many parts it has.',
+      build: 'Listen to the word, then tap the letter gems in order to spell it.',
+      wand: q.back ? 'Watch the sparkles light up. Then tap them backwards, from the last one to the first!' : 'Watch the sparkles light up, then tap them in the same order.',
+      match: 'Tap two flowers to peek under them. Remember what you saw, and find the two that match!',
+      missing: `Look carefully at everything on the tray. A cloud will hide it, and ${(q.answers || []).length > 1 ? 'two things' : 'one thing'} will go away. Tap what's missing!` }[q.kind] || 'Watch me first!';
+  const HAND = '<svg viewBox="0 0 64 72" aria-hidden="true"><path d="M24 6c4 0 7 3 7 7v20l3-1c3-1 6 0 7 3l1 2c3-1 6 0 7 3l1 1c3-1 6 1 7 4l1 9c1 9-4 16-12 18H33c-6 0-10-3-13-8L10 47c-2-3-1-6 2-8c3-1 6 0 8 2l-3-28c0-4 3-7 7-7Z" fill="#fff" stroke="#4B2E6F" stroke-width="4" stroke-linejoin="round"/><path d="M35 40v10M45 42v8M54 45v6" stroke="#4B2E6F" stroke-width="3" stroke-linecap="round"/></svg>';
+  function demoClear() { for (const id of ['demoVeil', 'hand']) { const el = $(id); if (el) el.remove(); } }
+  const waitFor = async (ok, ms = 15000) => { const t = Date.now(); while (!ok()) { if (Date.now() - t > ms) return false; await wait(120); } return true; };
+  async function demo(level) {
+    const R = round; if (!R) return;
+    const run = R.demoRun = {}, live = () => round === R && R.demoRun === run;
+    R.demo = true;
+    const [who, name] = HOST[R.skill];
+    const q = C.make(R.skill, level, E.rng((Date.now() * 7) >>> 0), { tries: 0, words: metWords(R.skill) });
+    if (q.kind === 'match') q.swap = false;
+    if (q.kind === 'missing') q.look = Math.min(q.look, 2500);
+    demoClear();
+    $('round').insertAdjacentHTML('beforeend', `<div class="demoveil" id="demoVeil"><div class="demotag" id="demoTag">${A.icon('sparkle', 26)}<span>Watch how to play!</span></div><button type="button" class="demoskip" id="demoSkip">Skip</button>
+      <div class="howcard" id="howCard"><span class="hh">${host(R.skill)}</span><b>${esc(SKILL_NAME[R.skill])}</b><span>${esc(HOW(q))}</span></div></div><div class="hand" id="hand" hidden>${HAND}</div>`);
+    $('demoSkip').onclick = () => { V.stop(); demoDone(R); };
+    $('stage').innerHTML = '';
+    await V.say([HOW(q) + ' Watch me first!'], { who });
+    if (!live()) return;
+    $('howCard').remove();
+    R.q = q; R.p = { demo: true };
+    draw(R, q);
+    const hand = $('hand'); hand.hidden = false;
+    const tap = async el => { if (!live() || !el) return;
+      const r = el.getBoundingClientRect(); hand.style.left = (r.left + r.width / 2) + 'px'; hand.style.top = (r.top + r.height / 2) + 'px';
+      await wait(reduce() ? 250 : 700); if (!live()) return;
+      hand.classList.add('tap'); await wait(160); if (live()) el.click(); await wait(260); hand.classList.remove('tap'); };
+    const show = $('show'), ch = $('choices'), sel = (box, s) => box && box.querySelector(s);
+    if (q.kind === 'build') {
+      if (!await waitFor(() => !live() || ch.onclick)) return;
+      const used = new Set();
+      for (const l of q.word) { const k = q.tiles.findIndex((t, i) => t === l && !used.has(i)); used.add(k); await tap(sel(ch, `.tile[data-t="${k}"]`)); await wait(250); }
+    } else if (q.kind === 'match') {
+      if (!await waitFor(() => !live() || show.onclick)) return;
+      // a peek that doesn't match (they turn back), then the pair
+      const a = 0, mate = q.cards.findIndex((c, k) => k !== a && c.pair === q.cards[a].pair), other = q.cards.findIndex((c, k) => k !== a && c.pair !== q.cards[a].pair);
+      await tap(sel(show, `.card[data-k="${a}"]`)); await tap(sel(show, `.card[data-k="${other}"]`)); await wait(1300);
+      await tap(sel(show, `.card[data-k="${a}"]`)); await tap(sel(show, `.card[data-k="${mate}"]`)); await wait(900);
+      if (live()) demoDone(R);
+    } else if (q.kind === 'missing') {
+      if (!await waitFor(() => !live() || ch.onclick)) return;
+      for (const id of q.answers) await tap(sel(ch, `.choice[data-c="${CSS.escape(id)}"]`));
+    } else if (q.kind === 'wand') {
+      if (!await waitFor(() => !live() || (show.onclick && show.style.pointerEvents === ''))) return;
+      for (const k of q.back ? q.seq.slice().reverse() : q.seq) await tap(sel(show, `button[data-k="${k}"]`));
+    } else {
+      await R.asked; if (!live()) return;
+      if (q.kind === 'syll') for (let k = 0; k < q.parts.length; k++) { await tap($('drum')); await wait(200); }
+      await tap(sel(ch, `.choice[data-c="${CSS.escape(q.answer)}"]`));
+    }
+  }
+  async function demoDone(R) {
+    if (R.demo !== true) return;
+    R.demo = 'ending'; R.demoRun = null; R.q = null;
+    const level = R.sk.placed ? R.sk.level : R.sk.warm.level;
+    me.demos = me.demos || {}; me.demos[R.skill + ':' + level] = 1; persist();
+    const hand = $('hand'); if (hand) hand.remove();
+    const tag = $('demoTag'); if (tag) tag.innerHTML = `${A.icon('star', 26)}<span>Your turn!</span>`;
+    const skip = $('demoSkip'); if (skip) skip.remove();
+    await V.say(["Now it's your turn!"], { who: HOST[R.skill][0] });
+    demoClear();
+    if (round !== R || R.demo !== 'ending') return;
+    R.demo = false;
+    if (screen === 'round') nextQuestion();
   }
 
   // ---- the games she plays rather than picks; each resolves with her score (1, 0.5 or 0) ----

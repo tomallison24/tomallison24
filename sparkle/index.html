@@ -362,6 +362,18 @@ svg{display:block}
 .cover{position:absolute;inset:0;display:grid;place-items:center;border-radius:30px;background:rgba(255,255,255,.75);animation:yay .5s}
 .cover svg{width:80%}
 .praise.note{display:flex;align-items:center;gap:10px;font-size:17px;text-align:left}
+/* how to play: her friend explains, a hand shows one, then her turn */
+.demoveil{position:absolute;inset:calc(env(safe-area-inset-top) + 66px) 0 0;z-index:20}
+.demotag{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 18px 8px 12px;border-radius:999px;background:var(--k-gold);box-shadow:inset 0 0 0 3px var(--k-ink);font-weight:900;font-size:18px;color:var(--k-ink);white-space:nowrap}
+.demotag svg{width:26px;height:26px}
+.demoskip{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 14px);min-height:44px;padding:0 18px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 2.5px var(--k-ink);font-weight:800;font-size:15px;color:var(--k-ink)}
+.howcard{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;border-radius:30px;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 6px 0 rgba(75,46,111,.25);text-align:center;color:var(--k-ink);font-size:19px;font-weight:700;line-height:1.3}
+.howcard b{font-size:22px;font-weight:900}
+.howcard .hh{height:140px}.howcard .hh svg{height:100%;width:auto}
+.hand{position:fixed;left:50%;top:70%;width:58px;z-index:21;pointer-events:none;transform:translate(-22%,-8%);transition:left .6s ease-in-out,top .6s ease-in-out}
+.hand svg{width:100%;height:auto;filter:drop-shadow(0 3px 0 rgba(75,46,111,.3))}
+.hand.tap svg{transform:scale(.86)}
+#howBtn{margin-right:8px}
 /* a chapter of the story */
 .chbook{display:flex;align-items:center;gap:12px;padding:10px 20px 10px 12px;border-radius:24px;background:var(--k-gold);box-shadow:0 4px 0 #D9A21E,inset 0 0 0 3px var(--k-ink);font-weight:900;font-size:20px;color:var(--k-ink);animation:wiggle 1.4s ease-in-out infinite}
 .chbook svg{width:44px;height:44px}
@@ -397,7 +409,7 @@ svg{display:block}
   .card.swap,.slots i.on,.tile.wrong,.cover{animation:none!important}
 }
 @media (prefers-reduced-motion:reduce){
-  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
+  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.hand,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
   .fly{opacity:0}
 }
 </style>
@@ -476,7 +488,7 @@ svg{display:block}
   <!-- a round in a land -->
   <section id="round" class="game" hidden aria-label="A round">
     <div class="bd" id="roundBd"></div>
-    <div class="hud"><button type="button" class="rbtn" id="roundBack" aria-label="Back to the kingdom"></button><span class="sp"></span><div class="pill" id="roundCoins"></div></div>
+    <div class="hud"><button type="button" class="rbtn" id="roundBack" aria-label="Back to the kingdom"></button><span class="sp"></span><button type="button" class="rbtn" id="howBtn" aria-label="How to play"></button><div class="pill" id="roundCoins"></div></div>
     <div class="stage" id="stage"></div>
   </section>
 
