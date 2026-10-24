@@ -541,7 +541,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + '<button class="btn quiet" type="button" id="emptyAdd">Add a booking by hand</button>';
     } else if (st.when === 'check') {
       const list = checkList().sort((a, b) => (startOf(a) || '9999').localeCompare(startOf(b) || '9999'));
-      h = '<div class="tl glass">' + list.map(b => evRow(b, startOf(b), 'start', true)).join('') + '</div>';
+      // Have Ipsy check these: the same check as a trip's page, for what's waiting here (checkBookings)
+      if (aiOn() && aiAvail !== false && list.some(checkable)) h += '<div class="rgroup glass"><button class="rowbtn" type="button" id="ckAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>'
+        + (st.aiBusy ? 'Ipsy is reading the emails…' : 'Have Ipsy check these') + '<span class="sub">Reads the newest email for each booking and updates what changed</span></span></button></div>';
+      h += '<div class="tl glass">' + list.map(b => evRow(b, startOf(b), 'start', true)).join('') + '</div>';
     } else {
       if (st.when === 'upcoming') h += heroHTML(groups);
       const list = st.when === 'past' ? past : up;
@@ -553,6 +556,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
     if ($('emptyAdd')) $('emptyAdd').onclick = () => openAdd();
     if ($('olderBtn')) $('olderBtn').onclick = () => loadOlder(true);
+    if ($('ckAi')) $('ckAi').onclick = () => checkBookings(checkList().filter(checkable));
     if (st.when === 'past' && st.tab !== 'explore') loadOlder(false);
     if (!$('tripPage').hidden && st.trip) renderTrip();
   }
@@ -1662,13 +1666,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const { html, text } = bodies(msg.payload);
     return { id, threadId: msg.threadId || '', text: P.htmlToText(html) || text || '', subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || Date.now() };
   }
-  async function checkTrip(id) {
+  function checkTrip(id) {
+    const g = tripById(id);
+    if (g) return checkBookings(g.items.filter(checkable));
+  }
+  // The same for any bookings: a trip's (above), or what's waiting in To check (render). Eight at most, each time.
+  async function checkBookings(all) {
     if (st.aiBusy) return;
-    const g = tripById(id); if (!g) return;
     if (!getToken()) { toast('Connect Gmail first, so Travel can read the emails.'); return; }
-    st.aiBusy = true; renderTrip();
+    st.aiBusy = true; render();
     if (ipsy) ipsy.working(true);
-    const list = g.items.filter(checkable).slice(0, 8), mine2 = list.filter(b => !b.edited);
+    const list = all.slice(0, 8), mine2 = list.filter(b => !b.edited);
     const changes = [], said = [];
     let read = 0, cancelled = 0, stop = '';
     try {
@@ -1711,7 +1719,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       toast(bits.join(' ') || 'Nothing to check.', undo, undo ? 6000 : 0);
     } catch (e) {
       toast(e instanceof AuthError ? 'Gmail needs you to sign in again.' : 'Couldn’t check just now. Try again in a moment.');
-    } finally { st.aiBusy = false; if (ipsy) ipsy.working(false); render(); if (st.trip) renderTrip(); }
+    } finally { st.aiBusy = false; if (ipsy) ipsy.working(false); render(); }
   }
   // Ipsy checks by itself: after Travel reads Gmail, opens or you change a booking (smartPass, once the calendar and the
   // flight board have had their go), every upcoming booking still missing something that came from an email is
