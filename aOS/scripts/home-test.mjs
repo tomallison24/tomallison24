@@ -2,6 +2,8 @@
 // and dark:
 //   - Home first, in place of Apps: the Ipsy bar, Favorites with the Weather and Calendar widgets,
 //     and every app as an icon in groups, so one tap opens any app
+//   - the widgets: Weather's forecast fetched again when aOS opens or comes back and it's over 10
+//     minutes old; drawn again, nothing that didn't change is replaced, and nothing under a finger
 //   - the Ipsy bar finds the app as you type (Return opens it) and what's in the apps, never a
 //     hidden order or a note in the Trash; a note found opens Notes at it
 //   - an icon opens the app inside aOS: full screen, "‹ aOS" over it, the app's content starting
@@ -270,6 +272,29 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await pg.waitForTimeout(300);
     check(await pg.textContent('#favs .wx .big') === '64°' && /Partly cloudy/.test(await pg.textContent('#favs .wx')) && /H 70° L 52°/.test(await pg.textContent('#favs .wx')), `the Weather widget: Weather's own last forecast ${tag}`);
     check(await pg.textContent('#favs .cal b') === 'Soccer practice' && /Next/.test(await pg.textContent('#favs .cal em')), `the Calendar widget: what's next ${tag}`);
+    // drawn again (back on the phone, a new unread count), what didn't change stays the same element,
+    // and nothing is swapped out under a finger: iOS drops a tap whose button is replaced mid-tap
+    await pg.evaluate(() => { document.querySelector('#favs .wx').__same = 1; document.querySelector('#spaces .happ').__same = 1; document.dispatchEvent(new Event('visibilitychange', { bubbles: true })); });
+    check(await pg.evaluate(() => document.querySelector('#favs .wx').__same === 1 && document.querySelector('#spaces .happ').__same === 1), `drawn again, the widgets and icons that didn't change stay as they are ${tag}`);
+    const held = await pg.evaluate(async () => { const w = document.querySelector('#spaces [data-open="mail"]'); w.__same = 1;
+      w.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); aosHome.unread('mail', 4);
+      const during = document.querySelector('#spaces [data-open="mail"]') === w;
+      w.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); await new Promise(r => setTimeout(r, 1100));
+      const after = document.querySelector('#spaces [data-open="mail"] .unread'); aosHome.unread('mail', 0); return during && !!after && after.textContent === '4'; });
+    check(held, `a new count waits for the finger to lift, then shows ${tag}`);
+    // aOS opening, or back on the phone: a forecast over 10 minutes old is fetched again, with Weather's own
+    // code, and kept in Weather's cache for Weather too
+    await pg.evaluate(() => { const c = JSON.parse(localStorage.getItem('wx.cache')); c['39.740,-104.990'].fetchedAt = Date.now() - 3 * 3600e3; localStorage.setItem('wx.cache', JSON.stringify(c));
+      window.__asked = 0; WXD.fetchBase = async () => { window.__asked++; return { tz: 'America/Denver', place: 'Denver', cur: { tF: 41, c: 'rainy' }, hourly: [], daily: [{ t: Math.floor(Date.now() / 1000), hF: 50, lF: 38, c: 'rainy' }] }; };
+      document.dispatchEvent(new Event('visibilitychange', { bubbles: true })); });
+    await pg.waitForTimeout(900);
+    check(await pg.textContent('#favs .wx .big') === '41°' && /Rain/.test(await pg.textContent('#favs .wx')) && await pg.evaluate(() => Date.now() - JSON.parse(localStorage.getItem('wx.cache'))['39.740,-104.990'].fetchedAt < 60e3),
+      `an old forecast is fetched again as aOS comes back, and kept for Weather ${tag}`);
+    await pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange', { bubbles: true }))); await pg.waitForTimeout(300);
+    check(await pg.evaluate(() => window.__asked) === 1, `a fresh one isn't fetched again ${tag}`);
+    await pg.locator('#favs .wx').tap(); await pg.waitForTimeout(1200);
+    check((await state()).shown.join() === 'weather', `a tap on the Weather widget opens Weather ${tag}`);
+    await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
     await pg.locator('#hq').fill('socc'); await pg.waitForTimeout(200);
     const hits = await pg.evaluate(() => [...document.querySelectorAll('#hfound .hit')].map(h => h.dataset.open + ':' + h.querySelector('b').textContent));
     check(hits.includes('calendar:Soccer practice') && hits.includes('notes:Soccer snacks') && hits.includes('orders:Soccer ball') && hits.includes('calendar:Old dentist visit') === false,

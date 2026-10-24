@@ -1,7 +1,7 @@
 // Offline shell for aOS. Same-origin requests load network-first, so a new
 // deploy shows on the next open; the cache is only the fallback offline.
-const CACHE = 'aos-v42';
-const SHELL = ['./', 'index.html', 'app.js', 'home-tab.js', 'home-find.js', '../calendar/ical.js', 'look.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/sky.js', '../home/welcome.js', '../home/account.js', '../home/ipsy.js'];
+const CACHE = 'aos-v43';
+const SHELL = ['./', 'index.html', 'app.js', 'home-tab.js', 'home-find.js', '../calendar/ical.js', '../weather/data.js', 'look.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/sky.js', '../home/welcome.js', '../home/account.js', '../home/ipsy.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

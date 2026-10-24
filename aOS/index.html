@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob:; connect-src 'self' https://api.weather.gov https://api.open-meteo.com; frame-src 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -717,6 +717,7 @@
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, drawn on the Meet Ipsy card and page -->
 <script src="app.js"></script>
 <script src="../calendar/ical.js"></script>   <!-- Calendar's .ics reader, for what's next on Home -->
+<script src="../weather/data.js"></script>   <!-- Weather's forecast code, so Home's Weather widget is fresh when aOS opens -->
 <script src="home-find.js"></script>   <!-- what Home reads from the apps: the widgets, and what's in them -->
 <script src="home-tab.js"></script>   <!-- aOS 2's Home: every app inside aOS -->
 </body>

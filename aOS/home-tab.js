@@ -106,10 +106,27 @@
   window.aosHome.unread = (id, n) => { const was = unread[id] || 0; unread[id] = n > 0 ? n : 0; if (unread[id] !== was) paintHome(); };
   const readUnread = () => { try { caches.open('unread').then(c => c.match('/unread/mail')).then(r => r ? r.text() : '0').then(n => window.aosHome.unread('mail', +n || 0)).catch(() => {}); } catch {} };
   addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') readUnread(); });
-  // the widgets keep up: back on the phone, and every minute while Home is showing
+  // the widgets keep up: on opening aOS, back on the phone, and every minute while Home is showing.
+  // The forecast is fetched again when Weather's last one is over 10 minutes old (aOS/home-find.js).
   const onHome = () => !current && tab === 'home' && document.visibilityState === 'visible';
-  addEventListener('visibilitychange', () => { if (onHome()) paintHome(); });
-  setInterval(() => { if (onHome() && !editing()) paintHome(); }, 60e3);
+  const freshen = () => { if (window.aosFind && aosFind.refreshWeather) aosFind.refreshWeather().then(got => { if (got) paintHome(); }, () => {}); };
+  addEventListener('visibilitychange', () => { if (onHome()) { paintHome(); freshen(); } });
+  setInterval(() => { if (onHome() && !editing()) { paintHome(); freshen(); } }, 60e3);
+  // Home is drawn again often (back on the phone, every minute, a new unread count, a new forecast).
+  // Only what changed is replaced, and never under a finger: iOS drops a tap whose button is swapped
+  // out between touching and lifting (the Weather widget, tapped as aOS came back, didn't open).
+  let down = false, upAt = 0, later = null;
+  addEventListener('pointerdown', () => { down = true; }, true);
+  for (const t of ['pointerup', 'pointercancel']) addEventListener(t, () => { down = false; upAt = Date.now(); }, true);
+  const tpl = document.createElement('template');
+  function setHTML(el, html) {
+    if (el._html === html) return;
+    tpl.innerHTML = html;
+    const now = [...el.children], next = [...tpl.content.children];
+    if (now.length === next.length) next.forEach((n, i) => { if (!now[i].isEqualNode(n)) now[i].replaceWith(n); });
+    else el.replaceChildren(...next);
+    el._html = html;
+  }
   // off Home (Today, Search), Home floats at the bottom; on Home, nothing does
   function paintQuick() {
     quick.hidden = tab === 'home';
@@ -119,28 +136,29 @@
   const ic = id => { const n = unread[id] || 0;
     return `<span class="ic"><img src="${icon(id)}" alt="">${n ? `<em class="unread" aria-hidden="true">${n > 99 ? '99+' : n}</em>` : ''}</span>`; };
   const label = id => esc(name(id)) + (unread[id] ? `, ${unread[id]} unread` : '');
-  function paintHome() {
+  function paintHome(now = false) {   // now: a change you just made (a pin, back on Home), drawn at once
+    if (!now && (down || Date.now() - upAt < 450)) { clearTimeout(later); later = setTimeout(paintHome, 500); return; }   // a finger on the screen: once it's lifted
     $('hdate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     paintQuick();
     const F = window.aosFind || {}, wx = F.weather ? F.weather() : null, next = F.next ? F.next() : null;
     const tiles = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" aria-label="${label(f.id)}">${ic(f.id)}<i class="pin" aria-hidden="true">${STAR(f.why === 'pin')}</i><b>${esc(name(f.id))}</b></button>`).join('');
-    $('favs').innerHTML = (known('weather') ? `<button type="button" class="wid wx" data-open="weather" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
+    setHTML($('favs'), (known('weather') ? `<button type="button" class="wid wx" data-open="weather" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
         <span class="wh"><img src="${icon('weather')}" alt="">${wx && wx.place ? esc(wx.place) : 'Weather'}</span>
         <span class="big">${wx ? esc(wx.temp) : '–'}</span><small>${wx ? esc(wx.text) : 'Open for the forecast'}</small>${wx && wx.hilo ? `<small>${esc(wx.hilo)}</small>` : ''}</button>` : '')
       + tiles
       + (known('calendar') ? `<button type="button" class="wid cal" data-open="calendar" style="--c:${appHue('calendar')}" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">
         <img src="${icon('calendar')}" alt=""><span>${next
           ? `<em>Next · ${esc(next.when)}</em><b>${esc(next.title)}</b><small>${next.then ? 'Then ' + esc(next.then) : esc(next.where || 'Nothing after it today')}</small>`
-          : `<em>Calendar</em><b>Nothing else today</b><small>Open for the week ahead</small>`}</span></button>` : '');
-    $('spaces').innerHTML = SPACES.filter(s => s[1].length).map(([title, ids]) => `<div class="hcat${ids.length <= 2 ? ' half' : ''}"><h3>${esc(title)}</h3><div class="hg" style="--n:${ids.length <= 2 ? 2 : 5}">${ids.map(id =>
-      `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join('')}</div></div>`).join('');
+          : `<em>Calendar</em><b>Nothing else today</b><small>Open for the week ahead</small>`}</span></button>` : ''));
+    setHTML($('spaces'), SPACES.filter(s => s[1].length).map(([title, ids]) => `<div class="hcat${ids.length <= 2 ? ' half' : ''}"><h3>${esc(title)}</h3><div class="hg" style="--n:${ids.length <= 2 ? 2 : 5}">${ids.map(id =>
+      `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join('')}</div></div>`).join(''));
   }
   const appHue = id => (window.aosAppHue && aosAppHue(id)) || '129,147,188';
   function togglePin(id) {
     if (pins.includes(id)) pins = pins.filter(x => x !== id);
     else if (pins.length >= MAX_PINS) return toast('Four at most: unpin one first');
     else pins = [...pins, id];
-    put(PINS, pins); paintHome();
+    put(PINS, pins); paintHome(true);
   }
   $('favEdit').onclick = () => { const on = body.classList.toggle('editing'); $('favEdit').textContent = on ? 'Done' : 'Edit'; $('favHint').hidden = !on; };
   $('home').addEventListener('click', e => {
@@ -256,7 +274,7 @@
     else reveal(current);
     body.classList.toggle('in-app', !!current);
     $('appwin').setAttribute('aria-hidden', String(!current));
-    if (!current) paintHome();   // an app's design may have changed its icon
+    if (!current) paintHome(true);   // an app's design may have changed its icon
     remember();
     tint();
   }
@@ -458,7 +476,7 @@
 
   window.aosHomeTab = { show, open: () => open.slice(), favorites, findApps, insets, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
-  paintHome(); readUnread();
+  paintHome(); readUnread(); freshen();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];
   if (known(start)) {
     // opened straight into an app (back from Google, or a link): Home goes in under it first
