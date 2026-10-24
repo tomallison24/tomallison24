@@ -105,7 +105,7 @@ const store = (p, k) => p.evaluate(k => localStorage.getItem(k), k);
   await openAos(p);
   await ask(p, claude, 'open_setting', { place: 'clock' }, { btn: '#ipsySlot .ipsy-btn' });
   let opened = false;
-  for (let t = 0; t < 40 && !opened; t++) { await p.waitForTimeout(250); opened = await p.evaluate(() => [...document.querySelectorAll('iframe')].some(f => { try { const s = f.contentWindow.location.pathname.includes('/clock/') && f.contentDocument.getElementById('setSheet'); return !!s && !s.hidden; } catch { return false; } })); }
+  for (let t = 0; t < 100 && !opened; t++) { await p.waitForTimeout(250); opened = await p.evaluate(() => [...document.querySelectorAll('iframe')].some(f => { try { const s = f.contentWindow.location.pathname.includes('/clock/') && f.contentDocument.getElementById('setSheet'); return !!s && !s.hidden; } catch { return false; } })); }
   if (!opened) pr.push('Clock\'s Settings did not open inside aOS');
   report('open_setting opens an app\'s Settings inside aOS', pr); await ctx.close();
 }

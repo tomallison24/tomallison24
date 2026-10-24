@@ -543,7 +543,7 @@
   const openSettings = (id, sel) => {
     if (!known(id)) return;
     show(id);
-    let n = 0; const tap = () => { try { const b = frames[id].firstChild.contentDocument.querySelector(sel); if (b && frames[id].firstChild.contentWindow.AllisonOS) return b.click(); } catch {} if (n++ < 60) setTimeout(tap, 250); };
+    let n = 0; const tap = () => { try { const b = frames[id].firstChild.contentDocument.querySelector(sel); if (b && frames[id].firstChild.contentWindow.AllisonOS) return b.click(); } catch {} if (n++ < 120) setTimeout(tap, 250); };   // up to 30 seconds for the app to start
     setTimeout(tap, 300);
   };
   window.aosHomeTab = { everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)

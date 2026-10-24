@@ -924,3 +924,29 @@
     [/^(.+): ([\w,-]+)$/, m => { const a = about(m[1]); return a ? a + ': ' + val(m[2]) : null; }],
   ]);
 })();
+
+// aOS2.1: New looks, new language
+aosLang.add({
+  'New looks, new language': 'Новые стили, новый язык',
+  'Two new looks: Night Drive and Folk': 'Два новых стиля: Ночная трасса и Народный',
+  'aOS in Russian: Appearance, Language': 'aOS на русском: Оформление, Язык',
+  'Ask Ipsy to change a setting, or show you where it is': 'Попросите Ипси изменить настройку или показать, где она',
+  'Two new designs: Night Drive and Folk, for aOS and every app': 'Два новых стиля для aOS и всех приложений: Ночная трасса и Народный',
+  'Read aOS in Russian: Appearance, Language': 'aOS на русском: Оформление, Язык',
+  'Two new designs: Night Drive and Folk': 'Два новых дизайна: Ночная трасса и Народный',
+  'Now in Russian too: aOS, Appearance, Language': 'Теперь и на русском: aOS, Оформление, Язык',
+  'In Russian, the clock is 24-hour': 'На русском часы показывают 24-часовое время',
+  'Looks and language': 'Стили и язык',
+  'Your name, then Appearance: four looks for aOS and every app, and English or Русский.': 'Ваше имя, затем Оформление: четыре стиля для aOS и всех приложений и выбор языка: English или Русский.',
+  'New designs': 'Новые дизайны',
+  'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.': 'Настройки, затем Дизайн: рядом с Винтажем и Стандартом появились Ночная трасса и Народный.',
+  'Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)':
+    'Ночная трасса: неон 80-х, полосатый закат над сеткой, пурпурный и голубой, жирный курсив. Народный: днём Гжель, кобальт на фарфоре, а ночью Хохлома, киноварь и золото на чёрном лаке. У каждого свои значки приложений, и Ипси одевается под стиль (зеркальные очки, платок матрёшки)',
+  'The look you pick in Account > Appearance is every app\'s look now; an app\'s own Settings > Design can still be different':
+    'Стиль, выбранный в Профиль > Оформление, теперь общий для всех приложений; в настройках приложения (Дизайн) можно выбрать и другой',
+  'Language, in Account > Appearance: English or Русский, for aOS and every app at once, with Russian dates and times. What the family wrote, emails, news and device names stay as they are. Lost in a language? Type "English" (or «Русский») to Ipsy':
+    'Язык, в Профиль > Оформление: English или Русский, сразу для aOS и всех приложений, с датами и временем по-русски. Написанное семьёй, письма, новости и названия устройств остаются как есть. Запутались в языке? Напишите Ипси «English» или «Русский»',
+  'Ipsy can change how things look and read for you, with Undo: light or dark, the look, the language, Favorites, Calendar, Clock, Weather\'s units, Podcasts, Fitness goals and what Orders counts. It asks first before a new event\'s defaults or turning its own access down, never touches sign-ins, the plan, privacy or the family\'s allergies, and opens the right screen for those':
+    'Ипси может менять оформление и отображение, с возможностью отменить: светлую или тёмную тему, стиль, язык, Избранное, Календарь, Часы, единицы Погоды, Подкасты, цели Фитнеса и что учитывают Заказы. Перед изменением настроек новых событий или ограничением своего доступа он спрашивает, а входы, план, приватность и аллергии семьи не трогает никогда и открывает для них нужный экран',
+  'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings': 'На русском Часы показывают 24-часовое время, пока вы не выберете формат в их настройках',
+});
