@@ -149,7 +149,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (st.media !== 'all,all,not all') pr.push('Night Drive should keep Vintage on and its own block on: ' + st.media);
   if (st.designs !== 'neon,neon,neon,neon' || st.clock !== 'neon') pr.push('not every app took Night Drive: ' + st.designs + ' / clock ' + st.clock);
   if (!/icon-neon-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Night Drive\'s: ' + st.icon);
-  if (!/#F6F0FF/i.test(st.tint)) pr.push('the status bar tint is not Night Drive\'s: ' + st.tint);
+  if (!/#F5F2FD/i.test(st.tint)) pr.push('the status bar tint is not Night Drive\'s: ' + st.tint);
   if (await selected(p) !== 'neon') pr.push('the picker does not show Night Drive picked');
   if (!/Night Drive/.test(await p.locator('#lookSub').innerText())) pr.push('the Appearance line does not say Night Drive');
   if (await p.evaluate(() => document.documentElement.hasAttribute('data-sky'))) pr.push('the Vintage sky is still drawn in Night Drive');
@@ -163,6 +163,32 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   await p.reload(); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'folk') pr.push('Folk is not kept over a reload');
   report('Night Drive and Folk: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts', pr); await ctx.close();
+}
+
+// 7. under an iPhone's solid status bar, an app's shapes fade in from its ground in every flat look (../home/sky.js),
+// the fade a solid square band (not one of the shapes: no shape's opacity or roundness), and the tint is that ground
+for (const scheme of ['light', 'dark']) {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme });
+  const pr = [];
+  for (const look of ['vintage', 'neon', 'folk']) {
+    await ctx.addInitScript(l => { localStorage.setItem('aos.bar', 'solid'); localStorage.setItem('aos.seen', JSON.stringify({ calendar: '999' })); localStorage.setItem('design.calendar', l); }, look);
+    const p = await ctx.newPage(); p.on('pageerror', e => pr.push(look + ': ' + e.message));
+    await p.route('**/api/**', r => r.fulfill({ status: 401, body: '{}' }));
+    await p.goto(BASE + '/calendar/'); await p.waitForTimeout(900);
+    const c = await p.evaluate(() => { const e = document.querySelector('.ambient .aos-sky-cap'); if (!e) return null; const cs = getComputedStyle(e), r = e.getBoundingClientRect();
+      return { display: cs.display, opacity: cs.opacity, radius: cs.borderRadius, top: Math.round(r.top), covers: r.left <= 0 && r.right >= innerWidth, first: (/^linear-gradient\((rgba?\([^)]*\))/.exec(cs.backgroundImage) || [])[1],
+        ground: getComputedStyle(document.body).backgroundColor, tint: [...document.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || matchMedia(m.media).matches).content }; });
+    const hex = s => '#' + (s.match(/\d+/g) || []).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    if (!c || c.display !== 'block') pr.push(look + ': no fade under the status bar');
+    else {
+      if (c.opacity !== '1' || c.radius !== '0px') pr.push(`${look}: the fade is styled as a shape (opacity ${c.opacity}, corners ${c.radius})`);
+      if (c.top !== 0 || !c.covers) pr.push(`${look}: the fade does not cover the top of the page (top ${c.top})`);
+      if (c.first !== c.ground) pr.push(`${look}: the fade starts at ${c.first}, not the page's ground ${c.ground}`);
+      if (look !== 'vintage' && c.tint.toUpperCase() !== hex(c.ground)) pr.push(`${look}: the status bar tint ${c.tint} is not the page's ground ${hex(c.ground)}`);
+    }
+    await p.close();
+  }
+  report(`under a solid status bar (${scheme}), an app's shapes fade in from its own ground in Vintage, Night Drive and Folk, and the tint matches`, pr); await ctx.close();
 }
 
 await b.close(); server.close();

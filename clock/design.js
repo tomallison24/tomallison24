@@ -19,8 +19,8 @@
   const SET = {
     vintage: { ground: ['#F4ECDD', '#241E1A'], icon: ['icon-180.png?v=1', 'icon-512.png?v=1'], bar: 'default' },
     glass: { ground: ['#EEF2F0', '#0D1213'], icon: ['icon-glass-180.png?v=1', 'icon-glass-512.png?v=1'], bar: 'black-translucent' },
-    neon: { ground: ['#F6F0FF', '#120B1F'], icon: ['icon-neon-180.png?v=1', 'icon-neon-512.png?v=1'], bar: 'default' },
-    folk: { ground: ['#F5F7FB', '#0D0B0A'], icon: ['icon-folk-180.png?v=1', 'icon-folk-512.png?v=1'], bar: 'default' },
+    neon: { ground: ['#F5F2FD', '#140A22'], icon: ['icon-neon-180.png?v=1', 'icon-neon-512.png?v=1'], bar: 'default' },
+    folk: { ground: ['#F4F7FD', '#0F0B07'], icon: ['icon-folk-180.png?v=1', 'icon-folk-512.png?v=1'], bar: 'default' },
   };
   const ok = v => v in SET ? v : 'vintage';
   let stored = null;

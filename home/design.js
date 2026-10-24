@@ -42,7 +42,7 @@
   const APP = data.app || '';
   const KEY = 'design.' + APP;
   const root = document.documentElement;
-  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], neon: ['#F6F0FF', '#120B1F'], folk: ['#F5F7FB', '#0D0B0A'] };
+  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], neon: ['#F5F2FD', '#140A22'], folk: ['#F4F7FD', '#0F0B07'] };
   const LOOKS = ['vintage', 'glass', 'neon', 'folk'];
   const ok = v => LOOKS.includes(v) ? v : 'vintage';
   const pairs = s => String(s || '').split(',').map(p => p.split('=').map(x => x.trim())).filter(p => p.length === 2 && p[0] && p[1]);

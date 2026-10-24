@@ -50,8 +50,9 @@ html[data-sky="day"] :is(.ambient, .aurora, .atoms) > :nth-child(1)::before {
   -webkit-mask-image: radial-gradient(circle, transparent 20%, #000 22%, transparent 68%);
   mask-image: radial-gradient(circle, transparent 20%, #000 22%, transparent 68%);
   animation: aos-sky-spin 80s linear infinite; }
-.aos-sky-cap { position: absolute; left: -50%; right: -50%; height: 44px; z-index: 9; display: none; pointer-events: none; background: linear-gradient(var(--sky-ground), transparent); }
-html[data-sky][data-bar="solid"] .aos-sky-cap { display: block; }
+.aos-sky-cap { position: absolute; left: -50%; right: -50%; height: 44px; z-index: 9; display: none; pointer-events: none; background: linear-gradient(var(--sky-ground, var(--aos-cap)), transparent);
+  opacity: 1 !important; border-radius: 0 !important; transform: none !important; animation: none !important; filter: none !important; margin: 0 !important; }   /* not one of the shapes (an app's .ambient > * rules) */
+html[data-bar="solid"]:is([data-sky], [data-look="neon"], [data-look="folk"]) .aos-sky-cap { display: block; }
 .aos-star { position: absolute; display: none; border-radius: 50%; background: var(--sky-star, #F4ECDD); pointer-events: none; animation: aos-sky-twinkle ease-in-out infinite alternate; }
 html[data-sky="night"] .aos-star { display: block; }
 @keyframes aos-sky-spin { to { transform: rotate(360deg); } }
@@ -188,7 +189,8 @@ html[data-sky="night"] .aos-star { display: block; }
   // once, when the app is added) has a solid strip above the page, in the page's own ground colour
   // (iOS 26: the body's background, or a full-width fixed element's at the top, such as aOS's frame
   // around an app). The shapes and the sun's rays would stop flat under it, a band across the top of
-  // every page; here they fade in from the ground instead. Inside aOS, an app goes by aOS's bar.
+  // every page; here they fade in from the ground instead: the sky's in Vintage, the page's own in Night Drive
+  // and Folk (their sunsets and flowers run to the top too). Inside aOS, an app goes by aOS's bar.
   // localStorage aos.bar = 'solid' shows it anywhere (the tests).
   function solidBar() {
     try { if (localStorage.getItem('aos.bar') === 'solid') return true; } catch {}
@@ -204,13 +206,17 @@ html[data-sky="night"] .aos-star { display: block; }
   function cap() {
     if (!solidBar()) return root.removeAttribute('data-bar');
     root.setAttribute('data-bar', 'solid');
+    const see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
+    root.style.setProperty('--aos-cap', see(document.body) || see(root) || 'transparent');   // Night Drive's and Folk's ground (Vintage's is the sky's)
     for (const host of document.querySelectorAll('.ambient, .aurora, .atoms')) {
       let c = host.querySelector(':scope > .aos-sky-cap');
       if (!c) { c = document.createElement('i'); c.className = 'aos-sky-cap'; host.appendChild(c); }
       const box = host.closest('#scroller');   // aOS's tabs scroll in a box of their own (aOS/index.html)
-      c.style.top = -(host.getBoundingClientRect().top + (box ? box.scrollTop : scrollY) - host.clientTop) + 'px';   // at the top of the page, wherever the box starts
+      c.style.top = -(host.getBoundingClientRect().top + (box ? box.scrollTop : scrollY) + host.clientTop) + 'px';   // at the top of the page, wherever the box starts (from inside the host's border)
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cap); else cap();
   addEventListener('load', cap); addEventListener('resize', cap);
+  new MutationObserver(() => requestAnimationFrame(cap)).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-look'] });   // the ground changes with light or dark, and the look
+  (dark.addEventListener ? dark.addEventListener('change', cap) : dark.addListener(cap));
 })();
