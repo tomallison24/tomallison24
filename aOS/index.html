@@ -366,6 +366,10 @@
   .askipsy input { position: relative; flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 17px; outline: none; -webkit-appearance: none; appearance: none; }
   .askipsy input::placeholder { color: var(--muted); opacity: 1; }
   .askipsy input::-webkit-search-cancel-button { display: none; }
+  /* Ipsy rolling across the bar (aOS/home-tab.js, roll): in front, the words and the glass out of its way */
+  .askipsy input, .askipsy .hqs { transition: opacity .3s; }
+  .askipsy.rolling .ipsy-slot { z-index: 1; }
+  .askipsy.rolling input, .askipsy.rolling .hqs { opacity: 0; }
   .hqs { position: relative; flex: none; width: 19px; height: 19px; margin-right: 6px; color: var(--muted); }
   .hqx { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); background: var(--dot); }
   .hqx svg { width: 14px; height: 14px; }
