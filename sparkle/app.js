@@ -347,7 +347,7 @@
   // a question on the stage, and its game started (a demo's sample too)
   function draw(R, q) {
     const [who] = HOST[R.skill];
-    const dots = R.demo ? '<div class="dots"></div>' : `<div class="dots" aria-label="Question ${R.i + 1} of ${R.plan.length}">${R.plan.map((_, k) => `<i class="${k < R.i ? 'on' : k === R.i ? 'now' : ''}"></i>`).join('')}</div>`;
+    const dots = R.demo ? '<div class="dots demorow"></div>' : `<div class="dots" aria-label="Question ${R.i + 1} of ${R.plan.length}">${R.plan.map((_, k) => `<i class="${k < R.i ? 'on' : k === R.i ? 'now' : ''}"></i>`).join('')}</div>`;
     // what she hears, shown as words too (each lights up as it's said)
     const toks = [];
     q.say.forEach((part, k) => {
