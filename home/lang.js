@@ -46,7 +46,7 @@
       if (lang !== 'ru') return;
       for (const k in words || {}) WORDS.set(norm(k), words[k]);
       for (const p of patterns || []) PATTERNS.push(p);
-      if (started) sweep(document.documentElement);   // a word file that came late: what's on the page already
+      if (started) { changed = false; sweep(document.documentElement); if (changed) tell(); }   // a word file that came late: what's on the page already
     },
     set(next) {
       next = ok(next);
@@ -84,7 +84,7 @@
     if (!p || SKIP.test(p.nodeName) || done.get(n) === n.data || kept(p)) return;
     const s = n.data; if (!/[A-Za-z]/.test(s)) return;
     const r = t(s);
-    if (r !== s) { const lead = /^\s*/.exec(s)[0], trail = /\s*$/.exec(s)[0]; n.data = lead + r + trail; done.set(n, n.data); }   // only what we changed: the rest is looked at again when more words come
+    if (r !== s) { const lead = /^\s*/.exec(s)[0], trail = /\s*$/.exec(s)[0]; n.data = lead + r + trail; done.set(n, n.data); changed = true; }   // only what we changed: the rest is looked at again when more words come
   }
   function attrs(el) {
     if (kept(el)) return;
@@ -107,13 +107,18 @@
     } });
     for (let x = w.nextNode(); x; x = w.nextNode()) x.nodeType === 3 ? text(x) : attrs(x);
   }
-  let started = false;
+  let started = false, changed = false, told = 0;
+  // words that changed size: 'aos:words' on window, once a frame, so what was measured in English is measured
+  // again (home/slide.js's thumbs)
+  const tell = () => { if (told) return; told = requestAnimationFrame(() => { told = 0; window.dispatchEvent(new Event('aos:words')); }); };
   const mo = new MutationObserver(list => {
+    changed = false;
     for (const m of list) {
       if (m.type === 'characterData') text(m.target);
       else if (m.type === 'attributes') { if (m.target.nodeType === 1) attrs(m.target); }
       else for (const n of m.addedNodes) sweep(n);
     }
+    if (changed) tell();
   });
   mo.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...ATTRS, 'value'] });
   started = true;
