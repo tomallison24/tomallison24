@@ -229,7 +229,7 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsyâ€™s instructions, Newsâ€
   assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['find_stories', 'get_story', 'summarize_story', 'show_story', 'sport_scores', 'league_table', 'show_sport',
     'find_sport_options', 'set_sport_filters', 'set_my_team', 'set_story_filters']);
   for (const t of IPSY_CLIENT_TOOLS) { assert.equal(t.input_schema.type, 'object'); assert.equal(t.input_schema.additionalProperties, false); assert.ok(t.description.length > 40, t.name); }
-  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'web_search', 'web_fetch']);
+  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
   assert.deepEqual(q.body.messages, Q, 'the conversation as the phone sent it');
 });

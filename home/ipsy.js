@@ -49,6 +49,13 @@
   const follow = el => { followers.add(el); wear(el); };
   for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(el => wear(el)));
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // The language a short message asks for ("English", "switch to English please", «на русский»), or null
+  const LANG_NAME = { en: 'English', ru: 'Русский' };
+  const LANG_WORDS = /^(?:(?:please|pls|switch|change|set|go|back|to|the|language|lang|in|into|use|speak|i|want|need|can't|cant|read|this|it|пожалуйста|переключи|переключись|переключить|верни|вернуть|поменяй|смени|сделай|включи|язык|на|по|хочу)\s+)*(english|eng|russian|английский|англ|русский|рус)(?:\s+(?:please|language|pls|пожалуйста|язык))?$/;
+  const langAsked = s => {
+    const m = LANG_WORDS.exec(String(s || '').toLowerCase().replace(/[.!?,«»"]/g, ' ').replace(/\s+/g, ' ').trim());
+    return m ? (/^(english|eng|английский|англ)$/.test(m[1]) ? 'en' : 'ru') : null;
+  };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const ls = {
     get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
@@ -359,6 +366,20 @@
     // the app's tools, for Ipsy in aOS: aOS opens the app out of sight and runs them there (aOS/home-tab.js)
     AOS.ipsy.mounted = { app: o.app, name: o.name, tools: o.tools || {}, label: o.label, context: o.context };
     const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok', hist: 'ipsy.' + o.app + '.history', closed: 'ipsy.' + o.app + '.closed' };
+    // Built in, in every app and in aOS: the language (../home/lang.js), for someone who switched to one they can't
+    // read. Claude's set_language tool (server/ipsy.js LANG_TOOL) or just typing "English" / «Русский» (no question
+    // used up, and before Ipsy is set up): aOS and every app are drawn again in it once Ipsy has answered.
+    let langTo = null;
+    const BUILT_IN = {
+      set_language: async ({ lang } = {}) => {
+        if (!window.aosLang) return { error: true, content: 'There is no language setting here.' };
+        if (!LANG_NAME[lang]) return { error: true, content: 'lang must be "en" or "ru".' };
+        if (lang === aosLang.get()) return { content: 'aOS is already in ' + (lang === 'ru' ? 'Russian.' : 'English.') };
+        langTo = lang;
+        return { content: 'Done: aOS and every app switch to ' + (lang === 'ru' ? 'Russian' : 'English') + ' as soon as your reply is shown. Reply in that language, in a line.',
+          change: { text: LANG_NAME[lang], undo: () => { langTo = null; } } };
+      },
+    };
     let messages = [], view = [], busy = false, undos = new Map();
     let showing = false;                  // the list of recent chats is on screen instead of the chat
     const asks = new Map();               // questions waiting on a Yes or No: id -> resolve
@@ -578,7 +599,7 @@
       }).then(ok => { mood('work'); say('Working…'); return ok; });
     }
     async function runTool(u) {
-      const fn = o.tools && o.tools[u.name];
+      const fn = BUILT_IN[u.name] || (o.tools && o.tools[u.name]);
       if (!fn) return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: 'No such tool here.' };
       try {
         const res = await fn(u.input || {}, { confirm }) || {};
@@ -627,6 +648,14 @@
 
     async function submit() {
       const text = input.value.trim();
+      const want = langAsked(text);
+      if (want && !busy && window.aosLang) {   // "English", «Русский», "switch to English": at once, with no question to Claude
+        input.value = ''; input.style.height = '';
+        add({ t: 'me', text });
+        if (want === aosLang.get()) add({ t: 'it', text: want === 'ru' ? 'aOS уже на русском.' : 'aOS is already in English.' });
+        else { add({ t: 'it', text: want === 'ru' ? 'Переключаю aOS на русский…' : 'Switching aOS to English…' }); persist(); setTimeout(() => aosLang.set(want), 900); }
+        persist(); return;
+      }
       if (!text || busy || !ls.get(K.ok, '')) return;
       input.value = ''; input.style.height = '';
       busy = true; sendBtn.disabled = true;
@@ -652,7 +681,7 @@
           if (res.stop_reason === 'pause_turn') continue;                    // Anthropic paused a long search: carry on
           if (res.stop_reason === 'tool_use' && uses.length) {
             mood('work');
-            uses.forEach(u => { const l = o.label ? o.label(u.name, u.input || {}) : ''; if (l) add({ t: 'act', text: l }); });
+            uses.forEach(u => { const l = u.name in BUILT_IN ? 'Changing the language' : o.label ? o.label(u.name, u.input || {}) : ''; if (l) add({ t: 'act', text: l }); });
             say('Working…');
             const results = [];
             for (const u of uses) results.push(await runTool(u));          // one at a time: they share the app's data
@@ -676,6 +705,7 @@
         if (code === 'full') { /* nothing more to say */ }
       }
       busy = false; persist(); mood(document.activeElement === input ? 'listen' : 'idle'); say(''); draw();
+      if (langTo) { const l = langTo; langTo = null; setTimeout(() => aosLang.set(l), 1600); }   // after the answer has been read
     }
 
     // ---- For the app: Ipsy doing things by itself (Orders and Travel check their "To check" items) ----

@@ -2,6 +2,8 @@
 //   - English by default: nothing swapped, dates in English;
 //   - Account > Appearance > Language > Русский: kept, aOS is drawn again in Russian (lang="ru"), and an app
 //     open in another page follows at once; English brings it back;
+//   - lost in a language you can't read: Ipsy switches it back (typing "English", or asking Claude, which uses
+//     the set_language tool every Ipsy has);
 //   - the engine: whole texts and patterns, attributes, text drawn later, translate="no" left alone,
 //     Russian plurals, dates and times in Russian;
 //   - every app opens with no English left on its page (aOS/scripts/lang-scan.mjs, the names in KEEP aside).
@@ -32,6 +34,12 @@ async function phone(seed = {}) {
     const route = u.pathname.slice(u.pathname.indexOf('/api/') + 5), J = (o, s = 200) => r.fulfill({ status: s, contentType: 'application/json', body: JSON.stringify(o) });
     if (route === 'state') return J({ storage: true, setup: true, user, plan: null });
     if (route === 'members') return J({ members: [user] });
+    if (route === 'ipsy') {   // Claude, stood in for: asked to, it switches the language with the tool every Ipsy has
+      const b = JSON.parse(r.request().postData() || '{}'), last = (b.messages || []).slice(-1)[0] || {};
+      const done = Array.isArray(last.content) && last.content.some(c => c.type === 'tool_result');
+      return J(done ? { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Switched aOS to English.' }] }
+        : { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tu1', name: 'set_language', input: { lang: 'en' } }] });
+    }
     return J({}, 401);
   });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
@@ -68,6 +76,23 @@ const openAos = async p => { await p.goto(BASE + '/aOS/'); await p.evaluate(() =
   await p.waitForTimeout(300);
   if (await p.evaluate(() => document.documentElement.lang) !== 'en-US') pr.push('English did not come back');
   report('Language > Русский: kept, aOS drawn again in Russian, an open app follows; English brings it back', pr); await ctx.close();
+}
+
+// 2b. Ipsy puts the language back: typing "English" (at once, nothing asked), or asking (Claude's set_language tool)
+{
+  const pr = [];
+  for (const [how, words] of [['typed', 'English'], ['asked', 'I cannot read this, help']]) {
+    const { ctx, p, errs } = await phone({ 'aos.lang': 'ru' }); pr.push(...errs.map(e => how + ': ' + e));
+    await p.goto(BASE + '/meals/'); await p.waitForTimeout(500);
+    await p.click('.ipsy-btn'); await p.waitForSelector('.ipsy-bubble');
+    if (await p.locator('#ipsyOk').count()) await p.click('#ipsyOk');
+    await p.fill('#ipsyIn', words);
+    await Promise.all([p.waitForEvent('load', { timeout: 15000 }).catch(() => pr.push(how + ': the page was not drawn again')), p.click('.ipsy-send')]);
+    await p.waitForTimeout(300);
+    if (await p.evaluate(() => document.documentElement.lang + '/' + localStorage.getItem('aos.lang')) !== 'en-US/en') pr.push(how + ': Ipsy did not put English back');
+    await ctx.close();
+  }
+  report('Ipsy puts English back: typing "English", or asking (the set_language tool)', pr);
 }
 
 // 3. the engine

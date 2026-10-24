@@ -1804,7 +1804,6 @@ function renderChrome() {
   $('#title').textContent = sel ? (sel.size ? sel.size + ' Selected' : 'Select') : signedIn ? viewName() : 'Mail';
   $('#title').translate = !(signedIn && !sel && ownView());
   fitTitle();
-  if (window.aosLang && aosLang.get() === 'ru') queueMicrotask(fitTitle);   // again once ../home/lang.js has put the Russian in (it does so just after)
   $('#vbar').classList.toggle('hide', !main || !!sel);
   if ($('#vbar').classList.contains('hide')) closeBoxMenu(true);
   else drawPill();
@@ -4345,6 +4344,7 @@ document.addEventListener('pointerdown', e => {
 addEventListener('resize', () => { closeBoxMenu(true); slideSeg(true); slideNotify(true); slideTags(true); });
 // Futura (Vintage) and the system font (Standard) are different widths: fit the title and place the sliding thumbs again
 addEventListener('aos:design', () => requestAnimationFrame(() => { fitTitle(); slideSeg(true); slideNotify(true); slideTags(true); }));
+addEventListener('aos:words', fitTitle);   // Russian (../home/lang.js): the title is measured again in its own words
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (clientId() && !getToken()) return renew();         // back after the hour ran out

@@ -72,12 +72,20 @@ Replies: short and friendly, in plain US English, dates like "Oct 9" and times l
 Each of the person's messages starts with a note from the app in [brackets]: today's date and what's on their screen. The app adds it; the person didn't type it.`;
 }
 
-// web: false sends the app's own tools only, no web search or web pages (Fitness).
+// Every Ipsy (each app's, and aOS's) can switch aOS's language (home/ipsy.js runs it, home/lang.js): for someone who
+// picked a language they can't read and can't find the setting again.
+export const LANG_TOOL = {
+  name: 'set_language',
+  description: 'Switch aOS and every app between English and Russian (the Language setting in aOS: Account > Appearance). Use it when the person asks for the other language, or plainly can\'t read the one aOS is in (they write in English while aOS is in Russian and seem lost, or the reverse). aOS is drawn again in it right after your reply, so reply in the new language, in a line.',
+  input_schema: { type: 'object', properties: { lang: { type: 'string', enum: ['en', 'ru'], description: 'en: English, ru: Russian' } }, required: ['lang'], additionalProperties: false },
+};
+
+// web: false sends the app's own tools only, no web search or web pages (Fitness); every Ipsy has LANG_TOOL.
 export function requestHead({ model, system, tools, web = true }) {
   return {
     model, max_tokens: 16000,
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-    tools: web ? [...tools, ...webTools(model)] : [...tools],
+    tools: web ? [...tools, LANG_TOOL, ...webTools(model)] : [...tools, LANG_TOOL],
     output_config: { effort: 'medium' },
     cache_control: { type: 'ephemeral' },                 // and the conversation so far, as it grows
     ...(FALLBACK_OK.test(model) ? { fallbacks: 'default' } : {}),

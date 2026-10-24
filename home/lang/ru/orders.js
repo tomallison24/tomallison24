@@ -9,6 +9,7 @@
   // a day as the app says it: today, tomorrow, a date, or "24 окт. to 26" (a range)
   const DW = { today: 'сегодня', tomorrow: 'завтра', yesterday: 'вчера' };
   const dw = s => DW[s] || s.replace(/^([^A-Za-z]+) to ([^A-Za-z]+)$/, '$1 – $2');
+  const end = s => /\.$/.test(s) ? s : s + '.';   // a date already ends in a dot (24 окт.)
   const store = s => s === 'the store' ? 'магазин' : s === 'The store' ? 'Магазин' : s;
   const ago = s => { let m; if (s === 'just now') return 'только что'; if ((m = /^(\d+) min ago$/.exec(s))) return m[1] + ' мин назад'; if ((m = /^(\d+) h ago$/.exec(s))) return m[1] + ' ч назад'; if ((m = /^(\d+) days ago$/.exec(s))) return P(m[1], 'день', 'дня', 'дней') + ' назад'; return s; };
   const FIELD = { store: 'магазин', kind: 'вид', 'order number': 'номер заказа', items: 'товары', total: 'сумма', courier: 'перевозчик', 'tracking number': 'трек-номер',
@@ -139,11 +140,12 @@
     [/^Last checked (.+)$/, m => 'Последняя проверка: ' + ago(m[1])],
     [/^(\d+) results?$/, m => P(m[1], 'результат', 'результата', 'результатов')],
     [/^(\d+) of (\d+)$/, m => m[1] + ' из ' + m[2]],
+    [/^([^A-Za-z]+) to ([^A-Za-z]+)$/, m => m[1] + ' – ' + m[2]],
     [/^Nothing older in the family’s Google Sheet(?: \(before (.+)\))?\.$/, m => 'В семейной Google-таблице больше ничего нет' + (m[1] ? ' (до ' + m[1] + ')' : '') + '.'],
     // a card
     [/^Order (.+)$/, m => 'Заказ ' + m[1]],
     [/^(?:×(\d+) )?and (\d+) more$/, m => (m[1] ? '×' + m[1] + ' ' : '') + 'и ещё ' + m[2]],
-    [/^Expected (.+)$/, m => 'Ожидается ' + dw(m[1])],
+    [/^Expected (.+?)(\.?)$/, m => 'Ожидается ' + (m[2] ? end(dw(m[1])) : dw(m[1]))],
     [/^Was due (.+)$/, m => 'Ожидался ' + dw(m[1])],
     [/^Arrives (.+)$/, m => 'Прибудет ' + dw(m[1])],
     [/^arrives (.+)$/, m => 'прибудет ' + dw(m[1])],
@@ -158,22 +160,22 @@
     [/^On its way back to (.+)$/, m => 'Едет обратно в ' + store(m[1])],
     [/^The carrier is sending it back\. Refund: (.+)\.$/, m => 'Перевозчик отправляет его обратно. Возврат: ' + m[1] + '.'],
     [/^Return was due (.+)$/, m => 'Срок возврата истёк ' + m[1]],
-    [/^Return started (.+)\.$/, m => 'Возврат оформлен ' + m[1] + '.'],
+    [/^Return started (.+)\.$/, m => 'Возврат оформлен ' + end(m[1])],
     [/^Sent back (.+)$/, m => 'Отправлено обратно ' + dw(m[1])],
     [/^(.+) refund to come once (.+) has it\.$/, m => 'Возврат ' + m[1] + ' — когда ' + store(m[2]) + ' получит товар.'],
     [/^Waiting for (.+) to get it\.$/, m => 'Ждём, когда ' + store(m[1]) + ' получит товар.'],
     [/^(.+) has it$/, m => store(m[1]) + ' получил товар'],
     [/^Refunded ([^A-Za-z.]+)$/, m => 'Возвращено ' + m[1]],
-    [/^Refunded ([^A-Za-z]+?)(?: to (.+?))?\.( The carrier sent it back\.)?$/, m => 'Деньги возвращены ' + m[1] + (m[2] ? ' на ' + m[2] : '') + '.' + (m[3] ? ' Перевозчик отправил его обратно.' : '')],
+    [/^Refunded ([^A-Za-z]+?)(?: to (.+?))?\.( The carrier sent it back\.)?$/, m => 'Деньги возвращены ' + end(m[1] + (m[2] ? ' на ' + m[2] : '')) + (m[3] ? ' Перевозчик отправил его обратно.' : '')],
     [/^To (.+?)\.( The carrier sent it back\.)?$/, m => 'На ' + m[1] + '.' + (m[2] ? ' Перевозчик отправил его обратно.' : '')],
     [/^Out for delivery, due (.+)$/, m => 'Передано курьеру, прибудет ' + m[1]],
     [/^On the truck with (.+)\.$/, m => 'Везёт ' + m[1] + '.'],
-    [/^Shipped (.+?)(?: with (.+?))?\. It may be late: check the carrier\.$/, m => 'Отправлено ' + m[1] + (m[2] ? ' через ' + m[2] : '') + '. Возможна задержка: уточните у перевозчика.'],
-    [/^Shipped(?: ([^A-Za-z]+?))?(?: with (.+?))?\.$/, m => 'Отправлено' + (m[1] ? ' ' + m[1] : '') + (m[2] ? ' через ' + m[2] : '') + '.'],
+    [/^Shipped (.+?)(?: with (.+?))?\. It may be late: check the carrier\.$/, m => end('Отправлено ' + m[1] + (m[2] ? ' через ' + m[2] : '')) + ' Возможна задержка: уточните у перевозчика.'],
+    [/^Shipped(?: ([^A-Za-z]+?))?(?: with (.+?))?\.$/, m => end('Отправлено' + (m[1] ? ' ' + m[1] : '') + (m[2] ? ' через ' + m[2] : ''))],
     [/^Ordered (.+)$/, m => 'Заказано ' + dw(m[1])],
-    [/^Pickup booked for (.+)\.$/, m => 'Выдача назначена на ' + m[1] + '.'],
+    [/^Pickup booked for (.+)\.$/, m => 'Выдача назначена на ' + end(m[1])],
     [/^Pick up by (.+)$/, m => 'Забрать до ' + m[1]],
-    [/^Ready since (.+)\.$/, m => 'Готово с ' + m[1] + '.'],
+    [/^Ready since (.+)\.$/, m => 'Готово с ' + end(m[1])],
     [/^Delivered by (.+)\.$/, m => 'Доставил ' + m[1] + '.'],
     [/^Delivered (.+)$/, m => 'Доставлено ' + dw(m[1])],
     [/^Picked up (.+)$/, m => 'Получено ' + dw(m[1])],

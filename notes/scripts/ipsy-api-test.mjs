@@ -88,7 +88,7 @@ await test('one step goes to Sonnet 5.5 with Ipsy’s Notes instructions, tools,
   assert.equal(q.headers['x-api-key'], 'ak');
   assert.deepEqual(q.body.cache_control, { type: 'ephemeral' });
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
-  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'web_search', 'web_fetch']);
+  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
   assert.deepEqual(q.body.messages, Q);
   assert.ok(q.raw.endsWith(',"messages":' + JSON.stringify(Q) + '}'), 'the conversation is passed on as the phone wrote it');
