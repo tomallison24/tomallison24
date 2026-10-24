@@ -8,7 +8,8 @@
 // KV namespace bound as ACCOUNTS (made and bound by .github/workflows/news.yml):
 //   owner            the owner's id; until it exists, the locked routes refuse everyone
 //   user:<id>        { id, name, role: 'owner'|'member', creds: [...], created, by,
-//                      removed?: when the owner removed them (signed out, data kept) }
+//                      removed?: removed before Remove deleted everything (signed out, data kept;
+//                      Remove again deletes them for good) }
 //   apps:<id>        { <app>: when it was last opened from their Home Screen }
 //   sv:<id>          how many times they've used "Sign out other devices"
 //   wipe:<id>        "Sign out and erase": every session of theirs signed before this sign-out
@@ -24,8 +25,8 @@
 //   layer:<app>:<id> { at, data } - what Notes, Travel (travelv: Travel Vintage), Fitness or Mail shows in that
 //                    person's Calendar (functions/aOS/api); only they can read it
 //   cred:<credId>    { user, spki, alg, created } - a passkey's public key
-//   invite:<token>   { name, by, user? } - one use, gone after 24 hours; with user,
-//                    it brings that removed person back, with everything they had
+//   invite:<token>   { name, by } - one use, gone after 24 hours, always for someone new
+//                    (removing someone deletes them: functions/aOS/api, forget)
 //   chal:<id>        a sign-in or sign-up challenge, gone after 5 minutes
 //   secret           the key sessions are signed with, made on first use
 //   config:home      the family's Home Assistant address (an https origin), set by

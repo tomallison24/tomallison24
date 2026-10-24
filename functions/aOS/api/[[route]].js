@@ -34,9 +34,9 @@
 //   POST announce/begin|send|done  (the release workflow only, with its key) tells the family "aOS updated to 1.x", once per version (server/push.js)
 //   GET  members          (family) everyone's first name and role, for aOS's family card
 //   GET  family           (owner) everyone with an account
-//   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours;
-//                         { id } of someone removed -> an invite that brings them back as they were
-//   POST remove           (owner) { id }       -> signs them out everywhere; their data is kept
+//   POST invite           (owner) { name }     -> { token } for #invite=<token>, one use, 24 hours
+//   POST remove           (owner) { id }       -> takes them out of the family completely: signed out everywhere,
+//                                                 their account and everything kept for them deleted (forget)
 //   POST erase            (owner) { id }       -> signs someone else out everywhere and erases aOS from their
 //                                                 phones as they next open (they lost their only phone)
 //   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
@@ -132,8 +132,27 @@ async function body(request, max = MAX_BODY) {
   try { return JSON.parse(t || '{}'); } catch { throw Object.assign(new Error('bad-json'), { status: 400 }); }
 }
 
-// Everyone with an account, the owner first, then in the order they joined
-// (with removed people, marked, for the owner's list).
+// Everyone with an account, the owner first, then in the order they joined (with anyone
+// removed before removing deleted everything, marked, so the owner can remove them for good).
+// Someone removed from the family, completely: their passkeys, their account (so every session of theirs
+// ends with it) and everything kept for them here - apps, settings, Calendar layers, what was moving to a
+// new phone or into aOS, notifications, their step sensor (freed to be linked again, functions/fitness/api)
+// and Health. There's no bringing it back: inviting them again makes a new account. Today's AI counts
+// (<app>:ai:<id>:<day> and the like) go by themselves in two days.
+async function forget(db, u) {
+  const id = u.id, keys = ['apps', 'sv', 'wipe', 'prefs', 'move', 'push', 'health', 'vitals', 'vitals-sent', 'drinks', 'handoff:want'].map(k => k + ':' + id);
+  for (const a of LAYER_APPS) keys.push('layer:' + a + ':' + id);
+  for (const pre of ['handoff:' + id + ':', 'handoff:taken2:' + id + ':']) {
+    let cursor;
+    do { const page = await db.list({ prefix: pre, cursor }); keys.push(...page.keys.map(k => k.name)); cursor = page.list_complete ? null : page.cursor; } while (cursor);
+  }
+  const steps = await db.get('steps:' + id);
+  if (steps) keys.push('steps:by:' + steps, 'steps:' + id);
+  for (const c of u.creds || []) keys.push('cred:' + c);
+  await db.delete('user:' + id);   // first: whatever else fails, they're out
+  for (const k of keys) await db.delete(k);
+}
+
 async function everyone(db) {
   const out = [];
   let cursor;
@@ -186,12 +205,8 @@ export async function onRequest({ request, params, env }) {
         name = name || invite.name;
       }
       if (!NAME.test(name)) return reply({ error: 'name' }, 400);
-      // an invite back keeps the person's own id, so everything they had is theirs again
-      const back = invite && invite.user ? await getJSON(db, 'user:' + invite.user) : null;
-      if (invite && invite.user && !(back && back.removed)) return reply({ error: 'invite' }, 403);
-      if (back) name = back.name;
-      const id = rand(16), challenge = rand(32), user = back ? back.id : rand(16);
-      await putJSON(db, 'chal:' + id, { kind: 'signup', challenge, user, name, role, back: !!back, invite: invite ? String(b.invite) : null, by: invite ? invite.by : null }, 300);
+      const id = rand(16), challenge = rand(32), user = rand(16);   // always someone new: a removed person's account is gone
+      await putJSON(db, 'chal:' + id, { kind: 'signup', challenge, user, name, role, invite: invite ? String(b.invite) : null, by: invite ? invite.by : null }, 300);
       return reply({ id, challenge, rp: { id: P.rpId, name: 'AllisonOS' }, user: { id: user, name } });
     }
 
@@ -204,10 +219,8 @@ export async function onRequest({ request, params, env }) {
       if (ch.role === 'owner' && await db.get('owner')) return reply({ error: 'owner-exists' }, 409);
       if (ch.invite && !(await db.get('invite:' + ch.invite))) return reply({ error: 'invite' }, 403);   // used meanwhile
       if (await db.get('cred:' + cred.credId)) return reply({ error: 'passkey-exists' }, 409);   // never repoint someone's passkey
-      const was = ch.back ? await getJSON(db, 'user:' + ch.user) : null;
-      if (ch.back && !(was && was.removed)) return reply({ error: 'invite' }, 403);
-      const user = was ? { ...was, creds: [cred.credId], removed: undefined, back: Date.now() }
-        : { id: ch.user, name: ch.name, role: ch.role, creds: [cred.credId], created: Date.now(), by: ch.by };
+      if (await db.get('user:' + ch.user)) return reply({ error: 'expired' }, 400);   // never over someone's account
+      const user = { id: ch.user, name: ch.name, role: ch.role, creds: [cred.credId], created: Date.now(), by: ch.by };
       await putJSON(db, 'cred:' + cred.credId, { user: user.id, spki: cred.spki, alg: cred.alg, created: Date.now() });
       await putJSON(db, 'user:' + user.id, user);
       if (ch.invite) await db.delete('invite:' + ch.invite);
@@ -390,13 +403,10 @@ export async function onRequest({ request, params, env }) {
     if (route === 'family' && method === 'GET') return reply({ family: await everyone(db) });
 
     if (route === 'invite' && method === 'POST') {
-      const b = await body(request);
-      const back = b.id ? await getJSON(db, 'user:' + String(b.id)) : null;   // inviting a removed person back
-      if (b.id && !(back && back.removed)) return reply({ error: 'unknown' }, 404);
-      const name = back ? back.name : String(b.name || '').trim();
+      const name = String((await body(request)).name || '').trim();
       if (!NAME.test(name)) return reply({ error: 'name' }, 400);
       const token = rand(18);
-      await putJSON(db, 'invite:' + token, { name, by: me.id, at: Date.now(), ...(back ? { user: back.id } : {}) }, 86400);
+      await putJSON(db, 'invite:' + token, { name, by: me.id, at: Date.now() }, 86400);
       return reply({ token, name, hours: 24 });
     }
 
@@ -405,14 +415,7 @@ export async function onRequest({ request, params, env }) {
       const u = await getJSON(db, 'user:' + id);
       if (!u) return reply({ error: 'unknown' }, 404);
       if (u.role === 'owner') return reply({ error: 'owner' }, 400);
-      // Signed out everywhere and their passkeys forgotten, but nothing of theirs is
-      // deleted (their record, Drinks log, apps): an invite back brings it all back.
-      for (const c of u.creds || []) await db.delete('cred:' + c);
-      await putJSON(db, 'user:' + id, { ...u, creds: [], removed: Date.now() });
-      // Their step sensor is freed, so it can be linked again (functions/fitness/api).
-      const steps = await db.get('steps:' + id);
-      if (steps) { await db.delete('steps:by:' + steps); await db.delete('steps:' + id); }
-      await db.delete('health:' + id);
+      await forget(db, u);
       return reply({ ok: true });
     }
 

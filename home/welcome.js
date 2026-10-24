@@ -87,7 +87,7 @@
   const RELEASES = [
     { v: '2', date: '2026-10-22', title: 'Every app, one home', look: 'vintage',
       highlights: ['Every app now opens inside aOS', 'Ask Ipsy across all your apps', 'aOS in your design, Vintage or Sea glass'],
-      notes: ['aOS: Home is where it opens (in place of Apps): the Ipsy bar at the top, your Favorites with a Weather and a Calendar widget (today\'s weather, what\'s next), then every app as an icon in four groups (Family, Every day, Out and about, You): one tap opens any app',
+      notes: ['aOS: removing someone from the family takes them out completely: signed out of every app, and their account and everything aOS keeps for them deleted (no more Invite back: inviting them again makes a new account)', 'aOS: Home is where it opens (in place of Apps): the Ipsy bar at the top, your Favorites with a Weather and a Calendar widget (today\'s weather, what\'s next), then every app as an icon in four groups (Family, Every day, Out and about, You): one tap opens any app',
         'The Ipsy bar finds things as you type: the app first (Return opens it), then what\'s in your apps (events, notes and reminders, bookings, orders, dinners, places and shows), read on your phone and sent nowhere; Ask Ipsy is under them. Hidden orders stay hidden. An app found there has its i, for its page with What\'s New, Open and Get',
         'No dock, and nothing floats over Home; on Today, Home floats at the bottom to take you back. Today sits beside your account on Home',
         'Home\'s Weather widget is up to date when you open aOS: a forecast over 10 minutes old is fetched again (Weather opens with it too). A tap on a widget or an icon opens its app every time, even as Home updates',
@@ -381,7 +381,7 @@
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colors, in every app: one look, and one family of icons',
         'US English and US dates everywhere (Friday, October 9)', 'Home and Places follow the Light or Dark you pick, even when your iPhone is set the other way', 'Podcasts: the first tab is Listen Now',
         'Calendar and Travel only answer your family',
-        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app, and Invite back brings them back with everything they had',
+        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
         'Lost a phone? Sign out everywhere else, in your aOS account, ends every other sign-in at once',
         'Every app works on its own: add only the ones you want; what they share with each other is extra',
         'AllisonOS lives at tomallison24-news.pages.dev; the old GitHub Pages address sends you there',
