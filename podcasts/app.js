@@ -604,7 +604,8 @@
   }
   function epRow(e, withArt, i){
     const p = S.prog[e.k], played = !!(p && p.p), fresh = !p && e.d > Date.now() - 14 * DAY;
-    const meta = [withArt ? '<span translate="no">' + esc(e.st) + '</span>' : '', esc(day(e.d)), esc(epNum(e)), e.v ? I.video : ''].filter(Boolean).join(' · ');
+    const rest = [esc(day(e.d)), esc(epNum(e)), e.v ? I.video : ''].filter(Boolean).join(' · ');
+    const meta = (withArt && e.st ? '<span translate="no">' + esc(e.st) + (rest ? ' · ' : '') + '</span>' : '') + rest;
     const saved = isSaved(e.k);
     return '<article class="ep' + (played ? ' played' : '') + '" style="--i:' + (i || 0) + '">'
       + '<button class="epmain" type="button" data-ep="' + esc(e.k) + '">' + (withArt ? art(e.sa, 56) : '')
@@ -1291,7 +1292,7 @@
     const q = S.queue.map(x => getEp(x.k) || x);
     $('npQueueWrap').hidden = !q.length;
     $('npQueue').innerHTML = q.map((e, i) => '<div class="qrow"><button class="sopen" type="button" data-qplay="' + i + '">' + art(e.sa, 40)
-      + '<span class="stx"><b translate="no">' + esc(e.t) + '</b><span><span translate="no">' + esc(e.st) + '</span>' + esc((e.st && e.dur ? ' · ' : '') + (e.dur ? len(e.dur) : '')) + '</span></span></button>'
+      + '<span class="stx"><b translate="no">' + esc(e.t) + '</b><span><span translate="no">' + esc((e.st || '') + (e.st && e.dur ? ' · ' : '')) + '</span>' + esc(e.dur ? len(e.dur) : '') + '</span></span></button>'
       + '<button class="icbtn" type="button" data-qdel="' + i + '" aria-label="Remove from Up Next">' + I.x + '</button></div>').join('');
   }
   $('npQueueClear').onclick = () => { const q = S.queue; S.queue = []; save(); render(); toast('Up Next cleared', () => { S.queue = q; save(); render(); }); };
