@@ -17,6 +17,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request stops the run still going for the one before it.
+concurrency:
+  group: apps-check-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -74,22 +79,27 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
         with:
           node-version: 22
-      # the test browser, kept between runs (its system libraries still come from apt)
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+      # the test browser and its system packages, from the caches the default branch keeps (warm)
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         id: pw
         with:
           path: ~/.cache/ms-playwright
           key: playwright-1.56.1-chromium-${{ runner.os }}
-      - run: npm install --global playwright@1.56.1 && if [ "${{ steps.pw.outputs.cache-hit }}" = true ]; then npx --yes playwright@1.56.1 install-deps chromium; else npx --yes playwright@1.56.1 install --with-deps chromium; fi
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        with:
+          path: ~/apt-archives
+          key: apt-playwright-1.56.1-${{ runner.os }}
+          restore-keys: apt-playwright-1.56.1-${{ runner.os }}-
+      - run: .github/scripts/ci-browser.sh ${{ steps.pw.outputs.cache-hit == 'true' && 'hit' || '' }}
       - run: node aOS/scripts/tours-test.mjs
         env:
           TOURS_SHARD: ${{ matrix.shard }}/3
 
   # The browser tests: each app at iPhone size in Chromium, driven through what a person does,
   # and aOS's own (every app opens, on its own, the sky, the release's update screens). They run in
-  # groups side by side, each about four minutes, so the whole check takes about as long as one
-  # group, not all of them in a row. A new browser test goes into the group that runs shortest
-  # (each group's time is on its run's page). A group runs all its tests even when one fails, and
+  # twelve groups side by side, each about three minutes of tests (the sky alone is one), so the
+  # whole check takes about as long as one group, not all of them in a row. A new browser test goes
+  # into the group that runs shortest (each test's time is on its run's page, under its name). A group runs all its tests even when one fails, and
   # names each failure. A test seeds aos.seen at '999' so no walkthrough or update screen covers the page.
   browser:
     name: ${{ matrix.group }}
@@ -99,47 +109,72 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # every app opens, light and dark, with nothing its policy blocks; and every app on its own
-          - group: smoke
-            tests: |
-              aOS/scripts/apps-smoke-test.mjs
-              aOS/scripts/standalone-test.mjs
-          # the Vintage sky; the newest release's update screens in aOS and every app; aOS's Today
-          - group: sky-release
+          # the Vintage sky in every app
+          - group: sky
             tests: |
               aOS/scripts/sky-test.mjs
-              aOS/scripts/release-test.mjs
-              aOS/scripts/today-test.mjs
-          # aOS: Calendar's layers through the family account, an invite, notifications, designs (and home/design.js), the look, Android; Meals and Podcasts
-          - group: aos
+          # every app on its own (and its old Vintage address); aOS's Today
+          - group: standalone
             tests: |
+              aOS/scripts/standalone-test.mjs
+              aOS/scripts/today-test.mjs
+          # the newest release's update screens; every app opens, light and dark; Calendar's layers, an invite, notifications, designs
+          - group: release-smoke
+            tests: |
+              aOS/scripts/release-test.mjs
+              aOS/scripts/apps-smoke-test.mjs
               calendar/scripts/layers-test.mjs
               aOS/scripts/join-test.mjs
               aOS/scripts/notify-test.mjs
               aOS/scripts/designs-test.mjs
-              aOS/scripts/design-test.mjs
-              aOS/scripts/look-test.mjs
-              aOS/scripts/android-installed-test.mjs
-              meals/scripts/app-test.mjs
-              podcasts/scripts/app-test.mjs
-          # Drinks; Fitness's Meds and Steps, with Sign out and erase; Private: what Orders, Travel and Calendar keep from Ipsy; Home's Automations
+          # Drinks; Private: what Orders, Travel and Calendar keep from Ipsy; Home's Automations
           - group: drinks
             tests: |
               drinks/scripts/app-test.mjs
-              fitness/scripts/meds-steps-test.mjs
               home/scripts/ipsy-private-test.mjs
               house/scripts/automations-test.mjs
-          # Home, News' table and match pages, Calendar; aOS 2's Home (every app inside aOS, Ipsy across them)
-          - group: home
+          # Orders, and Ipsy in Orders and News
+          - group: orders
             tests: |
+              orders/scripts/app-test.mjs
+              orders/scripts/ipsy-test.mjs
+              news/scripts/ipsy-test.mjs
+          # Ipsy in Calendar and Notes; Mail's two designs
+          - group: calendar-ipsy
+            tests: |
+              calendar/scripts/ipsy-test.mjs
+              notes/scripts/ipsy-test.mjs
+              mail/scripts/design-test.mjs
+          # Notes; Ipsy in Meals; Fitness's Meds and Steps; home/design.js
+          - group: notes
+            tests: |
+              notes/scripts/app-test.mjs
+              meals/scripts/ipsy-test.mjs
+              fitness/scripts/meds-steps-test.mjs
+              aOS/scripts/design-test.mjs
+          # Meals, Podcasts; aOS's look; Android
+          - group: meals-podcasts
+            tests: |
+              meals/scripts/app-test.mjs
+              podcasts/scripts/app-test.mjs
+              aOS/scripts/look-test.mjs
+              aOS/scripts/android-installed-test.mjs
+          # Places; aOS 2's Home (every app inside aOS, Ipsy across them); News' table and match pages
+          - group: places-home
+            tests: |
+              places/scripts/app-test.mjs
               aOS/scripts/home-test.mjs
-              house/scripts/app-test.mjs
-              house/scripts/connect-test.mjs
               news/scripts/table-test.mjs
               news/scripts/match-test.mjs
+          # Home (the house app), Calendar, Mail's security tests that run in a page
+          - group: house-calendar-mail
+            tests: |
+              house/scripts/connect-test.mjs
+              house/scripts/app-test.mjs
               calendar/scripts/app-test.mjs
-          # Fitness (and its Health page), Clock, Notes, and Ipsy in Travel and Fitness
-          - group: apps
+              mail/scripts/security-test.mjs
+          # Fitness (and its Health page, and Ipsy), Clock, Notes' aisles, reminders and security
+          - group: fitness-clock
             tests: |
               fitness/scripts/app-test.mjs
               fitness/scripts/ipsy-test.mjs
@@ -148,34 +183,15 @@ jobs:
               notes/scripts/aisles-app-test.mjs
               notes/scripts/push-app-test.mjs
               notes/scripts/security-test.mjs
-              travel/scripts/ipsy-test.mjs
-          # Notes, Places
-          - group: notes-places
-            tests: |
-              notes/scripts/app-test.mjs
-              places/scripts/app-test.mjs
-          # Travel, Weather, News
+          # Travel (and Ipsy in it), Weather, News
           - group: travel-weather-news
             tests: |
               travel/scripts/app-test.mjs
               travel/scripts/smart-test.mjs travel
               travel/scripts/smart-test.mjs travelvintage
+              travel/scripts/ipsy-test.mjs
               weather/scripts/app-test.mjs
               news/scripts/app-test.mjs
-          # Orders, and Ipsy in Orders, News and Meals
-          - group: orders
-            tests: |
-              orders/scripts/app-test.mjs
-              orders/scripts/ipsy-test.mjs
-              news/scripts/ipsy-test.mjs
-              meals/scripts/ipsy-test.mjs
-          # Mail (the security tests that run in a page, and both designs), and Ipsy in Calendar and Notes
-          - group: mail-ipsy
-            tests: |
-              calendar/scripts/ipsy-test.mjs
-              notes/scripts/ipsy-test.mjs
-              mail/scripts/security-test.mjs
-              mail/scripts/design-test.mjs
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
       # of this group's tests, the ones this pull request needs (none: the group stops here)
@@ -192,14 +208,20 @@ jobs:
         if: steps.pick.outputs.any == 'yes'
         with:
           node-version: 22
-      # the test browser, kept between runs (its system libraries still come from apt)
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+      # the test browser and its system packages, from the caches the default branch keeps (warm)
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         id: pw
         if: steps.pick.outputs.any == 'yes'
         with:
           path: ~/.cache/ms-playwright
           key: playwright-1.56.1-chromium-${{ runner.os }}
-      - run: npm install --global playwright@1.56.1 && if [ "${{ steps.pw.outputs.cache-hit }}" = true ]; then npx --yes playwright@1.56.1 install-deps chromium; else npx --yes playwright@1.56.1 install --with-deps chromium; fi
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        if: steps.pick.outputs.any == 'yes'
+        with:
+          path: ~/apt-archives
+          key: apt-playwright-1.56.1-${{ runner.os }}
+          restore-keys: apt-playwright-1.56.1-${{ runner.os }}-
+      - run: .github/scripts/ci-browser.sh ${{ steps.pw.outputs.cache-hit == 'true' && 'hit' || '' }}
         if: steps.pick.outputs.any == 'yes'
       - name: Run the group's tests
         if: steps.pick.outputs.any == 'yes'
@@ -214,3 +236,43 @@ jobs:
             node $t"; fi
           done <<< "$TESTS"
           if [ -n "$failed" ]; then echo "Failed:$failed"; exit 1; fi
+
+  # The caches the browser jobs start from (.github/scripts/ci-browser.sh): the browser, and apt's
+  # .deb files (a new set each month, so they stay close to current). A pull request's run can't
+  # share what it saves with other pull requests, only the default branch's can, so they're made
+  # here, on a merge, and only when missing.
+  warm:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+      - id: month
+        run: echo "m=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        id: pw
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-chromium-${{ runner.os }}
+          lookup-only: true
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        id: apt
+        with:
+          path: ~/apt-archives
+          key: apt-playwright-1.56.1-${{ runner.os }}-${{ steps.month.outputs.m }}
+          lookup-only: true
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
+        if: steps.pw.outputs.cache-hit != 'true' || steps.apt.outputs.cache-hit != 'true'
+        with:
+          node-version: 22
+      - run: .github/scripts/ci-browser.sh
+        if: steps.pw.outputs.cache-hit != 'true' || steps.apt.outputs.cache-hit != 'true'
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        if: steps.pw.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-chromium-${{ runner.os }}
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        if: steps.apt.outputs.cache-hit != 'true'
+        with:
+          path: ~/apt-archives
+          key: apt-playwright-1.56.1-${{ runner.os }}-${{ steps.month.outputs.m }}
