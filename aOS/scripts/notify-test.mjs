@@ -59,7 +59,10 @@ async function open(role, { standalone = true, push = true, acct = true, hash = 
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
   await p.goto(BASE + '/aOS/' + hash);
   await p.waitForSelector('.tab:not([hidden]) [data-acct]');   // aOS2 opens on Home
-  if (acct) { await p.click('.tab:not([hidden]) [data-acct]'); await p.waitForSelector('#nBox h3', { timeout: 15000 }); }
+  if (acct) {   // Account, then its Notifications fold (every section there is folded until tapped)
+    await p.click('.tab:not([hidden]) [data-acct]'); await p.waitForSelector('[aria-controls="fNotify"]', { timeout: 15000 });
+    await p.click('[aria-controls="fNotify"]'); await p.waitForSelector('#nBox p', { timeout: 15000 });
+  }
   return { ctx, p, calls, errs };
 }
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');

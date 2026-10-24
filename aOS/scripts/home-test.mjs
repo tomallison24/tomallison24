@@ -338,7 +338,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   };
   const old = await icon(false);
   check(old.took() === 1, 'an aOS icon on the Home Screen asks whether something was left for it as it opens');
-  await old.pg.locator('.tab:not([hidden]) [data-acct]').click(); await old.pg.waitForSelector('#mGo', { timeout: 8000 });
+  await old.pg.locator('.tab:not([hidden]) [data-acct]').click(); await old.pg.click('[aria-controls="fMove"]'); await old.pg.waitForSelector('#mGo', { timeout: 8000 });
   await old.pg.click('#mGo'); await old.pg.waitForFunction(() => /Remove App/.test(document.getElementById('mErr').textContent), null, { timeout: 8000 }).catch(() => {});
   const notes = left && (left.idb || []).find(d => d.name === 'allison-notes');
   check(left && left.ls['allison-clock-v1'] && !('mail.token' in left.ls) && !('aos.session' in left.ls) && notes && notes.stores[0].rows[0][1].url === 'https://sheet',

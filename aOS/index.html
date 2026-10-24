@@ -276,6 +276,14 @@
   .acct > .tools span { flex: 1; } .acct > .tools small { display: block; margin-top: 2px; color: var(--muted); font-size: 14px; font-weight: 400; }
   .acct > .tools b { font-size: 17px; } .acct > .tools i { font-style: normal; color: var(--accent); font-size: 20px; transition: transform .25s; }
   .acct > .tools[aria-expanded="true"] i { transform: rotate(90deg); }
+  /* Account: each section folded under its heading (aOS/app.js, fold) */
+  .acct > .fbody { display: block; padding-top: 4px; }
+  .acct > .fbody[hidden] { display: none; }
+  .acct > .fbody > * + * { margin-top: 18px; }
+  .acct > .fbody > .soft:first-child, .acct > .fbody > .seg:first-child { margin-top: 0; }
+  .acct > .fbody > .soft + .soft { margin-top: 10px; }
+  .acct > .fbody .group { margin-top: 0; }
+  .acct > .tools + .tools, .acct > .fbody + .tools { border-top: 0; }
   .acct > .me { display: flex; }
   .acct h3 { margin: 0 0 4px; font-size: 17px; }
   .acct p { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
