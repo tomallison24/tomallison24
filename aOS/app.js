@@ -346,29 +346,37 @@
   // Look: Vintage (mid-century, the default) or Sea glass, kept on this phone (look.js)
   const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look']];
   const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
+  // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
+  // a link to Updates or Subscription (a notification, the plan card) opens that one
+  // (subId: its line under the heading, kept up to date; anchor: the id a link opens it by, #whats-new, #subscription)
+  const fold = (id, title, sub, body, subId = '', anchor = '') => `<button type="button" class="tools" data-fold aria-expanded="false" aria-controls="${id}"${anchor ? ` id="${anchor}"` : ''}><span><b>${title}</b><small${subId ? ` id="${subId}"` : ''}>${sub}</small></span><i aria-hidden="true">›</i></button>
+    <div class="fbody" id="${id}" hidden>${body}</div>`;
+  const unfold = (b, on) => { if (!b) return; on = on == null ? b.getAttribute('aria-expanded') !== 'true' : on; b.setAttribute('aria-expanded', String(on)); const x = $(b.getAttribute('aria-controls')); if (x) x.hidden = !on; };
+  const THEME_NAME = t => (W.theme.list.find(([v]) => v === t) || [, 'Automatic'])[1];
+  const looksLine = () => `${THEME_NAME(W.theme.read())} · ${aosLook.get() === 'glass' ? 'Sea glass' : 'Vintage'}`;
   function acctPage(at) {
+    const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
-      <div class="glbl">Appearance</div>
-      <div class="group"><div><div class="seg" id="theme" style="flex:1">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div></div></div>
-      <div class="glbl">Look</div>
-      <div class="dlist" id="looks" role="listbox" aria-label="Look" style="margin-top:10px">${lookOpts()}</div>
-      <div class="glbl" id="subscription">Subscription</div>
-      <div class="group plans" id="plans"></div>
-      <p class="note" id="planNote"></p>
-      <div class="glbl" id="whats-new">Updates</div>
-      <div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
-        <ul>${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
-      <div class="group" style="margin-top:20px"><button type="button" data-replay style="color:var(--accent)">Replay the welcome</button></div>`, { up: true });
+      <div class="group acct">
+        ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div>
+          <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>`, 'lookSub')}
+        ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
+        ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
+          <ul>${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
+          <button type="button" class="soft" data-replay>Replay the welcome</button>`, '', 'whats-new')}
+      </div>`, { up: true });
     el.addEventListener('click', ev => {
+      const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
       const lk = ev.target.closest('[data-look]'); if (lk) { aosLook.set(lk.dataset.look); el.querySelector('#looks').innerHTML = lookOpts(); }
+      if (t || lk) $('lookSub').textContent = looksLine();
       if (ev.target.closest('[data-replay]')) W.play();
       onPlanTap(ev);
     });
     paintPlans();
     paintAccount(el.querySelector('#acct'));
-    if (at === 'updates' || at === 'plan') setTimeout(() => el.querySelector(at === 'plan' ? '#subscription' : '#whats-new').scrollIntoView({ block: 'start' }), 450);
+    if (at === 'updates' || at === 'plan') { unfold(el.querySelector(at === 'plan' ? '#subscription' : '#whats-new'), true); setTimeout(() => el.querySelector(at === 'plan' ? '#subscription' : '#whats-new').scrollIntoView({ block: 'start' }), 450); }
     return el;
   }
 
@@ -539,9 +547,9 @@
     box.innerHTML = `<div class="me"><span class="avatar">${esc(u.name[0].toUpperCase())}</span><span style="flex:1"><b>${esc(u.name)}</b> <small class="muted">${u.role === 'owner' ? 'Owner' : 'Family'}</small></span>
       <button type="button" class="soft" id="aOut">Sign out</button></div>`;
     $('aOut').onclick = () => { ACC.signOut(); paintAccount(box); };
-    box.insertAdjacentHTML('beforeend', `<div><h3>Lost a phone?</h3>
+    box.insertAdjacentHTML('beforeend', fold('fLost', 'Lost a phone?', 'Sign out everywhere else, erase a lost phone', `
       <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
-      <button type="button" class="soft" data-lost>Erase a lost phone, step by step</button></div>`);
+      <button type="button" class="soft" data-lost>Erase a lost phone, step by step</button>`));
     $('aOthers').onclick = async () => {
       if (!confirm('Sign out everywhere else, including the other apps on this phone?')) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
@@ -549,35 +557,32 @@
       catch (e) { m.textContent = why(e); }
       busy($('aOthers'), false);
     };
-    box.insertAdjacentHTML('beforeend', `<div><h3>Moving to a new aOS icon?</h3>
-      <p>To switch to another aOS icon, rename aOS, or for a new phone: get ready here, then open the other aOS icon and sign in. Everything comes with it.</p>
-      <button type="button" class="soft" id="mGo">Get ready to move</button><div class="err" id="mErr"></div></div>`);
+    // your settings follow you to your other devices by themselves (aOS/prefs-sync.js); this carries the rest
+    // (Home's Home Assistant sign-in, Ipsy's chats, every app's own settings) to a phone or aOS icon that replaces this one
+    box.insertAdjacentHTML('beforeend', fold('fMove', 'Replacing this phone?', 'Bring everything to a new phone or aOS icon', `
+      <p>Your settings already follow you to your other devices. To replace this phone or this aOS icon (or rename aOS), get ready here, then open the new aOS icon and sign in: everything else comes too, like Home's Home Assistant sign-in and Ipsy's chats.</p>
+      <button type="button" class="soft" id="mGo">Get ready to move</button><div class="err" id="mErr"></div>`));
     $('mGo').onclick = async () => {
       busy($('mGo'), true); const m = $('mErr'); m.textContent = ''; m.style.color = '';
       try { await moveOut(); m.style.color = 'var(--muted)'; m.innerHTML = 'Ready for two days. Now open your other <b>aOS</b> icon and sign in (or add one: <b>tomallison24-news.pages.dev/aOS</b> in Safari, Share, <b>Add to Home Screen</b>). Once everything is there, press and hold this icon, <b>Remove App</b>.'; }
       catch (e) { m.textContent = e.message === 'too-big' ? 'Too much to move in one go.' : why(e); }
       busy($('mGo'), false);
     };
-    box.insertAdjacentHTML('beforeend', '<div id="nBox"></div>');
+    box.insertAdjacentHTML('beforeend', fold('fNotify', 'Notifications', 'Updates and family news', '<div id="nBox"></div>', 'nSub'));
     paintNotify();
     if (u.role !== 'owner') return;
     // the owner's tools, folded away until wanted
-    box.insertAdjacentHTML('beforeend', `<button type="button" class="tools" id="tToggle" aria-expanded="false" aria-controls="tSend tHome tInvite"><span><b>Owner tools</b><small>Notifications, Home Assistant, invites</small></span><i aria-hidden="true">›</i></button>
-      <div id="tSend" hidden><h3>Send a notification</h3>
+    box.insertAdjacentHTML('beforeend', `<button type="button" class="tools" id="tToggle" data-fold aria-expanded="false" aria-controls="tTools"><span><b>Owner tools</b><small>Notifications, Home Assistant, invites, Sheets, the family</small></span><i aria-hidden="true">›</i></button>
+      <div class="fbody" id="tTools" hidden><div id="tSend"><h3>Send a notification</h3>
       <input id="nTitle" placeholder="Title" maxlength="60"><textarea id="nBody" placeholder="Message" maxlength="240" rows="3"></textarea>
       <div class="row2"><button type="button" class="soft" id="nFill">Announce update</button><button type="button" class="go" id="nGo">Send</button></div><div class="err" id="nErr"></div><p class="note" id="nWho"></p></div>
-      <div id="tHome" hidden><h3>Home Assistant address</h3><p>From Home Assistant: Settings → Home Assistant Cloud.</p>
+      <div id="tHome"><h3>Home Assistant address</h3><p>From Home Assistant: Settings → Home Assistant Cloud.</p>
       <input id="hAddr" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="go" id="hSave">Save</button><div class="err" id="hErr"></div></div>
-      <div id="tInvite" hidden><h3>Invite someone</h3><p>Good once, for 24 hours.</p>
+      <div id="tInvite"><h3>Invite someone</h3><p>Good once, for 24 hours.</p>
       <input id="iName" placeholder="Their name" maxlength="40"><button type="button" class="go" id="iGo">Make an invite link</button><div class="err" id="iErr"></div><div id="iOut"></div></div>
       <div><h3>Google Sheets</h3><p>Paste the new script into each Sheet first (aOS/SHEETS.md).</p>
       <div class="fam sheets" id="shList"><p class="note">Checking…</p></div></div>
-      <div><h3>Your family</h3><div class="fam" id="fam"></div></div>`);
-    $('tToggle').onclick = () => {
-      const on = $('tToggle').getAttribute('aria-expanded') !== 'true';
-      $('tToggle').setAttribute('aria-expanded', String(on));
-      for (const id of ['tSend', 'tHome', 'tInvite']) $(id).hidden = !on;
-    };
+      <div><h3>Your family</h3><div class="fam" id="fam"></div></div></div>`);
     $('iGo').onclick = async () => {
       busy($('iGo'), true); $('iErr').textContent = '';
       try { showInvite(await ACC.call('invite', { name: $('iName').value.trim() })); $('iName').value = ''; }
@@ -689,13 +694,13 @@
     let on = false, sub = null;
     if (pushOK() && Notification.permission === 'granted') { try { sub = (await thisPhone()).sub; on = !!sub; } catch {} }
     if (!$('nBox')) return;
-    const head = '<h3>Notifications</h3>';
     let html;
     if (!pushOK()) html = `<p>${iphone && !standalone ? 'Add aOS to your Home Screen to turn these on.' : 'This browser can\'t show notifications from aOS.'}</p>`;
     else if (Notification.permission === 'denied') html = `<p>Blocked: allow them in ${iphone ? 'Settings → Notifications → aOS' : 'this browser\'s site settings'}.</p>`;
     else if (on) html = '<p>On: you hear when aOS is updated, and when the family has news.</p><button type="button" class="soft" id="nOff">Turn off</button>';
     else html = '<p>Hear when aOS is updated, and when the family has news.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
-    box.innerHTML = `<div>${head}${html}<div class="err" id="nMsg"></div></div>`;
+    box.innerHTML = `<div>${html}<div class="err" id="nMsg"></div></div>`;
+    if ($('nSub')) $('nSub').textContent = !pushOK() ? 'Not on this phone' : Notification.permission === 'denied' ? 'Blocked' : on ? 'On' : 'Off';   // on its fold, under Account
     if (msg) { const m = $('nMsg'); m.style.color = msg.err ? '' : 'var(--muted)'; m.textContent = msg.t; }
     if ($('nOn')) $('nOn').onclick = turnOn;
     if ($('nOff')) $('nOff').onclick = async () => {
@@ -868,7 +873,7 @@
   });
   // a tap on a notification while aOS is already open (aOS/sw.js)
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
-    if (e.data && e.data.aosGo === '#whats-new') { const w = $('whats-new'); if (w) w.scrollIntoView({ block: 'start' }); else acctPage('updates'); }
+    if (e.data && e.data.aosGo === '#whats-new') { const w = $('whats-new'); if (w) { unfold(w, true); w.scrollIntoView({ block: 'start' }); } else acctPage('updates'); }
   });
   addEventListener('hashchange', () => { if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); } });
 })();

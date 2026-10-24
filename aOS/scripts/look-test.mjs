@@ -41,7 +41,7 @@ async function open(scheme = 'light', seed = {}, o = {}) {
 const css = (p, sel, prop) => p.locator(sel).first().evaluate((e, k) => getComputedStyle(e)[k], prop);
 const tint = p => p.evaluate(() => [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content).join());
 const WALNUT = 'rgb(74, 52, 38)';
-const openLook = async p => { await p.click('#today [data-acct]'); await p.waitForSelector('#looks .dopt'); };
+const openLook = async p => { await p.click('#today [data-acct]'); await p.click('[aria-controls="fLook"]'); await p.waitForSelector('#looks .dopt'); };   // Account, its Appearance fold
 const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAll(es => es.map(e => e.dataset.look).join());
 
 // 1. aOS opens in Vintage, and the Look picker offers both, Vintage picked
