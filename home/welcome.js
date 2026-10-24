@@ -1435,6 +1435,8 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-sw { position: relative; flex: 0 0 44px; height: 56px; border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--w-edge); }
 #aos-welcome .c-sw.vintage { background: #F4ECDD; } #aos-welcome .c-sw.vintage::after { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
 #aos-welcome .c-sw.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.95), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.95), transparent 70%), #EEF2F0; }
+#aos-welcome .c-sw.neon { background: #120B1F; } #aos-welcome .c-sw.neon::after { content: ''; position: absolute; right: -12px; top: -12px; width: 32px; height: 32px; border-radius: 50%; background: repeating-linear-gradient(to bottom, transparent 0 4px, #120B1F 4px 6px) 0 100%/100% 45% no-repeat, linear-gradient(#FFC75A, #FF8A4C 45%, #FF3D9A); }
+#aos-welcome .c-sw.folk { background: #F5F7FB; } #aos-welcome .c-sw.folk::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #F5F7FB 0 18%, #C7261C 19% 34%, #1C3F94 35%); }
 #aos-welcome .c-seg button[aria-pressed="true"] { background: var(--w-bg); box-shadow: 0 2px 8px rgba(0,0,0,.18), inset 0 0 0 .5px var(--w-edge); }
 #aos-welcome .c-via { margin: 10px 0 8px; font-size: 13px; line-height: 1.4; color: var(--w-muted); }
 #aos-welcome .c-link { display: block; margin-top: 16px; height: 48px; line-height: 48px; border-radius: 999px; font-size: 16px; font-weight: 600; text-decoration: none; color: var(--w-text); background: var(--w-dot); }
@@ -1507,6 +1509,31 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
 #aos-welcome.mc::after { left: -30px; bottom: 90px; width: 130px; height: 36px; border-radius: 18px; background: #D8572A; transform: rotate(-18deg); opacity: .85; }
 #aos-welcome.mc .c-panel { box-shadow: inset 0 0 0 1.5px var(--w-edge); -webkit-backdrop-filter: none; backdrop-filter: none; }
 #aos-welcome.mc .w-btn { background: #D8572A !important; color: #FFF8EC !important; box-shadow: none; }
+/* Night Drive and Folk (data-look on <html>, home/design.js): the same screens in their colours */
+html[data-look="neon"] #aos-welcome.mc.mc { --w-bg: #F6F0FF; --w-text: #22123A; --w-muted: #5A4A78; --w-glass: #FFFFFF; --w-edge: rgba(34,18,58,.14); --w-dot: rgba(34,18,58,.2);
+  --w-pastel: linear-gradient(100deg, #C21E78, #C21E78); --w-glow: rgba(255,180,67,.45); --w-hot: linear-gradient(120deg, #0A8AA6 0%, #0A8AA6 45%, #C21E78 100%); --w-hot-glow: rgba(255,61,154,.6); --w-hot-glow2: rgba(34,211,238,.5);
+  --w-tube: #C21E78; font-family: "Avenir Next", "Avenir", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="neon"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #120B1F; --w-text: #F5ECFF; --w-muted: #B9A9D6; --w-glass: #1B1230; --w-edge: rgba(255,61,154,.32); --w-dot: rgba(245,236,255,.24);
+  --w-pastel: linear-gradient(100deg, #FF3D9A, #FF3D9A); --w-hot: linear-gradient(120deg, #22D3EE 0%, #22D3EE 45%, #FF3D9A 100%); --w-tube: #FF3D9A; } }
+html[data-look="neon"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #120B1F; --w-text: #F5ECFF; --w-muted: #B9A9D6; --w-glass: #1B1230; --w-edge: rgba(255,61,154,.32); --w-dot: rgba(245,236,255,.24);
+  --w-pastel: linear-gradient(100deg, #FF3D9A, #FF3D9A); --w-hot: linear-gradient(120deg, #22D3EE 0%, #22D3EE 45%, #FF3D9A 100%); --w-tube: #FF3D9A; }
+html[data-look="neon"] #aos-welcome.mc::before { opacity: 1; background: repeating-linear-gradient(to bottom, transparent 0 10px, var(--w-bg) 10px 15px) 0 100%/100% 46% no-repeat, linear-gradient(#FFC75A, #FF8A4C 42%, #FF3D9A 78%); }
+html[data-look="neon"] #aos-welcome.mc::after { background: var(--w-tube); box-shadow: 0 0 18px var(--w-tube); opacity: 1; }
+html[data-look="neon"] #aos-welcome.mc .w-btn { background: var(--w-tube) !important; color: #FFFFFF !important; }
+html[data-look="folk"] #aos-welcome.mc.mc { --w-bg: #F5F7FB; --w-text: #0F1D44; --w-muted: #3F4F7A; --w-glass: #FFFFFF; --w-edge: rgba(28,63,148,.2); --w-dot: rgba(15,29,68,.2);
+  --w-pastel: linear-gradient(100deg, #1C3F94, #1C3F94); --w-glow: rgba(78,116,199,.4); --w-hot: linear-gradient(120deg, #1C3F94 0%, #1C3F94 45%, #C7261C 100%); --w-hot-glow: rgba(78,116,199,.6); --w-hot-glow2: rgba(199,38,28,.45);
+  --w-flower: #1C3F94; --w-leaf: #8FA8DE; --w-btn: #1C3F94; font-family: "PT Sans", "Avenir Next", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="folk"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #0D0B0A; --w-text: #F6E7C6; --w-muted: #C9B48A; --w-glass: #191412; --w-edge: rgba(217,166,48,.35); --w-dot: rgba(246,231,198,.24);
+  --w-pastel: linear-gradient(100deg, #D9A630, #D9A630); --w-hot: linear-gradient(120deg, #D9A630 0%, #D9A630 45%, #E0412F 100%); --w-flower: #C7261C; --w-leaf: #B88A24; --w-btn: #C7261C; } }
+html[data-look="folk"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #0D0B0A; --w-text: #F6E7C6; --w-muted: #C9B48A; --w-glass: #191412; --w-edge: rgba(217,166,48,.35); --w-dot: rgba(246,231,198,.24);
+  --w-pastel: linear-gradient(100deg, #D9A630, #D9A630); --w-hot: linear-gradient(120deg, #D9A630 0%, #D9A630 45%, #E0412F 100%); --w-flower: #C7261C; --w-leaf: #B88A24; --w-btn: #C7261C; }
+html[data-look="folk"] #aos-welcome.mc::before { opacity: 1; border-radius: 0; background: var(--w-flower);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat; }
+html[data-look="folk"] #aos-welcome.mc::after { background: var(--w-leaf); border-radius: 100% 0; opacity: 1; }
+html[data-look="folk"] #aos-welcome.mc .w-btn { background: var(--w-btn) !important; color: #FFFFFF !important; }
+html[data-look="folk"] #aos-welcome.mc :is(h1, h2) { font-family: "Yeseva One", Georgia, serif; font-weight: 400; }
+html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next Condensed", "Avenir Next", system-ui, sans-serif; font-style: italic; font-weight: 800; }
 `;
 
   // ---- the overlay ----
@@ -1517,7 +1544,7 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
     }
     const el = document.createElement('div');
     el.id = 'aos-welcome'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label);
-    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage') el.classList.add('mc');   // aOS2's screens: mid-century
+    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage' || /^(neon|folk)$/.test(document.documentElement.dataset.look || '')) el.classList.add('mc');   // aOS2's screens: mid-century (in Night Drive and Folk, theirs)
     el.innerHTML = `<button class="w-skip" type="button">Skip</button>${inner}
       <div class="c-fly"></div>
       <div class="c-panel"><div class="c-body"></div><div class="w-dots"></div>
@@ -2055,8 +2082,8 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look']];
-  const lookIcon = look => url(`../aOS/icon-${look === 'glass' ? 'glass-' : ''}512.png`);
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma']];
+  const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now
     try { if (!stay && sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
@@ -2400,7 +2427,7 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
 .aos-fback svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 html[data-theme="dark"] .aos-fback{color:#fff;background:rgba(44,44,48,.8);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.18)}
 @media (prefers-color-scheme: dark){html:not([data-theme="light"]) .aos-fback{color:#fff;background:rgba(44,44,48,.8);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.18)}}
-html[data-look="vintage"] .aos-fback{color:var(--text,#2B2522);background:var(--mc-card,#FBF3E2);-webkit-backdrop-filter:none;backdrop-filter:none;
+html[data-look]:not([data-look="glass"]) .aos-fback{color:var(--text,#2B2522);background:var(--mc-card,#FBF3E2);-webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:inset 0 0 0 1.5px var(--mc-edge,rgba(43,37,34,.22)),0 4px 14px rgba(43,37,34,.18)}
 @keyframes aos-fb-in{from{transform:scale(.6);opacity:0}}
 @media (prefers-reduced-motion: reduce){.aos-fback{animation:none;transition:none}}`;

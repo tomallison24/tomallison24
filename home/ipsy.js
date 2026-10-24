@@ -41,11 +41,13 @@
   const me = document.currentScript;
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
-  const LOOK = () => (FIXED || document.documentElement.dataset.look) === 'vintage' ? 'vintage' : 'glass';
+  // Night Drive and Folk wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-folk on top of ipsy-vintage).
+  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|folk)$/.test(l || '') ? l : 'glass'; };
   const followers = new Set();                       // elements that wear the page's look
-  const wear = el => { const l = LOOK(); el.classList.toggle('ipsy-vintage', l === 'vintage'); el.classList.toggle('ipsy-glass', l !== 'vintage'); };
+  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'folk']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'folk'))); };
+  const wear = (el, l) => dress(el, l || LOOK());
   const follow = el => { followers.add(el); wear(el); };
-  for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(wear));
+  for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(el => wear(el)));
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const ls = {
@@ -718,7 +720,7 @@
   function character(host, o = {}) {
     addStyle();
     host.classList.add('ipsy-host');
-    const setLook = l => { host.classList.toggle('ipsy-vintage', l === 'vintage'); host.classList.toggle('ipsy-glass', l !== 'vintage'); };
+    const setLook = l => dress(host, l);
     if (o.look) setLook(o.look); else follow(host);
     const c = addCell(host);
     c.live = !!o.live; c.form = FORMS[o.form] ? o.form : '';
@@ -779,5 +781,5 @@
     },
   };
 
-  AOS.ipsy = { mount, character, privacy, forms: Object.keys(FORMS), look: LOOK };   // look(): 'vintage' | 'glass'
+  AOS.ipsy = { mount, character, privacy, wear, forms: Object.keys(FORMS), look: LOOK };   // look(): 'vintage' | 'glass' | 'neon' | 'folk'
 })();

@@ -6,16 +6,19 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   // Every app carries both its designs itself (picked in its own Settings, ../home/design.js), so its folder has
-  // both icons: icon-512.png (Vintage) and icon-glass-512.png (Sea glass). aOS shows the one for its own look.
-  // The app's own icon (what a Home Screen shows) follows the design picked in the app.
-  const icon = id => `../${id}/${window.aosLook && aosLook.get() === 'glass' ? 'icon-glass-512.png' : 'icon-512.png'}`;
+  // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-neon-512.png, icon-folk-512.png. aOS shows
+  // the one for its own look. The app's own icon (what a Home Screen shows) follows the design picked in the app.
+  const lookNow = () => (window.aosLook ? aosLook.get() : 'vintage');
+  const icon = id => `../${id}/icon-${lookNow() === 'vintage' ? '' : lookNow() + '-'}512.png`;
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
   const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104' };   // each icon's Sea glass tint
   const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42' };   // each mid-century icon's colour
+  const NEON_HUE = { notes: '86,73,110', podcasts: '145,63,113', places: '29,142,174', meals: '146,42,94', news: '135,109,217', fitness: '51,35,76', travel: '51,35,76', drinks: '135,109,217', weather: '135,109,217', calendar: '101,98,159', mail: '34,113,137', house: '251,162,74', orders: '223,56,142' };   // the same, in Night Drive (aOS/scripts/looks.mjs)
+  const FOLK_HUE = { notes: '63,76,106', podcasts: '155,61,73', places: '48,87,207', meals: '142,43,34', news: '97,140,71', fitness: '32,46,83', travel: '32,46,83', drinks: '97,140,71', weather: '97,140,71', calendar: '70,95,157', mail: '42,69,144', house: '219,156,34', orders: '221,62,49' };   // and in Folk
   // the glow behind an app: its icon's tint, for aOS's look
-  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => (window.aosLook && aosLook.get() === 'glass' ? o[id] : VINTAGE_HUE[id] || o[id]) });
+  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => ({ glass: o, neon: NEON_HUE, folk: FOLK_HUE }[lookNow()] || VINTAGE_HUE)[id] || o[id] });
   const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
@@ -154,7 +157,7 @@
     }, 2900);
   }
   addEventListener('aos:look', () => {
-    for (const host of document.querySelectorAll('[data-ipsy-stage], [data-ipsy-form]')) host.classList.toggle('ipsy-vintage', aosLook.get() === 'vintage'), host.classList.toggle('ipsy-glass', aosLook.get() !== 'vintage');
+    for (const host of document.querySelectorAll('[data-ipsy-stage], [data-ipsy-form]')) AllisonOS.ipsy && AllisonOS.ipsy.wear ? AllisonOS.ipsy.wear(host, aosLook.get()) : (host.classList.toggle('ipsy-vintage', aosLook.flat()), host.classList.toggle('ipsy-glass', !aosLook.flat()));
   });
   const SHAPE = ['', 'half', 'half', 'wide', '', 'half', 'half'];   // the bento: one tall, two halves, one wide, again
   const intro = fresh && now.intro === 'ipsy';
@@ -343,8 +346,8 @@
     if ((b = ev.target.closest('[data-plan-stop]'))) return setPlan(b, { cancel: true });
     if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
   }
-  // Look: Vintage (mid-century, the default) or Sea glass, kept on this phone (look.js)
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look']];
+  // Look: Vintage (mid-century, the default), Sea glass, Night Drive or Folk, kept on this phone (look.js); every app takes it too
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel by day, Khokhloma by night']];
   const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
   // a link to Updates or Subscription (a notification, the plan card) opens that one
@@ -353,7 +356,7 @@
     <div class="fbody" id="${id}" hidden>${body}</div>`;
   const unfold = (b, on) => { if (!b) return; on = on == null ? b.getAttribute('aria-expanded') !== 'true' : on; b.setAttribute('aria-expanded', String(on)); const x = $(b.getAttribute('aria-controls')); if (x) x.hidden = !on; };
   const THEME_NAME = t => (W.theme.list.find(([v]) => v === t) || [, 'Automatic'])[1];
-  const looksLine = () => `${THEME_NAME(W.theme.read())} · ${aosLook.get() === 'glass' ? 'Sea glass' : 'Vintage'}`;
+  const looksLine = () => `${THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]}`;
   function acctPage(at) {
     const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>
@@ -369,8 +372,10 @@
     el.addEventListener('click', ev => {
       const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
-      const lk = ev.target.closest('[data-look]'); if (lk) { aosLook.set(lk.dataset.look); el.querySelector('#looks').innerHTML = lookOpts(); }
-      if (t || lk) $('lookSub').textContent = looksLine();
+      const lk = ev.target.closest('[data-look]');
+      if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS }))
+        .then(() => { el.querySelector('#looks').innerHTML = lookOpts(); $('lookSub').textContent = looksLine(); });
+      if (t) $('lookSub').textContent = looksLine();
       if (ev.target.closest('[data-replay]')) W.play();
       onPlanTap(ev);
     });
@@ -476,7 +481,12 @@
       <circle cx="42.5" cy="22" r="6.2" opacity=".9"/><path d="M31 46c0-7.4 5.2-12.6 11.5-12.6S54 38.6 54 46z" opacity=".9"/></g>
       <g fill="#fff" stroke="#9FB0C9" stroke-width="1.2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
       <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
-  const familyIcon = () => aosLook.get() === 'glass' ? FAMILY_ICON_GLASS : FAMILY_ICON_VINTAGE;
+  // Night Drive and Folk: the mid-century one, repainted (aOS/scripts/looks.mjs)
+  const FAMILY_PAINT = {
+    neon: { '#1F6F6B': '#227189', '#A9D3C7': '#AAD7E7', '#B9C6E0': '#C8C2D6', '#D8572A': '#DF388E', '#E3A72F': '#FBA24A', '#E3C5C3': '#D1CBDD', '#E9D6B4': '#FAD8BB', '#FBF5E9': '#FBF9FF' },
+    folk: { '#1F6F6B': '#2A4590', '#A9D3C7': '#97AEE3', '#B9C6E0': '#C1C5CF', '#D8572A': '#DD3E31', '#E3A72F': '#DB9C22', '#E3C5C3': '#CBCFD8', '#E9D6B4': '#E1CBAB', '#FBF5E9': '#FBFCFF' },
+  };
+  const familyIcon = () => { const l = aosLook.get(); return l === 'glass' ? FAMILY_ICON_GLASS : FAMILY_PAINT[l] ? FAMILY_ICON_VINTAGE.replace(/#[0-9A-F]{6}/g, c => FAMILY_PAINT[l][c] || c) : FAMILY_ICON_VINTAGE; };
   addEventListener('aos:look', () => {   // the picker: the family icon and every app's icon follow the look
     if (state) paintHero(state);
     paintList();

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Night Drive: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs><linearGradient id="nds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC75A"/><stop offset=".45" stop-color="#FF8A4C"/><stop offset=".85" stop-color="#FF3D9A"/></linearGradient><clipPath id="ndc"><circle cx="404" cy="108" r="150"/></clipPath>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <path d="M160 100H352C360 178 348 244 306 280C288 295 274 299 266 301V380H326a16 16 0 0 1 0 32H186a16 16 0 0 1 0-32H246V301C238 299 224 295 206 280C164 244 152 178 160 100Z" fill="#fff"/>
+      <path d="M150 172H362" fill="none" stroke="#000" stroke-width="18"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#5F1C3D"/>
+  <g clip-path="url(#ndc)"><circle cx="404" cy="108" r="150" fill="url(#nds)"/><rect x="254" y="126.0" width="300" height="6.0" fill="#5F1C3D"/><rect x="254" y="153.0" width="300" height="7.8" fill="#5F1C3D"/><rect x="254" y="177.0" width="300" height="9.6" fill="#5F1C3D"/><rect x="254" y="198.0" width="300" height="11.4" fill="#5F1C3D"/><rect x="254" y="216.0" width="300" height="13.2" fill="#5F1C3D"/><rect x="254" y="234.0" width="300" height="15.0" fill="#5F1C3D"/></g>
+  <rect x="32" y="418" width="136" height="50" rx="25" fill="#FF3D9A" transform="rotate(-18 100 443)"/>
+  <rect width="512" height="512" fill="#FBF9FF" mask="url(#cut)"/>
+</svg>

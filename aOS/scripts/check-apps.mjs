@@ -38,9 +38,11 @@
 //   - Ipsy: a page that loads ../home/ipsy.js lists it in sw.js SHELL and lets
 //     connect-src 'self'; with ipsy-tools.js (Ipsy to chat with) it lists that too,
 //     and its functions/<app>/api answers ipsy
-// And for the repository: every <folder>/scripts/*test*.mjs is run by a workflow.
+// And for the repository: every <folder>/scripts/*test*.mjs is run by a workflow; the Night Drive and Folk
+// blocks and icons are up to date with Vintage (make-looks.mjs --check).
 //   - Sea glass, not the old iOS look: no --bg #F2F2F7 / #08080B, no blue --accent
 import fs from 'fs';
+import { execFileSync } from 'child_process';
 import path from 'path';
 
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
@@ -206,6 +208,7 @@ for (const id of ids) {
   if (/--bg:\s*#(F2F2F7|08080B)\b|--accent:\s*#(007AFF|0A84FF)\b/i.test(html)) warn(id, 'still has the old iOS colours (--bg #F2F2F7 / #08080B or a blue --accent): use the Sea glass tokens (the new-aos-app skill, "Look")');
   const csp = (/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html) || [])[1] || '';
   rule(csp, 'no Content-Security-Policy meta (every app has one: only its own scripts may run)');
+  rule(!csp || /font-src[^;]*'self'/.test(csp), "policy's font-src needs 'self': the Folk look's fonts are in ../home/fonts");
   if (csp) {
     const scripts = (/script-src([^;]*)/.exec(csp) || [])[1] || '';
     rule(/'self'/.test(scripts) && !/'unsafe-inline'|'unsafe-eval'|https?:|\*/.test(scripts), "its policy's script-src should be just 'self': no inline, eval or outside scripts");
@@ -228,6 +231,10 @@ for (const id of ids) {
     }
   }
 }
+
+// Night Drive and Folk are generated from each page's Vintage block and icon (make-looks.mjs): they must be up to date
+try { execFileSync(process.execPath, [path.join(ROOT, 'aOS/scripts/make-looks.mjs'), '--check'], { stdio: 'pipe' }); }
+catch (e) { err(null, String(e.stdout || e.message).trim().replace(/\n\s*/g, ' ')); }
 
 for (const w of warnings) console.log('warning - ' + w);
 for (const e of errors) console.log('error   - ' + e);

@@ -1,8 +1,10 @@
 // home/design.js, shared by every app (Clock has its own clock/design.js), at iPhone size:
 //   - every app loads it in <head> with its own data-app, and the old Vintage app's id, keys and
 //     databases (data-was, data-keys, data-dbs), with a <style id="vintage"> to switch;
-//   - every app opens in Vintage, and in Standard when design.<app> says so, with the matching icon,
-//     status bar and bar colour, and no script errors either way;
+//   - every app opens in Vintage, and in Standard, Night Drive or Folk when design.<app> says so, with
+//     the matching blocks (Night Drive and Folk keep Vintage on under their own), icon, status bar and
+//     bar colour, and no script errors any way; a change aOS makes (design.<app> written while the app
+//     is open) is followed at once, and Settings > Design offers all four;
 //   - at an old Vintage address (the deploy copies the app there, news.yml), the old app's data is
 //     moved over once: localStorage by prefix, what it had seen, and its IndexedDB databases, store by
 //     store; never when the app already has data of its own on the phone.
@@ -13,7 +15,7 @@
 import { createRequire } from 'module'; import { execSync } from 'child_process'; import http from 'http'; import fs from 'fs'; import path from 'path';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/'); const { chromium } = require('playwright');
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.css': 'text/css' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.css': 'text/css', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
   p = p.replace(/^\/([a-z]+)vintage\//, '/$1/');   // an old Vintage app's address: a copy of the app (news.yml)
@@ -56,26 +58,44 @@ async function phone(scheme, seed) {
 }
 
 // 2. every app in each design, light and dark: the right look, icon, status bar and bar colour, no script errors
-for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
+const NAME = { vintage: 'Vintage', glass: 'Standard', neon: 'Night Drive', folk: 'Folk' };
+for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['neon', 'dark'], ['folk', 'light']]) {
   const pr = [];
   for (const id of APPS) {
     const seed = { 'aos.seen': JSON.stringify({ [id]: '999' }), 'aos.signin.asked': '1', 'aos.sky': 'day' };
-    if (design === 'glass') seed['design.' + id] = 'glass';
+    if (design !== 'vintage') seed['design.' + id] = design;
     const { ctx, p, errs } = await phone(scheme, seed);
     await p.goto(BASE + '/' + id + '/'); await p.waitForTimeout(700);
-    const st = await p.evaluate(() => ({ look: document.documentElement.dataset.look, media: (document.getElementById('vintage') || {}).media,
+    const st = await p.evaluate(() => ({ look: document.documentElement.dataset.look, media: (document.getElementById('vintage') || {}).media, own: ['neon', 'folk'].map(k => (document.getElementById(k) || {}).media).join(),
       icon: (document.querySelector('link[rel="apple-touch-icon"]') || {}).href || '', bar: (document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') || {}).content }));
     const glass = design === 'glass';
     if (st.look !== design) pr.push(`${id}: data-look ${st.look}`);
     if (st.media !== (glass ? 'not all' : 'all')) pr.push(`${id}: the Vintage styles are "${st.media}"`);
-    if (/icon-glass-/.test(st.icon) !== glass) pr.push(`${id}: icon ${st.icon}`);
+    if (st.own !== ['neon', 'folk'].map(k => k === design ? 'all' : 'not all').join()) pr.push(`${id}: the Night Drive and Folk blocks are "${st.own}"`);
+    if (!new RegExp(`/icon-${design === 'vintage' ? '' : design + '-'}180\\.png`).test(st.icon)) pr.push(`${id}: icon ${st.icon}`);
     const own = (/name="apple-mobile-web-app-status-bar-style" content="([^"]+)"/.exec(fs.readFileSync(path.join(ROOT, id, 'index.html'), 'utf8')) || [])[1];   // Standard keeps the page's own (Mail's is default)
     if (st.bar !== (glass ? own : 'default')) pr.push(`${id}: status bar ${st.bar}`);
     if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) pr.push(`${id}: the page scrolls sideways`);
     pr.push(...errs.map(e => id + ': ' + e));
     await ctx.close();
   }
-  report(`every app in ${design === 'glass' ? 'Standard' : 'Vintage'} (${scheme}): look, icon, status bar, no script errors`, pr);
+  report(`every app in ${NAME[design]} (${scheme}): look, icon, status bar, no script errors`, pr);
+}
+
+// 2b. aOS picks a look for every app (aOS/look.js writes design.<app>): an app open in another frame follows at once;
+// and its Settings > Design rows offer all four
+{
+  const pr = [];
+  const { ctx, p, errs } = await phone('light', { 'aos.seen': JSON.stringify({ meals: '999' }), 'aos.signin.asked': '1', 'aos.sky': 'day' });
+  await p.goto(BASE + '/meals/'); await p.waitForTimeout(500);
+  const other = await ctx.newPage(); await other.goto(BASE + '/meals/'); await other.waitForTimeout(300);
+  await other.evaluate(() => localStorage.setItem('design.meals', 'neon'));   // what aOS's Appearance does
+  await p.waitForTimeout(300);
+  if (await p.evaluate(() => document.documentElement.dataset.look + '/' + document.getElementById('neon').media) !== 'neon/all') pr.push('an open app did not follow a look written elsewhere: ' + await p.evaluate(() => document.documentElement.dataset.look));
+  const rows = await p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = aosDesign.picker(); return [...d.querySelectorAll('[data-design]')].map(b => b.dataset.design).join(); });
+  if (rows !== 'vintage,glass,neon,folk') pr.push('Settings > Design offers ' + rows);
+  pr.push(...errs);
+  report('a look aOS writes is followed at once by an open app; Settings > Design offers all four', pr); await ctx.close();
 }
 
 // 3. the move at an old address: localStorage by prefix, what it had seen, IndexedDB store by store; once only

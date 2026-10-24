@@ -62,7 +62,7 @@
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
-  const icon = id => { let g = false; try { g = localStorage.getItem('design.' + id) === 'glass'; } catch {} return `../${id}/icon${g ? '-glass' : ''}-180.png`; };
+  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} return `../${id}/icon${/^(glass|neon|folk)$/.test(d || '') ? '-' + d : ''}-180.png`; };
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
   // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
@@ -125,7 +125,7 @@
   function prefsCame(apps) {
     for (const id of apps) {
       if (id === 'aos') {
-        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && (l === 'glass' || l === 'vintage') && aosLook.get() !== l) aosLook.set(l); } catch {}
+        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|folk)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
         if (W.theme) W.theme.set(W.theme.read());
         pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
       } else if (frames[id]) { const f = frames[id].firstChild; if (f.moving) { f.moving = false; point(f, `../${id}/`); } }
@@ -133,6 +133,13 @@
     paintHome(true);   // an app's design changes its icon
   }
   addEventListener('aos:account', e => { if (e.detail) syncPrefs(); });
+  // a look picked in Appearance is every app's: an app open out of sight closes first (so it can't save its old design
+  // over the new one), every app's design is written (aOS/look.js), then they open again in it
+  const everyLook = look => {
+    const done = () => { aosLook.set(look, { apps: D.APPS }); prefsCame(D.APPS); syncPrefs(); };
+    if (!D.APPS.some(id => frames[id] && id !== current)) return done();   // none open: at once
+    return prefsReady(D.APPS).then(done);
+  };
   // Home is drawn again often (back on the phone, every minute, a new unread count, a new forecast).
   // Only what changed is replaced, and never under a finger: iOS drops a tap whose button is swapped
   // out between touching and lifting (the Weather widget, tapped as aOS came back, didn't open).
@@ -523,7 +530,7 @@
     });
   }
 
-  window.aosHomeTab = { show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
+  window.aosHomeTab = { everyLook, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
   paintHome(); readUnread(); freshen(); syncPrefs();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];

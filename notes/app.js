@@ -14,8 +14,9 @@
   const okId = v => typeof v === 'string' && v.length > 0 && v.length <= 100;
   const okHex = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
   const hexOr = c => okHex(c) ? c : LIST_COLORS[0];
-  // The design (../home/design.js): Vintage, the default, or Standard (Sea glass).
-  const vintage = () => (window.aosDesign ? aosDesign.get() : 'vintage') === 'vintage';
+  // The design (../home/design.js): Vintage, the default, or Standard (Sea glass); vintage() is true for Night Drive
+  // and Folk too, which repaint Vintage (their blocks repaint the --lc and --tc tokens).
+  const vintage = () => (window.aosDesign ? aosDesign.get() : 'vintage') !== 'glass';
   // A list's colour. Stored as one of the seven hex values whatever the design (so a list means the same
   // everywhere, and in the Sheet). Standard draws it as it is; Vintage draws the seven as their Retro colours:
   // --lc0..6, and the ink on each, --lci0..6, are tokens in index.html's #vintage block that follow Light and

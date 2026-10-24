@@ -5,9 +5,10 @@
 // colours (CSS variables from index.html's #vintage block) with a sky of flat shapes; Standard,
 // Weather's own glowing colours and gradient skies. Everything else is the same in both.
 'use strict';
-// Which design is on: Vintage unless Standard was picked (design.js), read at each draw, and the
-// screen and any open sheet redrawn on a change (aos:design, at the bottom).
-const vintage = () => (window.aosDesign ? aosDesign.get() : 'vintage') === 'vintage';
+// Which design is on (design.js), read at each draw, and the screen and any open sheet redrawn on a change
+// (aos:design, at the bottom). vintage(): a flat design - Vintage, or Night Drive and Folk, which repaint it.
+const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
+const vintage = () => look() !== 'glass';
 // The data (NWS, Open-Meteo) is in data.js, shared with Home's weather pill.
 const { SEV, getJSON, dirDeg, mphOf, cToF, feelsF, ymd, kmBetween, tempAt, wmo, nwsCondition, inUS, fromNWS, fromOpenMeteo, fromNowcast, fetchBase } = WXD;
 
@@ -826,9 +827,12 @@ function radarSync() {
 // Absolute, so 30° looks the same in any week.
 function rampOf(m) {
   const f = (m.entity.attributes.temperature_unit || '').indexOf('F') >= 0;
-  const stops = vintage()
-    ? [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]]
-    : [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]];
+  const stops = {
+    vintage: [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]],
+    neon: [[0, [51, 132, 157]], [10, [58, 154, 183]], [18, [147, 116, 241]], [25, [251, 162, 74]], [32, [223, 56, 142]]],   // Vintage's, repainted (aOS/scripts/looks.mjs)
+    folk: [[0, [57, 87, 166]], [10, [69, 104, 198]], [18, [103, 152, 74]], [25, [219, 156, 34]], [32, [221, 62, 49]]],
+    glass: [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]],
+  }[look()] || [];
   return t => {
     const c = f ? (t - 32) * 5 / 9 : t;
     if (c <= stops[0][0]) return `rgb(${stops[0][1]})`;

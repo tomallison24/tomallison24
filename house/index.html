@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; font-src 'self'; media-src 'self' blob: https:; connect-src 'self' https: wss:">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Home</title>
 <meta name="description" content="The Signal dashboard's devices as an AllisonOS app, in a mid-century Vintage design or Sea glass, talking to Home Assistant directly.">
@@ -856,6 +856,71 @@
   .armbtn:not(.on):not(:disabled):active { background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgb(var(--a)); }
   .dots i.on { background: var(--accent); }
 
+</style>
+<style id="neon" media="not all">
+/* Night Drive: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-ground:#140A22;--mc-card:#1E142D;--mc-card-2:#241B35;--mc-edge:rgba(241,238,247,0.14);--mc-mustard:#FEAA5D;--mc-teal:#32C7DD;--mc-orange:#FE3CA2;--mc-olive:#C1B3FE;--mc-walnut:#281E38;--mc-on-mustard:#190F28;--text:#F1EEF7;--muted:rgba(241,238,247,0.68);--accent:#46D2E7;--cta:#FE3CA2;--cta-ink:#FBF9FF;--good:#C1B3FE;--warn:#FEAA5D;--bad:#FA70AF;--tile:#1E142D;--tile-edge:rgba(241,238,247,0.05);--lgs-top:#1E142D;--lgs-bottom:#1E142D;--lgs-edge:rgba(241,238,247,0.14);--lgs-row:rgba(241,238,247,0.07);--lgs-field:rgba(241,238,247,0.08);--lgs-lift:rgba(0,0,1,0.3);--lgs-lift-strong:rgba(0,0,1,0.45);--lgs-solid:#1A1029}
+@media (prefers-color-scheme: light){
+:root{--mc-ground:#F5F2FD;--mc-card:#FBF9FF;--mc-card-2:#EEEAF7;--mc-edge:rgba(33,13,58,0.14);--mc-teal:#227189;--mc-olive:#876DD9;--text:#210D3A;--muted:#46385F;--accent:#227189;--cta:#D03384;--cta-ink:#FCFBFF;--good:#876DD9;--warn:#C77512;--bad:#BE2B77;--tile:#FBF9FF;--tile-edge:rgba(33,13,58,0.05);--lgs-top:#FBF9FF;--lgs-bottom:#FBF9FF;--lgs-edge:rgba(33,13,58,0.12);--lgs-row:rgba(33,13,58,0.05);--lgs-field:rgba(33,13,58,0.06);--lgs-lift:rgba(33,13,58,0.10);--lgs-lift-strong:rgba(33,13,58,0.2);--lgs-solid:#FBF9FF}
+}
+body{font-family:"Avenir Next","Avenir","Saira",system-ui,sans-serif}
+.top h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231A8190'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FEAA5D'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23FE3CA2'/%3E%3C/svg%3E") no-repeat}
+.vbar::before{box-shadow:inset 0 0 0 1px rgba(241,238,247,0.12), 0 10px 22px -10px rgba(25,15,40,0.6)}
+.vbar > button{color:#F1EEF7}
+.vbar > button:active{background:rgba(241,238,247,0.14)}
+.vbar .vb-chev svg{color:#FEAA5D}
+.scrim{background:rgba(25,15,40,0.4)}
+.sw{background:rgba(241,238,247,0.24)}
+.sw::after{background:#FBF9FF}
+.armbtn:not(.on){background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgba(var(--a),0.95)}
+.armbtn:not(.on):not(:disabled):active{background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgb(var(--a))}
+/* Night Drive: heavy italic condensed headings, a striped sunset for the disc, a neon ring and tube, a grid under them */
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Avenir Next Condensed","Avenir Next","Arial Narrow",system-ui,sans-serif;font-style:italic;font-weight:800;letter-spacing:-.01em}
+:root{--nd-sun:linear-gradient(#FFC75A,#FF8A4C 42%,#FF3D9A 78%);--nd-ring:#0A8AA6;--nd-tube:#C21E78;--nd-glow:0;--nd-grid:rgba(194,30,120,.22)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}}
+:root[data-theme="dark"]{--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:repeating-linear-gradient(to bottom,transparent 0 9px,var(--bg) 9px 13px) 0 100%/100% 46% no-repeat,var(--nd-sun);opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:transparent;box-shadow:inset 0 0 0 4px var(--nd-ring),0 0 calc(var(--nd-glow) * 16px) var(--nd-ring)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--nd-tube);box-shadow:0 0 calc(var(--nd-glow) * 18px) var(--nd-tube)}
+:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
+  background:linear-gradient(90deg,var(--nd-grid) 1px,transparent 1px) 50% 0/28px 100%,linear-gradient(var(--nd-grid) 1px,transparent 1px) 0 0/100% 16px;
+  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--nd-glow) * 18px) color-mix(in srgb,var(--nd-tube) 70%,transparent)}
+</style>
+<style id="folk" media="not all">
+/* Folk: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-ground:#0F0B07;--mc-card:#19140F;--mc-card-2:#201B16;--mc-edge:rgba(244,231,216,0.14);--mc-mustard:#ECAD2A;--mc-teal:#D1A13E;--mc-orange:#D93020;--mc-olive:#92B463;--mc-walnut:#231E19;--mc-on-mustard:#14100B;--text:#F4E7D8;--muted:rgba(244,231,216,0.68);--accent:#DBAB4C;--cta:#D93020;--cta-ink:#FDF1E3;--good:#92B463;--warn:#ECAD2A;--bad:#E84937;--tile:#19140F;--tile-edge:rgba(244,231,216,0.05);--lgs-top:#19140F;--lgs-bottom:#19140F;--lgs-edge:rgba(244,231,216,0.14);--lgs-row:rgba(244,231,216,0.07);--lgs-field:rgba(244,231,216,0.08);--lgs-lift:rgba(0,0,0,0.3);--lgs-lift-strong:rgba(0,0,0,0.45);--lgs-solid:#15110C}
+@media (prefers-color-scheme: light){
+:root{--mc-ground:#F4F7FD;--mc-card:#FBFCFF;--mc-card-2:#ECEFF6;--mc-edge:rgba(16,30,70,0.14);--mc-teal:#2A4590;--mc-olive:#618C47;--text:#101E46;--muted:#313F60;--accent:#2A4590;--cta:#CD392D;--cta-ink:#FCFDFF;--good:#618C47;--warn:#A3720F;--bad:#BB2F25;--tile:#FBFCFF;--tile-edge:rgba(16,30,70,0.05);--lgs-top:#FBFCFF;--lgs-bottom:#FBFCFF;--lgs-edge:rgba(16,30,70,0.12);--lgs-row:rgba(16,30,70,0.05);--lgs-field:rgba(16,30,70,0.06);--lgs-lift:rgba(16,30,70,0.10);--lgs-lift-strong:rgba(16,30,70,0.2);--lgs-solid:#FBFCFF}
+}
+body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+.top h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23876313'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23ECAD2A'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D93020'/%3E%3C/svg%3E") no-repeat}
+.vbar::before{box-shadow:inset 0 0 0 1px rgba(244,231,216,0.12), 0 10px 22px -10px rgba(20,16,11,0.6)}
+.vbar > button{color:#F4E7D8}
+.vbar > button:active{background:rgba(244,231,216,0.14)}
+.vbar .vb-chev svg{color:#ECAD2A}
+.scrim{background:rgba(20,16,11,0.4)}
+.sw{background:rgba(244,231,216,0.24)}
+.sw::after{background:#FDF1E3}
+.armbtn:not(.on){background:linear-gradient(180deg, rgba(255,247,239,0.22), rgba(255,247,239,0) 60%), rgba(var(--a),0.95)}
+.armbtn:not(.on):not(:disabled):active{background:linear-gradient(180deg, rgba(255,247,239,0.22), rgba(255,247,239,0) 60%), rgb(var(--a))}
+/* Folk: Gzhel by day (cobalt on porcelain), Khokhloma by night (cinnabar and gold on black lacquer).
+   PT Sans and Yeseva One, both made for Cyrillic (SIL Open Font License, ../home/fonts). */
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Yeseva One","Georgia","Times New Roman",serif;font-weight:400;letter-spacing:0}
+:root{--fk-flower:#1C3F94;--fk-berry:#4E74C7;--fk-leaf:#8FA8DE;--fk-heart:#F5F7FB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630}}
+:root[data-theme="dark"]{--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;border-radius:0;opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
 </style>
 <script src="../home/design.js" data-app="house" data-was="housevintage" data-keys="housev.=house."></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
 <script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->

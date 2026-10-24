@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; connect-src 'self' https:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https:">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Places</title>
 <meta name="description" content="Places you want to go and places you've been, with your own ratings, on a map, in a mid-century Vintage design or Sea glass.">
@@ -406,6 +406,73 @@ path.osm-dot{stroke:#FBF5E9}
 .bizacts button:active{background:var(--fill)}
 .bizacts button:first-child{background:var(--cta);color:var(--cta-ink);box-shadow:none}
 .bizacts button:first-child:active{background:var(--cta)}
+</style>
+<style id="neon" media="not all">
+/* Night Drive: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FBF9FF;--mc-card-2:#EEEAF7;--mc-edge:rgba(33,13,58,.14);--mc-ink:#210D3A;--mc-mustard:#FBA24A;--mc-teal:#227189;--mc-orange:#DF388E;--mc-olive:#876DD9;--mc-on-mustard:#210D3A;--bg:#F5F2FD;--text:#210D3A;--muted:#46385F;--faint:#5E5276;--accent:#227189;--on-accent:#FCFBFF;--accent-text:#227189;--sel-ink:#210D3A;--cta:#D03384;--cta-ink:#FCFBFF;--icon:#227189;--danger:#BE2B77;--danger-text:#A32166;--star:#CA7612;--want:#227189;--been:#FBA24A;--me:#227189;--glass:#FBF9FF;--gb-edge:rgba(33,13,58,.14);--hair:rgba(33,13,58,.14);--fill:rgba(33,13,58,.06);--lift:rgba(33,13,58,.10);--lift-strong:rgba(33,13,58,.22);--seg-thumb:#FBA24A;--bar-solid:#FBF9FF;--tile:#FBF9FF;--tile-edge:rgba(33,13,58,.05);--lgs-top:#FBF9FF;--lgs-bottom:#FBF9FF;--lgs-edge:rgba(33,13,58,.12);--lgs-row:#EEEAF7;--lgs-field:#F5F2FD;--lgs-scrim:rgba(33,13,58,.30)}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){--mc-card:#1E142D;--mc-card-2:#241B35;--mc-edge:rgba(241,238,247,.14);--mc-ink:#F1EEF7;--mc-teal:#32C7DD;--mc-olive:#C1B3FE;--bg:#140A22;--text:#F1EEF7;--muted:#C9C5D2;--faint:#A5A0B0;--accent:#46D2E7;--on-accent:#11071F;--accent-text:#46D2E7;--sel-ink:#190F28;--cta:#FE3CA2;--cta-ink:#FBF9FF;--icon:#FEAA5D;--danger:#FA70AF;--danger-text:#FDA0C6;--star:#FEAA5D;--want:#32C7DD;--been:#FEAA5D;--me:#32C7DD;--glass:#1E142D;--gb-edge:rgba(241,238,247,.14);--hair:rgba(241,238,247,.14);--fill:rgba(241,238,247,.07);--lift:rgba(0,0,1,.22);--lift-strong:rgba(0,0,1,.4);--bar-solid:#1A1029;--tile:#1E142D;--tile-edge:rgba(241,238,247,.05);--lgs-top:#1E142D;--lgs-bottom:#1E142D;--lgs-edge:rgba(241,238,247,.14);--lgs-row:#241B35;--lgs-field:#140A22;--lgs-scrim:rgba(4,0,14,.5)}
+}
+:root[data-theme="dark"]{--mc-card:#1E142D;--mc-card-2:#241B35;--mc-edge:rgba(241,238,247,.14);--mc-ink:#F1EEF7;--mc-teal:#32C7DD;--mc-olive:#C1B3FE;--bg:#140A22;--text:#F1EEF7;--muted:#C9C5D2;--faint:#A5A0B0;--accent:#46D2E7;--on-accent:#11071F;--accent-text:#46D2E7;--sel-ink:#190F28;--cta:#FE3CA2;--cta-ink:#FBF9FF;--icon:#FEAA5D;--danger:#FA70AF;--danger-text:#FDA0C6;--star:#FEAA5D;--want:#32C7DD;--been:#FEAA5D;--me:#32C7DD;--glass:#1E142D;--gb-edge:rgba(241,238,247,.14);--hair:rgba(241,238,247,.14);--fill:rgba(241,238,247,.07);--lift:rgba(0,0,1,.22);--lift-strong:rgba(0,0,1,.4);--bar-solid:#1A1029;--tile:#1E142D;--tile-edge:rgba(241,238,247,.05);--lgs-top:#1E142D;--lgs-bottom:#1E142D;--lgs-edge:rgba(241,238,247,.14);--lgs-row:#241B35;--lgs-field:#140A22;--lgs-scrim:rgba(4,0,14,.5)}
+body{font-family:"Avenir Next","Avenir","Saira",system-ui,sans-serif}
+.title::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23227189'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FBA24A'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23DF388E'/%3E%3C/svg%3E") no-repeat}
+.fab{box-shadow:0 8px 18px -8px rgba(33,13,58,.55)}
+.pin{box-shadow:0 3px 8px rgba(33,13,58,.35)}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]) path.osm-fun{fill:#C1B3FE}
+:root:not([data-theme="light"]) path.osm-shops{fill:#DAA475}
+}
+:root[data-theme="dark"] path.osm-fun{fill:#C1B3FE}
+:root[data-theme="dark"] path.osm-shops{fill:#DAA475}
+path.osm-dot{stroke:#FBF9FF}
+/* Night Drive: heavy italic condensed headings, a striped sunset for the disc, a neon ring and tube, a grid under them */
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Avenir Next Condensed","Avenir Next","Arial Narrow",system-ui,sans-serif;font-style:italic;font-weight:800;letter-spacing:-.01em}
+:root{--nd-sun:linear-gradient(#FFC75A,#FF8A4C 42%,#FF3D9A 78%);--nd-ring:#0A8AA6;--nd-tube:#C21E78;--nd-glow:0;--nd-grid:rgba(194,30,120,.22)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}}
+:root[data-theme="dark"]{--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:repeating-linear-gradient(to bottom,transparent 0 9px,var(--bg) 9px 13px) 0 100%/100% 46% no-repeat,var(--nd-sun);opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:transparent;box-shadow:inset 0 0 0 4px var(--nd-ring),0 0 calc(var(--nd-glow) * 16px) var(--nd-ring)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--nd-tube);box-shadow:0 0 calc(var(--nd-glow) * 18px) var(--nd-tube)}
+:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
+  background:linear-gradient(90deg,var(--nd-grid) 1px,transparent 1px) 50% 0/28px 100%,linear-gradient(var(--nd-grid) 1px,transparent 1px) 0 0/100% 16px;
+  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--nd-glow) * 18px) color-mix(in srgb,var(--nd-tube) 70%,transparent)}
+</style>
+<style id="folk" media="not all">
+/* Folk: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FBFCFF;--mc-card-2:#ECEFF6;--mc-edge:rgba(16,30,70,.14);--mc-ink:#101E46;--mc-mustard:#DB9C22;--mc-teal:#2A4590;--mc-orange:#DD3E31;--mc-olive:#618C47;--mc-on-mustard:#101E46;--bg:#F4F7FD;--text:#101E46;--muted:#313F60;--faint:#465370;--accent:#2A4590;--on-accent:#FCFDFF;--accent-text:#2A4590;--sel-ink:#101E46;--cta:#CD392D;--cta-ink:#FCFDFF;--icon:#2A4590;--danger:#BB2F25;--danger-text:#A0241C;--star:#A6740E;--want:#2A4590;--been:#DB9C22;--me:#2A4590;--glass:#FBFCFF;--gb-edge:rgba(16,30,70,.14);--hair:rgba(16,30,70,.14);--fill:rgba(16,30,70,.06);--lift:rgba(16,30,70,.10);--lift-strong:rgba(16,30,70,.22);--seg-thumb:#DB9C22;--bar-solid:#FBFCFF;--tile:#FBFCFF;--tile-edge:rgba(16,30,70,.05);--lgs-top:#FBFCFF;--lgs-bottom:#FBFCFF;--lgs-edge:rgba(16,30,70,.12);--lgs-row:#ECEFF6;--lgs-field:#F4F7FD;--lgs-scrim:rgba(16,30,70,.30)}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){--mc-card:#19140F;--mc-card-2:#201B16;--mc-edge:rgba(244,231,216,.14);--mc-ink:#F4E7D8;--mc-teal:#D1A13E;--mc-olive:#92B463;--bg:#0F0B07;--text:#F4E7D8;--muted:#D6C5B2;--faint:#BAA691;--accent:#DBAB4C;--on-accent:#0C0805;--accent-text:#DBAB4C;--sel-ink:#14100B;--cta:#D93020;--cta-ink:#FDF1E3;--icon:#ECAD2A;--danger:#E84937;--danger-text:#F27866;--star:#ECAD2A;--want:#D1A13E;--been:#ECAD2A;--me:#D1A13E;--glass:#19140F;--gb-edge:rgba(244,231,216,.14);--hair:rgba(244,231,216,.14);--fill:rgba(244,231,216,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--bar-solid:#15110C;--tile:#19140F;--tile-edge:rgba(244,231,216,.05);--lgs-top:#19140F;--lgs-bottom:#19140F;--lgs-edge:rgba(244,231,216,.14);--lgs-row:#201B16;--lgs-field:#0F0B07;--lgs-scrim:rgba(2,1,0,.5)}
+}
+:root[data-theme="dark"]{--mc-card:#19140F;--mc-card-2:#201B16;--mc-edge:rgba(244,231,216,.14);--mc-ink:#F4E7D8;--mc-teal:#D1A13E;--mc-olive:#92B463;--bg:#0F0B07;--text:#F4E7D8;--muted:#D6C5B2;--faint:#BAA691;--accent:#DBAB4C;--on-accent:#0C0805;--accent-text:#DBAB4C;--sel-ink:#14100B;--cta:#D93020;--cta-ink:#FDF1E3;--icon:#ECAD2A;--danger:#E84937;--danger-text:#F27866;--star:#ECAD2A;--want:#D1A13E;--been:#ECAD2A;--me:#D1A13E;--glass:#19140F;--gb-edge:rgba(244,231,216,.14);--hair:rgba(244,231,216,.14);--fill:rgba(244,231,216,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--bar-solid:#15110C;--tile:#19140F;--tile-edge:rgba(244,231,216,.05);--lgs-top:#19140F;--lgs-bottom:#19140F;--lgs-edge:rgba(244,231,216,.14);--lgs-row:#201B16;--lgs-field:#0F0B07;--lgs-scrim:rgba(2,1,0,.5)}
+body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+.title::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%232A4590'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23DB9C22'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23DD3E31'/%3E%3C/svg%3E") no-repeat}
+.fab{box-shadow:0 8px 18px -8px rgba(16,30,70,.55)}
+.pin{box-shadow:0 3px 8px rgba(16,30,70,.35)}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]) path.osm-fun{fill:#92B463}
+:root:not([data-theme="light"]) path.osm-shops{fill:#C5A571}
+}
+:root[data-theme="dark"] path.osm-fun{fill:#92B463}
+:root[data-theme="dark"] path.osm-shops{fill:#C5A571}
+path.osm-dot{stroke:#FBFCFF}
+/* Folk: Gzhel by day (cobalt on porcelain), Khokhloma by night (cinnabar and gold on black lacquer).
+   PT Sans and Yeseva One, both made for Cyrillic (SIL Open Font License, ../home/fonts). */
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Yeseva One","Georgia","Times New Roman",serif;font-weight:400;letter-spacing:0}
+:root{--fk-flower:#1C3F94;--fk-berry:#4E74C7;--fk-leaf:#8FA8DE;--fk-heart:#F5F7FB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630}}
+:root[data-theme="dark"]{--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;border-radius:0;opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
 </style>
 <script src="../home/design.js" data-app="places" data-was="placesvintage" data-keys="allison-placesv-=allison-places-"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
 <script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->

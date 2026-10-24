@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Night Drive: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs><linearGradient id="nds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC75A"/><stop offset=".45" stop-color="#FF8A4C"/><stop offset=".85" stop-color="#FF3D9A"/></linearGradient><clipPath id="ndc"><circle cx="420" cy="96" r="128"/></clipPath>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <circle cx="256" cy="268" r="104" fill="#fff"/>
+      <g stroke="#fff" stroke-width="14" stroke-linecap="round">
+        <path d="M256 152V70M256 384v82M140 268H58M372 268h82"/>
+        <path d="M314 167.5l25-43.3M198 368.5l-25 43.3M156.5 210l-43.3-25M355.5 326l43.3 25M198 167.5l-25-43.3M314 368.5l25 43.3M156.5 326l-43.3 25M355.5 210l43.3-25"/>
+      </g>
+      <g fill="#fff"><circle cx="256" cy="66" r="18"/><circle cx="256" cy="470" r="18"/><circle cx="54" cy="268" r="18"/><circle cx="458" cy="268" r="18"/>
+        <circle cx="341" cy="121" r="12"/><circle cx="171" cy="415" r="12"/><circle cx="110" cy="183" r="12"/><circle cx="402" cy="353" r="12"/><circle cx="171" cy="121" r="12"/><circle cx="341" cy="415" r="12"/><circle cx="110" cy="353" r="12"/><circle cx="402" cy="183" r="12"/></g>
+      <g stroke="#000" stroke-linecap="round" fill="none"><path d="M256 268v-70" stroke-width="20"/><path d="M256 268l52 30" stroke-width="20"/></g>
+      <circle cx="256" cy="268" r="15" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#272739"/>
+  <g clip-path="url(#ndc)"><circle cx="420" cy="96" r="128" fill="url(#nds)"/><rect x="292" y="111.4" width="256" height="5.1" fill="#272739"/><rect x="292" y="134.4" width="256" height="6.7" fill="#272739"/><rect x="292" y="154.9" width="256" height="8.2" fill="#272739"/><rect x="292" y="172.8" width="256" height="9.7" fill="#272739"/><rect x="292" y="188.2" width="256" height="11.3" fill="#272739"/><rect x="292" y="203.5" width="256" height="12.8" fill="#272739"/></g>
+  <rect x="24" y="420" width="150" height="50" rx="25" fill="#FF3D9A" transform="rotate(-18 99 445)"/>
+  <rect width="512" height="512" fill="#FBF9FF" mask="url(#cut)"/>
+</svg>

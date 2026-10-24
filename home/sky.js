@@ -136,12 +136,13 @@ html[data-sky="night"] .aos-star { display: block; }
     return { day, wait: next ? Math.max(1000, (next - s) * 1000 + 1000) : 6 * 3600000 };
   }
 
-  // Off ('') in aOS's Sea glass look, which has no sky.
+  // Off ('') in every look but Vintage: Sea glass has no sky, and Night Drive and Folk draw their own shapes
+  // (their blocks, aOS/scripts/looks.mjs).
   let now = '', tone = '', timer = 0;
   function apply() {
     clearTimeout(timer);
     let m = '', t = '';
-    if (root.getAttribute('data-look') !== 'glass') {
+    if (root.getAttribute('data-look') === 'vintage') {
       const s = sun(); m = s.day ? 'day' : 'night'; t = light() ? 'light' : 'dark';
       timer = setTimeout(apply, Math.min(s.wait, 30 * 60000));   // at the next sunrise or sunset (rechecked at least every half hour)
     }
