@@ -3,9 +3,13 @@
 // notes and trips, come from the family's account or Sheet already).
 //
 //   Weather: your places and units          Clock: world clocks, alarms, Bedtime, its settings, recent timers
+//   Calendar: its settings (week start, clock, alerts, what it shows)
+//   Mail: which Google account, and that Gmail is connected - never the sign-in itself: on a new device
+//         Mail signs in to that account by itself as it opens (silently when Google knows the device,
+//         else with one tap), and that one sign-in covers Travel and Orders, as everywhere
 //   every app's design (Vintage, Sea glass)  aOS: its look, light or dark, Favorites
 //
-// Never a sign-in, a token, Home Assistant's address, a cache, where you are now (Weather's GPS fix)
+// Never a sign-in, a token (Gmail's included), Home Assistant's address, a cache, where you are now (Weather's GPS fix)
 // or what's running (Clock's stopwatch and timers, an alarm's next ring: each device works its own out).
 // The server keeps only these (functions/aOS/api, PREF_ITEM), each with when it last changed, per person.
 //
@@ -33,6 +37,10 @@
     { id: CLOCK + '#set', key: CLOCK, field: 'set', app: 'clock', blank: v => { const s = json(v) || {}; return !s.h24 && !s.secs && !s.analog && s.design !== 'glass' && !s.home; } },
     { id: CLOCK + '#tsound', key: CLOCK, field: 'tsound', app: 'clock', blank: v => v === '"twinbell"' },
     { id: CLOCK + '#recents', key: CLOCK, field: 'recents', app: 'clock' },
+    { id: 'allison-calendar-v1-settings', key: 'allison-calendar-v1-settings', app: 'calendar' },
+    // quiet: Mail reads these as it opens, so an open Mail isn't started again for them (it would go to Google)
+    { id: 'mail.hint', key: 'mail.hint', app: 'mail', quiet: true },
+    { id: 'mail.token.ever', key: 'mail.token.ever', app: 'mail', quiet: true },
     { id: 'aos.look', key: 'aos.look', app: 'aos' },
     { id: 'aos.home.picks', key: 'aos.home.picks', app: 'aos' },
     { id: 'home.settings#theme', key: 'home.settings', field: 'theme', app: 'aos', blank: v => v === '"auto"' },
@@ -87,7 +95,7 @@
         else down.push([all.find(i => i.id === id), kept]);
       }
     }
-    const take = down.filter(([it]) => !wait(it.app)), came = new Set(take.map(([it]) => it.app));   // the app on screen: next time
+    const take = down.filter(([it]) => it.quiet || !wait(it.app)), came = new Set(take.filter(([it]) => !it.quiet).map(([it]) => it.app));   // the app on screen: next time
     if (take.length) await ready([...came]);
     for (const [it, there] of take) { write(it, there.v); seen[it.id] = { h: read(it), at: there.at }; }
     try { localStorage.setItem(SEEN, JSON.stringify(seen)); } catch {}

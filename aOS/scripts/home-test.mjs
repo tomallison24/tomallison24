@@ -395,10 +395,12 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   // the iPhone: set up already
   const phone = await device({ 'wx.places': DENVER, 'wx.here': '{"lat":35.7,"lon":-78.8,"name":"Apex"}', 'design.weather': 'glass', 'home.settings': '{"theme":"dark"}', 'aos.home.picks': '["house"]',
     'allison-clock-v1': JSON.stringify({ tab: 'timers', cities: [{ id: 'c1', name: 'London', where: 'UK', tz: 'Europe/London' }], alarms: [{ id: 'a1', h: 7, m: 0, days: [1, 2, 3, 4, 5], label: 'Up', on: true, next: Date.now() + 3600e3 }],
-      timers: [{ id: 't1', dur: 600, state: 'run', end: Date.now() + 600e3 }], set: { h24: true } }), 'mail.token': 'secret' });
+      timers: [{ id: 't1', dur: 600, state: 'run', end: Date.now() + 600e3 }], set: { h24: true } }),
+    'mail.token': '{"t":"ya29.secret","exp":' + (Date.now() + 3e6) + '}', 'mail.hint': 'tom@gmail.com', 'mail.token.ever': '1', 'allison-calendar-v1-settings': '{"weekStart":1,"weekStartPicked":true,"clock":"24"}' });
   const p = synced();
   check(p['wx.places'] && JSON.parse(p['wx.places'].v)[0].name === 'Denver' && p['design.weather'].v === 'glass' && JSON.parse(p['home.settings#theme'].v) === 'dark' && p['allison-clock-v1#cities'],
     'opening aOS, its settings go to your account: Weather\'s places, designs, light or dark, Clock\'s clocks');
+  check(p['mail.hint'].v === 'tom@gmail.com' && p['mail.token.ever'].v === '1' && JSON.parse(p['allison-calendar-v1-settings'].v).weekStart === 1, 'and which Google account Mail uses, that Gmail is connected, Calendar\'s settings');
   check(!p['wx.here'] && !p['mail.token'] && !p['aos.session'] && !Object.keys(p).some(k => /timers|tab$/.test(k)) && !/next/.test(p['allison-clock-v1#alarms'].v),
     'never where you are now, a sign-in, Clock\'s running timers or an alarm\'s next ring');
   // back to aOS on the iPad: the iPhone's settings come (its empty ones wiped nothing)
@@ -410,6 +412,8 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(got.clock.cities[0].name === 'London' && got.clock.alarms[0].label === 'Up' && !('next' in got.clock.alarms[0]) && got.clock.set.h24 === true && got.clock.tab === 'world' && got.clock.timers.length === 0,
     'Clock\'s world clocks, alarms and settings come too; its own timers and tab stay as they were');
   check(JSON.parse(synced()['wx.places'].v)[0].name === 'Denver', 'and the iPad\'s empty places didn\'t replace the iPhone\'s');
+  check(await ls(ipad.pg, 'mail.hint') === 'tom@gmail.com' && await ls(ipad.pg, 'mail.token.ever') === '1' && !(await ls(ipad.pg, 'mail.token')) && JSON.parse(await ls(ipad.pg, 'allison-calendar-v1-settings')).clock === '24',
+    'Mail\'s Google account and Calendar\'s settings come too, never the Gmail sign-in itself');
   // a city added on the iPad reaches the iPhone the next time it comes back to aOS
   await ipad.pg.evaluate(() => { const p = JSON.parse(localStorage.getItem('wx.places')); p.push({ lat: 42.36, lon: -71.06, name: 'Boston', sub: 'MA' }); localStorage.setItem('wx.places', JSON.stringify(p)); });
   await back(ipad.pg); await ipad.pg.waitForTimeout(600);
@@ -428,6 +432,12 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await back(ipad.pg); await ipad.pg.waitForTimeout(2500);
   check(w0 && await ls(ipad.pg, 'design.weather') === 'vintage' && await ipad.pg.evaluate(() => { const w = document.querySelector('.frame[data-id="weather"] iframe').contentWindow; return !w.__old && /\/weather\/$/.test(w.location.href); }),
     'Weather, open out of sight, starts again with the design chosen on the iPhone');
+  // Mail on the iPad: it signs in to that Google account by itself (Google, quietly, for tom@gmail.com)
+  const toGoogle = [];
+  ipad.pg.on('request', r => { if (/accounts\.google\.com\/o\/oauth2/.test(r.url())) toGoogle.push(r.url()); });
+  await ipad.pg.evaluate(() => aosHomeTab.show('mail')); await ipad.pg.waitForTimeout(3000);
+  const g = toGoogle[0] ? new URL(toGoogle[0]).searchParams : null;
+  check(g && g.get('login_hint') === 'tom@gmail.com' && g.get('prompt') === 'none', `Mail on the iPad signs in to the iPhone's Google account by itself (${toGoogle[0] ? 'prompt=' + g.get('prompt') + ', hint=' + g.get('login_hint') : 'no sign-in'})`);
   check(!phone.errs.length && !ipad.errs.length, 'no script errors (both devices)' + ([...phone.errs, ...ipad.errs].length ? ': ' + [...phone.errs, ...ipad.errs].join(' | ') : ''));
   await phone.ctx.close(); await ipad.ctx.close();
 }

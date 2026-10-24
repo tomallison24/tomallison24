@@ -109,9 +109,11 @@ await test('prefs: your settings follow you between devices; the newer wins, onl
   assert.equal((await call('prefs', undefined)).status, 401, 'signed in only');
   const at = Date.now() - 5000;
   let r = await call('prefs', { set: { 'wx.places': { v: '[{"name":"Denver","lat":39.7,"lon":-105}]', at }, 'aos.session': { v: 'x', at }, 'mail.token': { v: 'x', at },
-    'allison-clock-v1#alarms': { v: '[]', at }, 'allison-clock-v1#timers': { v: '[]', at }, 'design.weather': { v: 'glass', at } } }, sam);
+    'allison-clock-v1#alarms': { v: '[]', at }, 'allison-clock-v1#timers': { v: '[]', at }, 'design.weather': { v: 'glass', at },
+    'mail.hint': { v: 'tom@gmail.com', at }, 'mail.token.ever': { v: '1', at }, 'mail.token': { v: '{"t":"ya29.secret"}', at }, 'allison-calendar-v1-settings': { v: '{"weekStart":1}', at } } }, sam);
   assert.equal(r.status, 200);
-  assert.deepEqual(Object.keys(r.body.prefs).sort(), ['allison-clock-v1#alarms', 'design.weather', 'wx.places'], 'never a sign-in, a token, or Clock\'s running timers');
+  assert.deepEqual(Object.keys(r.body.prefs).sort(), ['allison-calendar-v1-settings', 'allison-clock-v1#alarms', 'design.weather', 'mail.hint', 'mail.token.ever', 'wx.places'],
+    'never a sign-in or a token (Gmail\'s included), or Clock\'s running timers; Mail\'s Google account and that Gmail is connected, yes');
   r = await call('prefs', { set: { 'wx.places': { v: '[]', at: at - 1000 } } }, sam);
   assert.equal(r.body.prefs['wx.places'].v, '[{"name":"Denver","lat":39.7,"lon":-105}]', 'an older change loses');
   const w0 = db.m.get('prefs:' + samId);
