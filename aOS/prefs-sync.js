@@ -34,7 +34,7 @@
     { id: CLOCK + '#cities', key: CLOCK, field: 'cities', app: 'clock' },
     { id: CLOCK + '#alarms', key: CLOCK, field: 'alarms', app: 'clock', out: a => Array.isArray(a) ? a.map(x => drop(x, ['next', 'snoozeAt'])) : a },
     { id: CLOCK + '#sleep', key: CLOCK, field: 'sleep', app: 'clock', out: s => drop(s, ['next', 'bedNext', 'skip', 'snoozeAt']), blank: v => !(json(v) || {}).set },
-    { id: CLOCK + '#set', key: CLOCK, field: 'set', app: 'clock', blank: v => { const s = json(v) || {}; return !s.h24 && !s.secs && !s.analog && s.design !== 'glass' && !s.home; } },
+    { id: CLOCK + '#set', key: CLOCK, field: 'set', app: 'clock', blank: v => { const s = json(v) || {}; return !s.h24 && !s.h24Picked && !s.secs && !s.analog && (!s.design || s.design === 'vintage') && !s.home; } },
     { id: CLOCK + '#tsound', key: CLOCK, field: 'tsound', app: 'clock', blank: v => v === '"twinbell"' },
     { id: CLOCK + '#recents', key: CLOCK, field: 'recents', app: 'clock' },
     { id: 'allison-calendar-v1-settings', key: 'allison-calendar-v1-settings', app: 'calendar' },
@@ -42,6 +42,7 @@
     { id: 'mail.hint', key: 'mail.hint', app: 'mail', quiet: true },
     { id: 'mail.token.ever', key: 'mail.token.ever', app: 'mail', quiet: true },
     { id: 'aos.look', key: 'aos.look', app: 'aos' },
+    { id: 'aos.lang', key: 'aos.lang', app: 'aos', blank: v => v === 'en' },
     { id: 'aos.home.picks', key: 'aos.home.picks', app: 'aos' },
     { id: 'home.settings#theme', key: 'home.settings', field: 'theme', app: 'aos', blank: v => v === '"auto"' },
   ];

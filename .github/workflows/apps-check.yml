@@ -127,11 +127,12 @@ jobs:
               aOS/scripts/sky-test.mjs . 2/3
               aOS/scripts/sky-test.mjs . 0/3
               aOS/scripts/sky-test.mjs . 1/3
-          # every app on its own (and its old Vintage address); aOS's Today
+          # every app on its own (and its old Vintage address); aOS's Today; aOS in Russian
           - group: standalone
             tests: |
               aOS/scripts/standalone-test.mjs
               aOS/scripts/today-test.mjs
+              aOS/scripts/lang-test.mjs
           # the newest release's update screens; every app opens, light and dark; Calendar's layers, an invite, notifications, designs
           - group: release-smoke
             tests: |
@@ -148,12 +149,13 @@ jobs:
               drinks/scripts/app-test.mjs . 1/2
               home/scripts/ipsy-private-test.mjs
               house/scripts/automations-test.mjs
-          # Orders, and Ipsy in Orders and News
+          # Orders, and Ipsy in Orders and News; Ipsy and settings
           - group: orders
             tests: |
               orders/scripts/app-test.mjs
               orders/scripts/ipsy-test.mjs
               news/scripts/ipsy-test.mjs
+              aOS/scripts/ipsy-settings-test.mjs
           # Ipsy in Calendar and Notes; Mail's two designs
           - group: calendar-ipsy
             tests: |

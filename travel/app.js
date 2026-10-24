@@ -451,7 +451,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     mailApp: threadId => '../mail/?thread=' + encodeURIComponent(threadId),
     gmailWeb: msgId => 'https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(msgId),
   };
-  const linkRow = (href, title, sub, icon) => '<a class="rowbtn" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer"><span class="ic">' + (icon || I.search) + '</span><span>' + esc(title) + (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') + '</span></a>';
+  const linkRow = (href, title, sub, icon, keep) => '<a class="rowbtn" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer"><span class="ic">' + (icon || I.search) + '</span><span>' + esc(title) + (sub ? '<span class="sub"' + (keep ? ' translate="no"' : '') + '>' + esc(sub) + '</span>' : '') + '</span></a>';   // keep: the sub is the family's (a place), left as it is in Russian
   // A place in words for a search: a city name beats an airport code.
   const placeWords = x => (P.AIRPORTS[String(x || '').toUpperCase()] || x || '').replace(/ (JFK|LaGuardia|O'Hare|Midway|Hobby|Heathrow|Gatwick|Orly)$/i, '');
 
@@ -479,9 +479,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let h = '<button class="hero glass" type="button" data-bk="' + esc(next.id) + '" style="--tint:var(--' + ({ flight: 'fl', hotel: 'ho', car: 'ca' }[next.type] || 'fl') + ')">';
     h += '<p class="k">' + (I[next.type] || I.other) + esc(k) + '</p>';
     if (next.type === 'flight') {
-      h += '<div class="route"><div class="ap"><b>' + esc(next.from || '—') + '</b><span>' + esc(next.fromName || city(next.from)) + '</span></div><div class="line">' + I.plane + '</div>'
+      h += '<div class="route" translate="no"><div class="ap"><b>' + esc(next.from || '—') + '</b><span>' + esc(next.fromName || city(next.from)) + '</span></div><div class="line">' + I.plane + '</div>'
         + '<div class="ap r"><b>' + esc(next.to || '—') + '</b><span>' + esc(next.toName || city(next.to)) + '</span></div></div>';
-      h += '<div class="when">' + esc(flightName(next)) + ' · ' + esc(fmtDay(next.dep)) + (fmtTime(next.dep) ? ' · ' + esc(fmtTime(next.dep)) : '') + '</div>';
+      h += '<div class="when" translate="no">' + esc(flightName(next)) + ' · ' + esc(fmtDay(next.dep)) + (fmtTime(next.dep) ? ' · ' + esc(fmtTime(next.dep)) : '') + '</div>';
       const l = liveView(next);
       const bits = [];
       const gate = (l && l.gate) || next.gate, term = (l && l.terminal) || next.terminal;
@@ -492,14 +492,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (bits.length) h += '<div class="sub">' + esc(bits.join(' · ')) + '</div>';
     } else if (next.type === 'hotel') {
       const inStay = next.checkIn <= todayStr();
-      h += '<h3>' + esc(next.name || 'Hotel') + '</h3><div class="when">' + (inStay ? 'Check out ' + esc(fmtDay(next.checkOut)) : 'Check in ' + esc(fmtDay(next.checkIn)) + (next.checkInTime ? ' · from ' + esc(fmtTime(next.checkIn + 'T' + next.checkInTime)) : '')) + '</div>';
+      h += '<h3' + (next.name ? ' translate="no"' : '') + '>' + esc(next.name || 'Hotel') + '</h3><div class="when">' + (inStay ? 'Check out ' + esc(fmtDay(next.checkOut)) : 'Check in ' + esc(fmtDay(next.checkIn)) + (next.checkInTime ? ' · from ' + esc(fmtTime(next.checkIn + 'T' + next.checkInTime)) : '')) + '</div>';
       h += '<div class="sub">' + esc([next.address, next.conf ? 'Conf. ' + next.conf : ''].filter(Boolean).join(' · ')) + '</div>';
     } else if (next.type === 'car') {
       const out = next.pickup && moment(next.pickup, next.pickupIso) <= now;
-      h += '<h3>' + esc(carCo(next)) + '</h3><div class="when">' + (out ? 'Return ' + esc(fmtDay(next.dropoff)) + ' · ' + esc(fmtTime(next.dropoff)) : 'Pick up ' + esc(fmtDay(next.pickup)) + (fmtTime(next.pickup) ? ' · ' + esc(fmtTime(next.pickup)) : '')) + '</div>';
+      h += '<h3' + (carCo(next) !== 'Rental car' ? ' translate="no"' : '') + '>' + esc(carCo(next)) + '</h3><div class="when">' + (out ? 'Return ' + esc(fmtDay(next.dropoff)) + ' · ' + esc(fmtTime(next.dropoff)) : 'Pick up ' + esc(fmtDay(next.pickup)) + (fmtTime(next.pickup) ? ' · ' + esc(fmtTime(next.pickup)) : '')) + '</div>';
       h += '<div class="sub">' + esc([out ? next.dropPlace : next.pickupPlace, next.conf ? 'Conf. ' + next.conf : ''].filter(Boolean).join(' · ')) + '</div>';
     } else {
-      h += '<h3>' + esc(titleOf(next)) + '</h3><div class="when">' + esc(fmtDay(startOf(next))) + '</div>';
+      h += '<h3' + (next.title ? ' translate="no"' : '') + '>' + esc(titleOf(next)) + '</h3><div class="when">' + esc(fmtDay(startOf(next))) + '</div>';
     }
     const pill = statusPill(next);
     if (pill) h += '<div class="meta">' + pill + '</div>';
@@ -512,7 +512,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const soon = !g.past && g.startT > Date.now() ? until(g.startT) : !g.past ? 'Now' : '';
     const ai = !g.past && g.gaps && aiOn() && aiAvail !== false;
     return '<div class="tripwrap" style="--i:' + i + '"><button class="trip glass' + (g.past ? ' past' : '') + (ai ? ' hasai' : '') + '" type="button" data-trip="' + esc(g.id) + '" style="--i:' + i + '">'
-      + '<div class="tt"><h3>' + esc(g.name) + '</h3>' + (soon ? '<span class="soon">' + esc(soon) + '</span>' : '') + '</div>'
+      + '<div class="tt"><h3 translate="no">' + esc(g.name) + '</h3>' + (soon ? '<span class="soon">' + esc(soon) + '</span>' : '') + '</div>'
       + '<div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div>'
       + '<div class="icons">' + counts + (g.items.every(b => b.only) ? justMePill : '') + (g.check ? '<span class="st warn">' + esc(g.check + ' to check') + '</span>' : '')
       + (g.live.length < g.items.length ? '<span class="st bad">' + esc((g.items.length - g.live.length) + ' canceled') + '</span>' : '') + '</div></button>'
@@ -590,10 +590,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       t = (side === 'start' ? 'Pick up · ' : 'Return · ') + carCo(b);
       s = [side === 'start' ? b.pickupPlace : (b.dropPlace || b.pickupPlace), side === 'start' ? b.carClass : ''].filter(Boolean).join(' · ');
     } else { t = b.title || 'Booking'; s = b.place || ''; }
-    const meta = [statusPill(b), b.only && side === 'start' ? justMePill : '', b.conf && side === 'start' ? '<span class="st bare">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
+    const meta = [statusPill(b), b.only && side === 'start' ? justMePill : '', b.conf && side === 'start' ? '<span class="st bare" translate="no">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
+    const keepT = b.type === 'flight' || (b.type === 'other' && b.title), keepS = b.type === 'car' || b.type === 'other';   // the family's (a flight, a place): left as it is in Russian
     return '<button class="ev ' + esc(b.type) + cx + '" type="button" data-bk="' + esc(b.id) + '">'
       + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(at ? fmtDay(at) : 'No date') + '</small>' : '') + '</span><span class="ic">' + (b.ride ? I.car : I[b.type] || I.other) + '</span>'
-      + '<span class="bd"><span class="t">' + esc(t) + '</span>' + (s ? '<span class="s">' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
+      + '<span class="bd"><span class="t"' + (keepT ? ' translate="no"' : '') + '>' + esc(t) + '</span>' + (s ? '<span class="s"' + (keepS ? ' translate="no"' : '') + '>' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
   }
   function tripById(id) { return groupTrips().find(g => g.id === id || g.items.some(b => b.id === id)); }
   // Private: hidden from Ipsy (ipsy-tools.js), with its email; it still syncs, and an email can still update it.
@@ -642,7 +643,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     events.sort((x, y) => x.at.localeCompare(y.at));
     const days = [];
     for (const e of events) { const d = e.at.slice(0, 10); if (!days.length || days[days.length - 1].d !== d) days.push({ d, list: [] }); days[days.length - 1].list.push(e); }
-    let h = '<div class="triphead"><input id="tpName" value="' + esc(g.name) + '" aria-label="Trip name" placeholder="' + esc(g.auto) + '" enterkeyhint="done"><div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div></div>';
+    let h = '<div class="triphead"><input id="tpName" translate="no" value="' + esc(g.name) + '" aria-label="Trip name" placeholder="' + esc(g.auto) + '" enterkeyhint="done"><div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div></div>';
     h += days.map((d, i) => '<div class="dayblock" style="--i:' + i + '"><p class="sechead"><span>' + esc(fmtDay(d.d, { weekday: 'long', month: 'long' })) + '</span></p><div class="tl glass">'
       + d.list.map(e => evRow(e.b, e.at, e.side)).join('') + '</div></div>').join('');
     // Have Ipsy check this trip: every booking still to come, against its newest email (checkTrip)
@@ -665,9 +666,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const d0 = g.start.slice(0, 10), d1 = g.end.slice(0, 10);
     const where = hotel && hotel.city || placeWords(dest);
     h += '<p class="sechead"><span>Find more for this trip</span></p><div class="rgroup glass">'
-      + linkRow(LINKS.googleFlights(from, dest, d0, d1 > d0 ? d1 : ''), 'Google Flights', (from ? from + ' → ' : '') + dest + ' · ' + fmtRange(d0, d1), I.flight)
-      + linkRow(LINKS.googleHotels(where, d0, d1), 'Google Hotels', where + ' · ' + fmtRange(d0, d1), I.hotel)
-      + linkRow(LINKS.marriott(where, d0, d1), 'Marriott', where + ' · ' + fmtRange(d0, d1), I.hotel)
+      + linkRow(LINKS.googleFlights(from, dest, d0, d1 > d0 ? d1 : ''), 'Google Flights', (from ? from + ' → ' : '') + dest + ' · ' + fmtRange(d0, d1), I.flight, true)
+      + linkRow(LINKS.googleHotels(where, d0, d1), 'Google Hotels', where + ' · ' + fmtRange(d0, d1), I.hotel, true)
+      + linkRow(LINKS.marriott(where, d0, d1), 'Marriott', where + ' · ' + fmtRange(d0, d1), I.hotel, true)
       + linkRow(LINKS.kayakCars(/^[A-Z]{3}$/.test(dest) ? dest : where, d0, d1), 'Rental cars (Kayak)', 'Compares National, Enterprise, Hertz and others', I.car)
       + linkRow(LINKS.national(), 'National Car Rental', 'Opens nationalcar.com', I.car)
       + '</div>';
@@ -732,13 +733,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }).join('') + '<div class="f w"><label for="bf_notes">Notes</label><textarea id="bf_notes" data-k="notes" placeholder="Anything to remember">' + esc(b.notes || '') + '</textarea></div></div></div>';
     const rows = [];
     if (b.source && b.source.threadId && myMail(b)) {
-      rows.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(b.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(b.source.subject || '') + '</span></span></a>');
+      rows.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(b.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub" translate="no">' + esc(b.source.subject || '') + '</span></span></a>');
       rows.push(linkRow(LINKS.gmailWeb(b.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
     const place = b.type === 'hotel' ? [b.name, b.address].filter(Boolean).join(', ') : b.type === 'car' ? b.pickupPlace : b.type === 'other' ? b.place : '';
-    if (place) rows.push(linkRow(LINKS.maps(place), 'Map', place, I.map));
+    if (place) rows.push(linkRow(LINKS.maps(place), 'Map', place, I.map, true));
     if (!st.isNew && startOf(b)) rows.push('<button class="rowbtn" type="button" id="bkCal"><span class="ic">' + I.cal + '</span><span>Add to calendar</span></button>');
-    if (b.type === 'flight' && b.from && b.to) rows.push(linkRow(LINKS.googleFlights(b.from, b.to, (b.dep || '').slice(0, 10)), 'This route on Google Flights', b.from + ' → ' + b.to, I.search));
+    if (b.type === 'flight' && b.from && b.to) rows.push(linkRow(LINKS.googleFlights(b.from, b.to, (b.dep || '').slice(0, 10)), 'This route on Google Flights', b.from + ' → ' + b.to, I.search, true));
     if (b.type === 'hotel' && (b.city || b.address)) rows.push(linkRow(LINKS.googleHotels(b.city || b.address, b.checkIn, b.checkOut), 'Other hotels nearby', 'Google Hotels, same dates', I.search));
     if (rows.length) h += '<div class="rgroup glass">' + rows.join('') + '</div>';
     if (b.source && b.source.from) h += '<p class="hint">From ' + esc(b.source.from.replace(/<[^>]*>/g, '').trim() || b.source.from) + (b.source.date ? ', ' + esc(new Date(b.source.date).toLocaleDateString()) : '') + '.</p>';
@@ -1979,7 +1980,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const list = ls.json(K.scanLog, []), i = ls.json(K.scanInfo, null);
     let h = '';
     if (!list.length) h = '<div class="box glass"><span class="hint" style="margin:0">No emails read yet.</span></div>';
-    else h = '<div class="rgroup glass">' + list.map(e => '<div class="logrow"><div class="lgt"><b>' + esc(e.subj || '(no subject)') + '</b><span>' + esc([e.from, e.at ? new Date(e.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''].filter(Boolean).join(' · ')) + '</span></div><span class="lgo' + (/^(no booking|couldn)/.test(e.out || '') ? ' no' : '') + '">' + esc(e.out || '') + '</span></div>').join('') + '</div>';
+    else h = '<div class="rgroup glass">' + list.map(e => '<div class="logrow"><div class="lgt" translate="no"><b>' + esc(e.subj || '(no subject)') + '</b><span>' + esc([e.from, e.at ? new Date(e.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''].filter(Boolean).join(' · ')) + '</span></div><span class="lgo' + (/^(no booking|couldn)/.test(e.out || '') ? ' no' : '') + '">' + esc(e.out || '') + '</span></div>').join('') + '</div>';
     $('lgBody').innerHTML = h;
     $('lgHint').textContent = i ? plural(i.listed, 'email') + ' matched Travel’s search in the last look.' : '';
     $('lgHint').hidden = !i;

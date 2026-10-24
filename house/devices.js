@@ -104,7 +104,7 @@ function chipsHTML(a, list, cur, o = {}) {
   return `<div class="chips${o.cls ? ' ' + o.cls : ''}">${list.map(([v, l, x = {}]) => `<button class="chip2${x.cls ? ' ' + x.cls : ''}" data-a="${a}" data-v="${esc(v)}"${x.aria ? ` aria-label="${esc(x.aria)}"` : ''} aria-pressed="${cur != null && (o.near ? Math.abs(Number(cur) - Number(v)) <= o.near : String(cur) === String(v))}"${o.dis ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
 }
 function infoHTML2(name, title, sub, extra = '') {
-  return `<button class="dg-name" data-a="open" aria-label="All of the ${esc(name)}'s controls">${esc(name)}${svg('chevR', 16)}</button>
+  return `<button class="dg-name" data-a="open" aria-label="All of the ${esc(name)}'s controls"><span translate="no">${esc(name)}</span>${svg('chevR', 16)}</button>
     <div class="dg-title">${title}</div><div class="dg-sub">${sub}</div>${extra}`;
 }
 const pillHTML2 = (word, dot) => `<span class="dg-pill">${dot ? `<i style="background:rgb(${dot})"></i>` : ''}${word}</span>`;
@@ -147,6 +147,8 @@ function renderDev() {
   const { f, id } = openD, o = f.sheet(id);
   if (!o) return;
   const S = n => dsheet.querySelector(`[data-s="${n}"]`), body = S('body');
+  // A device's name is left as it is in any language; a popup of the app's own (ours: Activity) is translated.
+  if (o.ours) $('dTitle').removeAttribute('translate'); else $('dTitle').setAttribute('translate', 'no');
   $('dTitle').textContent = o.title;
   put(S('pill'), o.pill || '');
   put(S('fx'), o.fx || '');

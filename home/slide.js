@@ -23,7 +23,9 @@
   const slid = {}, MS = 560;
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  const calls = new Map();   // key -> the last call, to place again when the words change size (Russian: ../home/lang.js)
   function slide(box, chosen, key, { group = '', target, jump } = {}) {
+    if (box) calls.set(key, [box, chosen, { group, target }]);
     if (!box || !box.offsetWidth) return;   // hidden: nothing to measure yet
     let th = box.querySelector(':scope > .slthumb');
     const fresh = !th || !th.style.width;
@@ -58,6 +60,9 @@
     const ic = chosen.querySelector('svg');
     if (ic && !at) ic.animate([{ scale: '1' }, { scale: '1.18', offset: 0.5 }, { scale: '1' }], { duration: 380, delay: 200, easing: 'ease-out' });
   }
+
+  // The page's words were swapped for Russian after the thumb was measured: every thumb in sight is placed again, at once
+  addEventListener('aos:words', () => { for (const [key, [box, chosen, o]] of calls) if (box.isConnected && chosen && chosen.isConnected) slide(box, chosen, key, { ...o, jump: true }); });
 
   // What was last placed for a switch (the Calendar's week strip checks its group).
   slide.last = key => slid[key];

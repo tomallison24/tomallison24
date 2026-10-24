@@ -80,7 +80,7 @@ function favAway() {
 function favActivity() {
   const ev = actEvents(), x = ev[0];
   if (!x) return { c: '190,194,204', html: `<span class="wx-ic">${svg('clock', 24)}</span><span class="wx-t ac-t"><b>Activity</b><small>${gone(ACT_LOG) ? 'Not available' : 'Nothing yet'}</small></span><span class="wx-go">${svg('chevR', 18)}</span>` };
-  return { c: actRgb(x.c), html: `<span class="wx-ic">${svg(actIcon(x), 24)}</span><span class="wx-t ac-t"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span><span class="wx-go">${esc(ago(Number(x.t)))}${svg('chevR', 18)}</span>` };
+  return { c: actRgb(x.c), html: `<span class="wx-ic">${svg(actIcon(x), 24)}</span><span class="wx-t ac-t" translate="no"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span><span class="wx-go">${esc(ago(Number(x.t)))}${svg('chevR', 18)}</span>` };
 }
 // Its reading is the Weather app's own (../weather/data.js, loaded before
 // this): the NWS forecast for the spot corrected by the nearest station's
@@ -202,7 +202,7 @@ family({
     const run = this.el.querySelector('[data-r="run"]');
     run.hidden = !this.run.length;
     put(run, `<div class="run-h"><i></i>RUNNING NOW<span>${this.run.length}</span></div><div class="runchips">${this.run.map((x, i) =>
-      `<button class="runchip${x.idle ? ' idle' : ''}" data-a="go" data-v="${i}"><i></i><b>${esc(x.name)}</b><span>${esc(x.word)}</span></button>`).join('')}</div>`);
+      `<button class="runchip${x.idle ? ' idle' : ''}" data-a="go" data-v="${i}"><i></i><b translate="no">${esc(x.name)}</b><span>${esc(x.word)}</span></button>`).join('')}</div>`);
     run.dataset.dv = 'fav:run';
 
     const wx = favWeather();
@@ -215,7 +215,7 @@ family({
       const s = this.autoState(a), name = s.lit && a.onName ? a.onName : a.name;
       return `<div class="agw${s.lit ? ' lit' : ''}" style="--c:${a.acc}"><i class="ag-glow"></i>
         <button class="ag${s.lit ? ' lit' : ''}${tWaiting(s.d, 'lit') || tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="auto" data-v="${a.id}" aria-pressed="${s.lit}"${s.dis ? ' disabled' : ''}>
-        <span class="ag-disc">${svg(a.icon, 24)}</span><span class="ag-name">${esc(name)}</span></button></div>`;
+        <span class="ag-disc">${svg(a.icon, 24)}</span><span class="ag-name"${a.script ? ' translate="no"' : ''}>${esc(name)}</span></button></div>`;
     }).join(''));
     this.sum = [away ? 'Away' : '', this.run.length ? this.run.length + ' running' : away ? '' : 'Nothing running'].filter(Boolean).join(' · ');
   },
@@ -225,12 +225,12 @@ family({
       const ev = actEvents().slice(0, 10);
       const who = w => w === 'auto' ? `<span class="act-who" title="An automation or script">${svg('bolt', 14)}Auto</span>` : w === 'you' ? '<span class="act-who you">You</span>' : '';
       return {
-        title: 'Activity', accent: '190,194,204', pill: ev.length ? pillHTML2(ago(Number(ev[0].t))) : '',
+        title: 'Activity', ours: true, accent: '190,194,204', pill: ev.length ? pillHTML2(ago(Number(ev[0].t))) : '',
         fx: skyHTML(grad('#16171B', '#1F2026', '#2E3038'), '160,170,255', {}, 150),
         parts: [
           ['list', ev.length ? `<div class="group actlist">${ev.map(x => `<div class="actrow" style="--c:${actRgb(x.c)}">
               <span class="act-ic">${svg(actIcon(x), 18)}</span>
-              <span class="act-k"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span>
+              <span class="act-k" translate="no"><b>${esc(x.n || '')}</b><small>${esc(x.d || '')}</small></span>
               <span class="act-r"><time>${esc(actWhen(x.t))}</time>${who(x.w)}</span></div>`).join('')}</div>`
             : `<p class="tnote">${gone(ACT_LOG) ? 'No activity log in Home Assistant.' : 'Nothing has happened yet.'}</p>`],
         ],
@@ -239,7 +239,7 @@ family({
     if (id !== 'bug') return null;
     const ack = isOn('input_boolean.signal_bug_logged_ack');
     return {
-      title: 'Report a Bug', accent: '190,194,204', pill: ack ? pillHTML2('Logged', PAL.on) : '',
+      title: 'Report a Bug', ours: true, accent: '190,194,204', pill: ack ? pillHTML2('Logged', PAL.on) : '',
       fx: skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}, 150),
       parts: [
         // Never redrawn (its HTML never changes), so what is typed stays put.

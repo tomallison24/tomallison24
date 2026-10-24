@@ -219,7 +219,7 @@ const BG_FAM = family({
     if (id !== 'bg') return null;
     const on = BG.id, tn = BG.tone();
     return {
-      title: 'Background', accent: '190,194,204', pill: pillHTML2(this.label()),
+      title: 'Background', ours: true, accent: '190,194,204', pill: pillHTML2(this.label()),
       fx: '',
       parts: [
         ['tone', lbl('COLOR') + `<div class="tones">${BG_TONES.map(t => `<button class="tone${t.id === tn.id ? ' on' : ''}" data-a="tone" data-v="${t.id}" aria-pressed="${t.id === tn.id}" style="--t:${BG.swatch(t)}">

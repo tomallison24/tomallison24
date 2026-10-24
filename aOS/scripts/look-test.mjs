@@ -3,7 +3,9 @@
 // opens in Sea glass with the right look from the first paint; Vintage brings the new one back.
 // Before aOS is added to the Home Screen (iPhone, in Safari) its install steps start with the look:
 // the pick sets the icon, the status bar and the address that are added, and the installed app
-// (empty storage of its own) opens in the look the address or the cookie carries.
+// (empty storage of its own) opens in the look the address or the cookie carries. Night Drive and Folk:
+// picked in Appearance, each is aOS's look and every app's (each app's design.<id>, Clock's set.design),
+// with its own block, ground, icons and (Folk) fonts.
 // The accounts server is stood in for (the server rules are accounts-api-test.mjs).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -11,7 +13,7 @@
 import { createRequire } from 'module'; import { execSync } from 'child_process'; import http from 'http'; import fs from 'fs'; import path from 'path';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/'); const { chromium } = require('playwright');
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => { let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html'; const f = path.join(ROOT, p);
   if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); });
 await new Promise(r => server.listen(0, r)); const BASE = 'http://localhost:' + server.address().port;
@@ -52,9 +54,9 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
   const names = await p.locator('#looks .dopt b').allInnerTexts();
-  if (names.join() !== 'Vintage,Sea glass') pr.push('the picker offers ' + names.join());
+  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk') pr.push('the picker offers ' + names.join());
   if (await selected(p) !== 'vintage') pr.push('Vintage is not the one picked: ' + await selected(p));
-  report('aOS opens in Vintage; Appearance > Look offers Vintage and Sea glass, Vintage picked', pr); await ctx.close();
+  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Night Drive and Folk, Vintage picked', pr); await ctx.close();
 }
 
 // 2. Sea glass at once, kept over a reload, with no flash of Vintage; Vintage again
@@ -86,7 +88,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'glass') pr.push('the stored Sea glass was not used');
   if (!/#0D1213/i.test(await tint(p))) pr.push('the dark status bar tint is not the Sea glass ground: ' + await tint(p));
   await ctx.close();
-  const o = await open('dark', { 'aos.look': 'neon' });
+  const o = await open('dark', { 'aos.look': 'disco' });
   if (await o.p.evaluate(() => document.documentElement.dataset.look) !== 'vintage') pr.push('an unknown look did not fall back to Vintage');
   if (!/#4A391E/i.test(await tint(o.p))) pr.push('the dark Vintage tint is not the day sky\'s walnut and mustard (home/sky.js): ' + await tint(o.p));
   await o.ctx.close();
@@ -100,7 +102,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
   const names = await p.locator('#aos-welcome .c-look b').allInnerTexts();
-  if (names.join() !== 'Vintage,Sea glass') pr.push('the install step offers ' + names.join());
+  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());
@@ -129,10 +131,38 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const s = await open('light', { 'aos.look': 'vintage' }, { query: '?look=glass', cookie: 'glass' }); pr.push(...s.errs);
   if (await s.p.evaluate(() => document.documentElement.dataset.look) !== 'vintage') pr.push('the address or cookie overrode a look already chosen here');
   await s.ctx.close();
-  const j = await open('light', {}, { query: '?look=neon' });
+  const j = await open('light', {}, { query: '?look=disco' });
   if (await j.p.evaluate(() => document.documentElement.dataset.look) !== 'vintage') pr.push('an unknown ?look= did not fall back to Vintage');
   await j.ctx.close();
   report('the installed app takes the look from the address or the cookie on its first launch; a look already chosen wins', pr);
+}
+
+// 6. Night Drive and Folk: aOS's look and every app's, at once; their own block, ground, icons and fonts
+{
+  const { ctx, p, errs } = await open(); const pr = [...errs];
+  const state = () => p.evaluate(() => ({ look: document.documentElement.dataset.look, media: ['vintage', 'neon', 'folk'].map(id => document.getElementById(id).media).join(),
+    designs: ['mail', 'weather', 'notes', 'house'].map(id => localStorage.getItem('design.' + id)).join(), clock: ((JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {}).design,
+    icon: (document.querySelector('link[rel="apple-touch-icon"]') || {}).href || '', tint: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content).join() }));
+  await openLook(p); await p.click('#looks [data-look="neon"]'); await p.waitForTimeout(200);
+  let st = await state();
+  if (st.look !== 'neon') pr.push('Night Drive did not apply: ' + st.look);
+  if (st.media !== 'all,all,not all') pr.push('Night Drive should keep Vintage on and its own block on: ' + st.media);
+  if (st.designs !== 'neon,neon,neon,neon' || st.clock !== 'neon') pr.push('not every app took Night Drive: ' + st.designs + ' / clock ' + st.clock);
+  if (!/icon-neon-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Night Drive\'s: ' + st.icon);
+  if (!/#F6F0FF/i.test(st.tint)) pr.push('the status bar tint is not Night Drive\'s: ' + st.tint);
+  if (await selected(p) !== 'neon') pr.push('the picker does not show Night Drive picked');
+  if (!/Night Drive/.test(await p.locator('#lookSub').innerText())) pr.push('the Appearance line does not say Night Drive');
+  if (await p.evaluate(() => document.documentElement.hasAttribute('data-sky'))) pr.push('the Vintage sky is still drawn in Night Drive');
+  if (await p.locator('#stories .story img').first().getAttribute('src').then(s => !/icon-neon-512/.test(s || ''))) pr.push('the apps\' icons are not Night Drive\'s');
+  await p.click('#looks [data-look="folk"]'); await p.waitForTimeout(200);
+  st = await state();
+  if (st.look !== 'folk' || st.media !== 'all,not all,all') pr.push('Folk did not apply: ' + st.look + ' ' + st.media);
+  if (st.designs !== 'folk,folk,folk,folk' || st.clock !== 'folk') pr.push('not every app took Folk: ' + st.designs + ' / clock ' + st.clock);
+  const font = await p.evaluate(async () => { await document.fonts.ready; await Promise.all(['16px "Yeseva One"', '16px "PT Sans"', 'bold 16px "PT Sans"'].map(f => document.fonts.load(f, 'Дом Home'))); return document.fonts.check('16px "Yeseva One"', 'Дом') && document.fonts.check('16px "PT Sans"', 'Дом'); });
+  if (!font) pr.push('Folk\'s fonts (Yeseva One, PT Sans, with Cyrillic) did not load from ../home/fonts');
+  await p.reload(); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
+  if (await p.evaluate(() => document.documentElement.dataset.look) !== 'folk') pr.push('Folk is not kept over a reload');
+  report('Night Drive and Folk: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts', pr); await ctx.close();
 }
 
 await b.close(); server.close();

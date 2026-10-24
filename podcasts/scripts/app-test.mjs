@@ -420,7 +420,7 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
     assert.equal((await q('#np .sheet', ['backgroundColor'], '::before'))[0], MUSTARD, 'a mustard sun in the corner');
     assert.equal((await q('#scrub', ['backgroundColor']))[0], 'rgba(0, 0, 0, 0)');
     // (a range's thumb and track can't be read with getComputedStyle: read the last rule written for each)
-    const rule = sel => rp.evaluate(sel => { let last = ''; for (const sh of document.styleSheets) for (const r of sh.cssRules) if (r.selectorText === sel) last = r.cssText; return last; }, sel);
+    const rule = sel => rp.evaluate(sel => { let last = ''; for (const sh of document.styleSheets) if (!sh.disabled && sh.media.mediaText !== 'not all') for (const r of sh.cssRules) if (r.selectorText === sel) last = r.cssText; return last; }, sel);
     assert.match(await rule('.scrub::-webkit-slider-thumb'), /var\(--mc-mustard\)/, 'the scrubber’s knob is mustard');
     assert.match(await rule('.scrub::-webkit-slider-runnable-track'), /var\(--mc-teal\)/, 'the played part of the track is teal');
     assert.equal((await q('#npBg', ['display']))[0], 'none', 'no blurred artwork glow');

@@ -91,7 +91,7 @@ family({
   // also the popup's brightness presets, so they're one tap from the app.
   pill(id, presets) {
     const r = this.read(id);
-    return `${this.badge(r)}<div class="lp-mid"><div class="lp-row"><span class="lp-name">${esc(r.L.name)}</span><span class="lp-val">${this.readout(r)}</span></div>
+    return `${this.badge(r)}<div class="lp-mid"><div class="lp-row"><span class="lp-name" translate="no">${esc(r.L.name)}</span><span class="lp-val">${this.readout(r)}</span></div>
       ${r.onoff ? '' : sliderHTML('bri', r.bri, 1, 100, 1, { tint: r.pc, cls: 'thin', unit: '%', aria: r.L.name + ' brightness', dis: r.offline })
         + (presets ? this.presets(r, 'lp-chips') : '')}</div>`;
   },
@@ -99,7 +99,7 @@ family({
   roomBar(R) {
     const on = R.lights.filter(([id]) => this.read(id).on).length, n = R.lights.length, folded = lfold().includes(R.id);
     const line = on ? (n === 1 ? 'On' : `${on} of ${n} on`) : n === 1 ? 'Off' : 'All off';
-    return `<button class="rb-mid" data-a="fold" aria-expanded="${!folded}" aria-label="${folded ? 'Show' : 'Hide'} the ${esc(R.name)}'s lights"><span class="rb-name">${esc(R.name)}</span><span class="rb-line">${line}</span><span class="rb-chev${folded ? '' : ' open'}">${svg('chev', 18)}</span></button>
+    return `<button class="rb-mid" data-a="fold" aria-expanded="${!folded}" aria-label="${folded ? 'Show' : 'Hide'} the ${esc(R.name)}'s lights"><span class="rb-name" translate="no">${esc(R.name)}</span><span class="rb-line">${line}</span><span class="rb-chev${folded ? '' : ' open'}">${svg('chev', 18)}</span></button>
       <button class="rb-disc${on ? ' on' : ''}" data-a="room" aria-label="${on ? 'Turn off' : 'Turn on'} the ${esc(R.name)}">${svg(on ? 'lightbulb' : 'lightbulbOff', 20)}</button>`;
   },
   house() {
@@ -147,7 +147,7 @@ family({
     const r = this.read(id), L = r.L, ms = this.members(L), tint = r.on ? r.pc : PAL.on;
     const memberRows = ms.map(m => {
       const q = this.read(m), nm = L_NAMES[m] || (attr(m, 'friendly_name') || m.replace(/^light\./, '').replace(/_/g, ' ')).replace(/^\w/, c => c.toUpperCase());
-      return `<div class="mrow" data-m="${m}">${swRow('mtoggle', esc(nm), q.on ? 'lightbulb' : 'lightbulbOff', q.on, q.on ? q.pc : PAL.on, { v: m, dis: q.offline, wait: tWaiting(q.d, 'power') })}
+      return `<div class="mrow" data-m="${m}">${swRow('mtoggle', `<span translate="no">${esc(nm)}</span>`, q.on ? 'lightbulb' : 'lightbulbOff', q.on, q.on ? q.pc : PAL.on, { v: m, dis: q.offline, wait: tWaiting(q.d, 'power') })}
         ${q.onoff ? '' : sliderHTML('mbri', q.bri, 1, 100, 1, { v: m, tint: q.pc, cls: 'thin', unit: '%', aria: nm + ' brightness', dis: q.offline })}</div>`;
     }).join('');
     return {

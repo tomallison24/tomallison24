@@ -281,7 +281,7 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsy’s instructions and Mea
   assert.equal(q.body.output_config.effort, 'medium'); assert.equal(q.body.max_tokens, 16000);
   assert.equal(q.body.fallbacks, 'default'); assert.deepEqual(q.body.cache_control, { type: 'ephemeral' });
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
-  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'web_search', 'web_fetch']);
+  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
   assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['get_meals', 'get_dinners', 'get_deals', 'get_past_plans', 'get_shopping_list', 'tick_items',
     'set_dinner', 'make_plan', 'accept_plan', 'discard_draft', 'show_dinner']);

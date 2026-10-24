@@ -261,7 +261,7 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsy\'s instructions and tool
   assert.deepEqual(q.body.cache_control, { type: 'ephemeral' });
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
   assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['find_trips', 'get_bookings', 'update_booking', 'add_booking', 'delete_bookings', 'delete_trip', 'move_booking', 'rename_trip', 'show_trip', 'flight_status', 'find_flight', 'search_gmail', 'read_email']);
-  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'web_search', 'web_fetch']);
+  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
   for (const t of IPSY_CLIENT_TOOLS) { assert.equal(t.input_schema.type, 'object'); assert.ok(t.description.length > 30, t.name); }
   assert.deepEqual(q.body.messages, Q, 'the conversation as the phone sent it');

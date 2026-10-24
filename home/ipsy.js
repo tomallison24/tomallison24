@@ -41,12 +41,22 @@
   const me = document.currentScript;
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
-  const LOOK = () => (FIXED || document.documentElement.dataset.look) === 'vintage' ? 'vintage' : 'glass';
+  // Night Drive and Folk wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-folk on top of ipsy-vintage).
+  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|folk)$/.test(l || '') ? l : 'glass'; };
   const followers = new Set();                       // elements that wear the page's look
-  const wear = el => { const l = LOOK(); el.classList.toggle('ipsy-vintage', l === 'vintage'); el.classList.toggle('ipsy-glass', l !== 'vintage'); };
+  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'folk']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'folk'))); };
+  const wear = (el, l) => dress(el, l || LOOK());
   const follow = el => { followers.add(el); wear(el); };
-  for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(wear));
+  for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(el => wear(el)));
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // The language a short message asks for ("English", "switch to English please", «на русский»), or null
+  const LANG_NAME = { en: 'English', ru: 'Русский' };
+  const BUILT_LABEL = { set_language: 'Changing the language', get_settings: 'Looking at your settings', change_setting: 'Changing a setting', open_setting: 'Opening Settings' };
+  const LANG_WORDS = /^(?:(?:please|pls|switch|change|set|go|back|to|the|language|lang|in|into|use|speak|i|want|need|can't|cant|read|this|it|пожалуйста|переключи|переключись|переключить|верни|вернуть|поменяй|смени|сделай|включи|язык|на|по|хочу)\s+)*(english|eng|russian|английский|англ|русский|рус)(?:\s+(?:please|language|pls|пожалуйста|язык))?$/;
+  const langAsked = s => {
+    const m = LANG_WORDS.exec(String(s || '').toLowerCase().replace(/[.!?,«»"]/g, ' ').replace(/\s+/g, ' ').trim());
+    return m ? (/^(english|eng|английский|англ)$/.test(m[1]) ? 'en' : 'ru') : null;
+  };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const ls = {
     get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
@@ -86,7 +96,12 @@
       + '<circle class="i-nucleus" cx="128" cy="82" r="13"/>'
       + '<ellipse class="i-gloss" cx="72" cy="82" rx="11" ry="6" transform="rotate(-34 72 82)"/>'
       + '<g class="i-sparks">' + '<circle class="i-spark" cx="100" cy="108" r="5"/>'.repeat(5) + '</g>'
-      + '<g class="i-look"><g class="i-eyes"><ellipse class="i-eye" cx="86" cy="104" rx="6" ry="8.5"/><ellipse class="i-eye" cx="114" cy="104" rx="6" ry="8.5"/></g></g>'
+      + '<g class="i-look"><g class="i-eyes"><ellipse class="i-eye" cx="86" cy="104" rx="6" ry="8.5"/><ellipse class="i-eye" cx="114" cy="104" rx="6" ry="8.5"/></g>'
+      // Night Drive: mirror shades (they follow the eyes); Folk: a matryoshka's headscarf, with a flower (ipsy-neon, ipsy-folk)
+      + '<g class="i-shades"><rect class="i-lens" x="73" y="96" width="25" height="15" rx="6"/><rect class="i-lens" x="102" y="96" width="25" height="15" rx="6"/><path class="i-bridge" d="M98 101h4"/><path class="i-glint" d="M78 107l7-8M107 107l7-8"/></g></g>'
+      + '<g class="i-scarf"><path class="i-hood" d="M44 116C38 62 68 42 100 42s62 20 56 74c-8-26-28-40-56-40s-48 14-56 40z"/>'
+      + '<g class="i-dots"><circle cx="66" cy="74" r="3.2"/><circle cx="134" cy="74" r="3.2"/><circle cx="56" cy="96" r="2.6"/><circle cx="144" cy="96" r="2.6"/></g>'
+      + '<g class="i-flower">' + [0, 72, 144, 216, 288].map(a => '<ellipse cx="100" cy="47" rx="4.6" ry="7.5" transform="rotate(' + a + ' 100 55)"/>').join('') + '<circle class="i-fheart" cx="100" cy="55" r="4"/></g></g>'
       + '<ellipse class="i-cheek" cx="72" cy="120" rx="7" ry="4"/><ellipse class="i-cheek" cx="128" cy="120" rx="7" ry="4"/>'
       + '<path class="i-smile" d="M93 120Q100 127 107 120"/><ellipse class="i-mouth" cx="100" cy="123" rx="6" ry="5"/>'
       + '</g></g></svg>';
@@ -187,6 +202,21 @@
 .ipsy-vintage .ipsy-cell[data-form="neuron"] .i-eye,.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-mouth{fill:#FBF5E9}
 .i-cheek{fill:rgba(214,140,134,.55)}
 .ipsy-vintage .i-cheek{fill:var(--mc-orange,#D8572A)}
+.i-shades,.i-scarf{display:none}
+.ipsy-neon .i-shades{display:inline}
+.ipsy-neon .i-eye{opacity:0}
+.i-lens{fill:#120B1F;stroke:#FF3D9A;stroke-width:2.6}
+.i-bridge{fill:none;stroke:#FF3D9A;stroke-width:2.6;stroke-linecap:round}
+.i-glint{fill:none;stroke:#22D3EE;stroke-width:2.2;stroke-linecap:round;opacity:.9}
+.ipsy-neon .i-cheek{fill:#FF3D9A;opacity:.55}
+.ipsy-folk .i-scarf{display:inline}
+.ipsy-folk .i-nucleus,.ipsy-folk .i-gloss{opacity:0}
+.i-hood{fill:var(--fk-scarf,#C7261C)}
+.i-dots circle{fill:var(--fk-dot,#F6E7C6)}
+.i-flower ellipse{fill:var(--fk-petal,#D9A630)}
+.i-fheart{fill:var(--fk-scarf,#C7261C)}
+.ipsy-folk .i-cheek{fill:#E0412F;opacity:.85}
+.ipsy-folk .ipsy-cell:not([data-form="stem"]) .i-scarf{opacity:0;transition:opacity .2s}
 .ipsy-vintage .ipsy-cell[data-form="neuron"] .i-cheek{fill:var(--mc-mustard,#E3A72F)}
 .i-smile{fill:none;stroke:#1E2A2C;stroke-width:3.2;stroke-linecap:round}
 .ipsy-vintage .i-smile{stroke:var(--mc-on-mustard,#2B2522)}
@@ -350,6 +380,120 @@
   };
 
   // ---------------------------------------------------------------------------
+  // Settings Ipsy can change or show, in every app and in aOS (Claude's get_settings, change_setting and
+  // open_setting: server/ipsy.js SETTINGS_TOOLS). The list is here, on the phone, and nothing outside it can
+  // be changed, whatever a question, an email or a web page says. What's on it (aOS/RELEASING.md, "Ipsy and
+  // settings"): how things look and read, for this person, and easy to put back (each with Undo); a few that
+  // reach the family's settings or turn Ipsy's own access down ask first (ask: true). Never: sign-ins and
+  // connections, the plan, anything that lets Ipsy or anyone see more, anything that deletes or moves the
+  // family's things, and Meals' "Never in a plan" (the family's allergies): for those, open_setting shows where.
+  // ---------------------------------------------------------------------------
+  const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
+  const LOOKS = ['vintage', 'glass', 'neon', 'folk'];
+  const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
+  const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const CLOCK = 'allison-clock-v1', CAL = 'allison-calendar-v1-settings', POD = 'allison-podcasts-v1', ORD = 'allison-orders-v1';
+  const inObj = (key, path, def) => ({   // a value inside a JSON object in storage
+    get: () => { let x = jget(key, {}); for (const p of path) x = x && typeof x === 'object' ? x[p] : undefined; return x === undefined ? def : x; },
+    put: v => { const o = jget(key, {}) || {}; let x = o; path.slice(0, -1).forEach(p => { x = x[p] = x[p] && typeof x[p] === 'object' ? x[p] : {}; }); x[path[path.length - 1]] = v; jset(key, o); },
+  });
+  const raw = (key, def) => ({ get: () => ls.get(key, def), put: v => ls.set(key, String(v)) });
+  // values: what Claude passes -> what's stored (and back, for get_settings)
+  const choice = (pairs, store) => ({ values: Object.keys(pairs), to: v => pairs[v], from: s => Object.keys(pairs).find(k => String(pairs[k]) === String(s)), ...store });
+  const onoff = store => choice({ on: true, off: false }, store);
+  const range = (lo, hi, step, store) => ({ values: [lo + '-' + hi + ' in steps of ' + step], ok: v => Number.isFinite(+v) && +v >= lo && +v <= hi && (+v - lo) % step === 0, to: v => +v, from: s => String(s), ...store });
+  const lookOf = id => (id === 'clock' ? ((jget(CLOCK, {}) || {}).set || {}).design : ls.get('design.' + id, '')) || 'vintage';
+  function putLook(id, v) {   // an app's design; an open copy of it follows at once (design.js / clock/design.js: the storage event)
+    if (id === 'clock') inObj(CLOCK, ['set', 'design']).put(v); else ls.set('design.' + id, v);
+    if (id === pageApp()) { if (window.aosDesign) aosDesign.set(v); else if (window.clockDesign) clockDesign.set(v); }
+  }
+  const afterReply = [];   // what waits until Ipsy's answer has been read: the language, an app drawn again
+  const pageApp = () => (window.aosDesign && aosDesign.app) || (window.aosLook ? 'aos' : '');
+  const SETTINGS = {
+    theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
+      get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive or Folk', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk' }, {
+      get: () => ls.get('aos.look', 'vintage'),
+      put: v => { if (window.aosLook) return aosLook.set(v, { apps: SET_APPS }); ls.set('aos.look', v); SET_APPS.forEach(id => putLook(id, v)); } }) },
+    language: { app: '*', live: true, about: 'The language of aOS and every app (drawn again in it after your reply)', ...choice({ en: 'en', ru: 'ru' }, {
+      get: () => (window.aosLang ? aosLang.get() : 'en'), put: v => { for (let i = afterReply.length; i--;) if (afterReply[i].lang) afterReply.splice(i, 1); if (window.aosLang && v !== aosLang.get()) afterReply.push(Object.assign(() => aosLang.set(v), { lang: true })); } }) },
+    favorites: { app: 'aos', about: 'The apps pinned in Favorites on aOS Home, up to 4, by id (' + SET_APPS.join(', ') + ')', values: ['a comma-separated list of up to 4 app ids'],
+      ok: v => { const l = String(v).split(',').map(s => s.trim()).filter(Boolean); return l.length <= 4 && l.every(id => SET_APPS.includes(id)); },
+      to: v => [...new Set(String(v).split(',').map(s => s.trim()).filter(Boolean))], from: s => (Array.isArray(s) ? s.join(',') : ''),
+      get: () => jget('aos.home.picks', []), put: v => jset('aos.home.picks', v) },
+    'calendar.week_start': { app: 'calendar', about: 'Calendar: the day weeks start on', ...choice({ sunday: 0, monday: 1 }, { get: inObj(CAL, ['weekStart'], 0).get, put: v => { inObj(CAL, ['weekStart']).put(v); inObj(CAL, ['weekStartPicked']).put(true); } }) },
+    'calendar.time': { app: 'calendar', about: 'Calendar: 12- or 24-hour times (auto: as the language)', ...choice({ auto: 'auto', '12': '12', '24': '24' }, inObj(CAL, ['clock'], 'auto')) },
+    'calendar.temperature': { app: 'calendar', about: 'Calendar: °F or °C on its weather', ...choice({ auto: 'auto', f: 'f', c: 'c' }, inObj(CAL, ['units'], 'auto')) },
+    'calendar.day_view_opens_at': { app: 'calendar', about: 'Calendar: the hour Day view opens at (0-23)', ...range(0, 23, 1, inObj(CAL, ['dayStart'], 7)) },
+    ...Object.fromEntries(['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(l => ['calendar.show_' + l, { app: 'calendar', about: 'Calendar: show the ' + l + ' calendar', ...onoff(inObj(CAL, ['layers', l], l !== 'drinks')) }])),
+    'calendar.new_event_length': { app: 'calendar', ask: true, about: 'Calendar: how long a new event is, in minutes', ...choice({ '15': 15, '30': 30, '45': 45, '60': 60, '90': 90, '120': 120 }, inObj(CAL, ['duration'], 60)) },
+    'calendar.new_event_alert': { app: 'calendar', ask: true, about: 'Calendar: the alert a new event gets', ...choice({ none: '', at_start: 'PT0M', '5_min': '-PT5M', '10_min': '-PT10M', '15_min': '-PT15M', '30_min': '-PT30M', '1_hour': '-PT1H', '2_hours': '-PT2H', '1_day': '-P1D' }, inObj(CAL, ['alertTimed'], '-PT15M')) },
+    'clock.24_hour': { app: 'clock', about: 'Clock: 24-hour time', ...onoff({ get: () => { const s = (jget(CLOCK, {}) || {}).set || {}; return s.h24Picked ? !!s.h24 : !!s.h24 || (window.aosLang && aosLang.get() === 'ru'); }, put: v => { inObj(CLOCK, ['set', 'h24']).put(v); inObj(CLOCK, ['set', 'h24Picked']).put(true); } }) },
+    'clock.seconds': { app: 'clock', about: 'Clock: seconds on the Nightstand clock', ...onoff(inObj(CLOCK, ['set', 'secs'], false)) },
+    'clock.face': { app: 'clock', about: 'Clock: the Nightstand clock face', ...choice({ digital: false, analog: true }, inObj(CLOCK, ['set', 'analog'], false)) },
+    'weather.units': { app: 'weather', about: 'Weather (and Home\'s weather): °F, mph, in or °C, km/h, mm', ...choice({ us: 'us', metric: 'metric' }, { get: () => jget('wx.units', 'us'), put: v => jset('wx.units', v) }) },
+    'podcasts.skip_back': { app: 'podcasts', about: 'Podcasts: seconds the skip-back button goes', ...choice({ '10': 10, '15': 15, '30': 30 }, inObj(POD, ['set', 'back'], 15)) },
+    'podcasts.skip_forward': { app: 'podcasts', about: 'Podcasts: seconds the skip-forward button goes', ...choice({ '15': 15, '30': 30, '45': 45, '60': 60 }, inObj(POD, ['set', 'fwd'], 30)) },
+    'podcasts.when_episode_ends': { app: 'podcasts', about: 'Podcasts: play the next episode or stop', ...choice({ play_next: true, stop: false }, inObj(POD, ['set', 'auto'], true)) },
+    'fitness.step_goal': { app: 'fitness', about: 'Fitness: daily step goal', ...range(2000, 30000, 1000, raw('allison-fitness-v1-step-goal', '10000')) },
+    'fitness.move_goal': { app: 'fitness', about: 'Fitness: daily move goal, kcal', ...range(100, 2000, 50, raw('allison-fitness-v1-move-goal', '500')) },
+    ...Object.fromEntries([['pickup', 'store pickups'], ['food', 'food orders'], ['digital', 'subscriptions and digital'], ['other', 'tickets and other']].map(([k, n]) => ['orders.count_' + k, { app: 'orders', about: 'Orders: count ' + n + ' as orders', ...onoff(inObj(ORD, ['kinds', k], k === 'pickup')) }])),
+    // Ipsy's own access: only ever turned down here (back on is in the app's Settings, by the person)
+    ...Object.fromEntries(['orders', 'travel', 'calendar'].map(a => ['ipsy.gmail_' + a, { app: a, ask: true, about: 'Ipsy in ' + a + ': searching Gmail (can only be turned off here)', ...choice({ off: false }, { get: () => !!privacy.gmail(a), put: v => privacy.gmail(a, !!v) }), from: s => (s ? 'on' : 'off') }])),
+    'orders.ipsy_keeps_orders_up_to_date': { app: 'orders', ask: true, about: 'Orders: Ipsy rereads and fixes orders by itself (can only be turned off here)', ...choice({ off: '0' }, raw(ORD + '-ipsy-auto', '')), from: s => (s === '1' ? 'on' : 'off') },
+    'travel.ipsy_fills_in': { app: 'travel', ask: true, about: 'Travel: Ipsy fills in what\'s missing from bookings (can only be turned off here)', ...choice({ off: '0' }, raw('allison-travel-v1-ai-on', '1')), from: s => (s === '0' ? 'off' : 'on') },
+    'travel.ipsy_checks_by_itself': { app: 'travel', ask: true, about: 'Travel: Ipsy checks new bookings by itself (can only be turned off here)', ...choice({ off: '0' }, raw('allison-travel-v1-ipsy-auto', '')), from: s => (s === '1' ? 'on' : 'off') },
+    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
+  };
+  // where a setting is: each app's Settings (the button that opens it), and aOS's Account sections
+  const OPENER = { calendar: '#setBtn', clock: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', house: '#gear', mail: '#gear', meals: '#setBtn', news: '#setBtn', notes: '#setBtn', orders: '#setBtn', places: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', weather: '[data-action="location"]' };
+  const ACCOUNT = { 'aos.appearance': 'appearance', 'aos.notifications': 'notifications', 'aos.subscription': 'plan', 'aos.updates': 'updates', 'aos.lost_phone': 'lost', 'aos.replacing_phone': 'move', 'aos.owner_tools': 'owner', 'aos.account': '' };
+  const aosTop = () => { try { return window.top !== window && window.top.aosHomeTab ? window.top : (window.aosHomeTab ? window : null); } catch { return window.aosHomeTab ? window : null; } };
+  const shown = (id, s) => { const v = s.get(); return s.from ? (s.from(v) ?? v) : v; };
+  function settingsTools(o, closeChat) {
+    const later = fn => afterReply.push(fn);
+    const here = o.app;
+    return {
+      get_settings: async () => ({ content: Object.entries(SETTINGS).map(([id, s]) => ({ id, now: shown(id, s), values: s.values, about: s.about, ...(s.ask ? { asks_first: true } : {}) })) }),
+      change_setting: async ({ setting, value } = {}, { confirm }) => {
+        const s = SETTINGS[setting];
+        if (!s) return { error: true, content: 'That isn\'t a setting Ipsy can change. Use open_setting to show the person where it is.' };
+        value = String(value == null ? '' : value).trim().toLowerCase();
+        if (s.ok ? !s.ok(value) : !s.values.includes(value)) return { error: true, content: `${setting} takes: ${s.values.join(', ')}.` };
+        const was = s.get(), to = s.to(value);
+        if (JSON.stringify(was) === JSON.stringify(to)) return { content: `${setting} is already ${value}.` };
+        if (s.ask && !await confirm(`Change ${s.about.replace(/ \(.*\)$/, '')} to ${value}?`, { yes: 'Yes, change it', no: 'No' })) return { content: 'The person said no; nothing changed.' };
+        const put = v => apply(s, () => s.put(v));
+        await put(to);
+        return { content: `Done: ${setting} is ${value}.` + (s.app === here && !s.live ? ' The app is drawn again with it after your reply.' : ''),
+          change: { text: `${s.about.replace(/ \(.*\)$/, '')}: ${value}`, undo: () => put(was) } };
+      },
+      open_setting: async ({ place } = {}) => {
+        const top = aosTop();
+        if (place in ACCOUNT) {
+          if (!top || !top.aosAccount) return { error: true, content: 'This is in aOS (Account). Ask the person to open aOS, then their name at the top of Home.' };
+          closeChat(); if (top !== window) top.aosHomeTab.show(null);
+          top.aosAccount.open(ACCOUNT[place]);
+          return { content: 'Opened ' + place.replace('aos.', 'aOS > Account > ').replace(/_/g, ' ') + '.' };
+        }
+        if (!OPENER[place]) return { error: true, content: 'No such place. Places: ' + [...Object.keys(ACCOUNT), ...SET_APPS].join(', ') + '.' };
+        if (place === here) { closeChat(); const b = document.querySelector(OPENER[place]); if (b) b.click(); return { content: 'Opened Settings in this app.' }; }
+        if (top) { closeChat(); top.aosHomeTab.openSettings(place, OPENER[place]); return { content: 'Opened ' + place + '\'s Settings in aOS.' }; }
+        return { error: true, content: `Settings for ${place} are in that app: ask the person to open it from aOS and tap its Settings button.` };
+      },
+    };
+    // a change reaches the app that keeps it: in aOS, an app open out of sight closes first (so it can't save its
+    // old setting over the new one), then opens again; the app Ipsy is in is drawn again after Ipsy answers
+    async function apply(s, write) {
+      if (s.live || s.app === '*') return write();
+      const top = aosTop();
+      if (s.app === here && here !== 'aos') { write(); later(() => location.reload()); return; }
+      if (top) return top.aosHomeTab.around([s.app], write);
+      write();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // mount: the button, the chat bubble and the loop, for one app
   // ---------------------------------------------------------------------------
   function mount(o) {
@@ -357,6 +501,21 @@
     // the app's tools, for Ipsy in aOS: aOS opens the app out of sight and runs them there (aOS/home-tab.js)
     AOS.ipsy.mounted = { app: o.app, name: o.name, tools: o.tools || {}, label: o.label, context: o.context };
     const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok', hist: 'ipsy.' + o.app + '.history', closed: 'ipsy.' + o.app + '.closed' };
+    // Built in, in every app and in aOS: the language (../home/lang.js), for someone who switched to one they can't
+    // read. Claude's set_language tool (server/ipsy.js LANG_TOOL) or just typing "English" / «Русский» (no question
+    // used up, and before Ipsy is set up): aOS and every app are drawn again in it once Ipsy has answered.
+    let langTo = null;
+    const BUILT_IN = {
+      set_language: async ({ lang } = {}) => {
+        if (!window.aosLang) return { error: true, content: 'There is no language setting here.' };
+        if (!LANG_NAME[lang]) return { error: true, content: 'lang must be "en" or "ru".' };
+        if (lang === aosLang.get()) return { content: 'aOS is already in ' + (lang === 'ru' ? 'Russian.' : 'English.') };
+        langTo = lang;
+        return { content: 'Done: aOS and every app switch to ' + (lang === 'ru' ? 'Russian' : 'English') + ' as soon as your reply is shown. Reply in that language, in a line.',
+          change: { text: LANG_NAME[lang], undo: () => { langTo = null; } } };
+      },
+      ...settingsTools(o, () => close()),   // the settings Ipsy may change or show (above)
+    };
     let messages = [], view = [], busy = false, undos = new Map();
     let showing = false;                  // the list of recent chats is on screen instead of the chat
     const asks = new Map();               // questions waiting on a Yes or No: id -> resolve
@@ -493,7 +652,7 @@
       const ok = !!ls.get(K.ok, ''), past = recent(), hb = $('ipsyHist');
       hb.hidden = !past.length && !showing; hb.setAttribute('aria-expanded', String(showing));
       if (showing) {
-        log.innerHTML = '<div class="ipsy-hlist"><p>Recent chats</p>' + (past.length ? past.map((c, i) => '<button class="ipsy-hrow" type="button" data-hist="' + i + '"><b>' + esc(c.title) + '</b><small>' + esc(whenSaid(c.at)) + '</small></button>').join('')
+        log.innerHTML = '<div class="ipsy-hlist"><p>Recent chats</p>' + (past.length ? past.map((c, i) => '<button class="ipsy-hrow" type="button" data-hist="' + i + '"><b translate="no">' + esc(c.title) + '</b><small>' + esc(whenSaid(c.at)) + '</small></button>').join('')
           : '<p>No earlier chats yet.</p>') + '</div>';
         input.disabled = true; sendBtn.disabled = true; log.scrollTop = 0;
         return;
@@ -510,8 +669,8 @@
       log.scrollTop = log.scrollHeight;
     }
     function item(v, i) {
-      if (v.t === 'me') return '<div class="ipsy-msg ipsy-me">' + esc(v.text) + '</div>';
-      if (v.t === 'it') return '<div class="ipsy-msg ipsy-it">' + rich(v.text) + (v.src && v.src.length ? '<div class="ipsy-src">' + v.src.map(s => '<a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + esc(s.title || s.url) + '</a>').join('') + '</div>' : '') + '</div>';
+      if (v.t === 'me') return '<div class="ipsy-msg ipsy-me" translate="no">' + esc(v.text) + '</div>';
+      if (v.t === 'it') return '<div class="ipsy-msg ipsy-it" translate="no">' + rich(v.text) + (v.src && v.src.length ? '<div class="ipsy-src">' + v.src.map(s => '<a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + esc(s.title || s.url) + '</a>').join('') + '</div>' : '') + '</div>';
       if (v.t === 'act') return '<div class="ipsy-act">' + esc(v.text) + '</div>';
       if (v.t === 'change') return '<div class="ipsy-change' + (v.undone ? ' undone' : '') + '"><span>' + esc(v.text) + '</span>' + (!v.undone && undos.has(v.id) ? '<button class="ipsy-undo" type="button" data-undo="' + esc(v.id) + '">Undo</button>' : '') + '</div>';
       if (v.t === 'err') return '<div class="ipsy-err" role="alert">' + esc(v.text) + '</div>';
@@ -576,7 +735,7 @@
       }).then(ok => { mood('work'); say('Working…'); return ok; });
     }
     async function runTool(u) {
-      const fn = o.tools && o.tools[u.name];
+      const fn = BUILT_IN[u.name] || (o.tools && o.tools[u.name]);
       if (!fn) return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: 'No such tool here.' };
       try {
         const res = await fn(u.input || {}, { confirm }) || {};
@@ -625,12 +784,21 @@
 
     async function submit() {
       const text = input.value.trim();
+      const want = langAsked(text);
+      if (want && !busy && window.aosLang) {   // "English", «Русский», "switch to English": at once, with no question to Claude
+        input.value = ''; input.style.height = '';
+        add({ t: 'me', text });
+        if (want === aosLang.get()) add({ t: 'it', text: want === 'ru' ? 'aOS уже на русском.' : 'aOS is already in English.' });
+        else { add({ t: 'it', text: want === 'ru' ? 'Переключаю aOS на русский…' : 'Switching aOS to English…' }); persist(); setTimeout(() => aosLang.set(want), 900); }
+        persist(); return;
+      }
       if (!text || busy || !ls.get(K.ok, '')) return;
       input.value = ''; input.style.height = '';
       busy = true; sendBtn.disabled = true;
       const mark = messages.length;          // where this question starts, to go back to if it fails
       let ctx = ''; try { ctx = o.context ? o.context() : ''; } catch {}
-      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ']' }, { type: 'text', text }] });
+      const ru = window.aosLang && aosLang.get() === 'ru' ? ' The person has aOS in Russian: answer in Russian.' : '';   // ../home/lang.js
+      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ru + ']' }, { type: 'text', text }] });
       add({ t: 'me', text });
       let failed = null;
       try {
@@ -649,7 +817,7 @@
           if (res.stop_reason === 'pause_turn') continue;                    // Anthropic paused a long search: carry on
           if (res.stop_reason === 'tool_use' && uses.length) {
             mood('work');
-            uses.forEach(u => { const l = o.label ? o.label(u.name, u.input || {}) : ''; if (l) add({ t: 'act', text: l }); });
+            uses.forEach(u => { const l = BUILT_LABEL[u.name] || (o.label ? o.label(u.name, u.input || {}) : ''); if (l) add({ t: 'act', text: l }); });
             say('Working…');
             const results = [];
             for (const u of uses) results.push(await runTool(u));          // one at a time: they share the app's data
@@ -673,6 +841,8 @@
         if (code === 'full') { /* nothing more to say */ }
       }
       busy = false; persist(); mood(document.activeElement === input ? 'listen' : 'idle'); say(''); draw();
+      if (langTo) { const l = langTo; langTo = null; afterReply.push(() => aosLang.set(l)); }
+      if (afterReply.length) { const run = afterReply.splice(0); setTimeout(() => run.forEach(f => f()), 1600); }   // after the answer has been read
     }
 
     // ---- For the app: Ipsy doing things by itself (Orders and Travel check their "To check" items) ----
@@ -718,7 +888,7 @@
   function character(host, o = {}) {
     addStyle();
     host.classList.add('ipsy-host');
-    const setLook = l => { host.classList.toggle('ipsy-vintage', l === 'vintage'); host.classList.toggle('ipsy-glass', l !== 'vintage'); };
+    const setLook = l => dress(host, l);
     if (o.look) setLook(o.look); else follow(host);
     const c = addCell(host);
     c.live = !!o.live; c.form = FORMS[o.form] ? o.form : '';
@@ -779,5 +949,5 @@
     },
   };
 
-  AOS.ipsy = { mount, character, privacy, forms: Object.keys(FORMS), look: LOOK };   // look(): 'vintage' | 'glass'
+  AOS.ipsy = { mount, character, privacy, wear, forms: Object.keys(FORMS), look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'folk'
 })();

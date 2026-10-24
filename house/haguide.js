@@ -119,13 +119,14 @@
     item: '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="3" opacity=".9"/></svg>',
     bell: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a4 4 0 0 0-4 4v3L2.5 11.5h11L12 9V6a4 4 0 0 0-4-4zM6.5 13a1.5 1.5 0 0 0 3 0z"/></svg>',
   };
+  // The Home Assistant app's own words are left as it shows them (translate="no"), in any language.
   const STEPS = [
     'In the Home Assistant app, tap <b>☰</b>',
     'Tap <b>your name</b>, at the bottom',
-    'Tap <b>Security</b>',
-    'Scroll down, tap <b>Create token</b>',
-    n => `Name it <b>${esc(n)}</b>, then tap <b>${OK}</b>`,
-    'Tap <b>Copy</b>: it\'s only shown once',
+    'Tap <b translate="no">Security</b>',
+    'Scroll down, tap <b translate="no">Create token</b>',
+    n => `Name it <b translate="no">${esc(n)}</b>, then tap <b translate="no">${OK}</b>`,
+    'Tap <b translate="no">Copy</b>: it\'s only shown once',
     'Back in Home: paste it, tap <b>Connect</b>',
   ];
   const KEYS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
@@ -137,11 +138,11 @@
     const label = 'AllisonOS ' + (first || 'Home'), user = (first || 'you').toLowerCase();
     const menu = ['Overview', 'Map', 'Energy', 'Logbook', 'History', 'Media', 'To-do lists'];
     host.innerHTML = `<div class="hg" aria-hidden="true"><div class="hg-phone"><div class="hg-screen"><i class="hg-island"></i>
-      <div class="hg-s hg-dash"><div class="hg-top"><span class="hg-burger">${I.burger}<b></b></span>Overview</div><div class="hg-cards"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="hg-s hg-dash" translate="no"><div class="hg-top"><span class="hg-burger">${I.burger}<b></b></span>Overview</div><div class="hg-cards"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
       <div class="hg-shade"></div>
-      <div class="hg-drawer"><div class="hg-dh">Home Assistant</div>${menu.map(m => `<div class="hg-item">${I.item}${m}</div>`).join('')}
+      <div class="hg-drawer" translate="no"><div class="hg-dh">Home Assistant</div>${menu.map(m => `<div class="hg-item">${I.item}${m}</div>`).join('')}
         <div class="hg-dfoot"><div class="hg-item">${I.bell}Notifications</div><div class="hg-user"><span class="hg-av">${esc(user[0])}</span>${esc(user)}</div></div></div>
-      <div class="hg-s hg-prof"><div class="hg-top"><span class="hg-burger">${I.burger}<b></b></span></div>
+      <div class="hg-s hg-prof" translate="no"><div class="hg-top"><span class="hg-burger">${I.burger}<b></b></span></div>
         <div class="hg-page"><div class="hg-inner hg-sec">
           <div class="hg-card hg-gen"><h4>${esc(user)}</h4><div class="hg-line" style="width:70%"></div><div class="hg-line" style="width:50%"></div><div class="hg-line" style="width:80%"></div></div>
           <div class="hg-card hg-gen"><div class="hg-line" style="width:60%"></div><div class="hg-line" style="width:85%"></div><div class="hg-line" style="width:40%"></div></div>
@@ -152,12 +153,12 @@
             <div class="hg-btns"><span class="hg-cta hg-create">Create token</span></div></div>
         </div></div>
         <div class="hg-tabs"><span class="on hg-tgen">${I.person}General</span><span class="hg-tsec">${I.lock}Security</span></div></div>
-      <div class="hg-dlg hg-create-d"><div class="hg-dt"><span>✕</span><span>Create token</span></div>
+      <div class="hg-dlg hg-create-d" translate="no"><div class="hg-dt"><span>✕</span><span>Create token</span></div>
         <div class="hg-field"><small>Name*</small><span class="hg-typed"></span><i class="hg-caret"></i></div>
         <span class="hg-cta hg-ok">${OK}</span>
         <div class="hg-kb"><div class="hg-acc"><b class="hg-done">✓</b></div>${KEYS.map(r => `<div class="hg-krow">${[...r].map(k => `<i data-k="${k}">${k}</i>`).join('')}</div>`).join('')}
           <div class="hg-krow"><i class="mid">123</i><i class="wide" data-k=" "></i><i class="mid">↵</i></div></div></div>
-      <div class="hg-dlg hg-made"><div class="hg-dt"><span>✕</span><span>Token created: ${esc(label)}</span></div>
+      <div class="hg-dlg hg-made" translate="no"><div class="hg-dt"><span>✕</span><span>Token created: ${esc(label)}</span></div>
         <p>Copy your access token. It will not be shown again.</p>
         <div class="hg-tok"><span>${FAKE}</span><span class="hg-copy">${I.copy}Copy</span></div><div class="hg-qr">Generate QR code</div>
         <span class="hg-cta hg-ok">Close</span><div class="hg-toast">Copied to clipboard</div></div>

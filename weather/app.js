@@ -5,9 +5,10 @@
 // colours (CSS variables from index.html's #vintage block) with a sky of flat shapes; Standard,
 // Weather's own glowing colours and gradient skies. Everything else is the same in both.
 'use strict';
-// Which design is on: Vintage unless Standard was picked (design.js), read at each draw, and the
-// screen and any open sheet redrawn on a change (aos:design, at the bottom).
-const vintage = () => (window.aosDesign ? aosDesign.get() : 'vintage') === 'vintage';
+// Which design is on (design.js), read at each draw, and the screen and any open sheet redrawn on a change
+// (aos:design, at the bottom). vintage(): a flat design - Vintage, or Night Drive and Folk, which repaint it.
+const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
+const vintage = () => look() !== 'glass';
 // The data (NWS, Open-Meteo) is in data.js, shared with Home's weather pill.
 const { SEV, getJSON, dirDeg, mphOf, cToF, feelsF, ymd, kmBetween, tempAt, wmo, nwsCondition, inUS, fromNWS, fromOpenMeteo, fromNowcast, fetchBase } = WXD;
 
@@ -470,7 +471,7 @@ function w3Hero(m) {
     <div class="w3-in${S.heroRise ? ' rise' : ''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
-          <button class="w3-place" data-action="location" aria-label="Places" style="font-size:19px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 14, 'opacity:0.9;') : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 20, 'opacity:0.95;margin-left:-1px;')}</button>
+          <button class="w3-place" data-action="location" aria-label="Places" style="font-size:19px;font-weight:600;letter-spacing:-0.3px;line-height:1.2;max-width:100%;">${gps ? svg('navigation-variant', 14, 'opacity:0.9;') : ''}<span${S.loc.name && S.loc.name !== 'My Location' ? ' translate="no"' : ''} style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 20, 'opacity:0.95;margin-left:-1px;')}</button>
           <div class="w3-temp" style="font-size:${String(temp).length >= 3 ? 62 : 76}px;line-height:0.95;margin-top:14px;font-variant-numeric:tabular-nums;">${temp}<span style="opacity:0.9;">°</span></div>
         </div>
         <div class="w3-side" style="display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex:none;">
@@ -826,9 +827,12 @@ function radarSync() {
 // Absolute, so 30° looks the same in any week.
 function rampOf(m) {
   const f = (m.entity.attributes.temperature_unit || '').indexOf('F') >= 0;
-  const stops = vintage()
-    ? [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]]
-    : [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]];
+  const stops = {
+    vintage: [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]],
+    neon: [[0, [51, 132, 157]], [10, [58, 154, 183]], [18, [147, 116, 241]], [25, [251, 162, 74]], [32, [223, 56, 142]]],   // Vintage's, repainted (aOS/scripts/looks.mjs)
+    folk: [[0, [57, 87, 166]], [10, [69, 104, 198]], [18, [103, 152, 74]], [25, [219, 156, 34]], [32, [221, 62, 49]]],
+    glass: [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]],
+  }[look()] || [];
   return t => {
     const c = f ? (t - 32) * 5 / 9 : t;
     if (c <= stops[0][0]) return `rgb(${stops[0][1]})`;
@@ -893,10 +897,10 @@ function alertCards(m) {
     return `<div class="alert${open ? ' open' : ''}">
       <button data-alert="${esc(key)}" aria-expanded="${open}">
         <span class="dot" style="background:${vin ? `color-mix(in srgb, ${c} 16%, transparent)` : c + '22'};color:${c};">${svg('alert', 20)}</span>
-        <span class="t"><b>${esc(a.event)}</b><small>${esc(until)}</small></span>
+        <span class="t"><b translate="no">${esc(a.event)}</b><small>${esc(until)}</small></span>
         <span class="chev">${svg('chevron-right', 20)}</span>
       </button>
-      <div class="body">${esc([a.desc, a.instr].filter(Boolean).join('\n\n'))}</div>
+      <div class="body" translate="no">${esc([a.desc, a.instr].filter(Boolean).join('\n\n'))}</div>
     </div>`;
   }).join('');
 }
@@ -1047,7 +1051,8 @@ function placesRows() {
     const icon = here ? svg('navigation-variant', 24, 'color:var(--accent);')
       : svg(face ? face.icon : 'weather-partly-cloudy', 26, face ? `color:${face.tint};` : 'color:var(--muted);');
     const words = face ? face.words : '';
-    return `<div class="prow${cur === id ? ' on' : ''}"><button class="pmain" data-pick-place="${id}">${icon}<span class="pn"><b>${esc(title)}</b><small>${esc(words || sub || '')}</small></span><span class="pr-t">${t}</span></button>${removable ? `<button class="prm" data-remove="${id.slice(1)}" aria-label="Remove ${esc(title)}">${svg('close', 18)}</button>` : ''}</div>`;
+    const keep = s => s && s !== 'My Location' ? ' translate="no"' : '';   // a city stays as it is in Russian (../home/lang.js)
+    return `<div class="prow${cur === id ? ' on' : ''}"><button class="pmain" data-pick-place="${id}">${icon}<span class="pn"><b${here ? '' : keep(title)}>${esc(title)}</b><small${words || (here && (!S.here || S.locError)) ? '' : keep(sub)}>${esc(words || sub || '')}</small></span><span class="pr-t">${t}</span></button>${removable ? `<button class="prm" data-remove="${id.slice(1)}" aria-label="Remove ${esc(title)}">${svg('close', 18)}</button>` : ''}</div>`;
   };
   return row('here', S.here && keyOf(S.here), 'My Location', S.locError ? 'Location unavailable · tap to retry' : (S.here ? S.here.name : 'Tap to find where you are'), true, false)
     + S.places.map((p, i) => row('p' + i, keyOf(p), p.name, p.sub, false, true)).join('');
@@ -1232,8 +1237,8 @@ function fillDay() {
     tiles.push(`<div class="hd-tile wide" style="--k:6"><div class="hd-k">${svg('weather-sunset-up', 18, `color:${SUN()};`)}Sunrise</div><div class="hd-v">${minFmt(rise, tz)}</div></div><div class="hd-tile wide" style="--k:6"><div class="hd-k">${svg('weather-sunset-down', 18, `color:${SUN()};`)}Sunset</div><div class="hd-v">${minFmt(set, tz)}</div><div class="hd-s">${Math.floor(len / 60)}h ${len % 60}m of daylight</div></div>`);
   }
   if (d.dt || d.nt) tiles.push(`<div class="hd-tile full" style="--k:7"><div class="hd-k">${line('text', 17)}Forecast</div>`
-    + (d.dt ? `<p class="dd-txt"><b>${today ? 'Today' : 'Day'}</b>${esc(d.dt)}</p>` : '')
-    + (d.nt ? `<p class="dd-txt"><b>${today ? 'Tonight' : 'Night'}</b>${esc(d.nt)}</p>` : '')
+    + (d.dt ? `<p class="dd-txt"><b>${today ? 'Today' : 'Day'}</b><span translate="no">${esc(d.dt)}</span></p>` : '')
+    + (d.nt ? `<p class="dd-txt"><b>${today ? 'Tonight' : 'Night'}</b><span translate="no">${esc(d.nt)}</span></p>` : '')
     + '<div class="hd-s">National Weather Service</div></div>');
 
   dayBody.innerHTML = `<div class="hd-hero" ${heroBg(sky)}>
@@ -1312,7 +1317,7 @@ q.addEventListener('input', () => {
       if (seq !== searchSeq) return;
       const list = j.results || [];
       results.innerHTML = list.length ? list.map((p, i) =>
-        `<button data-pick="${i}">${svg('weather-partly-cloudy', 20, 'color:var(--muted);')}<span>${esc(p.name)}<small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></span></button>`
+        `<button data-pick="${i}">${svg('weather-partly-cloudy', 20, 'color:var(--muted);')}<span translate="no">${esc(p.name)}<small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></span></button>`
       ).join('') : '<button disabled><span>No matches</span></button>';
       results._list = list;
     } catch (e) {

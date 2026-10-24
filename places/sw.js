@@ -4,7 +4,7 @@
 // place details and map tiles (other sites) are never cached here.
 const CACHE = 'places-v33';
 // slide.js is shared by every app, from home/.
-const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest?v=2', 'icon-180.png?v=4', 'icon-512.png?v=4', 'icon-glass-180.png?v=4', 'icon-glass-512.png?v=4', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js'];
+const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest?v=2', 'icon-180.png?v=4', 'icon-512.png?v=4', 'icon-glass-180.png?v=4', 'icon-glass-512.png?v=4', 'vendor/leaflet.js', 'vendor/leaflet.css', '../home/slide.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/places.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
