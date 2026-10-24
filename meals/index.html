@@ -265,6 +265,20 @@ button.card:active{transform:scale(.985)}
 .card strong{font-size:17px;color:var(--text)}
 .card .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .card .btns .btn{flex:1 1 140px}
+/* the plan's bar on Dinners: tap it to fold the dinners away (kept folded on this phone), × to clear the plan */
+.card.planbar{flex-direction:row;align-items:center;gap:6px;padding:6px 8px 6px 6px}
+.pfold{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:48px;padding:4px 6px;border-radius:16px;text-align:left;color:var(--text)}
+.pfold:active{background:var(--fill)}
+.pfold .chev{flex:none;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:var(--fill);color:var(--icon);transition:transform .25s var(--ease)}
+.pfold .chev svg{width:20px;height:20px}
+.pfold[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.pfold .pt{min-width:0;font-size:15px;font-weight:600;line-height:1.3}
+.pfold .pt small{display:block;font-size:13px;font-weight:400;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn.pclear{flex:none;width:40px;height:40px}
+.iconbtn.pclear svg{width:20px;height:20px}
+.pnights{display:contents}
+.pnights[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.pfold .chev{transition:none}}
 .saletag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--sale)}
 .saletag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .prime{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--accent-text);padding:1px 6px;border-radius:6px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
@@ -419,6 +433,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 /* the cards: cream, flat, round-cornered */
 .rgroup,.empty,.card{background:var(--mc-card);box-shadow:none;border-radius:20px}
 .card .night{letter-spacing:.14em}
+.pfold .chev{background:var(--mc-card-2)}
+.pfold:active{background:var(--mc-card-2)}
 .card.accept{background:color-mix(in srgb,var(--mc-mustard) 20%,var(--mc-card));box-shadow:inset 0 0 0 2px var(--mc-mustard)}
 .card.accept strong{letter-spacing:-.01em}
 .sheet .rgroup{background:var(--lgs-field);border-radius:20px}

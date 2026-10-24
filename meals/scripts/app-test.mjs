@@ -2,7 +2,7 @@
 // (functions/meals/api) on an in-memory KV with a real family session, and a
 // stand-in for the AI service (no network, no key): no key yet, finding the
 // week's deals (sorted into grocery sections), planning dinners, a recipe, the
-// shopping list (ticks kept, the list there offline), a plan that keeps using
+// shopping list (ticks kept, the list there offline), the plan folded away and cleared (with Undo), a plan that keeps using
 // coconut never saved, settings, the family's Google Sheet through aOS (the real
 // google-sheet-sync.gs on a fake Sheet, with who's asking from each phone's session:
 // not set up, signed out, the old link handed over, what is sent and when, whose rows,
@@ -235,6 +235,28 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await page.waitForSelector('[data-act="discard"]', { timeout: 5000 });
   await page.click('[data-act="discard"]'); await page.waitForTimeout(400);
   ok('discarding drops the new plan; the accepted one shows again', !m.get('meals:draft') && (await page.locator('[data-src="plan"]').count()) === 4);
+  await ctx.close();
+}
+{ // the plan's bar: it folds the dinners away (kept folded on this phone), and × clears the plan for the family, with Undo
+  const { ctx, page, errs } = await phone();
+  const id = JSON.parse(m.get('meals:plan')).id;
+  ok('the plan has a bar: what it is, when, and a clear button', (await page.locator('.planbar [data-act="fold"][aria-expanded="true"]').count()) === 1
+    && (await page.locator('.planbar [data-act="clear"]').count()) === 1 && (await page.locator('#planNights [data-meal]').count()) === 4
+    && /4 dinners/.test(await page.textContent('.planbar .pt small')));
+  await page.click('.planbar [data-act="fold"]'); await page.waitForTimeout(300);
+  ok('tapped, it folds the dinners away into the bar', await page.locator('#planNights').isHidden() && (await page.getAttribute('.planbar [data-act="fold"]', 'aria-expanded')) === 'false');
+  await shot(page, 'folded');
+  await page.reload(); await page.waitForTimeout(800);
+  ok('and stays folded on this phone', await page.locator('#planNights').isHidden());
+  await page.click('.planbar [data-act="fold"]'); await page.waitForTimeout(300);
+  ok('tapped again, the dinners are back', (await page.locator('#planNights [data-meal]').count()) === 4 && await page.locator('#planNights').isVisible());
+  await page.click('.planbar [data-act="clear"]'); await page.waitForTimeout(500);
+  ok('× clears the plan for the family', !m.get('meals:plan') && (await page.locator('.planbar').count()) === 0 && (await page.textContent('#main')).includes('No dinners planned yet'));
+  ok('it stays in Past plans', (await page.locator(`[data-past="${id}"]`).count()) === 1 && JSON.parse(m.get('meals:log'))[0].id === id);
+  ok('and says so, with Undo', /still in Past plans/.test(await page.textContent('#toastMsg')) && await page.locator('#toastAct').isVisible());
+  await page.click('#toastAct'); await page.waitForTimeout(500);
+  ok('Undo puts it back as the family\'s plan', JSON.parse(m.get('meals:plan') || '{}').id === id && (await page.locator('#planNights [data-meal]').count()) === 4);
+  ok('nothing wider than the phone; no script errors', !(await wide(page)) && !errs.length, errs.join(' | '));
   await ctx.close();
 }
 { // a plan that keeps using coconut is never kept
