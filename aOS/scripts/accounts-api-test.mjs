@@ -104,6 +104,28 @@ await test('"installed" is kept apart (apps:<id>) and never rewrites the user re
   assert.deepEqual(Object.keys((await call('state', undefined, sam)).body.user.apps).sort(), ['news', 'weather']);
 });
 
+await test('prefs: your settings follow you between devices; the newer wins, only the settings named, only yours', async () => {
+  assert.deepEqual((await call('prefs', undefined, sam)).body.prefs, {});
+  assert.equal((await call('prefs', undefined)).status, 401, 'signed in only');
+  const at = Date.now() - 5000;
+  let r = await call('prefs', { set: { 'wx.places': { v: '[{"name":"Denver","lat":39.7,"lon":-105}]', at }, 'aos.session': { v: 'x', at }, 'mail.token': { v: 'x', at },
+    'allison-clock-v1#alarms': { v: '[]', at }, 'allison-clock-v1#timers': { v: '[]', at }, 'design.weather': { v: 'glass', at } } }, sam);
+  assert.equal(r.status, 200);
+  assert.deepEqual(Object.keys(r.body.prefs).sort(), ['allison-clock-v1#alarms', 'design.weather', 'wx.places'], 'never a sign-in, a token, or Clock\'s running timers');
+  r = await call('prefs', { set: { 'wx.places': { v: '[]', at: at - 1000 } } }, sam);
+  assert.equal(r.body.prefs['wx.places'].v, '[{"name":"Denver","lat":39.7,"lon":-105}]', 'an older change loses');
+  const w0 = db.m.get('prefs:' + samId);
+  await call('prefs', { set: { 'wx.places': { v: '[]', at } } }, sam);
+  assert.equal(db.m.get('prefs:' + samId), w0, 'nothing newer: nothing written');
+  r = await call('prefs', { set: { 'wx.places': { v: '[]', at: at + 1000 }, 'design.weather': { v: null, at: at + 1000 } } }, sam);
+  assert.equal(r.body.prefs['wx.places'].v, '[]'); assert.equal(r.body.prefs['design.weather'].v, null, 'taken away travels too');
+  r = await call('prefs', { set: { 'aos.look': { v: 'glass', at: Date.now() + 864e5 } } }, sam);
+  assert.ok(r.body.prefs['aos.look'].at <= Date.now(), 'never from the future');
+  assert.equal((await call('prefs', { set: { 'wx.units': { v: 'x'.repeat(70 * 1024), at: Date.now() } } }, sam)).body.prefs['wx.units'], undefined, 'too big: left out');
+  assert.equal((await call('prefs', { set: 'no' }, sam)).status, 400);
+  assert.deepEqual((await call('prefs', undefined, tom)).body.prefs, {}, 'only yours');
+});
+
 await test('"Removed it?" in aOS shows Get at once; the next report from the Home Screen shows Installed again', async () => {
   const at = JSON.parse(db.m.get('apps:' + samId)).weather;
   await call('installed', { app: 'weather' }, sam);

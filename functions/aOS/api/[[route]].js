@@ -22,6 +22,10 @@
 //   POST handoff/take     (family) { app }       -> { data } (or null), once: then it's deleted
 //   POST move             (family) { data }      -> everything aOS keeps on this phone, for a new aOS icon (2 days)
 //   POST move/take        (family)               -> { data } (or null), once: then it's deleted
+//   GET  prefs            (family)               -> { prefs: { <item>: { v, at } } } your settings that follow you
+//                                                  from device to device (aOS/prefs-sync.js; PREF_ITEM says which)
+//   POST prefs            (family) { set: { <item>: { v, at } } } -> { prefs } each item kept when it's newer
+//                                                  than the one here (v: the setting as text, null: taken away)
 //   GET  push             (family) { key, devices } - the push key for this phone to subscribe with, and how many of yours are on
 //   POST push/subscribe   (family) { subscription } -> this phone gets your notifications
 //   POST push/unsubscribe (family) { endpoint }     -> it doesn't
@@ -46,6 +50,11 @@ const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 256 * 1024;   // a layer or a handoff can be this big; everything else is tiny
 const HANDOFF_MAX = 240 * 1024, HANDOFF_DAYS = 14;   // one app's data moving into aOS 2, and how long it waits
 const MOVE_MAX = 5 * 1024 * 1024, MOVE_DAYS = 2;       // all of aOS's, moving to a new aOS icon
+// Settings that follow you between your devices (aOS/prefs-sync.js): Weather's places and units, Clock's
+// world clocks, alarms, Bedtime, settings and recent timers, each app's design, aOS's look, light or dark
+// and Favorites. Never a sign-in, a token or what a device keeps for itself.
+export const PREF_ITEM = /^(wx\.(places|units)|allison-clock-v1#(cities|alarms|sleep|set|tsound|recents)|design\.[a-z]{2,16}|aos\.look|aos\.home\.picks|home\.settings#theme)$/;
+const PREF_MAX = 64 * 1024, PREFS_MAX = 192 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
@@ -272,6 +281,25 @@ export async function onRequest({ request, params, env }) {
       if (!json) return reply({ data: null });
       await db.delete(key);
       return reply({ data: JSON.parse(json) });
+    }
+    if (route === 'prefs' && method === 'GET') return reply({ prefs: (await getJSON(db, 'prefs:' + me.id)) || {} });
+    if (route === 'prefs' && method === 'POST') {
+      const b = await body(request), set = b.set && typeof b.set === 'object' && !Array.isArray(b.set) ? b.set : null;
+      if (!set) return reply({ error: 'data' }, 400);
+      const prefs = (await getJSON(db, 'prefs:' + me.id)) || {}, now = Date.now();
+      let changed = false;
+      for (const [id, p] of Object.entries(set)) {
+        if (!PREF_ITEM.test(id) || !p || typeof p !== 'object') continue;
+        const v = p.v === null ? null : typeof p.v === 'string' && p.v.length <= PREF_MAX ? p.v : undefined;
+        const at = Math.min(Math.round(+p.at) || 0, now);
+        if (v === undefined || at <= 0 || (prefs[id] && prefs[id].at >= at)) continue;   // the newer one stays
+        prefs[id] = { v, at }; changed = true;
+      }
+      if (changed) {
+        if (JSON.stringify(prefs).length > PREFS_MAX) return reply({ error: 'too-big' }, 413);
+        await putJSON(db, 'prefs:' + me.id, prefs);   // written only when something changed (KV writes are scarce)
+      }
+      return reply({ prefs });
     }
     if (route === 'handoff/want' && method === 'POST') {
       const key = 'handoff:want:' + me.id, at = +(await db.get(key)) || 0;
