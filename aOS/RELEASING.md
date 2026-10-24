@@ -149,6 +149,29 @@ picks a plan. Off is only a screen over the app: nothing is deleted, so
 everything is there when a plan starts again. With accounts off there
 is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.mjs`.
 
+## Ipsy and settings
+
+Every Ipsy (each app's and aOS's) can read, change and show the person's settings: Claude's
+`get_settings`, `change_setting` and `open_setting` (`server/ipsy.js` SETTINGS_TOOLS), run on the phone by
+`home/ipsy.js`, which keeps the list (`SETTINGS`) and refuses anything not on it, whatever a question, an
+email or a web page says. `aOS/scripts/ipsy-settings-test.mjs` checks the phone's list is the server's.
+
+- **Changed at once, with Undo:** how things look and read, for this person: light or dark, the look (aOS
+  and every app), the language, an app's own design, Favorites, Calendar's week start, time, temperature,
+  Day view hour and which calendars show, Clock's 24-hour time, seconds and face, Weather's units, Podcasts'
+  skip lengths and what happens when an episode ends, Fitness's step and move goals, what Orders counts.
+- **Asks first (Yes / No in the chat):** a new Calendar event's length and alert, and Ipsy's own access,
+  which it can only turn **down** (Gmail for Ipsy, Orders' and Travel's automatic checks).
+- **Never; `open_setting` shows where:** signing in or out, Face ID, accounts and connections (Gmail,
+  Google, iCloud, Home Assistant, Sheets, invites), the plan, notifications, anything that lets Ipsy or
+  anyone see more, anything that deletes or moves the family's things (Mail's clean-up, Delete all data,
+  imports), and Meals' "Never in a plan" (the family's allergies).
+
+A change reaches the app that keeps it: in aOS, an app open out of sight closes first, so it can't save its
+old setting over the new one, then opens again (`aosHomeTab.around`); the app Ipsy is in is drawn again
+after Ipsy answers. Adding a setting means adding it in both lists, and its Russian in
+`home/lang/ru/shared.js`.
+
 ## Notifications
 
 Everyone can turn on (and off) notifications under **Your account → Notifications**, and the

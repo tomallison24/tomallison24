@@ -73,7 +73,7 @@ await test('one step goes to Sonnet 5.5 with Fitness’s instructions and tools,
   assert.equal(q.headers['x-api-key'], 'ak');
   assert.deepEqual(q.body.cache_control, { type: 'ephemeral' });
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
-  assert.deepEqual(q.body.tools.map(t => t.name), ['days', 'summary', 'compare', 'meds', 'context', 'set_language'], 'only Fitness’s own tools, and the language every Ipsy has');
+  assert.deepEqual(q.body.tools.map(t => t.name), ['days', 'summary', 'compare', 'meds', 'context', 'set_language', 'get_settings', 'change_setting', 'open_setting'], 'only Fitness’s own tools, and the language and settings every Ipsy has');
   assert.ok(q.body.tools.every(t => !t.type && t.input_schema), 'no server tools of any kind');
   assert.ok(!/web_search|web_fetch/.test(q.raw.slice(0, q.raw.indexOf(',"messages":'))), 'no web tool anywhere in the request head');
   assert.deepEqual(q.body.messages, Q);
@@ -82,7 +82,7 @@ await test('one step goes to Sonnet 5.5 with Fitness’s instructions and tools,
 await test('the request head, whatever the model: never a web tool', () => {
   for (const model of [undefined, 'claude-opus-5-5', 'claude-haiku-5-5', 'claude-sonnet-4-6']) {
     const h = ipsyRequestHead({ FITNESS_IPSY_MODEL: model });
-    assert.deepEqual(h.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language'], String(model));
+    assert.deepEqual(h.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'get_settings', 'change_setting', 'open_setting'], String(model));
     assert.ok(!JSON.stringify(h).includes('web_'), String(model));
   }
 });
@@ -114,8 +114,8 @@ await test('server/ipsy.js: other apps keep their web tools and the web lines in
   assert.equal(persona({ ...base, web: true, privacy: true }), on, 'the defaults are the old instructions');
   assert.ok(!/web_search|Search the web|web searches|mark things Private/.test(off));
   const h = requestHead({ model: 'claude-sonnet-5-5', system: on, tools: [] });
-  assert.deepEqual(h.tools.map(t => t.name), ['set_language', 'web_search', 'web_fetch']);
-  assert.deepEqual(requestHead({ model: 'claude-sonnet-5-5', system: off, tools: [], web: false }).tools.map(t => t.name), ['set_language']);
+  assert.deepEqual(h.tools.map(t => t.name), ['set_language', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
+  assert.deepEqual(requestHead({ model: 'claude-sonnet-5-5', system: off, tools: [], web: false }).tools.map(t => t.name), ['set_language', 'get_settings', 'change_setting', 'open_setting']);
 });
 await test('only a new question counts toward the day; tool results and a paused turn don’t; the cap stops a new one', async () => {
   const db3 = fakeKV(); await db3.put('owner', 'u1'); await putJSON(db3, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });

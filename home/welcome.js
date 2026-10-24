@@ -947,6 +947,8 @@
     dispatchEvent(new CustomEvent('aos:theme', { detail: t }));   // for any page showing its own switch
   }
   applyTheme(readTheme());   // every app, every time
+  // changed on another page (aOS's Appearance, Ipsy in another app): this one follows at once
+  addEventListener('storage', e => { if (e.key === 'home.settings') { applyTheme(readTheme()); dispatchEvent(new CustomEvent('aos:theme', { detail: readTheme() })); } });
 
   // ---- installing ----
   // Opened inside aOS's all-in-one test (labs/home: the apps framed in one window, on this

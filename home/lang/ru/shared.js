@@ -870,3 +870,57 @@
   }
   aosLang.add(W, P);
 })();
+
+// Ipsy and settings (home/ipsy.js get_settings, change_setting, open_setting): what it says it's doing, the
+// question a setting that asks first puts, and the line each change leaves in the chat (with Undo)
+(() => {
+  const ABOUT = {
+    'Light or dark, for aOS and every app': 'Светлая или тёмная тема в aOS и всех приложениях',
+    'The look of aOS and every app: Vintage, Sea glass, Night Drive or Folk': 'Стиль aOS и всех приложений',
+    'The language of aOS and every app': 'Язык aOS и всех приложений',
+    'The apps pinned in Favorites on aOS Home, up to 4, by id': 'Избранное на главной aOS',
+    'Calendar: the day weeks start on': 'Календарь: первый день недели',
+    'Calendar: 12- or 24-hour times': 'Календарь: 12- или 24-часовой формат',
+    'Calendar: °F or °C on its weather': 'Календарь: °F или °C в погоде',
+    'Calendar: the hour Day view opens at': 'Календарь: с какого часа открывается день',
+    'Calendar: how long a new event is, in minutes': 'Календарь: длительность нового события, мин',
+    'Calendar: the alert a new event gets': 'Календарь: напоминание для нового события',
+    'Clock: 24-hour time': 'Часы: 24-часовой формат',
+    'Clock: seconds on the Nightstand clock': 'Часы: секунды на ночных часах',
+    'Clock: the Nightstand clock face': 'Часы: циферблат ночных часов',
+    'Weather (and Home\'s weather): °F, mph, in or °C, km/h, mm': 'Погода: единицы измерения',
+    'Podcasts: seconds the skip-back button goes': 'Подкасты: перемотка назад, сек',
+    'Podcasts: seconds the skip-forward button goes': 'Подкасты: перемотка вперёд, сек',
+    'Podcasts: play the next episode or stop': 'Подкасты: после выпуска',
+    'Fitness: daily step goal': 'Фитнес: цель по шагам',
+    'Fitness: daily move goal, kcal': 'Фитнес: цель подвижности, ккал',
+    'Orders: Ipsy rereads and fixes orders by itself': 'Заказы: Ипси сам проверяет и исправляет заказы',
+    'Travel: Ipsy fills in what\'s missing from bookings': 'Поездки: Ипси дополняет брони',
+    'Travel: Ipsy checks new bookings by itself': 'Поездки: Ипси сам проверяет новые брони',
+  };
+  const APP = { calendar: 'Календарь', clock: 'Часы', drinks: 'Напитки', fitness: 'Фитнес', house: 'Дом', mail: 'Почта', meals: 'Меню', news: 'Новости', notes: 'Заметки', orders: 'Заказы', places: 'Места', podcasts: 'Подкасты', travel: 'Поездки', weather: 'Погода' };
+  const LAYER = { holidays: 'праздники', notes: 'заметки', travel: 'поездки', mail: 'почту', fitness: 'фитнес', drinks: 'напитки', weather: 'погоду' };
+  const KIND = { 'store pickups': 'самовывоз', 'food orders': 'доставку еды', 'subscriptions and digital': 'подписки и цифровое', 'tickets and other': 'билеты и прочее' };
+  const VAL = { on: 'вкл.', off: 'выкл.', auto: 'авто', light: 'светлая', dark: 'тёмная', vintage: 'Винтаж', glass: 'Морское стекло', neon: 'Ночная трасса', folk: 'Народный', en: 'English', ru: 'русский',
+    sunday: 'воскресенье', monday: 'понедельник', us: '°F, mph, in', metric: '°C, км/ч, мм', digital: 'цифровой', analog: 'стрелочный', play_next: 'следующий выпуск', stop: 'стоп', none: 'нет', at_start: 'в начале',
+    '5_min': 'за 5 мин', '10_min': 'за 10 мин', '15_min': 'за 15 мин', '30_min': 'за 30 мин', '1_hour': 'за 1 ч', '2_hours': 'за 2 ч', '1_day': 'за 1 день' };
+  const about = a => {
+    if (ABOUT[a]) return ABOUT[a];
+    let m;
+    if ((m = /^Calendar: show the (\w+) calendar$/.exec(a))) return 'Календарь: показывать ' + (LAYER[m[1]] || m[1]);
+    if ((m = /^Orders: count (.+) as orders$/.exec(a))) return 'Заказы: учитывать ' + (KIND[m[1]] || m[1]);
+    if ((m = /^Ipsy in (\w+): searching Gmail$/.exec(a))) return 'Ипси в приложении «' + (APP[m[1]] || m[1]) + '»: поиск в Gmail';
+    if ((m = /^Just (\w+)'s own design$/.exec(a))) return 'Дизайн приложения «' + (APP[m[1]] || m[1]) + '»';
+    return null;
+  };
+  const val = v => VAL[v] || v;
+  aosLang.add({
+    'Looking at your settings': 'Смотрю ваши настройки',
+    'Changing a setting': 'Меняю настройку',
+    'Opening Settings': 'Открываю настройки',
+    'Yes, change it': 'Да, изменить',
+  }, [
+    [/^Change (.+) to (.+)\?$/, m => { const a = about(m[1]); return a ? 'Изменить: ' + a + ' — ' + val(m[2]) + '?' : null; }],
+    [/^(.+): ([\w,-]+)$/, m => { const a = about(m[1]); return a ? a + ': ' + val(m[2]) : null; }],
+  ]);
+})();

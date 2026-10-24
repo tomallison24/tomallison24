@@ -149,12 +149,13 @@ jobs:
               drinks/scripts/app-test.mjs . 1/2
               home/scripts/ipsy-private-test.mjs
               house/scripts/automations-test.mjs
-          # Orders, and Ipsy in Orders and News
+          # Orders, and Ipsy in Orders and News; Ipsy and settings
           - group: orders
             tests: |
               orders/scripts/app-test.mjs
               orders/scripts/ipsy-test.mjs
               news/scripts/ipsy-test.mjs
+              aOS/scripts/ipsy-settings-test.mjs
           # Ipsy in Calendar and Notes; Mail's two designs
           - group: calendar-ipsy
             tests: |

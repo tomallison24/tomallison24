@@ -195,6 +195,7 @@
   const show = t => { const names = [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab); for (const s of ['today', 'apps', 'search', 'home']) if ($(s)) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', names.indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); $('scroller').scrollTop = 0; if (t === 'search') setTimeout(() => $('q').focus(), 50); };
   tabs.forEach(b => b.onclick = () => show(b.dataset.tab));
   window.aosTabs = { show };
+  window.aosAccount = { open: at => acctPage(at) };   // Ipsy's open_setting: 'appearance', 'notifications', 'plan', 'updates', 'lost', 'move', 'owner'
   window.aosAppHue = id => HUE[id];
 
   // ---- pages that slide over ----
@@ -389,6 +390,9 @@
     paintPlans();
     paintAccount(el.querySelector('#acct'));
     if (at === 'updates' || at === 'plan') { unfold(el.querySelector(at === 'plan' ? '#subscription' : '#whats-new'), true); setTimeout(() => el.querySelector(at === 'plan' ? '#subscription' : '#whats-new').scrollIntoView({ block: 'start' }), 450); }
+    // a section the account's own card draws (Ipsy's open_setting): once it's there, unfolded and in sight
+    const SECTION = { appearance: '[aria-controls="fLook"]', notifications: '[aria-controls="fNotify"]', lost: '[aria-controls="fLost"]', move: '[aria-controls="fMove"]', owner: '#tToggle' };
+    if (SECTION[at]) { let n = 0; const find = () => { const b = el.querySelector(SECTION[at]); if (b) { unfold(b, true); setTimeout(() => b.scrollIntoView({ block: 'start' }), 300); } else if (n++ < 30) setTimeout(find, 200); }; find(); }
     return el;
   }
 

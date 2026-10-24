@@ -536,7 +536,17 @@
     });
   }
 
-  window.aosHomeTab = { everyLook, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
+  // Ipsy changed an app's setting (../home/ipsy.js): open out of sight, it closes first (so it can't save its old one
+  // over it), the setting is written, and it opens again with it; 'aos' reads aOS's own again (Favorites)
+  const around = (apps, write) => prefsReady(apps).then(() => { write(); prefsCame(apps); });
+  // Ipsy's open_setting: the app, then its Settings, once it has started
+  const openSettings = (id, sel) => {
+    if (!known(id)) return;
+    show(id);
+    let n = 0; const tap = () => { try { const b = frames[id].firstChild.contentDocument.querySelector(sel); if (b && frames[id].firstChild.contentWindow.AllisonOS) return b.click(); } catch {} if (n++ < 60) setTimeout(tap, 250); };
+    setTimeout(tap, 300);
+  };
+  window.aosHomeTab = { everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
   paintHome(); readUnread(); freshen(); syncPrefs();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];

@@ -63,4 +63,6 @@
     },
   };
   apply(look);
+  // changed on another page (Ipsy in an app open inside aOS): aOS follows at once
+  addEventListener('storage', e => { if (e.key === KEY && ok(e.newValue) && ok(e.newValue) !== window.aosLook.get()) { apply(ok(e.newValue)); window.dispatchEvent(new Event('aos:look')); } });
 })();
