@@ -1022,11 +1022,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Start
   // ---------------------------------------------------------------------
+  // Back from Google's sign-in: the token is taken from the address at once, before anything waits,
+  // since welcome.js sends the page straight back into aOS (backToAOS) as soon as it has loaded.
+  const back = consumeRedirect();
   // Start once this phone's copy is read (IndexedDB).
   const ready = load().catch(() => {});
   ready.then(start);
   function start() {
-    const back = consumeRedirect();
     render();
     animateIn(main);
     if (back && back.error) {
