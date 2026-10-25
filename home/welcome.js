@@ -145,6 +145,10 @@
         meals: { highlights: ['Two new designs: Night Drive and Folk',
           'Now in Russian too: aOS, Appearance, Language',
           'Ask Ipsy to change a setting, or show you where it is'],
+          notes: ['Meals is AI first: Ipsy is where it opens. Pick breakfast, lunch or dinner and what you\'d like (chicken, lamb, vegetarian), or type what\'s in the fridge, and Ipsy asks the rest one question at a time (how many days, how many you cook for, lunches from leftovers or fresh) and writes the recipes',
+          'Family rules in Settings: vegetables in every meal (0 to 5), protein (some 20 g, good 30 g, high 40 g), how many you cook for and how long on a weeknight. Every meal is checked against them and the allergies',
+          'Rate a recipe and Ipsy learns what the family loves, and leaves out what it doesn\'t (Settings, Learned, to forget one)',
+          'Deals are gone: no more store sales in the plan or the list'],
           tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
         news: { highlights: ['Two new designs: Night Drive and Folk',
           'Now in Russian too: aOS, Appearance, Language',
@@ -909,32 +913,32 @@
       ]
     },
     "meals": {
-      "tag": "Dinner for the family, for less",
+      "tag": "Tell Ipsy what you fancy",
       "cards": [
         {
-          "i": "calendar",
-          "t": "A week of dinners",
-          "d": "Pick a meat, and Meals plans a few nights of different dinners for the family, each a different cuisine."
+          "i": "sparkle",
+          "t": "Ipsy plans it",
+          "d": "Pick breakfast, lunch or dinner and what you'd like (chicken, lamb, vegetarian), and Ipsy writes the recipes."
         },
         {
-          "i": "tag",
-          "t": "This week's deals",
-          "d": "Your Whole Foods' sales, found for you or pasted from its app, sorted like a grocery list."
+          "i": "calendar",
+          "t": "Ipsy asks the rest",
+          "d": "How many days, how many you're cooking for, lunches from leftovers or fresh, anything else. One question at a time."
+        },
+        {
+          "i": "heart",
+          "t": "Healthy and safe",
+          "d": "Every meal has the vegetables and protein your family's rules ask for, and is checked against the family's allergies."
         },
         {
           "i": "list",
           "t": "One shopping list",
-          "d": "Everything the dinners need in one list, sorted by aisle, with what's on sale. Tick it off in the store."
-        },
-        {
-          "i": "shield",
-          "t": "Safe for the family",
-          "d": "Every plan is checked against your family's allergies before it's kept."
+          "d": "Everything the meals need in one list, sorted by aisle. Tick it off in the store."
         },
         {
           "i": "people",
           "t": "Shared with the family",
-          "d": "Everyone signed in sees the same plan and deals."
+          "d": "Everyone signed in sees the same plan and list, and Ipsy learns what you love."
         },
         {
           "i": "star",
@@ -1964,11 +1968,11 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in the family\'s Google Sheet, where only you can see yours, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
   ] };
   SPOTS.meals = { stops: [
-    { sel: ['#main .card', '#tabs'], t: 'Shared with the family', d: 'Your family’s dinners: everyone signed in sees the same plan and deals.' },
-    { sel: '#fab', t: 'A week of dinners', d: 'Tap + and pick a meat, and Meals plans a few nights of different dinners for the family, each a different cuisine. Tap a night for its recipe.', g: 'tap' },
-    { sel: '#tabs [data-tab="deals"]', t: 'This week’s deals', d: 'Your Whole Foods’ sales, found for you or pasted from its app, sorted like a grocery list.', g: 'tap' },
-    { sel: '#tabs [data-tab="list"]', t: 'One shopping list', d: 'Everything the dinners need in one list, sorted by aisle, with what’s on sale. Tick it off in the store.', g: 'tap' },
-    { sel: '#setBtn', t: 'Safe for the family', d: 'Every plan is checked against your family’s allergies before it’s kept. Set them, and your store, here.', g: 'tap' },
+    { sel: ['#main .card.pick', '#tabs [data-tab="ipsy"]'], t: 'Ipsy plans it', d: 'Pick breakfast, lunch or dinner and what you’d like (chicken, lamb, vegetarian), or what’s in the fridge, and Ipsy writes the recipes.' },
+    { sel: ['#main [data-act="pick"]', '#tabs [data-tab="ipsy"]'], t: 'Ipsy asks the rest', d: 'Then it asks how many days, how many you’re cooking for, lunches from leftovers or fresh, and anything else. One question at a time.' },
+    { sel: '#tabs [data-tab="plan"]', t: 'Shared with the family', d: 'Your plan: each day’s meals, with their vegetables and protein. Tap one for its recipe. Everyone signed in sees the same plan and list, and Ipsy learns what you love.', g: 'tap' },
+    { sel: '#tabs [data-tab="list"]', t: 'One shopping list', d: 'Everything the meals need in one list, sorted by aisle. Tick it off in the store.', g: 'tap' },
+    { sel: '#setBtn', t: 'Healthy and safe', d: 'Every meal has the vegetables and protein your family’s rules ask for, and is checked against the family’s allergies. Set the rules here, with how many you cook for and how long on a weeknight.', g: 'tap' },
   ] };
   SPOTS.clock = { stops: [
     { sel: ['#hero', '#tabs [data-tab="world"]'], t: 'World Clock', d: 'See your own time and the cities you add, each with its time, its day and how far ahead or behind it is. Tap + to add a city.' },

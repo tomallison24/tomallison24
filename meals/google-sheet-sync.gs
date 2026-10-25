@@ -218,8 +218,8 @@ function cleanPlan(p) {
   const at = num(p.acceptedAt) || num(p.at);
   return {
     id: p.id, at: at, updated: num(p.updated) || at, start: s(p.start, 10), planner: s(p.acceptedBy || p.planner, 60), meat: s(p.meat, 40),
-    shop: s(p.shop, 40), shopName: s(p.shopName, 60), people: num(p.people), tip: s(p.tip, 300), dates: (Array.isArray(p.dates) ? p.dates : []).map(d => s(d, 10)).slice(0, 14),
-    meals: p.meals.slice(0, 14).map((m, i) => m && {
+    shop: s(p.shop, 40), shopName: s(p.shopName, 60), people: num(p.people), tip: s(p.tip, 300), dates: (Array.isArray(p.dates) ? p.dates : []).map(d => s(d, 10)).slice(0, 21),
+    meals: p.meals.slice(0, 21).map((m, i) => m && {
       day: num(m.day) || i + 1, title: s(m.title, 120), cuisine: s(m.cuisine, 40), method: s(m.method, 40), minutes: num(m.minutes), why: s(m.why, 240),
       uses: (Array.isArray(m.uses) ? m.uses : []).map(u => s(u, 80)).slice(0, 10),
       ingredients: (Array.isArray(m.ingredients) ? m.ingredients : []).slice(0, 40).map(x => x && {item: s(x.item, 80), qty: s(x.qty, 40), pantry: !!x.pantry}).filter(x => x && x.item),

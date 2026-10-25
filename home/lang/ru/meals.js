@@ -4,39 +4,40 @@
 {
   const T = s => aosLang.t(s);
   const P = (n, one, few, many) => n + ' ' + aosLang.plural(n, one, few, many);
-  const dinners = n => P(n, 'ужин', 'ужина', 'ужинов');
-  const people = n => 'на ' + P(n, 'человека', 'человека', 'человек');
+  const meals = n => P(n, 'блюдо', 'блюда', 'блюд');
+  const days = n => P(n, 'день', 'дня', 'дней');
+  const forN = n => 'на ' + P(n, 'человека', 'человека', 'человек');
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-  const MEAT = 'Chicken|Beef|Pork|Turkey|Lamb|Salmon|White fish|Shrimp|On sale';
-  const meatLine = new RegExp('^(?:(' + MEAT + ') · )?for (\\d+)(?: · (.+?))?(?: · accepted by (.+))?$');
-  const pastRow = new RegExp('^(.+? – .+?) · (' + MEAT + ')( · .+)?$');
-  // Ipsy's "4 chicken dinners for 4", "4 dinners around what’s on sale for 4"
-  const sum = s => {
-    let m = /^(\d+) dinners around what’s on sale for (\d+)$/.exec(s);
-    if (m) return dinners(+m[1]) + ' из того, что со скидкой, ' + people(+m[2]);
-    m = /^(\d+) (.+) dinners for (\d+)$/.exec(s);
-    return m ? dinners(+m[1]) + ' (' + T(cap(m[2])).toLowerCase() + ') ' + people(+m[3]) : s;
+  // the meals of the day and what they're built around, as the app joins them ("lunch and dinner", "chicken and lamb")
+  const SLOT = { breakfast: 'завтрак', lunch: 'обед', dinner: 'ужин', breakfasts: 'завтраки', lunches: 'обеды', dinners: 'ужины' };
+  const FOOD = { chicken: 'курица', lamb: 'баранина', beef: 'говядина', pork: 'свинина', turkey: 'индейка', fish: 'рыба', shrimp: 'креветки', vegetarian: 'вегетарианское',
+    'surprise me': 'на ваш вкус', anything: 'что угодно', salmon: 'лосось', 'white fish': 'белая рыба', 'whatever’s on sale': 'что со скидкой', 'on sale': 'что со скидкой' };
+  const words = (s, dict) => s.split(/, | and /).map(w => dict[w.toLowerCase()] || w).join(', ').replace(/, ([^,]+)$/, ' и $1');
+  const slots = s => words(s, SLOT), foods = s => words(s, FOOD);
+  // "Chicken and lamb · lunch and dinner · for 4 · by Tom" (a plan in a few words), and the old "Chicken · dinners · for 4"
+  const about = s => {
+    const m = /^(.+?) · (.+?) · for (\d+)(?: · by (.+))?$/.exec(s);
+    return m ? [cap(foods(m[1])), slots(m[2]), forN(+m[3]), m[4] && 'автор: ' + m[4]].filter(Boolean).join(' · ') : null;
   };
-  // the ingredients Ipsy ticked, as the plan names them, or "N items"
-  const items = s => { const m = /^(\d+) items$/.exec(s); return m ? P(+m[1], 'пункт', 'пункта', 'пунктов') : s.replace(/ and /g, ' и '); };
+  // "2+ vegetables and about 30 g protein in every meal · never tree nuts and coconut"
+  const rules = s => {
+    const m = /^(?:(\d+)\+ vegetables? and about|About) (\d+) g protein in every meal(?: · never (.+))?$/.exec(s);
+    return m ? (m[1] ? m[1] + '+ ' + aosLang.plural(m[1], 'овощ', 'овоща', 'овощей') + ' и около ' : 'Около ') + m[2] + ' г белка в каждом блюде' + (m[3] ? ' · никогда: ' + T(m[3]).replace(/ and /g, ' и ') : '') : null;
+  };
   const WHAT = { 'the new plan': 'новый план', 'saving the plan': 'сохранение плана', 'the discard': 'отклонение' };
   aosLang.add({
     // ---- the page ----
     'Meals': 'Меню',
-    'Store, allergies and your account': 'Магазин, аллергии и профиль',
-    'Dinners, deals or shopping list': 'Ужины, скидки или список покупок',
-    'Dinners': 'Ужины',
-    'Deals': 'Скидки',
+    'Family rules, design and your account': 'Правила семьи, дизайн и профиль',
+    'Plan with Ipsy, the plan or the shopping list': 'Планировать с Ипси, план или список покупок',
+    'Ipsy': 'Ипси',
+    'Plan': 'План',
     'List': 'Список',
-    'Plan dinners': 'Спланировать ужины',
+    'A new plan': 'Новый план',
     'Close': 'Закрыть',
     'Done': 'Готово',
+    'Recipe': 'Рецепт',
     'Past plan': 'Прошлый план',
-    'Paste this week’s deals': 'Вставить скидки недели',
-    'Copy your store’s weekly sales and paste them here.': 'Скопируйте скидки недели из своего магазина и вставьте их сюда.',
-    'This week’s deals': 'Скидки этой недели',
-    'Paste the sales here': 'Вставьте скидки сюда',
-    'Read the deals': 'Прочитать скидки',
     'Settings': 'Настройки',
     'Undo': 'Отменить',
     'Meals can’t be opened inside another page.': 'Меню нельзя открыть внутри другой страницы.',
@@ -44,20 +45,54 @@
     // ---- what went wrong ----
     'Meals needs its AI key first: the owner adds it (see Meals’ README).': 'Сначала Меню нужен ключ ИИ: его добавляет владелец (см. README Меню).',
     'Family accounts aren’t switched on yet, so Meals can’t plan for the family.': 'Семейные профили ещё не включены, поэтому Меню не может планировать для семьи.',
-    'Sign in with your family account to see the family’s dinners.': 'Войдите в семейный профиль, чтобы видеть ужины семьи.',
+    'Sign in with your family account to see the family’s meals.': 'Войдите в семейный профиль, чтобы видеть меню семьи.',
     'Meals’ server isn’t set up on this site.': 'Сервер Меню на этом сайте не настроен.',
     'You’re offline. Showing what this phone kept.': 'Нет сети. Показано то, что сохранено на телефоне.',
     'The AI service didn’t accept Meals’ key. The owner can check it.': 'Сервис ИИ не принял ключ Меню. Владелец может его проверить.',
     'The AI service is busy. Try again in a minute.': 'Сервис ИИ занят. Повторите через минуту.',
     'Couldn’t reach the AI service. Try again in a minute.': 'Не удалось связаться с сервисом ИИ. Повторите через минуту.',
     'That didn’t come back right. Try again.': 'Ответ пришёл с ошибкой. Повторите.',
-    'Every plan it made used something the family avoids, so none was kept. Try again, or pick another meat.': 'В каждом плане было то, чего семья не ест, поэтому ни один не сохранён. Повторите или выберите другое мясо.',
-    'Only the owner can change what the family avoids. Your stores and cards were kept.': 'Менять то, чего семья не ест, может только владелец. Ваши магазины и карты сохранены.',
+    'Every plan it made used something the family avoids, so none was kept. Try again, or pick something else.': 'В каждом плане было то, чего семья не ест, поэтому ни один не сохранён. Повторите или выберите что-то другое.',
+    'That’s a lot of plans today. Try again tomorrow.': 'Сегодня уже много планов. Повторите завтра.',
+    'Only the owner can change what the family avoids. Your other rules were kept.': 'Менять то, чего семья не ест, может только владелец. Остальные правила сохранены.',
     'Someone in the family changed the plan just now. Here’s the plan as it is.': 'Кто-то из семьи только что изменил план. Вот он сейчас.',
     'Something went wrong. Try again in a minute.': 'Что-то пошло не так. Повторите через минуту.',
     'Sign in with Face ID': 'Войти с Face ID',
 
-    // ---- Dinners ----
+    // ---- the Ipsy tab: what you fancy, and Ipsy's questions ----
+    'Which meals': 'Какие приёмы пищи',
+    'Breakfast': 'Завтрак', 'Lunch': 'Обед', 'Dinner': 'Ужин',
+    'What do you fancy': 'Чего хочется',
+    'Chicken': 'Курица', 'Lamb': 'Баранина', 'Beef': 'Говядина', 'Pork': 'Свинина', 'Turkey': 'Индейка', 'Fish': 'Рыба', 'Shrimp': 'Креветки', 'Vegetarian': 'Вегетарианское',
+    'Surprise me': 'На ваш вкус',
+    'In the fridge (optional)': 'В холодильнике (необязательно)',
+    'Half a cabbage, feta, eggs…': 'Полкочана капусты, фета, яйца…',
+    'Edit': 'Изменить',
+    'Plan it': 'Спланировать',
+    'Lovely. How far ahead should I plan?': 'Отлично. На сколько вперёд планировать?',
+    'Just today': 'Только сегодня',
+    'Next 3 days': 'Ближайшие 3 дня',
+    'The week': 'Неделю',
+    'How far ahead': 'На сколько вперёд',
+    'How many at the table': 'Сколько человек за столом',
+    'Lunches': 'Обеды',
+    'For lunches: the night before’s leftovers, or something fresh each day?': 'На обед — остатки вчерашнего ужина или каждый день что-то новое?',
+    'Leftovers are great': 'Остатки — отлично',
+    'Fresh each day': 'Каждый день новое',
+    'A mix': 'По-разному',
+    'Anything else? (No spicy food, kid-friendly…)': 'Что-то ещё? (Не остро, для детей…)',
+    'Anything else? (optional)': 'Что-то ещё? (необязательно)',
+    'Anything else': 'Что-то ещё',
+    'Nothing else': 'Больше ничего',
+    'Make it': 'Составить',
+    'Start over': 'Начать заново',
+    'Or just tell Ipsy…': 'Или просто скажите Ипси…',
+    'Change anything…': 'Изменить что-нибудь…',
+    'Ask': 'Спросить',
+    'Ipsy isn’t ready yet. Try again in a moment.': 'Ипси ещё не готова. Повторите через мгновение.',
+
+    // ---- the plan ----
+    'About a minute.': 'Примерно минута.',
     'About half a minute.': 'Примерно полминуты.',
     'New plan · not saved yet': 'Новый план · ещё не сохранён',
     'Starting': 'Начало',
@@ -66,59 +101,41 @@
     'Discard': 'Отклонить',
     'Tip:': 'Совет:',
     'Clear this plan': 'Убрать этот план',
-    'No dinners planned yet': 'Ужины ещё не запланированы',
+    'Nothing planned yet': 'Пока ничего не запланировано',
+    'Tell Ipsy what you fancy, and it plans the meals.': 'Скажите Ипси, чего хочется, и она спланирует меню.',
+    'Plan with Ipsy': 'Спланировать с Ипси',
     'Past plans': 'Прошлые планы',
     'Current': 'Текущий',
     'Looking in the Sheet…': 'Ищу в таблице…',
     'Show older plans from the Sheet': 'Показать старые планы из таблицы',
-    'Best deals': 'Лучшие скидки',
+    'Leftovers': 'Остатки',
+    'In your fridge': 'Есть в холодильнике',
+    'On sale': 'Со скидкой',
     'Here’s a plan. Accept it to save it.': 'Вот план. Примите его, чтобы сохранить.',
     'New plan discarded.': 'Новый план отклонён.',
     'Plan cleared. It’s still in Past plans.': 'План убран. Он остался в прошлых планах.',
     'Plan back.': 'План возвращён.',
     'Shopping list': 'Список покупок',
+
+    // ---- a recipe ----
     'Ingredients': 'Ингредиенты',
     'Steps': 'Шаги',
+    'The night before’s dinner, cooked double for today’s lunch.': 'Вчерашний ужин, приготовленный вдвойне на сегодняшний обед.',
+    'See that recipe': 'Открыть тот рецепт',
+    'What the family thought': 'Как понравилось семье',
+    'Loved it': 'Понравилось',
+    'Not again': 'Больше не надо',
+    'Swap this meal': 'Заменить блюдо',
+    'Ask Ipsy about it': 'Спросить Ипси',
     'Made by AI: check times, temperatures and labels.': 'Сделано ИИ: проверяйте время, температуру и этикетки.',
-    'On sale': 'Со скидкой',
-
-    // ---- a new plan ----
-    'Built around': 'Основа',
-    'Chicken': 'Курица', 'Beef': 'Говядина', 'Pork': 'Свинина', 'Turkey': 'Индейка', 'Lamb': 'Баранина', 'Salmon': 'Лосось',
-    'White fish': 'Белая рыба', 'Shrimp': 'Креветки', 'Whatever’s on sale': 'Что со скидкой',
-    'Nights': 'Вечеров',
-    'People': 'Человек',
-    'Shop at': 'Магазин',
-    'Best deals, any store': 'Лучшие скидки, любой магазин',
-    'Use this week’s deals': 'Скидки недели',
-    'Anything else': 'Что-то ещё',
-    'Anything else? (kid-friendly, no spice…)': 'Что-то ещё? (для детей, не остро…)',
-    'Yes': 'Да',
-    'No': 'Нет',
-    'None found yet': 'Пока не найдены',
-
-    // ---- Deals ----
-    'Store': 'Магазин',
-    'All my stores': 'Все мои магазины',
-    'Find deals at the rest': 'Найти в остальных',
-    'All found': 'Все найдены',
-    'Look again': 'Обновить',
-    'Find this week’s deals': 'Найти скидки',
-    'Paste deals': 'Вставить',
-    'Looking for this week’s sales…': 'Ищу скидки этой недели…',
-    'This can take up to a minute.': 'Это может занять до минуты.',
-    'No deals yet': 'Скидок пока нет',
-    'Plan dinners with the best of these': 'Ужины по лучшим скидкам',
-    'Plan dinners with these deals': 'Ужины по этим скидкам',
-    'Found on:': 'Найдено на:',
-    'From the sales you pasted.': 'Из вставленных вами скидок.',
-    'No food deals in that text.': 'В этом тексте нет скидок на продукты.',
-    'Paste the sales first.': 'Сначала вставьте скидки.',
+    'Noted: Ipsy will make more like it.': 'Запомнила: Ипси будет предлагать похожее.',
+    'Noted: Ipsy won’t make it again.': 'Запомнила: Ипси больше не будет это предлагать.',
+    'Forgotten.': 'Забыто.',
 
     // ---- List ----
     'Nothing to buy yet': 'Покупать пока нечего',
-    'Accept the new plan on Dinners.': 'Примите новый план на вкладке «Ужины».',
-    'Plan dinners first.': 'Сначала спланируйте ужины.',
+    'Accept the new plan first.': 'Сначала примите новый план.',
+    'Plan your meals with Ipsy first.': 'Сначала спланируйте меню с Ипси.',
     'You probably have': 'Скорее всего, уже есть',
     'Copy the list': 'Скопировать список',
     'Clear ticks': 'Снять отметки',
@@ -129,15 +146,28 @@
     'Account': 'Профиль',
     'Not signed in': 'Вход не выполнен',
     'Sign in to plan for the family.': 'Войдите, чтобы планировать для семьи.',
-    'Your stores': 'Ваши магазины',
-    'Deals and plans come from these stores.': 'Скидки и планы — из этих магазинов.',
-    'Member cards': 'Карты лояльности',
-    'With a card, deals show its member prices.': 'С картой скидки показаны по ценам для её владельцев.',
+    'Family rules': 'Правила семьи',
+    'Vegetables': 'Овощи',
+    'at least, in every meal': 'не меньше, в каждом блюде',
+    'Fewer': 'Меньше',
+    'More': 'Больше',
+    'Protein': 'Белок',
+    'a person, every meal': 'на человека, в каждом блюде',
+    'Some (20 g)': 'Немного (20 г)',
+    'Good (30 g)': 'Хорошо (30 г)',
+    'High (40 g)': 'Много (40 г)',
+    'Usually cooking for': 'Обычно готовим на',
+    'Weeknight dinners': 'Ужины в будни',
+    'ready in': 'готовы за',
+    'No limit': 'Без ограничения',
+    '20 minutes': '20 минут', '30 minutes': '30 минут', '40 minutes': '40 минут', 'An hour': 'Час',
     'Never in a plan': 'Никогда в плане',
     'Add an allergy or dislike': 'Аллергия или нелюбимый продукт',
     'Add': 'Добавить',
     'Only the owner can change what the family avoids.': 'Менять то, чего семья не ест, может только владелец.',
-    'Keep at least one store.': 'Оставьте хотя бы один магазин.',
+    'What Ipsy has learned': 'Что Ипси запомнила',
+    'Loved': 'Понравилось',
+    'Nothing yet. Use Loved it or Not again on a recipe, and Ipsy plans with it.': 'Пока ничего. Отмечайте «Понравилось» или «Больше не надо» в рецептах, и Ипси будет это учитывать.',
     'Saved for the family.': 'Сохранено для семьи.',
     'Signed in.': 'Вы вошли.',
     'No passkey found, or canceled. Set up your account in aOS first.': 'Ключ входа не найден или вход отменён. Сначала настройте профиль в aOS.',
@@ -158,22 +188,23 @@
     'Couldn’t reach the family’s Google Sheet. Try again later.': 'Не удалось связаться с семейной Google Таблицей. Повторите позже.',
 
     // ---- Ipsy here (ipsy-tools.js) ----
-    'Hi, I’m Ipsy! I can swap a night’s dinner, plan a new week around the deals, find what’s on sale, or tell you what you can make with what you have, always keeping to what the family never eats.':
-      'Привет, я Ипси! Могу заменить ужин на любой вечер, спланировать неделю под скидки, найти, что продаётся со скидкой, или подсказать, что приготовить из того, что есть, — всегда без того, чего семья не ест.',
-    'Ask Ipsy about dinner': 'Спросите Ипси об ужине',
+    'Hi, I’m Ipsy! Tell me what you fancy and I’ll plan the meals, swap one, or say what you can make with what’s in the fridge, always with plenty of vegetables and protein, and never what the family can’t eat.':
+      'Привет, я Ипси! Скажите, чего хочется, и я спланирую меню, заменю блюдо или подскажу, что приготовить из того, что есть в холодильнике, — всегда с овощами и белком и без того, чего семья не ест.',
+    'Ask Ipsy about meals': 'Спросите Ипси о меню',
     'What’s for dinner tonight?': 'Что сегодня на ужин?',
-    'Swap Thursday for something quicker': 'Замени ужин в четверг на что-то побыстрее',
-    'What’s on sale this week?': 'Что со скидкой на этой неделе?',
-    'What can I make with ground beef?': 'Что приготовить из говяжьего фарша?',
-    'Ipsy runs on Claude, by Anthropic: what you ask, and the plans and deals it reads, go there through the family server. Everyone in the family sees its changes, each with Undo, and it asks first before replacing a whole week.':
-      'Ипси работает на Claude от Anthropic: ваши вопросы и планы со скидками, которые читает Ипси, отправляются туда через семейный сервер. Изменения Ипси видит вся семья, каждое можно отменить, а перед заменой целой недели Ипси спрашивает.',
-    'Looking at the family’s dinners': 'Смотрю ужины семьи',
+    'Plan a week of lamb and chicken dinners': 'Спланируй ужины на неделю с бараниной и курицей',
+    'Swap Thursday for something quicker': 'Замени четверг на что-то побыстрее',
+    'What can I make with eggs and spinach?': 'Что приготовить из яиц и шпината?',
+    'Ipsy runs on Claude, by Anthropic: what you ask, and the plans it reads, go there through the family server. Everyone in the family sees its changes, each with Undo, and it asks first before replacing a whole plan.':
+      'Ипси работает на Claude от Anthropic: ваши вопросы и планы, которые читает Ипси, отправляются туда через семейный сервер. Изменения Ипси видит вся семья, каждое можно отменить, а перед заменой целого плана Ипси спрашивает.',
+    'Looking at the family’s meals': 'Смотрю меню семьи',
     'Reading the recipes': 'Читаю рецепты',
     'Looking at past plans': 'Смотрю прошлые планы',
     'Reading the shopping list': 'Читаю список покупок',
     'Unticking the list': 'Снимаю отметки в списке',
     'Ticking off the list': 'Отмечаю в списке',
-    'Planning dinners (about half a minute)': 'Планирую ужины (примерно полминуты)',
+    'Planning the meals (about a minute)': 'Планирую меню (примерно минута)',
+    'Planning the meals (about half a minute)': 'Планирую меню (примерно полминуты)',
     'Saving the plan': 'Сохраняю план',
     'Discarding the new plan': 'Отклоняю новый план',
     'Opening the recipe': 'Открываю рецепт',
@@ -183,59 +214,58 @@
     'Not yet': 'Пока нет',
     'Yes, discard it': 'Да, отклонить',
   }, [
-    // nights and plans
-    [/^Night (\d+)(?: · (.+))?$/, m => 'Вечер ' + m[1] + (m[2] ? ' · ' + m[2] : '')],
-    [/^Night (\d+) \((.+)\)$/, m => 'Вечер ' + m[1] + ' (' + m[2] + ')'],
-    [/^Planning (\d+) dinners?…$/, m => 'Планирую ' + dinners(+m[1]) + '…'],
-    [/^Plan (\d+) dinners?$/, m => 'Спланировать ' + dinners(+m[1])],
-    [meatLine, m => [m[1] && T(m[1]), people(+m[2]), m[3] && T(m[3]), m[4] && 'принято: ' + m[4]].filter(Boolean).join(' · ')],
+    // the Ipsy tab
+    [/^Hi(?: (.+?))?\. What are we eating\? Pick a few things and I’ll ask the rest\.$/, m => 'Привет' + (m[1] ? ', ' + m[1] : '') + '! Что будем есть? Выберите несколько вещей, а остальное я спрошу.'],
+    [/^How many at the table\? (?:Last time it was|Usually it’s) (\d+)\.$/, m => 'Сколько человек за столом? ' + (/Last/.test(m[0]) ? 'В прошлый раз было ' : 'Обычно ') + m[1] + '.'],
+    [/^(\d+) (?:person|people)$/, m => P(+m[1], 'человек', 'человека', 'человек')],
+    [/^Family rules: (.+)$/, m => 'Правила семьи: ' + (rules(m[1]) || m[1])],
+    // what was picked: "Lunch and dinner · chicken and lamb · use up half a cabbage, feta" (the fridge as the family wrote it)
+    [/^((?:Breakfast|Lunch|Dinner)(?:(?:, | and )(?:breakfast|lunch|dinner))*) · (.+?)(?: · use up (.+))?$/, m => cap(slots(m[1])) + ' · ' + foods(m[2]) + (m[3] ? ' · израсходовать: ' + m[3] : '')],
+    [/^Planning (today’s|(\d+) days of) (.+?) for (\d+)(, lunches from the night before)?: (\d+) meals?, each with (.+)\.$/,
+      m => 'Планирую ' + slots(m[3]) + ' ' + (m[2] ? 'на ' + days(+m[2]) : 'на сегодня') + ' ' + forN(+m[4]) + (m[5] ? ', обеды из вчерашних ужинов' : '') + ': ' + meals(+m[6]) + ', в каждом ' + (rules(m[7] + ' in every meal') || m[7]).replace(/ в каждом блюде$/, '') + '.'],
+    // the plan
+    [/^Planning (\d+) meals?…$/, m => 'Планирую ' + meals(+m[1]) + '…'],
+    [/^(.+? · .+? · for \d+(?: · by .+)?)$/, m => about(m[1])],
+    [/^(.+? – .+?) · (\d+) meals?$/, m => m[1] + ' · ' + meals(+m[2])],
+    [/^(.+? – .+?) · (.+? · .+? · for \d+)$/, m => m[1] + ' · ' + (about(m[2]) || m[2])],
     [/^Tonight: (.+)$/, m => 'Сегодня: ' + m[1]],
-    [/^(.+) · (\d+) dinners?$/, m => m[1] + ' · ' + dinners(+m[2])],
     [/^Accepted by (.+)\.$/, m => 'Принято: ' + m[1] + '.'],
     [/^Planned by (.+)\.$/, m => 'Спланировано: ' + m[1] + '.'],
-    [pastRow, m => m[1] + ' · ' + T(m[2]) + (m[3] || '')],
     [/^(Today|Tomorrow), (.+)$/, m => (m[1] === 'Today' ? 'Сегодня, ' : 'Завтра, ') + m[2]],
-    [/^Never (.+)\.$/, m => 'Исключено: ' + m[1].replace(/ or /g, ', ') + '.'],
-    // deals
-    [/^(\d+) of (\d+) stores? have this week’s deals\. ?(.*)$/, m => 'Скидки недели есть в ' + m[1] + ' из ' + P(+m[2], 'магазина', 'магазинов', 'магазинов') + '.' + (m[3] ? ' ' + m[3] : '')],
-    [/^(.+?) · (This week|An earlier week), (.+?)(?: · (.+) prices)?$/, m => m[1] + ' · ' + (m[2] === 'This week' ? 'эта неделя' : 'прошлая неделя') + ', ' + m[3] + (m[4] ? ' · цены ' + m[4] : '')],
-    [/^(.+?) · (Prime|VIC|.+) prices$/, m => m[1] + ' · цены ' + m[2]],
-    [/^At (.+)\. This can take up to a minute\.$/, m => m[1] + '. Это может занять до минуты.'],
-    [/^(.+) \((\d+) of (\d+)\)\. About half a minute a store\.$/, m => m[1] + ' (' + m[2] + ' из ' + m[3] + '). Примерно полминуты на магазин.'],
-    [/^usually (.+)$/, m => 'обычно ' + m[1]],
-    [/^On sale: (.+)$/, m => 'Со скидкой: ' + m[1]],
-    [/^On sale at (.+)$/, m => 'Скидка в ' + m[1]],
-    [/^On sale (.+)$/, m => 'Скидка ' + m[1]],
-    // the shopping list: "2 lb · nights 1, 3"
-    [/^(?:(.+) · )?(nights?) ([\d, ]+)$/, m => (m[1] ? m[1] + ' · ' : '') + (m[2] === 'night' ? 'вечер ' : 'вечера ') + m[3]],
+    [/^Day (\d+)$/, m => 'День ' + m[1]],
+    [/^([^ ]+|Day \d+) (breakfast|lunch|dinner)$/, m => cap(SLOT[m[2]]) + ' · ' + T(m[1])],
+    [/^(\d+) vegetables?$/, m => P(+m[1], 'овощ', 'овоща', 'овощей')],
+    [/^about (\d+) g protein$/, m => 'около ' + m[1] + ' г белка'],
+    [/^(\d+) min$/, m => m[1] + ' мин'],
+    [/^uses your (.+)$/, m => 'из холодильника: ' + m[1]],
+    [/^serves (\d+)$/, m => forN(+m[1])],
+    [/^Vegetables: (.+)\. The vegetables and protein are Ipsy’s estimates\.$/, m => 'Овощи: ' + m[1] + '. Овощи и белок — оценка Ипси.'],
+    // the shopping list: "2 lb · Mon, Wed", or "days 1, 3"
+    [/^(?:(.+) · )?(days?) ([\d, ]+)$/, m => (m[1] ? m[1] + ' · ' : '') + (m[2] === 'day' ? 'день ' : 'дни ') + m[3]],
     // settings
     [/^Remove (.+)$/, m => 'Убрать ' + m[1]],
+    [/^Forget (.+)$/, m => 'Забыть: ' + m[1]],
     [/^AI: (.+), through Anthropic’s API\.$/, m => 'ИИ: ' + m[1] + ' через API Anthropic.'],
     [/^AI: Not set up yet\.$/, () => 'ИИ: ещё не настроен.'],
     [/^AI: Unknown until you’re online\.$/, () => 'ИИ: неизвестно, пока нет сети.'],
     // toasts
     [/^Copied (\d+) items?\.$/, m => 'Скопировано: ' + P(+m[1], 'пункт', 'пункта', 'пунктов') + '.'],
-    [/^Found (\d+) deals? at (.+)\.$/, m => 'Найдено скидок в ' + m[2] + ': ' + m[1] + '.'],
-    [/^Found (\d+) deals?\.$/, m => 'Найдено скидок: ' + m[1] + '.'],
-    [/^Found (\d+) deals?\. None online for (.+): paste theirs from their apps\.$/, m => 'Найдено скидок: ' + m[1] + '. Для ' + m[2] + ' в интернете ничего нет: вставьте их скидки из приложений магазинов.'],
-    [/^Couldn’t find (.+)’s sales online this week\. Paste them from its app instead\.$/, m => 'Не удалось найти скидки ' + m[1] + ' на этой неделе. Вставьте их из приложения магазина.'],
     [/^Saved for the family, from (.+)\. The shopping list is ready\.$/, m => 'Сохранено для семьи, с ' + m[1].replace(/\.$/, '') + '. Список покупок готов.'],
     [/^Found (\d+) older plans? in the family’s Google Sheet\.$/, m => 'В семейной Google Таблице найдено: ' + P(+m[1], 'старый план', 'старых плана', 'старых планов') + '.'],
-    // Ipsy's changes and questions (ipsy-tools.js): dinners and ingredients as the plan names them
-    [/^Checking this week’s deals(?: at (.+))?$/, m => 'Проверяю скидки недели' + (m[1] ? ' в ' + m[1] : '')],
-    [/^Changing night (\d*)$/, m => 'Меняю ужин' + (m[1] ? ' на вечер ' + m[1] : '')],
-    [/^Ticked off (.+)$/, m => 'Отмечено: ' + items(m[1])],
-    [/^Unticked (.+)$/, m => 'Отметка снята: ' + items(m[1])],
-    [/^Night (\d+)(?: \((.+?)\))?( of the new plan)?: (.+ → .+)$/, m => 'Вечер ' + m[1] + (m[2] ? ' (' + m[2] + ')' : '') + (m[3] ? ' нового плана' : '') + ': ' + m[4]],
-    [/^Made a new plan: (.+) \(not saved yet\)$/, m => 'Новый план: ' + sum(m[1]) + ' (ещё не сохранён)'],
-    [/^Make a new plan in place of the one waiting \((.+?)(?:, by (.+))?\)\? Everyone in the family sees the change\.$/,
-      m => 'Составить новый план вместо ожидающего (' + sum(m[1]) + (m[2] ? ', автор: ' + m[2] : '') + ')? Изменение увидит вся семья.'],
-    [/^Save the new plan \((.+?)\) for the family, night 1 on (.+?)\?(?: It takes the place of the current plan \((.+)\) for everyone\.| Everyone in the family sees it\.)$/,
-      m => 'Сохранить новый план (' + sum(m[1]) + ') для семьи, первый вечер — ' + m[2] + '?' + (m[3] ? ' Он заменит текущий план (' + m[3] + ') для всех.' : ' Его увидит вся семья.')],
+    // Ipsy's changes and questions (ipsy-tools.js): meals as the plan names them
+    [/^Changing (breakfast|lunch|dinner)(?: on day (\d+))?$/, m => 'Меняю ' + SLOT[m[1]] + (m[2] ? ' на день ' + m[2] : '')],
+    [/^Ticked off (.+)$/, m => 'Отмечено: ' + m[1].replace(/^(\d+) items$/, (_, n) => P(+n, 'пункт', 'пункта', 'пунктов')).replace(/ and /g, ' и ')],
+    [/^Unticked (.+)$/, m => 'Отметка снята: ' + m[1].replace(/^(\d+) items$/, (_, n) => P(+n, 'пункт', 'пункта', 'пунктов')).replace(/ and /g, ' и ')],
+    [/^(.+?) (breakfast|lunch|dinner)( of the new plan)?: (.+ → .+)$/, m => cap(SLOT[m[2]]) + ' · ' + m[1] + (m[3] ? ' (новый план)' : '') + ': ' + m[4]],
+    [/^Made a new plan: (\d+) meals \((.+)\) \(not saved yet\)$/, m => 'Новый план: ' + meals(+m[1]) + ' (' + (about(m[2]) || m[2]) + ') (ещё не сохранён)'],
+    [/^Make a new plan in place of the one waiting \((\d+) meals \((.+?)\)(?:, by (.+))?\)\? Everyone in the family sees the change\.$/,
+      m => 'Составить новый план вместо ожидающего (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + (m[3] ? ', автор: ' + m[3] : '') + ')? Изменение увидит вся семья.'],
+    [/^Save the new plan \((\d+) meals \((.+?)\)\) for the family, from (.+?)\?(?: It takes the place of the current plan \((\d+) meals \((.+)\)\) for everyone\.| Everyone in the family sees it\.)$/,
+      m => 'Сохранить новый план (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + ') для семьи, с ' + m[3] + '?' + (m[4] ? ' Он заменит текущий план (' + meals(+m[4]) + ', ' + (about(m[5]) || m[5]) + ') для всех.' : ' Его увидит вся семья.')],
     [/^Saved the new plan for the family, from (.+)$/, m => 'Новый план сохранён для семьи, с ' + m[1]],
-    [/^Discard the new plan waiting \((.+?)(?:, by (.+))?\)\? It goes for everyone in the family; the current plan stays\.$/,
-      m => 'Отклонить ожидающий план (' + sum(m[1]) + (m[2] ? ', автор: ' + m[2] : '') + ')? Он исчезнет у всей семьи; текущий план останется.'],
-    [/^Discarded the new plan \((.+)\)$/, m => 'Новый план отклонён (' + sum(m[1]) + ')'],
-    [/^Couldn’t undo (the new plan|saving the plan|the discard|Night \d+(?: \(.+?\))?)\. (.*)$/, m => 'Не удалось отменить: ' + (WHAT[m[1]] || T(m[1])) + '. ' + T(m[2])],
+    [/^Discard the new plan waiting \((\d+) meals \((.+?)\)(?:, by (.+))?\)\? It goes for everyone in the family; the current plan stays\.$/,
+      m => 'Отклонить ожидающий план (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + (m[3] ? ', автор: ' + m[3] : '') + ')? Он исчезнет у всей семьи; текущий план останется.'],
+    [/^Discarded the new plan \((\d+) meals \((.+)\)\)$/, m => 'Новый план отклонён (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + ')'],
+    [/^Couldn’t undo (the new plan|saving the plan|the discard|.+ (?:breakfast|lunch|dinner))\. (.*)$/, m => 'Не удалось отменить: ' + (WHAT[m[1]] || T(m[1])) + '. ' + T(m[2])],
   ]);
 }

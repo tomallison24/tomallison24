@@ -3,8 +3,8 @@
 // step and every route its changes go through) on an in-memory KV with a real family session, and a
 // stand-in for Claude behind it (no network, no keys): Sonnet 5.5's side of the chat, and Haiku's
 // plans. Checks: Ipsy in the dock beside +, covering nothing; asking once before the first question;
-// the chat running the tools Claude asks for on the family's real data (the plan, the deals, the
-// shopping list); one night's dinner changed, with the server's allergy check turning away a
+// the chat running the tools Claude asks for on the family's real data (the plan, the rules, the
+// shopping list); one day's dinner changed, with the server's allergy check turning away a
 // dinner with coconut first; a new plan made and accepted, asked first with a Yes / No card; No
 // leaving it be; discarding; ticking the list; a recipe opened on screen; every change with an Undo
 // that puts it back on the server; what Ipsy changed reaching the family's Google Sheet (the real
@@ -24,7 +24,7 @@ import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';   // an in-memo
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 const R = path.resolve(new URL('../..', import.meta.url).pathname);
-const { onRequest, week, IPSY_SYSTEM } = await import(path.join(R, 'functions/meals/api/[[route]].js'));
+const { onRequest, IPSY_SYSTEM } = await import(path.join(R, 'functions/meals/api/[[route]].js'));
 const { issue, putJSON } = await import(path.join(R, 'server/auth.js'));
 const SHOTS = process.env.SHOTS || '';
 
@@ -38,8 +38,8 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, r));
 const BASE = 'http://localhost:' + server.address().port;
 
-// ---- the stand-in for Haiku: a plan built around the meat it is asked for ----
-const meal = (title, cuisine, meat = 'chicken thighs', extra = {}) => ({ title, cuisine, method: 'skillet', minutes: 30, why: 'Quick on a weeknight.', uses: [],
+// ---- the stand-in for Haiku: every meal it is asked for, built around the food its line names ----
+const meal = (title, cuisine, meat = 'chicken thighs', extra = {}) => ({ title, cuisine, method: 'skillet', minutes: 30, why: 'Quick on a weeknight.', veg: ['broccoli', 'carrots'], protein: 35,
   ingredients: [{ item: meat, qty: '1.5 lb' }, { item: 'broccoli', qty: '1 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }], steps: ['Brown the meat.', 'Add the rest and simmer.'], ...extra });
 const PLANS = {
   chicken: ['Chicken tacos', 'Chicken tikka masala', 'Lemon chicken orzo soup', 'Teriyaki chicken bowls'],
@@ -49,9 +49,10 @@ const PLANS = {
 let planAsked = 0;
 function haiku(b) {
   planAsked++;
-  const p = b.messages[0].content, meat = /around (\w+)/.exec(p)[1], days = +/Plan (\d+) different/.exec(p)[1];
-  const names = (/another go|make different dishes: .*Beef bulgogi/.test(p) ? [...PLANS[meat]].reverse() : PLANS[meat] || PLANS.chicken).slice(0, days);
-  return { content: [{ type: 'text', text: JSON.stringify({ meals: names.map(t => meal(t, 'Any', meat)), tip: 'Buy it in one family pack.' }) }], stop_reason: 'end_turn' };
+  const p = b.messages[0].content, lines = [...p.matchAll(/^- (d\d-\w+) \(.*built around (\w+)/gm)];
+  const again = /make different dishes: .*Beef bulgogi/.test(p);
+  const meals = lines.map(([, key, food], i) => { const names = PLANS[food] || PLANS.chicken; return { key, ...meal((again ? [...names].reverse() : names)[i % names.length], 'Any', food) }; });
+  return { content: [{ type: 'text', text: JSON.stringify({ meals, tip: 'Buy it in one family pack.' }) }], stop_reason: 'end_turn' };
 }
 
 // ---- the stand-in for Claude (Sonnet 5.5): each question has a script, one turn a step ----
@@ -59,28 +60,28 @@ let uid = 0;
 const use = (...calls) => ({ stop_reason: 'tool_use', content: [{ type: 'thinking', thinking: '', signature: 'sig-' + 'x'.repeat(20) }, ...calls.map(([name, input]) => ({ type: 'tool_use', id: 'toolu_' + (++uid), name, input }))] });
 const end = text => ({ stop_reason: 'end_turn', content: [{ type: 'text', text }] });
 const parsed = r => { try { return JSON.parse(r.content); } catch { return r.content; } };
-const GREEK = { title: 'Sheet-pan Greek lemon chicken', cuisine: 'Greek', method: 'sheet pan', minutes: 35, why: 'Bright and easy.', uses: ['Pork tenderloin'],
+const GREEK = { title: 'Sheet-pan Greek lemon chicken', cuisine: 'Greek', method: 'sheet pan', minutes: 35, why: 'Bright and easy.', veg: ['lemons', 'red onion', 'peppers'], protein: 40,
   ingredients: [{ item: 'chicken thighs', qty: '2 lb' }, { item: 'lemons', qty: '2' }, { item: 'olive oil', qty: '2 tbsp', pantry: true }], steps: ['Roast everything at 425°F for 30 minutes.'] };
 const CURRY = { ...GREEK, title: 'Thai green curry', cuisine: 'Thai', ingredients: [{ item: 'chicken thighs', qty: '2 lb' }, { item: 'coconut milk', qty: '1 can' }] };
 const SCRIPTS = [
-  { re: /swap night 2/i, turns: [
+  { re: /swap day 2/i, turns: [
     () => use(['get_meals', {}]),
-    () => use(['set_dinner', { plan: 'current', night: 2, dinner: CURRY }]),          // the check turns this one away
-    r => { assert.equal(r[0].is_error, true); assert.match(r[0].content, /never eats coconut/); return use(['set_dinner', { plan: 'current', night: 2, dinner: GREEK }]); },
+    () => use(['set_meal', { plan: 'current', day: 2, slot: 'dinner', meal: CURRY }]),          // the check turns this one away
+    r => { assert.equal(r[0].is_error, true); assert.match(r[0].content, /never eats coconut/); return use(['set_meal', { plan: 'current', day: 2, slot: 'dinner', meal: GREEK }]); },
     () => end('Done! Night 2 is now **Sheet-pan Greek lemon chicken**.'),
   ] },
   { re: /pork week/i, turns: [
-    () => use(['get_deals', { store: 'all', query: 'pork' }]),
-    () => use(['make_plan', { meat: 'pork', nights: 3, people: 4, shop: 'all', use_deals: true }]),
+    () => use(['get_meals', {}]),
+    () => use(['make_plan', { meals: ['dinner'], foods: ['pork'], days: 3, people: 4 }]),
     r => { assert.equal(parsed(r[0]).saved, false); return use(['accept_plan', {}]); },
     r => { assert.equal(parsed(r[0]).accepted, true); return end('Saved 3 pork dinners for the family, from today.'); },
   ] },
   { re: /beef plan/i, turns: [
-    () => use(['make_plan', { meat: 'beef', nights: 4 }]),
+    () => use(['make_plan', { foods: ['beef'], days: 4 }]),
     () => end('Here’s a beef plan, waiting for you to accept it.'),
   ] },
   { re: /another go/i, turns: [
-    () => use(['make_plan', { meat: 'beef', nights: 4, again: true }]),
+    () => use(['make_plan', { foods: ['beef'], days: 4, again: true }]),
     r => { assert.equal(parsed(r[0]).made, false); return end('OK, I left it as it was.'); },
   ] },
   { re: /throw it away/i, turns: [
@@ -92,8 +93,8 @@ const SCRIPTS = [
     r => { const items = parsed(r[0]).sections.flatMap(s => s.items).map(i => i.item); return use(['tick_items', { items: [items[0], 'unicorn steak'] }]); },
     r => { assert.deepEqual(parsed(r[0]).notOnTheList, ['unicorn steak']); return end('Ticked it off.'); },
   ] },
-  { re: /show me night 1/i, turns: [
-    () => use(['get_dinners', { plan: 'current', nights: [1] }], ['show_dinner', { plan: 'current', night: 1 }]),
+  { re: /show me day 1/i, turns: [
+    () => use(['get_recipes', { plan: 'current', days: [1] }], ['show_meal', { plan: 'current', day: 1 }]),
     () => end('It’s open behind the chat.'),
   ] },
 ];
@@ -112,7 +113,7 @@ function claude(b) {
 }
 const ai = async (url, init) => {
   const b = JSON.parse(init.body);
-  if (b.tools && b.tools.some(t => t.name === 'set_dinner')) {
+  if (b.tools && b.tools.some(t => t.name === 'set_meal')) {
     try { return new Response(JSON.stringify(claude(b))); }
     catch (e) { console.log('  stand-in:', e.message); return new Response(JSON.stringify({ type: 'error', error: { message: e.message } }), { status: 400 }); }
   }
@@ -120,19 +121,17 @@ const ai = async (url, init) => {
   return new Response(JSON.stringify(haiku(b)));
 };
 
-// ---- a family with this week's plan (chicken) and some deals ----
+// ---- a family with this week's plan (chicken dinners) ----
 async function family() {
   const m = new Map();
   const db = { m, get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { m.set(k, String(v)); }, delete: async k => { m.delete(k); } };
   await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
   const tok = await issue(db, 'O1'), env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
-  await putJSON(db, 'meals:deals:publix', { week: week(), at: Date.now(), how: 'paste', store: 'publix', validFrom: '', validTo: '', sources: [],
-    items: [{ name: 'Pork tenderloin', price: '$3.49/lb', regular: '$5.99/lb', member: false, note: '' }, { name: 'Broccoli crowns', price: '$1.49/lb', regular: '', member: false, note: '' }] });
   const go = async (route, body) => {
     const res = await onRequest({ request: new Request('https://x/meals/api/' + route, { method: 'POST', headers: { 'X-Meals': '1', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) }), params: { route: [route] }, env }, ai);
     return res.json();
   };
-  await go('plan', { meat: 'chicken', days: 4, people: 4, useDeals: true, shop: 'all' });
+  await go('plan', { slots: ['dinner'], foods: ['chicken'], days: 4, people: 4 });
   await go('accept', {});
   return { db, m, tok, env };
 }
@@ -175,7 +174,9 @@ async function phone(design, scheme) {
   page.on('console', msg => { if ((msg.type() === 'error' && !/Failed to load resource|net::ERR/.test(msg.text())) || (msg.type() === 'warning' && /Ipsy|Content Security/.test(msg.text()))) problems.push(msg.text()); });
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => console.error('CSP: ' + e.violatedDirective + ' ' + e.blockedURI)));
   await page.goto(BASE + '/meals/');
-  await page.waitForFunction(() => window.__meals && window.__meals.st.state === 'ok' && document.querySelectorAll('#main [data-meal]').length === 4, null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__meals && window.__meals.st.state === 'ok', null, { timeout: 10000 });
+  await page.click('#tabs [data-tab="plan"]');
+  await page.waitForFunction(() => document.querySelectorAll('#main [data-meal]').length === 4, null, { timeout: 10000 });
   return { ...fam, ctx, page, problems, sheet, sheetCalls };
 }
 async function ask(page, q) {
@@ -190,7 +191,7 @@ for (const [design, scheme] of [['glass', 'light'], ['glass', 'dark'], ['vintage
   await step('meals (' + design + ', ' + scheme + '): Ipsy sits in the dock beside +, wearing the design, and covers nothing on any tab', async () => {
     assert.equal(await page.$$eval('.dock > span .ipsy-btn', e => e.length), 1);
     assert.equal(await page.$eval('.ipsy-btn', (e, d) => e.classList.contains('ipsy-' + d), design), true);
-    for (const tab of ['dinners', 'deals', 'list']) {
+    for (const tab of ['ipsy', 'plan', 'list']) {
       await page.click('#tabs [data-tab="' + tab + '"]');
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
       await page.waitForTimeout(150);
@@ -208,7 +209,7 @@ for (const [design, scheme] of [['glass', 'light'], ['glass', 'dark'], ['vintage
       assert.equal(g.wide, false);
     }
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'meals-' + design + '-' + scheme + '-list.png') });
-    await page.click('#tabs [data-tab="dinners"]');
+    await page.click('#tabs [data-tab="plan"]');
     if (SHOTS) { await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(SHOTS, 'meals-' + design + '-' + scheme + '.png') }); }
   });
   await step('meals (' + design + ', ' + scheme + '): no script errors and nothing blocked by the page policy', async () => assert.deepEqual(problems, []));
@@ -232,8 +233,8 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(await page.$$eval('.ipsy-chip[data-ask]', e => e.length), 4);
   });
 
-  await step(tag + ': one night swapped: the allergy check turns away a curry with coconut, then the new dinner is saved for the family', async () => {
-    await ask(page, 'Swap night 2 for something Greek');
+  await step(tag + ': one dinner swapped: the allergy check turns away a curry with coconut, then the new dinner is saved for the family', async () => {
+    await ask(page, 'Swap day 2 for something Greek');
     await page.waitForFunction(() => /Night 2 is now/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
     await idle(page);
     const p = plan(m);
@@ -241,14 +242,14 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(JSON.parse(m.get('meals:log'))[0].titles[1], 'Sheet-pan Greek lemon chicken');
     assert.ok((await texts(page, '#main [data-meal] .ct')).includes('Sheet-pan Greek lemon chicken'), 'on screen behind the chat');
     const ch = await texts(page, '.ipsy-change');
-    assert.equal(ch.length, 1, 'only the dinner that was saved'); assert.match(ch[0], /^Night 2 \(\w{3}, \w{3} \d+\): Chicken tikka masala → Sheet-pan Greek lemon chicken ?Undo$/);
+    assert.equal(ch.length, 1, 'only the dinner that was saved'); assert.match(ch[0], /^\w{3}, \w{3} \d+ dinner: Chicken tikka masala → Sheet-pan Greek lemon chicken ?Undo$/);
     // what Claude saw: the family's Meals, the allergy list first among them
     const q = sent[n0];
-    assert.match(q[0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Meals: the family’s plan is 4 chicken dinners for 4, .* Never in a plan: tree nuts, coconut\. On screen: the Dinners tab\.\]$/);
+    assert.match(q[0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Meals: the family’s plan is 4 meals \(Chicken · dinner · for 4\), .* Rules: at least 2 vegetables and good protein in every meal, cooking for 4\. Never in a plan: tree nuts, coconut\. On screen: the Plan tab\.\]$/, q[0].content[0].text);
     const meals = JSON.parse(results.slice(r0).find(r => /"avoid"/.test(r.content)).content);
-    assert.deepEqual(meals.avoid, ['tree nuts', 'coconut']); assert.equal(meals.plan.nights.length, 4); assert.equal(meals.stores.find(s => s.id === 'publix').dealsThisWeek, 2);
+    assert.deepEqual(meals.avoid, ['tree nuts', 'coconut']); assert.equal(meals.plan.schedule.length, 4); assert.equal(meals.rules.vegetablesInEveryMeal, 2); assert.equal(meals.stores, undefined);
     const acts = await texts(page, '.ipsy-act');
-    assert.ok(acts.includes('Looking at the family’s dinners') && acts.includes('Changing night 2'), acts.join(' | '));
+    assert.ok(acts.includes('Looking at the family’s meals') && acts.includes('Changing dinner on day 2'), acts.join(' | '));
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'meals-' + design + '-chat.png') });
   });
 
@@ -263,7 +264,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await step(tag + ': a new plan made, then accepted after a Yes in the chat; Undo takes each back', async () => {
     await ask(page, 'Plan a pork week and save it');
     await page.waitForSelector('.ipsy-ask [data-ans="yes"]', { timeout: 15000 });
-    assert.match(await page.textContent('.ipsy-ask'), /Save the new plan \(3 pork dinners for 4\) for the family, night 1 on .*It takes the place of the current plan \(Chicken tacos, .*\) for everyone/);
+    assert.match(await page.textContent('.ipsy-ask'), /Save the new plan \(3 meals \(Pork · dinner · for 4\)\) for the family, from \w{3}, \w{3} \d+\? It takes the place of the current plan \(4 meals \(Chicken · dinner · for 4\)\) for everyone/);
     assert.equal(draft(m).meals.length, 3, 'the new plan waits, not saved yet'); assert.equal(plan(m).id, first.id, 'nothing accepted before the Yes');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'meals-' + design + '-ask.png') });
     await page.click('.ipsy-ask [data-ans="yes"]');
@@ -273,12 +274,11 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.deepEqual(p.meals.map(x => x.title), ['Pork carnitas', 'Pork ramen', 'Pork schnitzel']); assert.equal(draft(m), null);
     pork = p.id;
     assert.equal(JSON.parse(m.get('meals:log')).length, 2);
-    assert.ok(p.sales.some(x => x.name === 'Pork tenderloin'), 'planned with this week’s deals');
     const ch = (await texts(page, '.ipsy-change')).slice(-2);
-    assert.match(ch[0], /^Made a new plan: 3 pork dinners for 4 \(not saved yet\) ?Undo$/); assert.match(ch[1], /^Saved the new plan for the family, from \w{3}, \w{3} \d+ ?Undo$/);
+    assert.match(ch[0], /^Made a new plan: 3 meals \(Pork · dinner · for 4\) \(not saved yet\) ?Undo$/); assert.match(ch[1], /^Saved the new plan for the family, from \w{3}, \w{3} \d+ ?Undo$/);
     // Undo the accept: the chicken plan is the family's again, the pork plan waits
     await page.locator('.ipsy-change .ipsy-undo').last().click();
-    await until(() => plan(m).id === first.id && draft(m) && draft(m).meat === 'pork', 'the accept taken back');
+    await until(() => plan(m).id === first.id && draft(m) && draft(m).foods[0] === 'pork', 'the accept taken back');
     assert.equal(JSON.parse(m.get('meals:log')).length, 1);
     await page.waitForFunction(() => /New plan · not saved yet/.test(document.getElementById('main').textContent));
     // Undo the new plan: it goes
@@ -292,11 +292,11 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     await ask(page, 'Make a beef plan');
     await page.waitForFunction(() => /beef plan, waiting/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
     await idle(page);
-    const d = draft(m); assert.equal(d.meat, 'beef');
+    const d = draft(m); assert.deepEqual(d.foods, ['beef']);
     const asked = planAsked;
     await ask(page, 'Give it another go');
     await page.waitForSelector('.ipsy-ask [data-ans="no"]', { timeout: 15000 });
-    assert.match((await texts(page, '.ipsy-ask')).at(-1), /Make a new plan in place of the one waiting \(4 beef dinners for 4, by Tom\)\?/);
+    assert.match((await texts(page, '.ipsy-ask')).at(-1), /Make a new plan in place of the one waiting \(4 meals \(Beef · dinner · for 4\), by Tom\)\?/);
     await page.locator('.ipsy-ask [data-ans="no"]').last().click();
     await page.waitForFunction(() => /left it as it was/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
     await idle(page);
@@ -308,7 +308,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     const d = draft(m);
     await ask(page, 'Throw it away');
     await page.waitForSelector('.ipsy-ask [data-ans="yes"]:not([disabled])', { timeout: 15000 });
-    assert.match((await texts(page, '.ipsy-ask')).at(-1), /Discard the new plan waiting \(4 beef dinners for 4, by Tom\)\? It goes for everyone in the family/);
+    assert.match((await texts(page, '.ipsy-ask')).at(-1), /Discard the new plan waiting \(4 meals \(Beef · dinner · for 4\), by Tom\)\? It goes for everyone in the family/);
     await page.locator('.ipsy-ask [data-ans="yes"]').last().click();
     await page.waitForFunction(() => /Discarded it/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
     await idle(page);
@@ -333,11 +333,11 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   });
 
   await step(tag + ': a recipe opened on screen behind the chat', async () => {
-    await ask(page, 'Show me night 1');
+    await ask(page, 'Show me day 1');
     await page.waitForFunction(() => /open behind the chat/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
     await idle(page);
-    const full = JSON.parse(results.slice(r0).findLast(r => /"dinners"/.test(r.content)).content);
-    assert.equal(full.dinners.length, 1); assert.equal(full.dinners[0].title, 'Chicken tacos'); assert.ok(full.dinners[0].steps.length && full.dinners[0].ingredients.length);
+    const full = JSON.parse(results.slice(r0).findLast(r => /"steps"/.test(r.content)).content);
+    assert.equal(full.meals.length, 1); assert.equal(full.meals[0].title, 'Chicken tacos'); assert.ok(full.meals[0].steps.length && full.meals[0].ingredients.length);
     assert.equal(await page.$eval('#recipeSheet', e => e.hidden), false);
     assert.match(await page.textContent('#recipeBody'), /Chicken tacos/);
     await page.keyboard.press('Escape');

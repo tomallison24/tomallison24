@@ -1,7 +1,7 @@
 {
   "name": "Meals",
   "short_name": "Meals",
-  "description": "Dinner for the family: this week's deals at your Whole Foods, sorted like a grocery list, and a few nights of different dinners built around one meat, with the shopping list.",
+  "description": "Tell Ipsy what you fancy and it plans the family's meals: breakfast, lunch or dinner, a day or a week, healthy by the family's rules, with one shopping list.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

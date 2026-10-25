@@ -1,6 +1,6 @@
 "use strict";
 
-// Ipsy's tools in Meals (in both its designs). Claude asks for them by name through
+// Ipsy's tools in Meals (in every design). Claude asks for them by name through
 // functions/meals/api (IPSY_CLIENT_TOOLS describes them to it); they run here, on the phone,
 // and what they return goes back to Claude. Every change comes back with an undo for the
 // chat's Undo button.
@@ -8,36 +8,36 @@
 //   window.MealsIpsy(app) -> the options for AllisonOS.ipsy.mount (tools, label, context, words)
 //   app: the app's own pieces (meals/app.js passes them): data (the family's Meals as the app
 //        has it), api (its server calls), keep (its save: this phone's copy, the Sheet, the
-//        screen), say, toast, L (logic.js), storeById, mine, shopOf, dayLabel,
+//        screen), say, toast, L (logic.js), shopOf, dayLabel, dateOf, slotName, about,
 //        past (a past plan, whole), state, today, planning, ticked, setTicks, show, screen
 //
-// The plan, the new plan waiting (the draft), the deals and the settings are the family's,
-// on the family server. Ipsy changes them only through the app's own server calls (night,
-// plan, accept, discard, and draft and unaccept for Undo), so the server's allergy check and
-// every other rule there applies to what it saves; nothing is checked or saved here. A whole
-// week (a new plan in place of one waiting, accepting, discarding) is asked first in the chat.
+// The plan, the new plan waiting (the draft) and the family's rules are the family's, on the
+// family server. Ipsy changes the plans only through the app's own server calls (night, plan,
+// accept, discard, and draft and unaccept for Undo), so the server's allergy check and every
+// other rule there applies to what it saves; nothing is checked or saved here. A whole plan
+// (a new plan in place of one waiting, accepting, discarding) is asked first in the chat.
 // Ticks are this phone's, as in the app.
 window.MealsIpsy = function (app) {
   const copy = o => JSON.parse(JSON.stringify(o));
   const clip = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
   const ymd = s => typeof s === 'string' && /^\d{4}-\d\d-\d\d$/.test(s) && !isNaN(Date.parse(s + 'T12:00:00Z'));
   const fail = msg => { throw new Error(msg); };
-  const MEATS = ['chicken', 'beef', 'pork', 'turkey', 'lamb', 'salmon', 'white fish', 'shrimp', 'on sale'];
+  const SLOTS = ['breakfast', 'lunch', 'dinner'], FOODS = ['chicken', 'beef', 'pork', 'turkey', 'lamb', 'fish', 'shrimp', 'vegetarian', 'surprise'];
   const D = () => app.data;
   const has = p => !!(p && Array.isArray(p.meals) && p.meals.length);
   const planOf = which => which === 'draft' ? D().draft : D().plan;
-  const thisWeek = id => { const d = (D().deals || {})[id]; return d && d.week === D().week && d.items && d.items.length ? d : null; };
   const join = a => a.length <= 2 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const slotOf = m => m.slot || 'dinner';
 
   // The app's own server calls. What the server turns away comes back as words for Claude.
   const WHY = {
-    avoid: b => 'Nothing was saved: the family never eats ' + join(b.hits || ['something in it']) + ', and the dinner had it. Write it again without it, and without naming it.',
+    avoid: b => 'Nothing was saved: the family never eats ' + join(b.hits || ['something in it']) + ', and the meal had it. Write it again without it, and without naming it.',
     changed: () => 'Nothing was changed: someone in the family changed it in the meantime. Look again first.',
     draft: () => 'Nothing was changed: a new plan is waiting now. Discard or accept it first.',
     'no-draft': () => 'There’s no new plan waiting.',
     'no-plan': () => 'There’s no plan yet.',
-    meal: () => 'A dinner needs a title, ingredients and steps.',
-    day: () => 'That night isn’t in the plan.',
+    meal: () => 'A meal needs a title, ingredients and steps.',
+    day: () => 'That meal isn’t in the plan.',
   };
   async function call(path, body) {
     try { return await app.api(path, body); }
@@ -47,35 +47,41 @@ window.MealsIpsy = function (app) {
   const later = (what, job) => () => { const p = job(); p.catch(e => app.toast('Couldn’t undo ' + what + '. ' + e.message, null, 8000)); return p; };
 
   // ---- how the family's Meals is shown to Claude ----
-  const shopName = p => !p.shop || p.shop === 'all' ? 'best deals, any store' : (app.storeById(p.shop) || { name: p.shop }).name;
-  const sum = p => p.meals.length + ' ' + (p.meat === 'on sale' ? 'dinners around what’s on sale' : p.meat + ' dinners') + ' for ' + p.people;
-  const short = (p, m, i) => ({ night: m.day, ...(p.dates && p.dates[i] ? { date: p.dates[i] } : {}), title: m.title, cuisine: m.cuisine, method: m.method, minutes: m.minutes });
-  const whole = (p, m, i) => ({ ...short(p, m, i), why: m.why, ...(m.uses && m.uses.length ? { usesSales: m.uses } : {}), ingredients: m.ingredients.map(x => (x.qty ? x.qty + ' ' : '') + x.item + (x.pantry ? ' (pantry)' : '')), steps: m.steps });
-  const head = p => ({ ...(p.id ? { id: p.id } : {}), meat: p.meat, people: p.people, shop: shopName(p), ...(p.note ? { asked: p.note } : {}),
-    ...(p.acceptedBy ? { acceptedBy: p.acceptedBy } : p.by ? { plannedBy: p.by } : {}), ...(p.tip ? { tip: p.tip } : {}) });
-  const brief = p => ({ ...head(p), nights: p.meals.map((m, i) => short(p, m, i)) });
-  const night = (p, i) => 'Night ' + p.meals[i].day + (p.dates && p.dates[i] ? ' (' + app.dayLabel(p.dates[i]) + ')' : '');
-  const nightOf = (q, p) => { const n = q.night; if (!Number.isInteger(n) || n < 1 || n > p.meals.length) fail('night is 1 to ' + p.meals.length + ' in this plan.'); return n; };
+  const sum = p => p.meals.length + ' meals (' + app.about(p) + ')';
+  const short = (p, m) => ({ day: m.day || 1, ...(app.dateOf(p, m.day || 1) ? { date: app.dateOf(p, m.day || 1) } : {}), meal: slotOf(m), title: m.title,
+    ...(m.leftover ? { leftoversOfDay: m.leftover } : { cuisine: m.cuisine, minutes: m.minutes }), ...(m.veg ? { vegetables: m.veg.length } : {}), ...(m.protein ? { proteinGramsAPerson: m.protein } : {}) });
+  const whole = (p, m) => ({ ...short(p, m), ...(m.leftover ? {} : { method: m.method, why: m.why, vegetables: m.veg || [], ...(m.fridge && m.fridge.length ? { usesFromTheFridge: m.fridge } : {}),
+    ingredients: m.ingredients.map(x => (x.qty ? x.qty + ' ' : '') + x.item + (x.pantry ? ' (pantry)' : '')), steps: m.steps }) });
+  const head = p => ({ ...(p.id ? { id: p.id } : {}), builtAround: p.foods || [p.meat], meals: p.slots || ['dinner'], people: p.people, ...(p.lunches ? { lunches: p.lunches } : {}),
+    ...(p.fridge ? { fridge: p.fridge } : {}), ...(p.note ? { asked: p.note } : {}), ...(p.acceptedBy ? { acceptedBy: p.acceptedBy } : p.by ? { plannedBy: p.by } : {}), ...(p.tip ? { tip: p.tip } : {}) });
+  const brief = p => ({ ...head(p), schedule: p.meals.map(m => short(p, m)) });
+  const label = (p, m) => app.dateOf(p, m.day || 1) ? app.dayLabel(app.dateOf(p, m.day || 1)) + ' ' + slotOf(m) : 'Day ' + (m.day || 1) + ' ' + slotOf(m);
   const which = q => q.plan === 'draft' ? 'draft' : 'current';
   const need = w => { const p = planOf(w); if (!has(p)) fail(w === 'draft' ? 'There’s no new plan waiting.' : 'There’s no plan yet: make one first.'); return p; };
+  const find = (p, q) => {
+    const day = q.day, slot = SLOTS.includes(q.slot) ? q.slot : 'dinner';
+    const i = Number.isInteger(day) ? p.meals.findIndex(m => (m.day || 1) === day && slotOf(m) === slot) : -1;
+    if (i < 0) fail('That plan has no ' + slot + ' on day ' + day + '. Its meals: ' + p.meals.map(m => 'day ' + (m.day || 1) + ' ' + slotOf(m)).join(', ') + '.');
+    return i;
+  };
 
   const tools = {
     async get_meals() {
-      const d = D(), s = d.settings || {}, state = app.state();
+      const d = D(), s = d.settings || {}, t = d.taste || { loved: [], nope: [] }, state = app.state();
       return { content: {
-        today: app.today(), salesWeekFrom: d.week || '',
+        today: app.today(),
         plan: has(d.plan) ? brief(d.plan) : null,
         draft: has(d.draft) ? { ...brief(d.draft), saved: false } : null,
+        rules: { vegetablesInEveryMeal: s.veg, proteinAPerson: s.protein, usuallyCookingFor: s.people, weeknightDinnerMinutes: s.weeknight || 'no limit' },
         avoid: s.avoid || [],
-        stores: app.mine().map(x => ({ id: x.id, name: x.name, where: x.where, dealsThisWeek: thisWeek(x.id) ? thisWeek(x.id).items.length : 0,
-          ...(x.cardName && (s.cards || []).includes(x.card) ? { card: x.cardName } : {}) })),
+        loved: t.loved.map(x => x.title), neverAgain: t.nope.map(x => x.title),
         pastPlans: (d.log || []).length,
         ...(d.ai === null && state === 'ok' ? { ai: 'Meals’ AI key isn’t set up yet, so make_plan won’t work.' } : {}),
         ...(state !== 'ok' && state !== 'loading' ? { note: 'Meals couldn’t reach the family server just now: this is the copy on this phone.' } : {}),
       } };
     },
 
-    async get_dinners(q) {
+    async get_recipes(q) {
       let p;
       if (q.plan === 'current' || q.plan === 'draft') p = need(which(q));
       else {
@@ -83,37 +89,21 @@ window.MealsIpsy = function (app) {
         try { p = await app.past(id); } catch (e) { fail(e.code === 'not-found' ? 'No past plan with id ' + id + '.' : app.say(e.code)); }
         if (!has(p)) fail('No past plan with id ' + id + '.');
       }
-      const want = Array.isArray(q.nights) && q.nights.length ? new Set(q.nights) : null;
-      return { content: { ...head(p), dinners: p.meals.map((m, i) => whole(p, m, i)).filter(m => !want || want.has(m.night)) } };
-    },
-
-    async get_deals(q) {
-      const d = D(), ids = q.store && q.store !== 'all' ? [q.store] : (d.settings.stores || []);
-      const words = clip(q.query, 100).toLowerCase().split(/\s+/).filter(Boolean);
-      const stores = ids.map(id => {
-        const s = app.storeById(id); if (!s) return null;
-        const x = thisWeek(id);
-        if (!x) return { store: s.name, id, deals: 'None found for this week yet.' };
-        const card = s.cardName && (d.settings.cards || []).includes(s.card) ? s.cardName : '';
-        const items = x.items.filter(i => words.every(w => i.name.toLowerCase().includes(w)));
-        return { store: s.name, id, runs: x.validFrom && x.validTo ? x.validFrom + ' to ' + x.validTo : 'the week from ' + x.week, ...(card ? { memberPricesFor: card } : {}),
-          items: items.map(i => i.name + ': ' + (i.price || '?') + (i.regular ? ' (usually ' + i.regular + ')' : '') + (i.member ? ' [' + (s.cardName || 'member') + ' card]' : '') + (i.note ? ' - ' + i.note : '')) };
-      }).filter(Boolean);
-      return { content: { week: d.week, stores } };
+      const want = Array.isArray(q.days) && q.days.length ? new Set(q.days) : null;
+      return { content: { ...head(p), meals: p.meals.filter(m => !want || want.has(m.day || 1)).map(m => whole(p, m)) } };
     },
 
     async get_past_plans(q) {
       const limit = Math.max(1, Math.min(52, Number.isInteger(q.limit) ? q.limit : 12)), cur = D().plan && D().plan.id;
       const log = D().log || [];
-      return { content: { total: log.length, plans: log.slice(0, limit).map(e => ({ id: e.id, from: e.start, to: e.end, meat: e.meat, shop: shopName(e), people: e.people, dinners: e.titles, ...(e.id === cur ? { current: true } : {}) })) } };
+      return { content: { total: log.length, plans: log.slice(0, limit).map(e => ({ id: e.id, from: e.start, to: e.end, builtAround: e.foods || [e.meat], people: e.people, meals: e.titles, ...(e.id === cur ? { current: true } : {}) })) } };
     },
 
     async get_shopping_list() {
       const p = D().plan;
       if (!has(p)) return { content: { sections: [], note: D().draft ? 'No accepted plan yet: the list comes once the new plan is accepted.' : 'No plan yet.' } };
-      const s = app.shopOf(p), done = new Set(app.ticked()), all = !p.shop || p.shop === 'all';
-      const row = x => ({ item: x.item, ...(x.amounts.length ? { amount: app.L.total(x.amounts) } : {}), nights: x.nights,
-        ...(x.deal ? { onSale: (x.deal.price || 'yes') + (all && x.deal.at && x.deal.at.name ? ' at ' + x.deal.at.name : '') } : {}), ...(done.has(x.key) ? { ticked: true } : {}) });
+      const s = app.shopOf(p), done = new Set(app.ticked());
+      const row = x => ({ item: x.item, ...(x.amounts.length ? { amount: app.L.total(x.amounts) } : {}), days: x.nights, ...(done.has(x.key) ? { ticked: true } : {}) });
       return { content: { plan: p.id || '', sections: app.L.sections(s.buy, x => x.item).map(g => ({ section: g.name, items: g.items.map(row) })), youProbablyHave: s.pantry.map(row) } };
     },
 
@@ -132,26 +122,27 @@ window.MealsIpsy = function (app) {
         change: { text: (on ? 'Ticked off ' : 'Unticked ') + (found.length > 3 ? found.length + ' items' : join(found)), undo: () => app.setTicks(before) } };
     },
 
-    async set_dinner(q) {
-      const w = which(q), p = need(w), n = nightOf(q, p);
-      if (!q.dinner || typeof q.dinner !== 'object') fail('Give the whole dinner: title, ingredients and steps.');
-      const old = copy(p.meals[n - 1]), label = night(p, n - 1), who = w === 'draft' ? { draft: true, at: p.at } : { id: p.id };
+    async set_meal(q) {
+      const w = which(q), p = need(w), i = find(p, q);
+      if (!q.meal || typeof q.meal !== 'object') fail('Give the whole meal: title, ingredients and steps.');
+      const old = copy(p.meals[i]), name = label(p, old), who = w === 'draft' ? { draft: true, at: p.at } : { id: p.id };
       const put = async meal => {
-        const j = await call('night', { ...who, day: n, meal });
+        const j = await call('night', { ...who, day: old.day || 1, slot: slotOf(old), meal });
         app.keep(w === 'draft' ? { draft: j.draft } : { plan: j.plan, log: j.log });
         return w === 'draft' ? j.draft : j.plan;
       };
-      const now = await put(q.dinner), m = now.meals[n - 1];
-      return { content: { plan: w, dinner: whole(now, m, n - 1) },
-        change: { text: label + (w === 'draft' ? ' of the new plan' : '') + ': ' + old.title + ' → ' + m.title, undo: later(label, () => put(old)) } };
+      const now = await put(q.meal), m = now.meals[find(now, { day: old.day || 1, slot: slotOf(old) })];
+      return { content: { plan: w, meal: whole(now, m) },
+        change: { text: name + (w === 'draft' ? ' of the new plan' : '') + ': ' + old.title + ' → ' + m.title, undo: later(name, () => put(old)) } };
     },
 
     async make_plan(q, { confirm }) {
       const d = D(), before = has(d.draft) ? copy(d.draft) : null;
       const int = (v, lo, hi, dflt) => Number.isInteger(v) && v >= lo && v <= hi ? v : dflt;
-      const shop = q.shop === 'all' || app.mine().some(x => x.id === q.shop) ? q.shop : 'all';
-      const ask = { meat: MEATS.includes(q.meat) ? q.meat : 'chicken', days: int(q.nights, 2, 7, 4), people: int(q.people, 1, 10, (d.plan && d.plan.people) || 4),
-        useDeals: q.use_deals !== false, shop, note: clip(q.note, 200), ...(before && q.again ? { again: true } : {}) };
+      const slots = SLOTS.filter(s => Array.isArray(q.meals) && q.meals.includes(s)), foods = (Array.isArray(q.foods) ? q.foods : []).filter(f => FOODS.includes(f));
+      const ask = { slots: slots.length ? slots : ['dinner'], foods: foods.length ? foods : ['surprise'], days: int(q.days, 1, 7, 3),
+        people: int(q.people, 1, 10, (d.settings && d.settings.people) || 4), start: ymd(q.start) ? q.start : app.today(),
+        lunches: ['leftovers', 'fresh', 'mix'].includes(q.lunches) ? q.lunches : 'leftovers', fridge: clip(q.fridge, 300), note: clip(q.note, 200), ...(before && q.again ? { again: true } : {}) };
       if (before && !(await confirm('Make a new plan in place of the one waiting (' + sum(before) + (before.by ? ', by ' + before.by : '') + ')? Everyone in the family sees the change.',
         { yes: 'Yes, make a new one', no: 'No, keep it' }))) return { content: { made: false, note: 'They said no, so the new plan waiting is as it was.' } };
       app.planning(ask);
@@ -167,13 +158,13 @@ window.MealsIpsy = function (app) {
     },
 
     async accept_plan(q, { confirm }) {
-      const d = need('draft'), today = app.today(), start = q.start == null || q.start === '' ? today : q.start;
+      const d = need('draft'), today = app.today(), start = q.start == null || q.start === '' ? (ymd(d.start) && d.start >= today ? d.start : today) : q.start;
       if (!ymd(start)) fail('start is a day, YYYY-MM-DD.');
       const off = (Date.parse(start + 'T12:00:00Z') - Date.parse(today + 'T12:00:00Z')) / 864e5;
       if (off < -7 || off > 30) fail('start should be from a week ago to a month from today.');
       const cur = has(D().plan) ? D().plan : null;
-      const ok = await confirm('Save the new plan (' + sum(d) + ') for the family, night 1 on ' + app.dayLabel(start) + '?'
-        + (cur ? ' It takes the place of the current plan (' + cur.meals.map(m => m.title).join(', ') + ') for everyone.' : ' Everyone in the family sees it.'),
+      const ok = await confirm('Save the new plan (' + sum(d) + ') for the family, from ' + app.dayLabel(start) + '?'
+        + (cur ? ' It takes the place of the current plan (' + sum(cur) + ') for everyone.' : ' Everyone in the family sees it.'),
         { yes: 'Yes, save it', no: 'Not yet' });
       if (!ok) return { content: { accepted: false, note: 'They said no, so the new plan is still waiting.' } };
       const j = await call('accept', { start });
@@ -198,34 +189,35 @@ window.MealsIpsy = function (app) {
         }) } };
     },
 
-    async show_dinner(q) {
-      const p = need(which(q)), n = nightOf(q, p);
-      app.show(p, n - 1);
-      return { content: { shown: night(p, n - 1) + ': ' + p.meals[n - 1].title, note: 'It is open behind the chat; closing the chat shows it.' } };
+    async show_meal(q) {
+      const p = need(which(q)), i = find(p, q);
+      app.show(p, i);
+      return { content: { shown: label(p, p.meals[i]) + ': ' + p.meals[i].title, note: 'It is open behind the chat; closing the chat shows it.' } };
     },
   };
 
   const LABELS = {
-    get_meals: () => 'Looking at the family’s dinners', get_dinners: () => 'Reading the recipes',
-    get_deals: i => 'Checking this week’s deals' + (i.store && i.store !== 'all' && app.storeById(i.store) ? ' at ' + app.storeById(i.store).name : ''),
+    get_meals: () => 'Looking at the family’s meals', get_recipes: () => 'Reading the recipes',
     get_past_plans: () => 'Looking at past plans', get_shopping_list: () => 'Reading the shopping list',
-    tick_items: i => i.ticked === false ? 'Unticking the list' : 'Ticking off the list', set_dinner: i => 'Changing night ' + (Number.isInteger(i.night) ? i.night : ''),
-    make_plan: () => 'Planning dinners (about half a minute)', accept_plan: () => 'Saving the plan', discard_draft: () => 'Discarding the new plan', show_dinner: () => 'Opening the recipe',
+    tick_items: i => i.ticked === false ? 'Unticking the list' : 'Ticking off the list', set_meal: i => 'Changing ' + (SLOTS.includes(i.slot) ? i.slot : 'dinner') + (Number.isInteger(i.day) ? ' on day ' + i.day : ''),
+    make_plan: i => 'Planning the meals (' + ((i.days || 3) * ((i.meals || ['dinner']).length || 1) > 6 ? 'about a minute' : 'about half a minute') + ')', accept_plan: () => 'Saving the plan',
+    discard_draft: () => 'Discarding the new plan', show_meal: () => 'Opening the recipe',
   };
 
   return {
     tools,
     label: (name, input) => (LABELS[name] || (() => ''))(input || {}),
     context() {
-      const d = D(), p = has(d.plan) ? d.plan : null, dr = has(d.draft) ? d.draft : null, avoid = (d.settings || {}).avoid || [], state = app.state();
+      const d = D(), p = has(d.plan) ? d.plan : null, dr = has(d.draft) ? d.draft : null, s = d.settings || {}, avoid = s.avoid || [], state = app.state();
       const when = p && p.dates && p.dates.length ? ', ' + app.dayLabel(p.dates[0]) + ' to ' + app.dayLabel(p.dates[p.dates.length - 1]) : '';
       return 'Meals: ' + (p ? 'the family’s plan is ' + sum(p) + when : 'no plan yet') + (dr ? '; a new plan (' + sum(dr) + ') is waiting to be accepted' : '') + '. '
+        + 'Rules: at least ' + s.veg + ' vegetables and ' + s.protein + ' protein in every meal, cooking for ' + s.people + '. '
         + 'Never in a plan: ' + (avoid.length ? avoid.join(', ') : 'nothing listed') + '. On screen: ' + app.screen() + '.'
         + (state !== 'ok' && state !== 'loading' ? ' Meals couldn’t reach the family server just now.' : '');
     },
-    intro: 'Hi, I’m Ipsy! I can swap a night’s dinner, plan a new week around the deals, find what’s on sale, or tell you what you can make with what you have, always keeping to what the family never eats.',
-    placeholder: 'Ask Ipsy about dinner',
-    suggestions: ['What’s for dinner tonight?', 'Swap Thursday for something quicker', 'What’s on sale this week?', 'What can I make with ground beef?'],
-    consent: 'Ipsy runs on Claude, by Anthropic: what you ask, and the plans and deals it reads, go there through the family server. Everyone in the family sees its changes, each with Undo, and it asks first before replacing a whole week.',
+    intro: 'Hi, I’m Ipsy! Tell me what you fancy and I’ll plan the meals, swap one, or say what you can make with what’s in the fridge, always with plenty of vegetables and protein, and never what the family can’t eat.',
+    placeholder: 'Ask Ipsy about meals',
+    suggestions: ['What’s for dinner tonight?', 'Plan a week of lamb and chicken dinners', 'Swap Thursday for something quicker', 'What can I make with eggs and spinach?'],
+    consent: 'Ipsy runs on Claude, by Anthropic: what you ask, and the plans it reads, go there through the family server. Everyone in the family sees its changes, each with Undo, and it asks first before replacing a whole plan.',
   };
 };

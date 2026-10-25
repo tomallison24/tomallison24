@@ -1,16 +1,16 @@
 // Checks functions/meals/api/[[route]].js in plain Node, on an in-memory
-// stand-in for Workers KV with real sessions from server/auth.js, and stand-ins
-// for both AI services (no network, no keys): the header guard, accounts off,
-// signing in, no key, the week, deals by search and by paste (and that this
-// week's search isn't paid for twice), plans (variety asked for, recent dinners
-// passed on, sale items used) and, above all, that a plan with anything the
-// family avoids is never saved. And Ipsy: its step (POST ipsy: Sonnet 5.5 with its instructions and
-// tools, the conversation passed on as sent and the answer back untouched, behind the same guards),
-// and the routes its changes and their Undo go through (night, draft, unaccept, discard with at),
-// each with the same allergy check.
+// stand-in for Workers KV with real sessions from server/auth.js, and a stand-in
+// for Claude (no network, no key): the header guard, accounts off, signing in, no
+// key, the family's rules, plans (what each meal is asked for, written in parts side
+// by side, leftover lunches, the rules checked and sent back once, what the family
+// had and rated passed on) and, above all, that a plan with anything the family
+// avoids is never saved. And Ipsy: its step (POST ipsy: Sonnet 5.5 with its
+// instructions and tools, the conversation passed on as sent and the answer back
+// untouched, behind the same guards), and the routes its changes and their Undo go
+// through (night, draft, unaccept, discard with at), each with the same allergy check.
 //   node meals/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, week, avoidHits, ask, json, cleanPlan, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
+import { onRequest, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
 function fakeKV() {
@@ -21,14 +21,20 @@ const db = fakeKV();
 let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
 
-// ---- a stand-in AI: answers with whatever the test queues, and keeps what it was asked ----
+// ---- a stand-in Claude: answers with whatever the test queues (text, a Response, or a function of
+// what it was asked), and by default writes every meal the prompt asks for; keeps what it was asked ----
 const asked = [];
-let answers = [];
+let answers = [], made = 0;
+const keysOf = b => [...String(b.messages[0].content).matchAll(/^- (d\d-(?:breakfast|lunch|dinner)) \(/gm)].map(m => m[1]);
+const dish = (key, extra = {}) => ({ key, title: 'Dish ' + (++made) + ' ' + key, cuisine: 'Greek', method: 'roasted', minutes: 30, why: 'Quick',
+  veg: ['spinach', 'peppers', 'onion'], protein: 36, fridge: [], ingredients: [{ item: 'chicken thighs', qty: '2 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }], steps: ['Cook it.'], ...extra });
+const auto = (extra = {}) => b => JSON.stringify({ meals: keysOf(b).map(k => dish(k, typeof extra === 'function' ? extra(k) : extra)), tip: 'Cook the grains ahead.' });
 const ai = async (url, init) => {
   const b = JSON.parse(init.body); asked.push({ url, headers: init.headers, body: b });
-  const text = answers.length ? answers.shift() : '{}';
-  if (text instanceof Response) return text;
-  return new Response(JSON.stringify({ content: [{ type: 'text', text }], stop_reason: 'end_turn' }));
+  let a = answers.length ? answers.shift() : auto();
+  if (typeof a === 'function') a = a(b);
+  if (a instanceof Response) return a;
+  return new Response(JSON.stringify({ content: [{ type: 'text', text: a }], stop_reason: 'end_turn' }));
 };
 const A = { ANTHROPIC_API_KEY: 'ak' };
 const call = async (path, { body, token, header = true, env = { ACCOUNTS: db, ...A } } = {}) => {
@@ -37,9 +43,8 @@ const call = async (path, { body, token, header = true, env = { ACCOUNTS: db, ..
   const res = await onRequest({ request, params: { route: path.split('/') }, env }, ai);
   return { status: res.status, body: await res.json() };
 };
-const meal = (title, extra = {}) => ({ title, cuisine: 'Mexican', method: 'grilled', minutes: 30, why: 'Quick', uses: [], ingredients: [{ item: 'chicken thighs', qty: '2 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }], steps: ['Cook it.'], ...extra });
-const planJSON = (meals, tip = 'Buy the family pack.') => JSON.stringify({ meals, tip });
-const four = (extra = {}) => ['Chicken tacos', 'Chicken tikka masala', 'Lemon chicken orzo soup', 'Teriyaki chicken bowls'].map(t => meal(t, extra));
+const DIN = (o = {}) => ({ slots: ['dinner'], foods: ['chicken'], days: 4, ...o });
+const rules = settingsOf(null);
 
 await test('refuses requests without the app header', async () => {
   assert.equal((await call('state', { header: false })).status, 404);
@@ -53,29 +58,21 @@ const token = await issue(db, 'u1');
 await test('needs a signed-in family member', async () => {
   const r = await call('state'); assert.equal(r.status, 401); assert.equal(r.body.error, 'signin');
 });
-await test('state: the stores, member cards and allergies start as the family set them; which AI is set up', async () => {
+await test('state: the family\'s rules start as 2 vegetables, good protein, 4 people, 40-minute weeknights; which AI is set up', async () => {
   const r = await call('state', { token });
   assert.equal(r.status, 200);
   assert.equal(r.body.ai, 'anthropic'); assert.equal(r.body.model, 'claude-haiku-5-5');
   assert.equal((await call('state', { token, env: { ACCOUNTS: db, ...A, MEALS_MODEL: 'claude-sonnet-5-5' } })).body.model, 'claude-sonnet-5-5');
-  assert.deepEqual(r.body.settings.stores, ['wholefoods', 'harristeeter', 'publix', 'lidl', 'lowesfoods', 'aldi', 'walmart', 'target']);
-  assert.deepEqual(r.body.settings.cards, ['prime', 'vic']);
-  assert.match(r.body.stores.find(x => x.id === 'wholefoods').where, /New Waverly Pl, Cary/);
-  assert.equal(r.body.stores.find(x => x.id === 'harristeeter').cardName, 'VIC');
-  assert.deepEqual(r.body.settings.avoid, ['tree nuts', 'coconut']);
+  assert.deepEqual(r.body.settings, { avoid: ['tree nuts', 'coconut'], veg: 2, protein: 'good', people: 4, weeknight: 40 });
+  assert.deepEqual(r.body.taste, { loved: [], nope: [] });
+  assert.equal(r.body.deals, undefined, 'no deals any more');
   assert.equal((await call('state', { token, env: { ACCOUNTS: db } })).body.ai, null);
+  assert.equal((await call('deals', { token, body: { store: 'wholefoods' } })).status, 404, 'the deals route is gone');
 });
-await test('no key yet: deals and plans say so, without calling anything', async () => {
+await test('no key yet: plans say so, without calling anything', async () => {
   asked.length = 0;
-  assert.equal((await call('deals', { token, body: { store: 'wholefoods' }, env: { ACCOUNTS: db } })).body.error, 'no-ai');
-  assert.equal((await call('plan', { token, body: { meat: 'chicken' }, env: { ACCOUNTS: db } })).body.error, 'no-ai');
+  assert.equal((await call('plan', { token, body: DIN(), env: { ACCOUNTS: db } })).body.error, 'no-ai');
   assert.equal(asked.length, 0);
-});
-await test('the sales week starts on Wednesday, in Cary\'s time', async () => {
-  assert.equal(week(Date.UTC(2026, 9, 7, 12)), '2026-10-07');        // Wed
-  assert.equal(week(Date.UTC(2026, 9, 13, 23)), '2026-10-07');       // Tue evening
-  assert.equal(week(Date.UTC(2026, 9, 14, 3)), '2026-10-07');        // Tue 11pm in Cary, Wed in UTC
-  assert.equal(week(Date.UTC(2026, 9, 14, 5)), '2026-10-14');        // Wed 1am in Cary
 });
 await test('the allergy check: tree nuts and coconut in any form, but not peanuts, nutmeg or butternut squash', async () => {
   const avoid = ['tree nuts', 'coconut'];
@@ -86,72 +83,68 @@ await test('the allergy check: tree nuts and coconut in any form, but not peanut
   assert.deepEqual(avoidHits(['2 tbsp peanut butter', 'pinch of nutmeg', 'butternut squash', 'crushed peanuts', 'doughnut'], avoid), []);
   assert.deepEqual(avoidHits(['shrimp'], ['shrimp']), ['shrimp']);
 });
-await test('deals by search: Anthropic\'s API with its web search near Cary, Claude Haiku 5.5, for that store, member prices with the family\'s card', async () => {
-  asked.length = 0;
-  answers = ['Here you go: ' + JSON.stringify({ validFrom: '2026-10-07', validTo: '2026-10-13', items: [{ name: 'Boneless chicken thighs', price: '$3.99/lb', regular: '$5.99/lb', member: true }, { name: '' }, { name: 'Organic strawberries', price: '$3.99' }], sources: ['https://example.com/sales', 'javascript:alert(1)'] })];
-  assert.equal((await call('deals', { token, body: { store: 'nowhere' } })).body.error, 'store');
-  const r = await call('deals', { token, body: { store: 'wholefoods' } });
-  assert.equal(r.status, 200);
-  assert.equal(asked.length, 1);
-  const q = asked[0];
-  assert.equal(q.url, ANTHROPIC_URL); assert.equal(q.headers['x-api-key'], 'ak'); assert.equal(q.headers['anthropic-version'], '2023-06-01');
-  assert.equal(q.body.model, 'claude-haiku-5-5');
-  assert.equal(q.body.tools[0].type, 'web_search_20250305'); assert.equal(q.body.tools[0].max_uses, 5); assert.equal(q.body.tools[0].user_location.city, 'Cary');
-  assert.match(q.body.messages[0].content, /New Waverly Pl, Cary/); assert.match(q.body.system, /with a Prime card/);
-  assert.equal(r.body.deals.items[0].member, true); assert.equal(r.body.deals.store, 'wholefoods');
-  assert.equal(r.body.deals.items.length, 2);
-  assert.deepEqual(r.body.deals.sources, ['https://example.com/sales']);
-  assert.equal(r.body.deals.how, 'search');
+await test('choices: what the phone asks for, cleaned; dinners for 3 days from today by default', async () => {
+  const now = Date.UTC(2026, 9, 25, 16), t = '2026-10-25';
+  const o = choicesOf({}, rules, now);
+  assert.deepEqual(o, { start: t, days: 3, slots: ['dinner'], foods: ['surprise'], people: 4, lunches: 'leftovers', fridge: '', note: '' });
+  const o2 = choicesOf({ slots: ['dinner', 'breakfast', 'snack'], foods: ['Lamb', 'tofu', 'vegetarian'], days: 9, people: 2, lunches: 'fresh', start: '2027-01-01', fridge: 'half a cabbage' }, rules, now);
+  assert.deepEqual(o2.slots, ['breakfast', 'dinner']); assert.deepEqual(o2.foods, ['lamb', 'vegetarian']);
+  assert.equal(o2.days, 3, 'more than a week is not a choice'); assert.equal(o2.people, 2); assert.equal(o2.lunches, 'fresh');
+  assert.equal(o2.start, t, 'a start more than two weeks off is today'); assert.equal(o2.fridge, 'half a cabbage');
+  assert.equal(choicesOf({ start: addDays(t, 3) }, rules, now).start, addDays(t, 3));
 });
-await test('this week\'s search is kept: asking again costs nothing; refresh waits 10 minutes', async () => {
-  asked.length = 0;
-  assert.equal((await call('deals', { token, body: { store: 'wholefoods' } })).body.deals.items.length, 2);
-  assert.equal((await call('deals', { token, body: { store: 'wholefoods', refresh: true } })).body.deals.items.length, 2);
-  assert.equal(asked.length, 0);
+await test('specs: a cuisine each, foods in turn, a breakfast style each, weeknight time on Monday to Thursday dinners, leftover lunches after the first day', async () => {
+  const o = { start: '2026-10-26', days: 3, slots: ['breakfast', 'lunch', 'dinner'], foods: ['lamb', 'vegetarian'], people: 4, lunches: 'leftovers' };   // a Monday
+  const sp = specs(o, rules, () => 0);
+  assert.deepEqual(sp.map(s => s.key || 'leftover ' + s.day), ['d1-breakfast', 'd1-lunch', 'd1-dinner', 'd2-breakfast', 'leftover 2', 'd2-dinner', 'd3-breakfast', 'leftover 3', 'd3-dinner']);
+  const lunch1 = sp[1], din1 = sp[2], din2 = sp[5];
+  assert.equal(lunch1.cuisine, CUISINES[0]); assert.equal(din1.cuisine, CUISINES[1]); assert.equal(din2.cuisine, CUISINES[2]);
+  assert.equal(lunch1.food, 'lamb'); assert.equal(din1.food, 'vegetarian'); assert.equal(din2.food, 'lamb');
+  assert.notEqual(sp[0].style, sp[3].style);
+  assert.equal(din1.weekday, 'Monday'); assert.equal(din1.maxMinutes, 40);
+  assert.equal(din1.double, true, 'cooked double for tomorrow\'s lunch'); assert.equal(sp[8].double, false, 'the last night has no lunch after it');
+  const fri = specs({ ...o, start: '2026-10-30', slots: ['dinner'] }, rules, () => 0);
+  assert.deepEqual(fri.map(s => s.maxMinutes), [0, 0, 0], 'Friday to Sunday: no weeknight limit');
+  const fresh = specs({ ...o, lunches: 'fresh' }, rules, () => 0);
+  assert.ok(fresh.every(s => !s.leftover && !s.double));
+  const mix = specs({ ...o, lunches: 'mix' }, rules, () => 0);
+  assert.deepEqual(mix.filter(s => s.leftover).map(s => s.day), [2]);
+  assert.ok(specs({ ...o, foods: ['surprise'] }, rules, () => 0).every(s => !s.food));
 });
-await test('deals by paste: read out of the text, no search', async () => {
-  asked.length = 0;
-  answers = [JSON.stringify({ items: [{ name: 'Wild sockeye salmon', price: '$9.99/lb' }] })];
-  const r = await call('deals', { token, body: { store: 'wholefoods', text: 'Sockeye salmon fillets $9.99/lb Prime' } });
-  assert.equal(r.body.deals.how, 'paste'); assert.equal(r.body.deals.items[0].name, 'Wild sockeye salmon');
-  assert.equal(asked[0].body.tools, undefined); assert.match(asked[0].body.messages[0].content, /Sockeye salmon fillets/);
+await test('what each part asks: the rules, the allergies, what the family had and rated, the fridge and the note', async () => {
+  const o = { start: '2026-10-26', days: 2, slots: ['dinner'], foods: ['lamb'], people: 3, lunches: 'leftovers', fridge: 'half a cabbage', note: 'mild for the kids' };
+  const s = { ...rules, veg: 3, protein: 'high' };
+  const q = chunkAsk(s, o, specs(o, s, () => 0), { history: [{ title: 'Lamb kofta' }], taste: { loved: [{ title: 'Chicken shawarma' }], nope: [{ title: 'Liver and onions' }] }, fridge: true });
+  assert.match(q.prompt, /Write these 2 meals for 3 people/);
+  assert.match(q.prompt, /- d1-dinner \(Monday dinner\): dinner, Mediterranean, built around lamb, ready in 40 minutes or less/);
+  assert.match(q.system, /at least 3 different vegetables/); assert.match(q.system, /about 40 g of protein a person/);
+  assert.match(q.system, /never eat: tree nuts, coconut/);
+  assert.match(q.prompt, /fridge in these first meals where it fits: half a cabbage/);
+  assert.match(q.prompt, /lately; make different dishes: Lamb kofta/);
+  assert.match(q.prompt, /loved these: Chicken shawarma/); assert.match(q.prompt, /Never make these again.*Liver and onions/);
+  assert.match(q.prompt, /Also: mild for the kids/);
+  assert.doesNotMatch(chunkAsk(s, o, specs(o, s, () => 0), {}).prompt, /fridge/, 'the fridge goes to the first part only');
 });
-await test('a search that finds nothing keeps the last list', async () => {
-  answers = [JSON.stringify({ items: [] })];
-  await call('deals', { token, body: { store: 'wholefoods', refresh: true, text: 'nothing useful' } });
-  assert.equal(JSON.parse(db.m.get('meals:deals:wholefoods')).items[0].name, 'Wild sockeye salmon');
-});
-await test('each store keeps its own deals; a store without a card the family has gets everyone\'s prices', async () => {
+await test('a plan: 4 dinners for 4, kept as the family\'s draft with what was asked, nothing accepted yet', async () => {
   asked.length = 0;
-  answers = [JSON.stringify({ items: [{ name: 'Publix ground chuck', price: '$4.99/lb', regular: '$8.99/lb' }] })];
-  const r = await call('deals', { token, body: { store: 'publix' } });
-  assert.equal(r.body.deals.store, 'publix'); assert.match(asked[0].body.messages[0].content, /Publix, 1441 Kelly Rd, Apex/);
-  assert.match(asked[0].body.system, /everyone pays/);
-  assert.equal(JSON.parse(db.m.get('meals:deals:wholefoods')).items[0].name, 'Wild sockeye salmon');
-  const st = await call('state', { token });
-  assert.deepEqual(Object.keys(st.body.deals).sort(), ['publix', 'wholefoods']);
-});
-await test('a plan: 4 different dinners for 4, variety asked for, this week\'s deals passed on, kept as the family\'s draft', async () => {
-  asked.length = 0;
-  answers = ['```json\n' + planJSON(four()) + '\n```'];
-  const r = await call('plan', { token, body: { meat: 'chicken', useDeals: true } });
+  const r = await call('plan', { token, body: DIN() });
   assert.equal(r.status, 200);
   const p = r.body.draft;
   assert.equal(p.meals.length, 4); assert.equal(p.people, 4); assert.equal(p.days, 4); assert.equal(p.by, 'Sam');
-  const q = asked[0].body;
-  assert.match(q.messages[0].content, /4 different dinners for 4 people/); assert.match(q.messages[0].content, /different cuisine/);
-  assert.match(q.messages[0].content, /Wild sockeye salmon \$9\.99\/lb/);
-  assert.match(q.messages[0].content, /Publix ground chuck \$4\.99\/lb/);   // every store's: shop defaults to all
-  assert.match(q.messages[0].content, /store in brackets/);
-  assert.equal(p.shop, 'all');
-  assert.match(q.system, /never eat: tree nuts, coconut/);
-  assert.equal(q.tools, undefined);
-  assert.equal(JSON.parse(db.m.get('meals:draft')).meals[0].title, 'Chicken tacos');
-  assert.ok(p.sales.some(x => x.store === 'publix' && /ground chuck/.test(x.name)), 'the sale items it was planned with go with it');
+  assert.deepEqual(p.slots, ['dinner']); assert.deepEqual(p.foods, ['chicken']);
+  assert.deepEqual(p.meals.map(m => [m.day, m.slot]), [[1, 'dinner'], [2, 'dinner'], [3, 'dinner'], [4, 'dinner']]);
+  assert.deepEqual(p.meals[0].veg, ['spinach', 'peppers', 'onion']); assert.equal(p.meals[0].protein, 36);
+  assert.equal(p.tip, 'Cook the grains ahead.');
+  assert.equal(asked.length, 1); const q = asked[0];
+  assert.equal(q.url, ANTHROPIC_URL); assert.equal(q.headers['x-api-key'], 'ak'); assert.equal(q.headers['anthropic-version'], '2023-06-01');
+  assert.equal(q.body.model, 'claude-haiku-5-5'); assert.equal(q.body.tools, undefined);
+  assert.match(q.body.messages[0].content, /Write these 4 meals for 4 people/);
+  assert.equal(JSON.parse(db.m.get('meals:draft')).meals[0].title, p.meals[0].title);
   assert.equal(db.m.get('meals:plan'), undefined, 'nothing is the family\'s plan until it\'s accepted');
   assert.equal(db.m.get('meals:history'), undefined);
 });
-await test('accepting: the draft becomes the family\'s plan, with dates from the start, in the log', async () => {
+await test('accepting: the draft becomes the family\'s plan, a date a day from the start, in the log', async () => {
+  const d = JSON.parse(db.m.get('meals:draft'));
   const r = await call('accept', { token, body: { start: '2026-10-31' } });
   assert.equal(r.status, 200);
   const p = r.body.plan;
@@ -159,88 +152,125 @@ await test('accepting: the draft becomes the family\'s plan, with dates from the
   assert.equal(p.acceptedBy, 'Sam'); assert.match(p.id, /^p[a-z0-9]+$/);
   assert.equal(JSON.parse(db.m.get('meals:plan')).id, p.id);
   assert.equal(db.m.get('meals:draft'), undefined);
-  assert.equal(r.body.log[0].start, '2026-10-31'); assert.equal(r.body.log[0].end, '2026-11-03'); assert.deepEqual(r.body.log[0].titles.slice(0, 1), ['Chicken tacos']);
+  assert.equal(r.body.log[0].start, '2026-10-31'); assert.equal(r.body.log[0].end, '2026-11-03');
+  assert.deepEqual(r.body.log[0].foods, ['chicken']); assert.deepEqual(r.body.log[0].slots, ['dinner']);
+  assert.deepEqual(r.body.log[0].titles, d.meals.map(m => m.title));
   assert.equal(JSON.parse(db.m.get('meals:history')).length, 4);
-  assert.equal((await call('log/' + p.id, { token })).body.plan.meals[0].title, 'Chicken tacos');
+  assert.equal((await call('log/' + p.id, { token })).body.plan.meals[0].title, d.meals[0].title);
   assert.equal((await call('log/pnothere', { token })).status, 404);
   const st = await call('state', { token });
   assert.equal(st.body.plan.id, p.id); assert.equal(st.body.draft, null); assert.equal(st.body.log.length, 1);
   assert.equal((await call('accept', { token, body: {} })).body.error, 'no-draft');
 });
-await test('another go is told to differ from the draft it replaces; discarding drops it', async () => {
-  answers = [planJSON(four())];
-  await call('plan', { token, body: { meat: 'chicken' } });
+await test('accepting with no start: from the day the plan was made for', async () => {
+  const d = (await call('plan', { token, body: DIN({ days: 2 }) })).body.draft;
+  const p = (await call('accept', { token, body: {} })).body.plan;
+  assert.equal(p.start, d.start); assert.deepEqual(p.dates, [d.start, addDays(d.start, 1)]);
+});
+await test('a week of three meals a day: 21 meals, written in parts of 6 side by side; lunches from the night before, which is cooked double', async () => {
   asked.length = 0;
-  answers = [planJSON(['Chicken shawarma', 'Chicken pho', 'Chicken parm', 'Chicken fajitas'].map(t => meal(t)))];
-  await call('plan', { token, body: { meat: 'chicken', again: true } });
-  assert.match(asked[0].body.messages[0].content, /make different dishes: .*Chicken tacos/);
-  assert.equal(JSON.parse(db.m.get('meals:draft')).meals[0].title, 'Chicken shawarma');
+  const r = await call('plan', { token, body: { slots: ['breakfast', 'lunch', 'dinner'], foods: ['lamb', 'fish'], days: 7, lunches: 'leftovers' } });
+  assert.equal(r.status, 200);
+  const p = r.body.draft;
+  assert.equal(p.meals.length, 21);
+  assert.equal(asked.length, Math.ceil(15 / CHUNK), '15 to write (6 lunches are leftovers): 3 parts');
+  assert.ok(asked.every(a => keysOf(a.body).length <= CHUNK));
+  assert.deepEqual(p.meals.slice(0, 6).map(m => m.slot), ['breakfast', 'lunch', 'dinner', 'breakfast', 'lunch', 'dinner']);
+  const l2 = p.meals.find(m => m.day === 2 && m.slot === 'lunch'), d1 = p.meals.find(m => m.day === 1 && m.slot === 'dinner');
+  assert.equal(l2.leftover, 1); assert.equal(l2.title, 'Leftovers: ' + d1.title); assert.deepEqual(l2.ingredients, []);
+  assert.ok(!p.meals.find(m => m.day === 1 && m.slot === 'lunch').leftover, 'the first day\'s lunch is fresh');
+  assert.match(asked.map(a => a.body.messages[0].content).join('\n'), /d1-dinner .*cook enough for 4 tonight plus 4 lunches tomorrow/);
+  const all = asked.map(a => a.body.messages[0].content).join('\n'), cuisines = [...all.matchAll(/^- d\d-(?:lunch|dinner) \([^)]*\): (?:lunch|dinner), ([^,]+)/gm)].map(m => m[1]);
+  assert.equal(new Set(cuisines).size, cuisines.length, 'every lunch and dinner a different cuisine');
+  await call('discard', { token, body: {} });
+});
+await test('another go is told to differ from the draft it replaces; discarding drops it', async () => {
+  const d = (await call('plan', { token, body: DIN() })).body.draft;
+  asked.length = 0;
+  await call('plan', { token, body: DIN({ again: true }) });
+  assert.match(asked[0].body.messages[0].content, new RegExp('make different dishes: .*' + d.meals[0].title));
+  assert.notEqual(JSON.parse(db.m.get('meals:draft')).meals[0].title, d.meals[0].title);
+  const cur = db.m.get('meals:plan');
   await call('discard', { token, body: {} });
   assert.equal(db.m.get('meals:draft'), undefined);
-  assert.equal(JSON.parse(db.m.get('meals:plan')).meals[0].title, 'Chicken tacos', 'the accepted plan stays');
-});
-await test('a plan for one store uses only that store\'s deals', async () => {
-  asked.length = 0;
-  answers = [planJSON(four())];
-  const r = await call('plan', { token, body: { meat: 'pork', useDeals: true, shop: 'publix' } });
-  assert.equal(r.body.draft.shop, 'publix');
-  assert.match(asked[0].body.messages[0].content, /sales at Publix/);
-  assert.doesNotMatch(asked[0].body.messages[0].content, /sockeye/);
+  assert.equal(db.m.get('meals:plan'), cur, 'the accepted plan stays');
 });
 await test('the next plan is told what the family just had', async () => {
+  const had = JSON.parse(db.m.get('meals:history')).map(h => h.title);
   asked.length = 0;
-  answers = [planJSON(four())];
-  await call('plan', { token, body: { meat: 'chicken' } });
-  assert.match(asked[0].body.messages[0].content, /recently; make different dishes: Chicken tacos; Chicken tikka masala/);
-  assert.doesNotMatch(asked[0].body.messages[0].content, /sockeye/);   // useDeals off
+  await call('plan', { token, body: DIN() });
+  assert.match(asked[0].body.messages[0].content, new RegExp('lately; make different dishes: .*' + had.at(-1)));
 });
-await test('a plan with coconut milk goes back once with what was wrong, and the fixed one is saved', async () => {
+await test('rating: loved and not for us go to the next plan; rating again moves it, null forgets it', async () => {
+  assert.equal((await call('rate', { token, body: { up: true } })).body.error, 'title');
+  await call('rate', { token, body: { title: 'Chicken shawarma', up: true } });
+  await call('rate', { token, body: { title: 'Liver and onions', up: false } });
+  let t = (await call('rate', { token, body: { title: 'Fish tacos', up: true } })).body.taste;
+  assert.deepEqual(t.loved.map(x => x.title), ['Fish tacos', 'Chicken shawarma']); assert.deepEqual(t.nope.map(x => x.title), ['Liver and onions']);
+  t = (await call('rate', { token, body: { title: 'chicken shawarma', up: false } })).body.taste;
+  assert.deepEqual(t.loved.map(x => x.title), ['Fish tacos']); assert.deepEqual(t.nope.map(x => x.title), ['chicken shawarma', 'Liver and onions']);
+  t = (await call('rate', { token, body: { title: 'Chicken Shawarma', up: null } })).body.taste;
+  assert.deepEqual(t.nope.map(x => x.title), ['Liver and onions']);
   asked.length = 0;
-  const bad = four(); bad[1] = meal('Thai green curry', { ingredients: [{ item: 'coconut milk', qty: '1 can' }] });
-  answers = [planJSON(bad), planJSON(four())];
-  const r = await call('plan', { token, body: { meat: 'chicken' } });
+  await call('plan', { token, body: DIN() });
+  assert.match(asked[0].body.messages[0].content, /loved these: Fish tacos/); assert.match(asked[0].body.messages[0].content, /Never make these again.*Liver and onions/);
+  assert.deepEqual((await call('state', { token })).body.taste.loved.map(x => x.title), ['Fish tacos']);
+});
+await test('a part with coconut milk goes back once with what was wrong, and the fixed one is saved', async () => {
+  asked.length = 0;
+  answers = [auto(k => k === 'd2-dinner' ? { title: 'Thai green curry', ingredients: [{ item: 'coconut milk', qty: '1 can' }] } : {}), auto()];
+  const r = await call('plan', { token, body: DIN() });
   assert.equal(r.status, 200); assert.equal(asked.length, 2);
   assert.match(asked[1].body.messages[0].content, /used coconut, which this family must never eat/);
   assert.ok(!r.body.draft.meals.some(m => /curry/i.test(m.title)));
 });
+await test('too few vegetables, too little protein or a meal left out goes back once with what was short', async () => {
+  asked.length = 0;
+  answers = [b => JSON.stringify({ meals: keysOf(b).slice(1).map((k, i) => dish(k, i ? { protein: 12 } : { veg: ['onion'] })) }), auto()];
+  const r = await call('plan', { token, body: DIN({ days: 3 }) });
+  assert.equal(r.status, 200); assert.equal(asked.length, 2);
+  const why = asked[1].body.messages[0].content;
+  assert.match(why, /left out d1-dinner/); assert.match(why, /d2-dinner has 1 vegetables; it needs at least 2/); assert.match(why, /d3-dinner has about 12 g protein a person; it needs about 30 g/);
+  assert.equal(r.body.draft.meals.length, 3);
+  // still a few grams short after two goes: kept, with the counts it has
+  answers = [auto({ protein: 22 }), auto({ protein: 22 })];
+  assert.equal((await call('plan', { token, body: DIN({ days: 1 }) })).body.draft.meals[0].protein, 22);
+  // still a meal missing after two goes: no plan
+  answers = [JSON.stringify({ meals: [] }), JSON.stringify({ meals: [] })];
+  assert.equal((await call('plan', { token, body: DIN({ days: 1 }) })).body.error, 'ai-format');
+});
 await test('a plan that slips twice is never saved', async () => {
   const before = db.m.get('meals:draft');
-  const bad = four({ steps: ['Top with toasted almonds.'] });
-  answers = [planJSON(bad), planJSON(bad)];
-  const r = await call('plan', { token, body: { meat: 'beef' } });
+  answers = [auto({ steps: ['Top with toasted almonds.'] }), auto({ steps: ['Top with toasted almonds.'] })];
+  const r = await call('plan', { token, body: DIN({ foods: ['beef'] }) });
   assert.equal(r.status, 422); assert.equal(r.body.error, 'avoid');
   assert.equal(db.m.get('meals:draft'), before);
 });
-await test('settings: the family can change their stores, cards and what they avoid; unknown ones are dropped', async () => {
-  const r = await call('settings', { token, body: { stores: ['publix', 'harristeeter', 'kroger'], cards: ['vic', 'mvp'], avoid: ['Tree nuts', 'coconut', 'shellfish', ''] } });
-  assert.deepEqual(r.body.settings, { stores: ['harristeeter', 'publix'], cards: ['vic'], avoid: ['tree nuts', 'coconut', 'shellfish'] });
+await test('settings: the family\'s rules and what they avoid; anything out of range keeps the default', async () => {
+  const r = await call('settings', { token, body: { veg: 4, protein: 'high', people: 3, weeknight: 30, avoid: ['Tree nuts', 'coconut', 'shellfish', ''] } });
+  assert.deepEqual(r.body.settings, { avoid: ['tree nuts', 'coconut', 'shellfish'], veg: 4, protein: 'high', people: 3, weeknight: 30 });
   assert.deepEqual((await call('state', { token })).body.settings.avoid, ['tree nuts', 'coconut', 'shellfish']);
+  assert.deepEqual(settingsOf({ veg: 9, protein: 'lots', people: 0, weeknight: 45 }), { avoid: ['tree nuts', 'coconut'], veg: 2, protein: 'good', people: 4, weeknight: 40 });
+  assert.equal(settingsOf({ weeknight: 0 }).weeknight, 0, 'no limit is a choice'); assert.equal(settingsOf({ veg: 0 }).veg, 0);
+  assert.equal(choicesOf({}, settingsOf({ people: 3 })).people, 3, 'a plan cooks for the family\'s usual number');
 });
 await test('a model that answers in words, or an AI service that refuses the key, gives a plain error', async () => {
   answers = ['Sorry, I can\'t help with that.'];
-  assert.equal((await call('plan', { token, body: { meat: 'pork' } })).body.error, 'ai-format');
+  assert.equal((await call('plan', { token, body: DIN({ foods: ['pork'] }) })).body.error, 'ai-format');
   answers = [new Response('{}', { status: 401 })];
-  assert.equal((await call('plan', { token, body: { meat: 'pork' } })).body.error, 'ai-key');
+  assert.equal((await call('plan', { token, body: DIN({ foods: ['pork'] }) })).body.error, 'ai-key');
 });
-await test('Anthropic\'s API: the key and version headers, web search near Cary, and a paused search carried on', async () => {
-  asked.length = 0;
-  const replies = [
-    new Response(JSON.stringify({ content: [{ type: 'server_tool_use', id: 's1', name: 'web_search', input: {} }], stop_reason: 'pause_turn' })),
-    new Response(JSON.stringify({ content: [{ type: 'text', text: '{"items":[{"name":"Ground beef","price":"$4.99/lb"}]}' }], stop_reason: 'end_turn' })),
-  ];
-  const f = async (url, init) => { asked.push({ url, headers: init.headers, body: JSON.parse(init.body) }); return replies.shift(); };
-  const text = await ask(A, { system: 's', prompt: 'p', search: true }, f);
-  assert.equal(json(text).items[0].name, 'Ground beef');
-  assert.equal(asked.length, 2); assert.equal(asked[0].url, ANTHROPIC_URL);
-  assert.equal(asked[0].headers['x-api-key'], 'ak'); assert.equal(asked[0].headers['anthropic-version'], '2023-06-01');
-  assert.equal(asked[0].body.model, 'claude-haiku-5-5');
-  assert.equal(asked[0].body.tools[0].max_uses, 5);
-  assert.equal(asked[0].body.tools[0].type, 'web_search_20250305'); assert.equal(asked[0].body.tools[0].user_location.city, 'Cary');
-  assert.equal(asked[1].body.messages[1].role, 'assistant');
+await test('ask: Anthropic\'s API with the key and version headers', async () => {
+  const seen = [];
+  const f = async (url, init) => { seen.push({ url, headers: init.headers, body: JSON.parse(init.body) }); return new Response(JSON.stringify({ content: [{ type: 'text', text: '{"meals":[]}' }] })); };
+  assert.deepEqual(json(await ask(A, { system: 's', prompt: 'p', maxTokens: 900 }, f)), { meals: [] });
+  assert.equal(seen[0].url, ANTHROPIC_URL); assert.equal(seen[0].headers['x-api-key'], 'ak'); assert.equal(seen[0].headers['anthropic-version'], '2023-06-01');
+  assert.equal(seen[0].body.model, 'claude-haiku-5-5'); assert.equal(seen[0].body.max_tokens, 900); assert.equal(seen[0].body.system, 's');
 });
-await test('plans are trimmed to what Meals shows', async () => {
-  const p = cleanPlan({ meals: [{ title: 'x'.repeat(500), ingredients: [{ item: 'egg' }], steps: ['a'], minutes: 99999 }, { title: 'No steps', ingredients: [{ item: 'egg' }] }] }, 4);
-  assert.equal(p.meals.length, 1); assert.equal(p.meals[0].title.length, 90); assert.equal(p.meals[0].minutes, 0);
+await test('plans are trimmed to what Meals shows, in order by day and meal', async () => {
+  const p = cleanPlan({ meals: [{ day: 2, slot: 'breakfast', title: 'x'.repeat(500), ingredients: [{ item: 'egg' }], steps: ['a'], minutes: 99999 }, { title: 'No steps', ingredients: [{ item: 'egg' }] },
+    { day: 1, slot: 'dinner', title: 'First', ingredients: [{ item: 'egg' }], steps: ['a'] }] });
+  assert.deepEqual(p.meals.map(m => m.title.length), [5, 100]); assert.equal(p.meals[1].minutes, 0);
 });
 
 // ---- Ipsy ----
@@ -283,8 +313,8 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsy’s instructions and Mea
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
   assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
-  assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['get_meals', 'get_dinners', 'get_deals', 'get_past_plans', 'get_shopping_list', 'tick_items',
-    'set_dinner', 'make_plan', 'accept_plan', 'discard_draft', 'show_dinner']);
+  assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['get_meals', 'get_recipes', 'get_past_plans', 'get_shopping_list', 'tick_items',
+    'set_meal', 'make_plan', 'accept_plan', 'discard_draft', 'show_meal']);
   for (const t of IPSY_CLIENT_TOOLS) { assert.equal(t.input_schema.type, 'object'); assert.ok(t.description.length > 20, t.name); }
   assert.deepEqual(q.body.messages, Q, 'the conversation as the phone sent it');
 });
@@ -325,25 +355,23 @@ await test('ipsy: MEALS_IPSY_MODEL names another model; Meals’ plans keep thei
 // What Ipsy's changes go through: a plan made and accepted the app's way, then one night changed.
 const nightMeal = (title, extra = {}) => ({ title, cuisine: 'Greek', method: 'sheet pan', minutes: 35, why: 'Bright and quick', uses: [],
   ingredients: [{ item: 'chicken thighs', qty: '2 lb' }, { item: 'lemons', qty: '2' }, { item: 'olive oil', qty: '2 tbsp', pantry: true }], steps: ['Roast it all at 425°F.'], ...extra });
-answers = [planJSON(four())];
-await call2('plan', { meat: 'chicken' });
+await call2('plan', DIN());
 const first = (await call2('accept', { start: '2026-10-12' })).body.plan;
-answers = [planJSON(['Chicken shawarma', 'Chicken pho', 'Chicken parm', 'Chicken fajitas'].map(t => meal(t)))];
-await call2('plan', { meat: 'chicken' });
+await call2('plan', DIN());
 const plan2 = (await call2('accept', { start: '2026-10-19' })).body.plan;
 
 await test('night: one night\'s dinner on the family\'s plan, kept in the log and the history too', async () => {
   const r = await call2('night', { id: plan2.id, day: 2, meal: nightMeal('Sheet-pan Greek lemon chicken') });
   assert.equal(r.status, 200);
   assert.equal(r.body.plan.meals[1].title, 'Sheet-pan Greek lemon chicken'); assert.equal(r.body.plan.meals[1].day, 2);
-  assert.equal(r.body.plan.meals[0].title, 'Chicken shawarma', 'the other nights stay');
+  assert.equal(r.body.plan.meals[0].title, plan2.meals[0].title, 'the other nights stay');
   assert.deepEqual(r.body.plan.dates, plan2.dates); assert.equal(r.body.plan.at, plan2.at, 'the same plan (its ticks stay)');
   assert.equal(JSON.parse(db2.m.get('meals:plan')).meals[1].title, 'Sheet-pan Greek lemon chicken');
   assert.equal(JSON.parse(db2.m.get('meals:log:' + plan2.id)).meals[1].title, 'Sheet-pan Greek lemon chicken');
   assert.equal(JSON.parse(db2.m.get('meals:log'))[0].titles[1], 'Sheet-pan Greek lemon chicken');
   assert.equal(r.body.log[0].titles[1], 'Sheet-pan Greek lemon chicken');
   const h = JSON.parse(db2.m.get('meals:history'));
-  assert.ok(h.some(x => x.title === 'Sheet-pan Greek lemon chicken') && !h.some(x => x.title === 'Chicken pho'), 'what the family has, for the next plan to differ from');
+  assert.ok(h.some(x => x.title === 'Sheet-pan Greek lemon chicken') && !h.some(x => x.title === plan2.meals[1].title), 'what the family has, for the next plan to differ from');
   // Undo is the same call with the dinner that was there
   const u = await call2('night', { id: plan2.id, day: 2, meal: plan2.meals[1] });
   assert.deepEqual(u.body.plan.meals, plan2.meals);
@@ -366,8 +394,7 @@ await test('night: the right plan and night only, and a whole dinner', async () 
   assert.equal((await call2('night', { draft: true, day: 1, meal: nightMeal('X') })).body.error, 'no-draft');
 });
 await test('night on the new plan waiting: only the draft changes', async () => {
-  answers = [planJSON(four())];
-  const d = (await call2('plan', { meat: 'chicken' })).body.draft, plan = db2.m.get('meals:plan');
+    const d = (await call2('plan', DIN())).body.draft, plan = db2.m.get('meals:plan');
   const r = await call2('night', { draft: true, at: d.at, day: 3, meal: nightMeal('Greek chicken') });
   assert.equal(r.body.draft.meals[2].title, 'Greek chicken'); assert.equal(r.body.draft.at, d.at);
   assert.equal(JSON.parse(db2.m.get('meals:draft')).meals[2].title, 'Greek chicken');
@@ -398,8 +425,7 @@ await test('unaccept (Undo of Accept): the plan goes back to waiting, and the pl
   const cur = JSON.parse(db2.m.get('meals:plan')), log0 = JSON.parse(db2.m.get('meals:log')), hist0 = db2.m.get('meals:history');
   const a = (await call2('accept', { start: '2026-10-26' })).body.plan;
   assert.equal((await call2('unaccept', { id: cur.id })).body.error, 'changed', 'only the plan that is the family\'s now');
-  answers = [planJSON(four())];
-  const other = (await call2('plan', { meat: 'pork' })).body.draft;
+  const other = (await call2('plan', DIN({ foods: ['pork'] }))).body.draft;
   assert.equal((await call2('unaccept', { id: a.id })).body.error, 'draft', 'not over a new plan someone made since');
   await call2('discard', { at: other.at });
   const r = await call2('unaccept', { id: a.id });
@@ -408,12 +434,11 @@ await test('unaccept (Undo of Accept): the plan goes back to waiting, and the pl
   assert.deepEqual(r.body.log, log0); assert.deepEqual(JSON.parse(db2.m.get('meals:log')), log0);
   assert.equal(db2.m.get('meals:log:' + a.id), undefined);
   assert.equal(db2.m.get('meals:history'), hist0);
-  assert.deepEqual(r.body.draft, d); assert.deepEqual(JSON.parse(db2.m.get('meals:draft')), d);
+  assert.deepEqual(r.body.draft, { ...d, start: '2026-10-26' }, 'waiting again, from the day picked'); assert.deepEqual(JSON.parse(db2.m.get('meals:draft')), r.body.draft);
   // with no plan before it, there's none again
   const db3 = fakeKV(); await db3.put('owner', 'u1'); await putJSON(db3, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
   const t3 = await issue(db3, 'u1'), E3 = { ACCOUNTS: db3, ...A };
-  answers = [planJSON(four())];
-  await call('plan', { token: t3, env: E3, body: { meat: 'chicken' } });
+    await call('plan', { token: t3, env: E3, body: DIN() });
   const p3 = (await call('accept', { token: t3, env: E3, body: {} })).body.plan;
   const r3 = await call('unaccept', { token: t3, env: E3, body: { id: p3.id } });
   assert.equal(r3.body.plan, null); assert.deepEqual(r3.body.log, []);
@@ -438,31 +463,27 @@ await test('clear (Dinners\' ×): the family\'s plan goes, but stays in Past pla
   assert.equal(u.status, 200); assert.deepEqual(u.body.plan, cur); assert.deepEqual(JSON.parse(db2.m.get('meals:plan')), cur);
   assert.equal((await call2('current', { id: cur.id })).body.error, 'changed', 'not over a plan that is there');
 });
-await test('settings: only the owner changes what the family avoids; a member\'s stores and cards still save', async () => {
+await test('settings: only the owner changes what the family avoids; a member\'s other rules still save', async () => {
   const db4 = fakeKV(); await db4.put('owner', 'u1'); await putJSON(db4, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
   await putJSON(db4, 'user:u2', { id: 'u2', name: 'Kim', role: 'member', creds: [] });
   const t1 = await issue(db4, 'u1'), t2 = await issue(db4, 'u2'), E4 = { ACCOUNTS: db4, ...A };
-  await call('settings', { token: t1, env: E4, body: { stores: ['publix'], cards: ['vic'], avoid: ['tree nuts', 'shellfish'] } });
-  let r = await call('settings', { token: t2, env: E4, body: { stores: ['aldi'], cards: [], avoid: ['shellfish'] } });
+  await call('settings', { token: t1, env: E4, body: { veg: 3, avoid: ['tree nuts', 'shellfish'] } });
+  let r = await call('settings', { token: t2, env: E4, body: { veg: 1, avoid: ['shellfish'] } });
   assert.equal(r.status, 403); assert.equal(r.body.error, 'owner-only');
-  assert.deepEqual((await call('state', { token: t2, env: E4 })).body.settings, { stores: ['publix'], cards: ['vic'], avoid: ['tree nuts', 'shellfish'] }, 'nothing changed');
-  r = await call('settings', { token: t2, env: E4, body: { stores: ['aldi'], cards: [] } });
-  assert.equal(r.status, 200); assert.deepEqual(r.body.settings, { stores: ['aldi'], cards: [], avoid: ['tree nuts', 'shellfish'] });
-  r = await call('settings', { token: t2, env: E4, body: { stores: ['lidl'], cards: ['prime'], avoid: ['tree nuts', 'shellfish'] } });
+  assert.deepEqual((await call('state', { token: t2, env: E4 })).body.settings, { avoid: ['tree nuts', 'shellfish'], veg: 3, protein: 'good', people: 4, weeknight: 40 }, 'nothing changed');
+  r = await call('settings', { token: t2, env: E4, body: { veg: 1, people: 2 } });
+  assert.equal(r.status, 200); assert.deepEqual(r.body.settings, { avoid: ['tree nuts', 'shellfish'], veg: 1, protein: 'good', people: 2, weeknight: 40 });
+  r = await call('settings', { token: t2, env: E4, body: { protein: 'high', avoid: ['tree nuts', 'shellfish'] } });
   assert.equal(r.status, 200, 'the avoid list as it is, sent back unchanged, is fine');
 });
-await test('plans and pasted deals count toward the day (meals:ai:<user>:<day>); past AI_DAILY the person is told so', async () => {
+await test('plans count toward the day (meals:ai:<user>:<day>); past AI_DAILY the person is told so', async () => {
   const db5 = fakeKV(); await db5.put('owner', 'u1'); await putJSON(db5, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
   const t5 = await issue(db5, 'u1'), E5 = { ACCOUNTS: db5, ...A }, key = () => [...db5.m.keys()].find(k => k.startsWith('meals:ai:u1:'));
-  answers = [planJSON(four())]; assert.equal((await call('plan', { token: t5, env: E5, body: { meat: 'chicken' } })).status, 200);
+  assert.equal((await call('plan', { token: t5, env: E5, body: DIN() })).status, 200);
   assert.equal(db5.m.get(key()), '1');
-  answers = [JSON.stringify({ items: [] })]; await call('deals', { token: t5, env: E5, body: { store: 'publix', text: 'Chicken thighs $1.99/lb this week at Publix, through Tuesday.' } });
-  assert.equal(db5.m.get(key()), '2', 'a pasted flyer counts too');
   db5.m.set(key(), String(AI_DAILY));
-  const n0 = asked.length, r = await call('plan', { token: t5, env: E5, body: { meat: 'chicken' } });
+  const n0 = asked.length, r = await call('plan', { token: t5, env: E5, body: DIN() });
   assert.equal(r.status, 429); assert.equal(r.body.error, 'limit'); assert.equal(asked.length, n0, 'the model is not asked');
-  const d = await call('deals', { token: t5, env: E5, body: { store: 'publix', text: 'Chicken thighs $1.99/lb this week at Publix, through Tuesday.' } });
-  assert.equal(d.status, 429);
   assert.equal(db5.m.get('meals:draft') !== undefined, true, 'the first plan was kept');
 });
 console.log(`\n${n} passed`);

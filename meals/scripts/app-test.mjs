@@ -1,13 +1,14 @@
 // Meals at iPhone size (390 x 844), against the real server code
 // (functions/meals/api) on an in-memory KV with a real family session, and a
-// stand-in for the AI service (no network, no key): no key yet, finding the
-// week's deals (sorted into grocery sections), planning dinners, a recipe, the
-// shopping list (ticks kept, the list there offline), the plan folded away and cleared (with Undo), a plan that keeps using
-// coconut never saved, settings, the family's Google Sheet through aOS (the real
-// google-sheet-sync.gs on a fake Sheet, with who's asking from each phone's session:
-// not set up, signed out, the old link handed over, what is sent and when, whose rows,
-// plans read back from it, a plan taken back), and no script errors
-// or sideways scrolling in light and dark. Seeds localStorage['aos.seen'] so the walkthrough stays away.
+// stand-in for the AI service (no network, no key): no key yet, the Ipsy tab (what
+// you fancy, then Ipsy's questions one at a time), a plan (Try again, Accept), a
+// recipe (rated, Swap), the shopping list (ticks kept, the list there offline), the
+// plan folded away and cleared (with Undo), a plan that keeps using coconut never
+// saved, the family's rules in Settings, the family's Google Sheet through aOS (the
+// real google-sheet-sync.gs on a fake Sheet, with who's asking from each phone's
+// session: not set up, signed out, the old link handed over, what is sent and when,
+// whose rows, plans read back from it, a plan taken back), and no script errors or
+// sideways scrolling in light and dark. Seeds localStorage['aos.seen'] so the walkthrough stays away.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look (the sky held at day,
 // aos.sky), and Standard (Sea glass); Settings > Design switches between them at once and keeps the
 // choice; and the old Meals Vintage address (served from meals/, as the deploy does) moves that app's
@@ -55,22 +56,18 @@ const sheetCalls = [], claims = [];
 let sheetRefused = 0;   // syncs aOS answered 'no-sheet' (not set up in aOS yet)
 let sheetFail = '';     // when set, the Sheet answers every sync with this error
 
-// The stand-in AI (Anthropic's Messages API shape): deals, or a plan, by what it's asked.
-const DEALS = { validFrom: '', validTo: '', items: [
-  { name: 'Organic boneless skinless chicken thighs', price: '$3.99/lb', regular: '$5.99/lb', prime: true },
-  { name: 'Grass-fed ground beef', price: '$5.99/lb', regular: '$7.49/lb', prime: true },
-  { name: 'Broccoli crowns', price: '$1.99/lb' }, { name: 'Organic strawberries', price: '$3.99' }, { name: 'Greek yogurt', price: '$4.49' } ], sources: ['https://example.com/sales'] };
-const meal = (title, cuisine, extra) => ({ title, cuisine, method: 'skillet', minutes: 30, why: 'Quick on a weeknight.', uses: ['Grass-fed ground beef'],
-  ingredients: [{ item: 'ground beef', qty: '1.5 lb' }, { item: 'broccoli', qty: '1 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }, ...(extra || [])], steps: ['Brown the beef.', 'Add the rest and simmer.'] });
-const PLAN = { meals: [meal('Beef bulgogi bowls', 'Korean'), meal('Beef and bean chili', 'Tex-Mex'), meal('Bolognese with penne', 'Italian'), meal('Beef kofta wraps', 'Middle Eastern')], tip: 'Buy the beef in one family pack.' };
-let coconut = false, asked = 0;
+// The stand-in AI (Anthropic's Messages API shape): every meal the prompt asks for, by its key.
+const DISHES = ['Beef bulgogi bowls', 'Beef and bean chili', 'Bolognese with penne', 'Beef kofta wraps', 'Beef and broccoli stir-fry', 'Steak fajitas', 'Beef pho'];
+let coconut = false, asked = 0, made = 0;
 const ai = async (url, init) => {
   asked++;
-  const b = JSON.parse(init.body);
-  const out = /grocery store sales/.test(b.system) ? DEALS
-    : coconut ? { meals: PLAN.meals.map(x => ({ ...x, ingredients: [...x.ingredients, { item: 'coconut milk', qty: '1 can' }] })) } : PLAN;
+  const b = JSON.parse(init.body), keys = [...String(b.messages[0].content).matchAll(/^- (d\d-\w+) \(/gm)].map(x => x[1]);
+  const meals = keys.map(key => ({ key, title: DISHES[made++ % DISHES.length], cuisine: 'Korean', method: 'skillet', minutes: 30, why: 'Quick on a weeknight.',
+    veg: ['broccoli', 'carrots', 'spring onions'], protein: 38, fridge: [],
+    ingredients: [{ item: 'ground beef', qty: '1.5 lb' }, { item: 'broccoli', qty: '1 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }, ...(coconut ? [{ item: 'coconut milk', qty: '1 can' }] : [])],
+    steps: ['Brown the beef.', 'Add the rest and simmer.'] }));
   await new Promise(r => setTimeout(r, 300));
-  return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(out) }], stop_reason: 'end_turn' }));
+  return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ meals, tip: 'Buy the beef in one family pack.' }) }], stop_reason: 'end_turn' }));
 };
 let env = { ACCOUNTS: db }, down = false;
 
@@ -122,91 +119,97 @@ const text = (page, sel) => page.evaluate(s => [...document.querySelectorAll(s)]
 const shot = async (page, name) => { if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, name + '.png') }); };
 const wide = page => page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
 
+// The Ipsy tab, from what you fancy to a plan: dinners for 3 days, for 4 (foods: picked first)
+const planIt = async (page, { foods = [], days = 3, people = 4 } = {}) => {
+  if ((await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) !== 'true') { await page.click('#tabs [data-tab="ipsy"]'); await page.waitForTimeout(200); }
+  for (const f of foods) await page.click('[data-food="' + f + '"]');
+  await page.click('[data-act="pick"]'); await page.click('[data-days="' + days + '"]'); await page.click('[data-people="' + people + '"]');
+  await page.click('[data-act="make"]');
+};
+const toPlan = async page => { if ((await page.getAttribute('#tabs [data-tab="plan"]', 'aria-pressed')) !== 'true') { await page.click('#tabs [data-tab="plan"]'); await page.waitForTimeout(300); } };
+
 { // no key yet
   const { ctx, page, errs } = await phone();
-  ok('no AI key: Plan dinners is off', await page.locator('[data-act="plan"]').isDisabled());
+  ok('it opens on Ipsy', (await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) === 'true' && await page.isVisible('#main .card.pick'));
+  ok('no AI key: Plan it is off', await page.locator('[data-act="pick"]').isDisabled());
   await page.click('#setBtn'); await page.waitForTimeout(300);
-  ok('no AI key: the gear says so', (await page.textContent('#setBody')).includes('Not set up yet'));
-  ok('the family\'s stores, cards and allergies show in settings', (await page.locator('#sStores [aria-checked="true"]').count()) === 8 && (await page.locator('#sCards [aria-checked="true"]').count()) === 2
-    && (await text(page, '#avoid [data-avoid]')).join('|') === 'Tree nuts ✕|Coconut ✕');
+  ok('no AI key: Settings say so', (await page.textContent('#setBody')).includes('Not set up yet'));
+  ok('the family\'s rules and allergies show in Settings', (await page.textContent('#sVeg')) === '2' && (await page.getAttribute('[data-protein="good"]', 'aria-checked')) === 'true'
+    && (await page.inputValue('#sPeople')) === '4' && (await page.inputValue('#sWeek')) === '40' && (await text(page, '#avoid [data-avoid]')).join('|') === 'Tree nuts ✕|Coconut ✕');
+  ok('no deals anywhere', (await page.locator('#tabs [data-tab="deals"]').count()) === 0 && !/deal|store/i.test(await page.textContent('#setBody')));
   ok('no script errors', !errs.length, errs.join(' | '));
   await ctx.close();
 }
 env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
-{ // deals, a plan, the list
+{ // Ipsy asks, a plan, a recipe, the list
   const { ctx, page, errs } = await phone();
-  await page.click('#tabs [data-tab="deals"]'); await page.waitForTimeout(200);
-  await page.click('[data-act="find"]');
-  ok('finding deals shows that it\'s looking', await page.locator('.busy').isVisible());
-  await page.waitForSelector('#main .drow', { timeout: 5000 });
-  const heads = await text(page, '#main .sechead span:first-child');
-  ok('deals sorted into grocery sections, in store order', heads.join('|') === 'Produce|Meat|Dairy & Eggs', heads.join('|'));
-  ok('the first store is Whole Foods, and its Prime prices are marked', (await page.inputValue('#dStore')) === 'wholefoods' && (await text(page, '#main .prime')).join('|') === 'Prime|Prime');
-  await shot(page, 'deals');
-  ok('the page where they were found is linked', (await page.getAttribute('.src a', 'href')) === 'https://example.com/sales');
-  const before = asked; await page.click('[data-act="find"]'); await page.waitForSelector('#main .drow');
-  ok('looking again this week doesn\'t ask the AI again (within 10 minutes)', asked === before);
-
-  // another store: its own deals, no card of the family's there
-  await page.selectOption('#dStore', 'publix'); await page.waitForTimeout(200);
-  ok('switching store: Publix has no deals yet', (await page.textContent('#main')).includes('No deals yet'));
-  await page.click('[data-act="find"]'); await page.waitForSelector('#main .drow', { timeout: 5000 });
-  ok('Publix\'s deals, with no member prices', (await page.locator('#main .drow').count()) === 5 && (await page.locator('#main .prime').count()) === 0);
-  ok('each store\'s deals kept apart', !!m.get('meals:deals:publix') && !!m.get('meals:deals:wholefoods'));
-  // all of them together
-  await page.selectOption('#dStore', 'all'); await page.waitForTimeout(200);
-  ok('all my stores: how many have deals', (await page.textContent('#main')).includes('2 of 8 stores'));
-  ok('all my stores: each deal says where', (await text(page, '#main .drow .dn small')).some(t => t.startsWith('Publix')) && (await text(page, '#main .drow .dn small')).some(t => t.startsWith('Whole Foods')));
-  const was = asked;
-  await page.click('[data-act="find-all"]');
-  ok('finding the rest says which store it\'s on', (await page.textContent('#main .busy')).includes('of 6'));
-  await page.waitForFunction(() => document.querySelector('#main').textContent.includes('8 of 8 stores'), null, { timeout: 15000 });
-  ok('finding the rest searched the other 6 stores', asked - was === 6);
-  await shot(page, 'deals-all');
-
-  await page.click('[data-act="plan-deals"]'); await page.waitForTimeout(400);
-  ok('planning from all the deals: best deals at any store, using them', (await page.inputValue('#pShop')) === 'all' && (await page.inputValue('#pDeals')) === '1');
-  await page.click('[data-meat="beef"]');
-  ok('picking a meat', (await page.getAttribute('[data-meat="beef"]', 'aria-checked')) === 'true');
-  await shot(page, 'plan-sheet');
-  ok('the plan sheet names what the family never eats', (await page.textContent('#planBody')).includes('Never tree nuts or coconut'));
-  await page.click('#planGo');
-  ok('planning shows that it\'s working', await page.locator('.busy').isVisible());
+  ok('Ipsy says hi by name and asks what we\'re eating', /^Hi Tom\. What are we eating\?/.test((await text(page, '#main .bub'))[0]));
+  ok('Dinner is picked to start, and the family\'s rules show under the picks', (await page.getAttribute('[data-slot="dinner"]', 'aria-checked')) === 'true'
+    && (await page.getAttribute('[data-slot="lunch"]', 'aria-checked')) === 'false' && /2\+ vegetables and about 30 g protein in every meal · never tree nuts and coconut/.test(await page.textContent('#main .rules')));
+  await page.click('[data-food="beef"]'); await page.click('[data-food="surprise"]');
+  ok('Surprise me and the foods take turns', (await page.getAttribute('[data-food="beef"]', 'aria-checked')) === 'false' && (await page.getAttribute('[data-food="surprise"]', 'aria-checked')) === 'true');
+  await page.click('[data-food="beef"]');
+  ok('picking a food', (await page.getAttribute('[data-food="beef"]', 'aria-checked')) === 'true' && (await page.getAttribute('[data-food="surprise"]', 'aria-checked')) === 'false');
+  await page.click('[data-slot="dinner"]');
+  ok('no meal picked: nothing to plan', await page.locator('[data-act="pick"]').isDisabled());
+  await page.click('[data-slot="dinner"]');
+  await page.fill('#fFridge', 'half a cabbage');
+  await shot(page, 'ipsy-pick');
+  await page.click('[data-act="pick"]'); await page.waitForTimeout(300);
+  ok('then one question: how far ahead', (await text(page, '#main .bub')).at(-1) === 'Lovely. How far ahead should I plan?' && (await page.locator('[data-days]').count()) === 3
+    && (await text(page, '#main .bub.me'))[0] === 'Dinner · beef · use up half a cabbage', (await text(page, '#main .bub')).join(' | '));
+  await page.click('[data-days="3"]'); await page.waitForTimeout(200);
+  ok('then how many, the usual number picked', /^How many at the table\? Usually it’s 4\./.test((await text(page, '#main .bub')).at(-1)) && (await page.getAttribute('[data-people="4"]', 'aria-checked')) === 'true');
+  ok('no lunches question with dinners only', (await page.locator('[data-lunches]').count()) === 0);
+  await page.click('[data-people="4"]'); await page.waitForTimeout(200);
+  ok('then anything else, with what it will plan', /Planning 3 days of dinners for 4: 3 meals, each with 2\+ vegetables and about 30 g protein\./.test(await page.textContent('#main .card.ready')));
+  await shot(page, 'ipsy-questions');
+  await page.fill('#fNote', 'mild for the kids');
+  const a0 = asked;
+  await page.click('[data-act="make"]');
+  ok('planning shows that it\'s working, on the Plan tab', await page.locator('.busy').isVisible() && (await page.getAttribute('#tabs [data-tab="plan"]', 'aria-pressed')) === 'true');
   await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
   const cards = await text(page, '#main [data-meal] .ct');
-  await shot(page, 'dinners');
-  ok('4 different dinners', cards.length === 4 && new Set(cards).size === 4, cards.join(' | '));
-  ok('each says what\'s on sale in it', (await text(page, '#main [data-meal] .saletag')).length === 4);
+  await shot(page, 'plan');
+  ok('3 different dinners, a day a card', cards.length === 3 && new Set(cards).size === 3 && (await page.locator('#main .card.dayc').count()) === 3, cards.join(' | '));
+  ok('one call to the AI, with the picks, the fridge and the note', asked === a0 + 1);
+  ok('each says its vegetables and protein', (await text(page, '#main [data-meal] .tag.veg')).length === 3 && (await text(page, '#main [data-meal] .tag.pro')).every(t => /38 g/.test(t)), (await text(page, '#main [data-meal] .tags')).join(' | '));
   ok('a new plan is a draft: nothing saved, and the list waits for it', (await page.textContent('#main')).includes('not saved yet') && !m.get('meals:plan'));
-  // try again: another plan, told to differ from this one
+  const draft = JSON.parse(m.get('meals:draft'));
+  ok('the draft keeps what was asked', draft.foods.join() === 'beef' && draft.days === 3 && draft.people === 4 && draft.fridge === 'half a cabbage' && draft.note === 'mild for the kids');
+  // try again: another plan, the same choices
   const beforeAgain = asked;
   await page.click('[data-act="again"]');
-  await page.waitForFunction(() => document.querySelectorAll('#main [data-meal]').length === 4, null, { timeout: 5000 });
-  ok('try again asks for another plan', asked === beforeAgain + 1);
+  await page.waitForFunction(() => document.querySelectorAll('#main [data-meal]').length === 3, null, { timeout: 5000 });
+  ok('try again asks for another plan with the same choices', asked === beforeAgain + 1 && JSON.parse(m.get('meals:draft')).fridge === 'half a cabbage');
   // accept it, starting tomorrow
   const tomorrow = await page.evaluate(() => document.querySelectorAll('#aStart option')[1].value);
   await page.selectOption('#aStart', tomorrow);
   await page.click('[data-act="accept"]'); await page.waitForTimeout(500);
   const saved = JSON.parse(m.get('meals:plan') || '{}');
-  ok('accepting saves the plan for the family, from the day picked', saved.start === tomorrow && saved.dates.length === 4 && !m.get('meals:draft'), JSON.stringify(saved.dates));
-  ok('its nights show their dates', (await text(page, '#main [data-meal] .night'))[0].startsWith('Night 1 · '));
+  ok('accepting saves the plan for the family, from the day picked', saved.start === tomorrow && saved.dates.length === 3 && !m.get('meals:draft'), JSON.stringify(saved.dates));
+  ok('its days show their dates', /^[A-Z][a-z]+day, [A-Z][a-z]{2} \d+$/.test((await text(page, '#main .card.dayc .night'))[0]), (await text(page, '#main .card.dayc .night'))[0]);
   ok('it\'s in Past plans, as the current one', (await page.locator('[data-past] .prime', { hasText: 'Current' }).count()) === 1);
-  ok('the sale prices it was planned with are kept with it', Array.isArray(saved.sales) && saved.sales.length > 0);
   await shot(page, 'accepted');
-  await page.click('#main [data-meal="2"]'); await page.waitForTimeout(400);
-  const recipe = await page.textContent('#recipeBody');
+  await page.click('#main [data-meal="1"]'); await page.waitForTimeout(400);
+  const recipe = await page.textContent('#recipeBody'), title = saved.meals[1].title;
   await shot(page, 'recipe');
-  ok('a night opens to its recipe', recipe.includes('Bolognese with penne') && recipe.includes('Brown the beef.') && recipe.includes('serves 4'));
-  ok('its ingredients show what\'s on sale', (await text(page, '#recipeBody .saletag')).some(t => t.includes('$1.99/lb')));
-  await page.click('#recipeSheet .okbtn'); await page.waitForTimeout(300);
+  ok('a meal opens to its recipe, named by its day', recipe.includes(title) && recipe.includes('Brown the beef.') && recipe.includes('serves 4') && / dinner$/.test(await page.textContent('#recipeLbl')));
+  ok('with its vegetables, as estimates', recipe.includes('Vegetables: broccoli, carrots and spring onions'));
+  await page.click('#recipeBody [data-rate="up"]'); await page.waitForTimeout(400);
+  ok('Loved it: the family\'s taste, for the next plan', JSON.parse(m.get('meals:taste')).loved[0].title === title && (await page.getAttribute('#recipeBody [data-rate="up"]', 'aria-checked')) === 'true');
+  await page.click('#recipeBody [data-rate="down"]'); await page.waitForTimeout(400);
+  ok('Not again moves it', JSON.parse(m.get('meals:taste')).nope[0].title === title && !JSON.parse(m.get('meals:taste')).loved.length && (await page.getAttribute('#recipeBody [data-rate="up"]', 'aria-checked')) === 'false');
+  ok('Swap and Ask Ipsy', await page.isVisible('#recipeBody [data-act="swap"]') && await page.isVisible('#recipeBody [data-act="askmeal"]'));
+  await page.click('#recipeSheet .iconbtn[data-close]'); await page.waitForTimeout(300);
 
   await page.click('#tabs [data-tab="list"]'); await page.waitForTimeout(300);
   const lh = await text(page, '#main .sechead span:first-child');
   await shot(page, 'list');
   ok('the shopping list is in grocery sections, staples apart', lh.join('|') === 'Produce|Meat|You probably have', lh.join('|'));
   const beef = page.locator('.irow', { hasText: 'Ground beef' });
-  ok('the same ingredient once, with every night\'s amount', (await beef.textContent()).includes('6 lb'));
-  ok('and where it\'s on sale, at what price', /On sale at [A-Za-z ]+ \$5\.99\/lb/.test(await beef.textContent()));
+  ok('the same ingredient once, with every day\'s amount and which days', (await beef.textContent()).includes('4.5 lb') && /[A-Z][a-z]{2}, [A-Z][a-z]{2}, [A-Z][a-z]{2}/.test(await beef.textContent()), await beef.textContent());
+  ok('no sale prices', !/sale/i.test(await page.textContent('#main')));
   await beef.click();
   ok('ticking an item', (await beef.getAttribute('aria-checked')) === 'true');
   ok('nothing wider than the phone', !(await wide(page)));
@@ -219,43 +222,59 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   down = false;
   await ctx.close();
 }
-{ // a past plan opens with its dinners and shopping list
+{ // a week of breakfast, lunch and dinner: Ipsy asks about lunches, and leftover lunches point to the dinner before
+  const { ctx, page, errs } = await phone();
+  await page.click('[data-slot="breakfast"]'); await page.click('[data-slot="lunch"]');
+  await page.click('[data-act="pick"]'); await page.click('[data-days="7"]'); await page.click('[data-people="2"]'); await page.waitForTimeout(200);
+  ok('with lunch and dinner, Ipsy asks about lunches', (await text(page, '#main .bub')).at(-1).startsWith('For lunches: the night before’s leftovers'));
+  await page.click('[data-lunches="leftovers"]'); await page.waitForTimeout(200);
+  ok('and plans 21 meals', /21 meals/.test(await page.textContent('#main .card.ready')));
+  await page.click('[data-act="make"]');
+  await page.waitForSelector('#main [data-meal]', { timeout: 8000 });
+  const d = JSON.parse(m.get('meals:draft'));
+  ok('21 meals, 6 of them leftover lunches', d.meals.length === 21 && d.meals.filter(x => x.leftover).length === 6 && (await page.locator('#main .card.dayc').count()) === 7);
+  const li = d.meals.findIndex(x => x.leftover);
+  await page.click('#main [data-meal="' + li + '"]'); await page.waitForTimeout(400);
+  ok('a leftover lunch says so, and opens the dinner it comes from', (await page.textContent('#recipeBody')).includes('cooked double') && await page.isVisible('#recipeBody [data-open]'));
+  await page.click('#recipeBody [data-open]'); await page.waitForTimeout(300);
+  ok('that dinner\'s recipe', (await page.textContent('#recipeBody')).includes(d.meals.find(x => x.day === d.meals[li].leftover && x.slot === 'dinner').title));
+  await page.click('#recipeSheet .iconbtn[data-close]'); await page.waitForTimeout(300);
+  await page.click('[data-act="discard"]'); await page.waitForTimeout(400);
+  ok('discarding drops the new plan; the accepted one shows again', !m.get('meals:draft') && (await page.locator('[data-src="plan"]').count()) === 3);
+  ok('nothing wider than the phone; no script errors', !(await wide(page)) && !errs.length, errs.join(' | '));
+  await ctx.close();
+}
+{ // a past plan opens with its meals and shopping list
   const { ctx, page } = await phone();
+  await toPlan(page);
   await page.click('[data-past]'); await page.waitForTimeout(400);
   const t = await page.textContent('#pastBody');
-  ok('a past plan opens with its dinners and its shopping list', (await page.locator('#pastBody [data-meal]').count()) === 4 && t.includes('Shopping list') && t.includes('Ground beef'));
+  ok('a past plan opens with its meals and its shopping list', (await page.locator('#pastBody [data-meal]').count()) === 3 && t.includes('Shopping list') && t.includes('Ground beef'));
   await page.click('#pastBody [data-meal="0"]'); await page.waitForTimeout(400);
-  ok('and its recipes', (await page.textContent('#recipeBody')).includes('Beef bulgogi bowls'));
+  ok('and its recipes', (await page.textContent('#recipeBody')).includes(JSON.parse(m.get('meals:plan')).meals[0].title));
   await shot(page, 'past');
   await ctx.close();
 }
-{ // a new plan can be discarded, and the accepted one stays
-  const { ctx, page } = await phone();
-  await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
-  await page.waitForSelector('[data-act="discard"]', { timeout: 5000 });
-  await page.click('[data-act="discard"]'); await page.waitForTimeout(400);
-  ok('discarding drops the new plan; the accepted one shows again', !m.get('meals:draft') && (await page.locator('[data-src="plan"]').count()) === 4);
-  await ctx.close();
-}
-{ // the plan's bar: it folds the dinners away (kept folded on this phone), and × clears the plan for the family, with Undo
+{ // the plan's bar: it folds the days away (kept folded on this phone), and × clears the plan for the family, with Undo
   const { ctx, page, errs } = await phone();
+  await toPlan(page);
   const id = JSON.parse(m.get('meals:plan')).id;
   ok('the plan has a bar: what it is, when, and a clear button', (await page.locator('.planbar [data-act="fold"][aria-expanded="true"]').count()) === 1
-    && (await page.locator('.planbar [data-act="clear"]').count()) === 1 && (await page.locator('#planNights [data-meal]').count()) === 4
-    && /4 dinners/.test(await page.textContent('.planbar .pt small')));
+    && (await page.locator('.planbar [data-act="clear"]').count()) === 1 && (await page.locator('#planDays [data-meal]').count()) === 3
+    && /3 meals/.test(await page.textContent('.planbar .pt small')));
   await page.click('.planbar [data-act="fold"]'); await page.waitForTimeout(300);
-  ok('tapped, it folds the dinners away into the bar', await page.locator('#planNights').isHidden() && (await page.getAttribute('.planbar [data-act="fold"]', 'aria-expanded')) === 'false');
+  ok('tapped, it folds the days away into the bar', await page.locator('#planDays').isHidden() && (await page.getAttribute('.planbar [data-act="fold"]', 'aria-expanded')) === 'false');
   await shot(page, 'folded');
   await page.reload(); await page.waitForTimeout(800);
-  ok('and stays folded on this phone', await page.locator('#planNights').isHidden());
+  ok('and stays folded on this phone', await page.locator('#planDays').isHidden());
   await page.click('.planbar [data-act="fold"]'); await page.waitForTimeout(300);
-  ok('tapped again, the dinners are back', (await page.locator('#planNights [data-meal]').count()) === 4 && await page.locator('#planNights').isVisible());
+  ok('tapped again, the days are back', (await page.locator('#planDays [data-meal]').count()) === 3 && await page.locator('#planDays').isVisible());
   await page.click('.planbar [data-act="clear"]'); await page.waitForTimeout(500);
-  ok('× clears the plan for the family', !m.get('meals:plan') && (await page.locator('.planbar').count()) === 0 && (await page.textContent('#main')).includes('No dinners planned yet'));
+  ok('× clears the plan for the family', !m.get('meals:plan') && (await page.locator('.planbar').count()) === 0 && (await page.textContent('#main')).includes('Nothing planned yet'));
   ok('it stays in Past plans', (await page.locator(`[data-past="${id}"]`).count()) === 1 && JSON.parse(m.get('meals:log'))[0].id === id);
   ok('and says so, with Undo', /still in Past plans/.test(await page.textContent('#toastMsg')) && await page.locator('#toastAct').isVisible());
   await page.click('#toastAct'); await page.waitForTimeout(500);
-  ok('Undo puts it back as the family\'s plan', JSON.parse(m.get('meals:plan') || '{}').id === id && (await page.locator('#planNights [data-meal]').count()) === 4);
+  ok('Undo puts it back as the family\'s plan', JSON.parse(m.get('meals:plan') || '{}').id === id && (await page.locator('#planDays [data-meal]').count()) === 3);
   ok('nothing wider than the phone; no script errors', !(await wide(page)) && !errs.length, errs.join(' | '));
   await ctx.close();
 }
@@ -263,27 +282,36 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   coconut = true;
   const { ctx, page } = await phone();
   const was = m.get('meals:plan');
-  await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
+  await planIt(page);
   await page.waitForSelector('#toast:not([hidden])', { timeout: 8000 });
-  ok('a plan with coconut, twice: not kept, and it says why', (await page.textContent('#toastMsg')).includes('something the family avoids') && m.get('meals:plan') === was);
-  ok('the last good plan still shows', (await text(page, '#main [data-meal] .ct')).length === 4);
+  ok('a plan with coconut, twice: not kept, and it says why', (await page.textContent('#toastMsg')).includes('something the family avoids') && m.get('meals:plan') === was && !m.get('meals:draft'));
+  ok('the last good plan still shows', (await text(page, '#main [data-meal] .ct')).length === 3);
   coconut = false;
   await ctx.close();
 }
-{ // settings are the family's
+{ // the family's rules are the family's
   const { ctx, page } = await phone('dark');
   await page.click('#setBtn'); await page.waitForTimeout(300);
   ok('Settings: titled Settings, with a Done tick like the other apps', (await page.textContent('#setLbl')) === 'Settings' && (await page.getAttribute('#sSave', 'aria-label')) === 'Done');
+  ok('Settings: what Ipsy has learned, to forget one', (await text(page, '#setBody [data-forget]')).length === 1);
+  await page.click('#setBody [data-veg="1"]');
+  await page.click('#setBody [data-protein="high"]');
+  await page.selectOption('#sPeople', '3'); await page.selectOption('#sWeek', '30');
   await page.fill('#sAdd', 'Shellfish'); await page.click('#sAddGo');
   await page.click('[data-avoid="coconut"]');
-  await page.click('[data-store="target"]'); await page.click('[data-store="lidl"]'); await page.click('[data-card="prime"]');
   await shot(page, 'settings-dark');
   await page.click('#sSave'); await page.waitForTimeout(400);
-  await shot(page, 'dinners-dark');
   const saved = JSON.parse(m.get('meals:settings'));
-  ok('settings saved for the family', saved.avoid.join('|') === 'tree nuts|shellfish' && saved.stores.join('|') === 'wholefoods|harristeeter|publix|lowesfoods|aldi|walmart' && saved.cards.join('|') === 'vic', JSON.stringify(saved));
-  await page.click('#tabs [data-tab="deals"]'); await page.waitForTimeout(200);
-  ok('the store picker shows only the family\'s stores', (await page.locator('#dStore option').count()) === 7);
+  ok('the rules saved for the family', saved.veg === 3 && saved.protein === 'high' && saved.people === 3 && saved.weeknight === 30 && saved.avoid.join('|') === 'tree nuts|shellfish', JSON.stringify(saved));
+  await page.click('#tabs [data-tab="ipsy"]'); await page.waitForTimeout(300);
+  ok('the Ipsy tab shows them', /3\+ vegetables and about 40 g protein in every meal · never tree nuts and shellfish/.test(await page.textContent('#main .rules')));
+  // the next plan is asked for with them
+  await page.click('[data-act="pick"]'); await page.click('[data-days="1"]'); await page.waitForTimeout(200);
+  ok('Ipsy remembers how many were at the table last time', /Last time it was 4\./.test((await text(page, '#main .bub')).at(-1)));
+  await page.click('[data-people="3"]'); await page.click('[data-act="make"]');
+  await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
+  ok('a plan made with the new rules', JSON.parse(m.get('meals:draft')).people === 3);
+  await page.click('[data-act="discard"]'); await page.waitForTimeout(400);
   ok('dark: nothing wider than the phone', !(await wide(page)));
   await ctx.close();
 }
@@ -337,19 +365,17 @@ const SHEET_STEP = async () => {
       && claims.length === 1 && JSON.stringify(claims[0]) === JSON.stringify({ who: 'O1', url: SHEET_URL, secret: SHEET_SECRET }), JSON.stringify(claims));
     ok('Sheet: then it syncs, through aOS', await until(() => sheetCalls.length > 0));
     const first = sheetCalls[0].body;
-    ok('Sheet: a sync is the plan, deals, list, settings and graves, keeping 90 days; never a phrase', first.action === 'sync' && first.v === 3 && first.window === 90 && /^\d{4}-\d\d-\d\d$/.test(first.today)
-      && !('secret' in first) && first.plans.length === 1 && first.deals.length > 0 && first.shopping.buy.length > 0 && !!first.settings.stores.length && JSON.stringify(first.graves) === '{}', Object.keys(first).join());
+    ok('Sheet: a sync is the plan, list, settings and graves (no deals now), keeping 90 days; never a phrase', first.action === 'sync' && first.v === 3 && first.window === 90 && /^\d{4}-\d\d-\d\d$/.test(first.today)
+      && !('secret' in first) && first.plans.length === 1 && first.deals.length === 0 && first.shopping.buy.length > 0 && !!first.settings.stores.length && JSON.stringify(first.graves) === '{}', Object.keys(first).join());
     const cur = first.plans[0];
-    ok('Sheet: the plan is whole (id, who, when read, dates, store, meals with ingredients and steps), without the sale prices kept for the list', /^p/.test(cur.id) && cur.acceptedBy === 'Tom' && cur.acceptedAt > 0 && cur.updated >= cur.acceptedAt
-      && cur.dates.length === 4 && cur.shopName === 'Best deals' && cur.meat === 'beef' && cur.meals[0].ingredients[0].item === 'ground beef' && cur.meals[0].steps.length === 2 && cur.sales === undefined && cur.by === undefined && cur.tip === 'Buy the beef in one family pack.', JSON.stringify(Object.keys(cur)));
+    ok('Sheet: the plan is whole (id, who, when read, a date a meal, what it was built around, meals with ingredients and steps)', /^p/.test(cur.id) && cur.acceptedBy === 'Tom' && cur.acceptedAt > 0 && cur.updated >= cur.acceptedAt
+      && cur.dates.length === 3 && cur.shopName === 'Dinner' && cur.meat === 'Beef' && cur.meals[0].ingredients[0].item === 'ground beef' && cur.meals[0].steps.length === 2 && cur.sales === undefined && cur.by === undefined && cur.foods === undefined && cur.tip === 'Buy the beef in one family pack.', JSON.stringify({ ...cur, meals: cur.meals.length }));
     const beefRow = first.shopping.buy.find(x => x.item === 'Ground beef');
-    ok('Sheet: the shopping list is as the List tab shows it (section, amount, nights, sale)', !!beefRow && beefRow.section === 'Meat' && beefRow.amount === '6 lb' && beefRow.nights === 'nights 1, 2, 3, 4' && /^\$5\.99\/lb at /.test(beefRow.sale) && first.shopping.pantry.some(x => x.item === 'Olive oil' && x.amount === '4 tbsp'), JSON.stringify(beefRow));
-    const d0 = first.deals.find(d => d.store === 'Publix');
-    ok('Sheet: deals go with the store’s name and week', !!d0 && /^\d{4}-\d\d-\d\d$/.test(d0.week) && d0.items.length === 5 && d0.items[0].name && typeof d0.items[0].member === 'boolean', JSON.stringify(d0 && d0.items[0]));
-    ok('Sheet: settings are the stores and cards by name, and what is avoided', first.settings.stores.includes('Harris Teeter') && !first.settings.stores.includes('Target') && first.settings.cards.join() === 'VIC (Harris Teeter)' && first.settings.avoid.join() === 'tree nuts,shellfish' && /^Claude /.test(first.settings.model), JSON.stringify(first.settings));
+    ok('Sheet: the shopping list is as the List tab shows it (section, amount, days)', !!beefRow && beefRow.section === 'Meat' && beefRow.amount === '4.5 lb' && /^[A-Z][a-z]{2}, [A-Z][a-z]{2}, [A-Z][a-z]{2}$/.test(beefRow.nights) && beefRow.sale === '' && first.shopping.pantry.some(x => x.item === 'Olive oil' && x.amount === '3 tbsp'), JSON.stringify(beefRow));
+    ok('Sheet: settings are the family\'s rules and what is avoided', /^3\+ vegetables and about 40 g protein in every meal$/.test(first.settings.stores[0]) && first.settings.stores[1] === 'cooking for 3' && first.settings.cards.length === 0 && first.settings.avoid.join() === 'tree nuts,shellfish' && /^Claude /.test(first.settings.model), JSON.stringify(first.settings));
     const plansTab = sheet.tab('Plans');
-    ok('Sheet: Plans has a row a night, Planned by Tom; Shopping list, Deals (with Who) and Settings are readable', plansTab.length === 1 + 4 && plansTab[0][0] === 'Planned by' && plansTab.slice(1).every(r => r[0] === 'Tom')
-      && sheet.tab('Shopping list').some(r => r[1] === 'Ground beef' && r[2] === '6 lb') && sheet.tab('Deals').some(r => r[0] === 'Tom' && r[2] === 'Publix') && sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && r[1] === 'tree nuts, shellfish'));
+    ok('Sheet: Plans has a row a meal, Planned by Tom; Shopping list and Settings are readable', plansTab.length === 1 + 3 && plansTab[0][0] === 'Planned by' && plansTab.slice(1).every(r => r[0] === 'Tom')
+      && sheet.tab('Shopping list').some(r => r[1] === 'Ground beef' && r[2] === '4.5 lb') && sheet.tab('Settings').some(r => r[0] === 'Never in a plan' && r[1] === 'tree nuts, shellfish'));
     ok('Sheet: each row says whose (the owner’s), and the Sheet knows the people', hiddenRows('_plans').every(p => p.by === 'O1') && JSON.stringify(sheet.tab('_people').slice(1)) === JSON.stringify([['(owner)', 'O1'], ['O1', 'Tom']]));
     ok('Sheet: synced, the phone notes when', await synced(page));
     await page.click('#setBtn'); await page.waitForTimeout(300);
@@ -357,16 +383,16 @@ const SHEET_STEP = async () => {
     await page.click('#sSave'); await page.waitForTimeout(300);
     // a second plan accepted: only it goes (the first is in the Sheet already, and is not fetched again)
     const n0 = sheetCalls.length, l0 = logs.length;
-    await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo');
+    await planIt(page);
     await page.waitForSelector('[data-act="accept"]', { timeout: 8000 });
     await page.click('[data-act="accept"]');
     ok('Sheet: accepting a plan sends it a moment later', await until(() => sheetCalls.length > n0));
     const second = sheetCalls[sheetCalls.length - 1].body, newId = JSON.parse(m.get('meals:plan')).id;
     ok('Sheet: that sync has just the new plan, with no fetch of the older one', second.plans.length === 1 && second.plans[0].id === newId && logs.length === l0, second.plans.map(p => p.id).join() + ' ' + (logs.length - l0));
-    ok('Sheet: Plans now holds both plans, newest first', sheet.tab('Plans').length === 1 + 4 * 2 && sheet.tab('Plans')[1][16] === newId);
+    ok('Sheet: Plans now holds both plans, newest first', sheet.tab('Plans').length === 1 + 3 * 2 && sheet.tab('Plans')[1][16] === newId);
     // discarding a draft changes nothing the Sheet shows: no sync
     const n1 = sheetCalls.length;
-    await page.click('#fab'); await page.waitForTimeout(300); await page.click('#planGo'); await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
+    await planIt(page); await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
     await page.click('[data-act="discard"]'); await page.waitForTimeout(3800);
     ok('Sheet: nothing changed, nothing sent', sheetCalls.length === n1);
     // settings saved: the Settings tab follows
@@ -379,7 +405,7 @@ const SHEET_STEP = async () => {
     sheet = fakeSheet(GS, SHEET_SECRET); sheetCalls.length = 0;
     const B = await phone('dark', { as: tok2 });
     const logs = logCalls(B.page);
-    ok('Sheet: a phone whose Sheet lacks a plan the family server keeps sends it next (with the current plan), fetched whole once', await until(() => sheet.tab('Plans') && sheet.tab('Plans').length === 1 + 8)
+    ok('Sheet: a phone whose Sheet lacks a plan the family server keeps sends it next (with the current plan), fetched whole once', await until(() => sheet.tab('Plans') && sheet.tab('Plans').length === 1 + 6)
       && sheetCalls.length === 2 && sheetCalls[0].body.plans.length === 1 && sheetCalls[1].body.plans.length === 2 && logs.length === 1 && sheetCalls.every(c => c.who === 'E1'), sheetCalls.map(c => c.body.plans.length).join() + ' ' + logs.length);
     ok('Sheet: from Ella’s phone the rows are hers (by), and Planned by still says who accepted each (Tom)', hiddenRows('_plans').every(p => p.by === 'E1') && sheet.tab('Plans').slice(1).every(r => r[0] === 'Tom')
       && sheet.tab('_people').slice(1).some(r => r[0] === 'E1' && r[1] === 'Ella'));
@@ -396,6 +422,7 @@ const SHEET_STEP = async () => {
         { day: 2, title: title + ' sandwiches', cuisine: 'American', method: 'no-cook', minutes: 10, why: '', uses: [], ingredients: [{ item: 'rolls', qty: '4' }], steps: ['Fill the rolls.'] }] });
     sheet.post({ action: 'sync', plans: [old('phole1', ymd(-10), 'Pork stew'), old('pold2', ymd(-200), 'Pork ragù'), old('pold1', ymd(-600), 'Pulled pork')] }, { key: SHEET_SECRET, who: 'O1', name: 'Tom', owner: '1' });
     const { ctx, page, errs } = await phone();
+    await toPlan(page);
     ok('Sheet: a plan of the last 90 days the family server doesn’t keep shows under Past plans, from the Sheet', await until(() => page.locator('[data-past="phole1"]').count().then(c => c === 1)));
     ok('Sheet: older ones aren’t on the phone until you look back', (await page.locator('[data-past="pold2"], [data-past="pold1"]').count()) === 0 && await page.isVisible('[data-act="older"]'));
     await shot(page, 'past-older');
@@ -409,7 +436,7 @@ const SHEET_STEP = async () => {
     ok('Sheet: until there are none older (then the button goes)', await until(() => page.evaluate(() => /No older plans/.test(document.getElementById('toastMsg').textContent))) && await until(() => page.locator('[data-act="older"]').count().then(c => c === 0)));
     await page.click('[data-past="pold1"]'); await page.waitForSelector('#pastSheet:not([hidden])');
     const t = await page.textContent('#pastBody');
-    ok('Sheet: an old plan from the Sheet opens with its dinners, who accepted it, its store and its shopping list', (await page.locator('#pastBody [data-meal]').count()) === 2 && /accepted by Mum Allison/.test(t) && /Publix/.test(t) && t.includes('Shopping list') && t.includes('Pork shoulder'), t.slice(0, 200));
+    ok('Sheet: an old plan from the Sheet opens with its dinners, who accepted it and its shopping list', (await page.locator('#pastBody [data-meal]').count()) === 2 && /accepted by Mum Allison/.test(t) && t.includes('Shopping list') && t.includes('Pork shoulder'), t.slice(0, 200));
     await page.click('#pastBody [data-meal="0"]'); await page.waitForSelector('#recipeSheet:not([hidden])');
     ok('Sheet: and its recipe', (await page.textContent('#recipeBody')).includes('Braise for two hours.'));
     ok('no script errors', !errs.length, errs.join(' | '));
@@ -436,37 +463,40 @@ const SHEET_STEP = async () => {
     const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
     const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
     const flat = v => v === 'none' || v === '';
-    await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
+    await page.waitForSelector('#main .card.pick', { timeout: 5000 });
     ok(scheme + ': Futura', /Futura/.test((await q('body', ['fontFamily']))[0]));
     ok(scheme + ': the ground is cream / walnut', (await q('body', ['backgroundColor']))[0] === ground);
-    const [bg, shadow, backdrop, radius] = await q('#main [data-meal]', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
-    ok(scheme + ': a night is a flat cream / walnut card, 20px round', bg === cream && shadow === 'none' && flat(backdrop) && radius === '20px', [bg, shadow, backdrop, radius].join(' | '));
     ok(scheme + ': a mustard sun, a teal dot and a burnt-orange pill behind the title', (await q('.ambient i:nth-child(1)', ['backgroundColor']))[0] === ('rgb(227, 167, 47)')
       && (await q('.ambient i:nth-child(2)', ['backgroundColor']))[0] === teal && (await q('.ambient i:nth-child(3)', ['backgroundColor']))[0] === 'rgb(216, 87, 42)');
     ok(scheme + ': the title is big, with the three little bars under it', (await q('.title', ['fontSize']))[0] === '44px' && (await q('.title', ['backgroundImage'], '::after'))[0].startsWith('url('));
     ok(scheme + ': the tabs have a mustard thumb', (await q('#tabs .slthumb', ['backgroundColor']))[0] === 'rgb(227, 167, 47)' && (await q('#tabs', ['backgroundColor']))[0] === cream);
-    ok(scheme + ': + is solid orange', (await q('#fab', ['backgroundColor']))[0] === orange);
     ok(scheme + ': the theme colour is the sky\'s ground (home/sky.js) and the status bar is not translucent', (await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#F1DFBB' : '#4A391E')
       && (await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content')) === 'default');
-    await page.click('#fab'); await page.waitForTimeout(700);
-    const [sbg, sradius, sfilter] = await q('#planSheet .sheet', ['backgroundColor', 'borderRadius', 'backdropFilter']);
-    ok(scheme + ': the sheet is a flat panel', sbg === cream && sradius === '28px' && flat(sfilter), [sbg, sradius, sfilter].join(' | '));
-    ok(scheme + ': Plan is solid orange, the chosen meat is mustard, Nights is a flat menu', (await q('#planGo', ['backgroundColor']))[0] === orange
-      && (await q('#meats [aria-checked="true"]', ['boxShadow']))[0].includes('rgb(227, 167, 47)') && (await q('#pDays', ['backgroundColor']))[0] === cream);
+    const [pbg, pshadow, pbackdrop, pradius] = await q('#main .card.pick', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    ok(scheme + ': the picks are a flat cream / walnut card, 20px round', pbg === cream && pshadow === 'none' && flat(pbackdrop) && pradius === '20px', [pbg, pshadow, pbackdrop, pradius].join(' | '));
+    ok(scheme + ': Ipsy\'s bubble is cream / walnut; a picked chip is mustard; Plan it is solid orange', (await q('#main .bub', ['backgroundColor']))[0] === cream
+      && (await q('[data-slot="dinner"]', ['boxShadow']))[0].includes('rgb(227, 167, 47)') && (await q('[data-act="pick"]', ['backgroundColor']))[0] === orange);
+    await page.click('[data-act="pick"]'); await page.waitForTimeout(300);
+    ok(scheme + ': your answer is a teal bubble', (await q('#main .bub.me', ['backgroundColor']))[0] === teal);
+    await shot(page, 'retro-ipsy-' + scheme);
+    await toPlan(page);
+    await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
+    const [bg, shadow, backdrop, radius] = await q('#main .card.dayc', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    ok(scheme + ': a day is a flat cream / walnut card, 20px round', bg === cream && shadow === 'none' && flat(backdrop) && radius === '20px', [bg, shadow, backdrop, radius].join(' | '));
+    ok(scheme + ': + is solid orange', (await q('#fab', ['backgroundColor']))[0] === orange);
     await shot(page, 'retro-plan-' + scheme);
-    await page.click('#planSheet .iconbtn[data-close]'); await page.waitForTimeout(400);
     await page.click('#main [data-meal="0"]'); await page.waitForTimeout(600);
-    ok(scheme + ': a recipe\'s Done is solid orange', (await q('#recipeSheet .okbtn', ['backgroundColor']))[0] === orange);
+    const [sbg, sradius, sfilter] = await q('#recipeSheet .sheet', ['backgroundColor', 'borderRadius', 'backdropFilter']);
+    ok(scheme + ': the recipe is a flat panel', sbg === cream && sradius === '28px' && flat(sfilter), [sbg, sradius, sfilter].join(' | '));
+    ok(scheme + ': its Done and Ask Ipsy are solid orange; Swap is outlined teal, not filled', (await q('#recipeSheet .iconbtn.okbtn', ['backgroundColor']))[0] === orange && (await q('#recipeBody [data-act="askmeal"]', ['backgroundColor']))[0] === orange
+      && (await q('#recipeBody [data-act="swap"]', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)' && (await q('#recipeBody [data-act="swap"]', ['color']))[0] === (scheme === 'light' ? teal : 'rgb(92, 189, 181)'));
     await shot(page, 'retro-recipe-' + scheme);
-    await page.click('#recipeSheet .okbtn'); await page.waitForTimeout(400);
-    await page.click('#tabs [data-tab="deals"]'); await page.waitForTimeout(500);
-    ok(scheme + ': a secondary button is outlined teal, not filled', (await q('#main [data-act="find"]', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)' && (await q('#main [data-act="find"]', ['color']))[0] === (scheme === 'light' ? teal : 'rgb(92, 189, 181)'));
-    await shot(page, 'retro-deals-' + scheme);
+    await page.click('#recipeSheet .iconbtn.okbtn'); await page.waitForTimeout(400);
     await page.click('#tabs [data-tab="list"]'); await page.waitForTimeout(500);
     await page.click('.irow >> nth=0'); await page.waitForTimeout(200);
     ok(scheme + ': a ticked item is teal', (await q('.irow[aria-checked="true"] .box', ['backgroundColor']))[0] === teal);
     await shot(page, 'retro-list-' + scheme);
-    await page.click('#tabs [data-tab="dinners"]'); await page.waitForTimeout(300);
+    await page.click('#tabs [data-tab="plan"]'); await page.waitForTimeout(300);
     ok(scheme + ': no script errors, nothing blocked by the page policy', !errs.length, errs.join(' | '));
     await ctx.close();
   }
@@ -474,14 +504,14 @@ const SHEET_STEP = async () => {
 { // Standard: Sea glass, the Vintage block switched off, no sky; the icon and status bar follow
   for (const scheme of ['light', 'dark']) {
     const { ctx, page, errs } = await phone(scheme, { design: 'glass' });
-    await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
+    await page.waitForSelector('#main .card.pick', { timeout: 5000 });
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
     ok(scheme + ' Standard: data-look is glass, the Vintage styles are off, no sky', await page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')));
     ok(scheme + ' Standard: the Sea glass ground and the system font', (await q('body', ['backgroundColor']))[0] === (scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)') && !/Futura/.test((await q('body', ['fontFamily']))[0]));
     ok(scheme + ' Standard: the Sea glass icon, a translucent status bar, the Sea glass bar colour', /icon-glass-180\.png/.test(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'))
       && (await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content')) === 'black-translucent'
       && (await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#EEF2F0' : '#0D1213'));
-    await shot(page, 'glass-dinners-' + scheme);
+    await shot(page, 'glass-ipsy-' + scheme);
     ok(scheme + ' Standard: no script errors', !errs.length, errs.join(' | '));
     await ctx.close();
   }
@@ -519,9 +549,9 @@ const SHEET_STEP = async () => {
   await ctx.close();
 }
 { // a phone with both: Meals' own data is kept, the old app's is not copied over it
-  const seed = { 'aos.seen': JSON.stringify({ meals: '999', mealsvintage: '999' }), 'allison-meals-v1-tab': '"deals"', 'allison-mealsv-v1-tab': '"list"' };
+  const seed = { 'aos.seen': JSON.stringify({ meals: '999', mealsvintage: '999' }), 'allison-meals-v1-tab': '"plan"', 'allison-mealsv-v1-tab': '"list"' };
   const { ctx, page } = await phone('light', { seed });
-  ok('both: Meals\' own data is kept', (await page.evaluate(() => localStorage.getItem('allison-meals-v1-tab'))) === '"deals"');
+  ok('both: Meals\' own data is kept', (await page.evaluate(() => localStorage.getItem('allison-meals-v1-tab'))) === '"plan"');
   await ctx.close();
 }
 await SHEET_STEP();
