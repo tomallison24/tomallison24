@@ -82,7 +82,7 @@ export function newsJson() {
   const now = Date.now();
   return {
     generatedAt: new Date(now - 5 * 60e3).toISOString(),
-    feeds: [{ source: 'BBC Sport', topic: 'sport', ok: true }],
+    feeds: [{ source: 'BBC Sport', topic: 'sport', ok: true }, { topic: 'sport', ok: true }],   // a feed entry with no source must not break the status line
     topics: [{ id: 'sport', label: 'Sport' }],
     stories: [
       { id: 's1', topic: 'sport', source: 'BBC Sport', title: 'Liverpool edge a thriller', url: 'https://example.com/1', published: new Date(now - HOUR).toISOString(), image: null, summary: '' },

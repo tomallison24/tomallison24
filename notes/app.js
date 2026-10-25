@@ -165,7 +165,7 @@
   }
   initShadow();
   const st = { tab:'notes', sel:new Set(), remOnly:false, q:'', view:'grid', editing:null, isNew:false,
-               coll:null, rview:'today', rlist:null, rq:'', rsearch:false, showDone:false, todo:null, listEdit:null, shareFrom:null };
+               coll:null, rview:'today', rlist:null, rq:'', rsearch:false, showDone:false, todo:null, listEdit:null, shareFrom:null, edWas:null };
   try { st.view = localStorage.getItem(KEY+'-view') || 'grid'; st.tab = localStorage.getItem(KEY+'-tab') || 'notes'; } catch(e){}
 
   const $ = id => document.getElementById(id);
@@ -381,7 +381,7 @@
     if (d.getTime() < Date.now()) return {txt:'Overdue', over:true};
     if (diff === 0) return {txt:'Today '+t};
     if (diff === 1) return {txt:'Tomorrow '+t};
-    return {txt:d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})};
+    return {txt:d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'})};
   }
   // ---------- where notes live: home, collections (tags), archive, trash ----------
   // st.coll: null = home; 'tag:<name>', 'untagged', 'all', 'nudges', 'archive', 'trash'.
@@ -408,10 +408,10 @@
     const diff = Math.round((today - new Date(d).setHours(0, 0, 0, 0)) / D);
     if (diff === 0) return 'Today';
     if (diff === 1) return 'Yesterday';
-    if (diff < 7) return d.toLocaleDateString([], {weekday:'long'});
-    return d.toLocaleDateString([], {day:'numeric', month:'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric'});
+    if (diff < 7) return d.toLocaleDateString('en-US', {weekday:'long'});
+    return d.toLocaleDateString('en-US', {day:'numeric', month:'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric'});
   };
-  const monthOf = t => new Date(t).toLocaleDateString([], {month:'long', year:'numeric'});
+  const monthOf = t => new Date(t).toLocaleDateString('en-US', {month:'long', year:'numeric'});
 
   function card(n, i, opts = {}){
     const rem = n.reminder ? fmtRem(n.reminder) : null;
@@ -520,10 +520,25 @@
 
   // ---------- note actions (swipe buttons, trash) ----------
   const findNote = id => notes.find(n => n.id === id);
+  // Undo puts back only the notes fn changed, added or removed (by id, as Ipsy's undo does): a note
+  // another phone added, merged by a sync while the toast was up, stays. Restoring the whole list as it
+  // was would drop it, give it a grave, and the next sync would delete it everywhere.
   function withUndo(msg, fn){
-    const before = clone(notes);
+    const was = new Map(notes.map((n, i) => [n.id, {n: clone(n), i}]));
     fn(); save(); render();
-    toast(msg, () => { notes = before; save(); render(); });
+    const now = new Map(notes.map(n => [n.id, JSON.stringify(n)])), touched = [];
+    was.forEach(({n, i}, id) => { if (now.get(id) !== JSON.stringify(n)) touched.push({id, n, i}); });
+    now.forEach((j, id) => { if (!was.has(id)) touched.push({id, n:null}); });
+    toast(msg, () => {
+      const arr = notes.slice();
+      touched.forEach(({id, n, i}) => {
+        const at = arr.findIndex(x => x.id === id);
+        if (!n) { if (at >= 0) arr.splice(at, 1); }
+        else if (at >= 0) arr[at] = clone(n);
+        else arr.splice(Math.min(i, arr.length), 0, clone(n));
+      });
+      notes = arr; save(); render();
+    });
   }
   function noteAction(act, id){
     const n = findNote(id); if (!n) return;
@@ -673,6 +688,7 @@
     const base = id ? notes.find(n => n.id === id) : null;
     st.isNew = !base;
     st.editing = base ? clone(base) : {id:'n'+Date.now().toString(36), title:'', body:'', tags: st.coll && st.coll.startsWith('tag:') ? [st.coll.slice(4)] : [], color:'none', pinned:false, reminder:null, created:Date.now(), updated:Date.now(), archived:false, deletedAt:null};
+    st.edWas = base ? JSON.stringify({...st.editing, updated:0}) : null;   // as it opened: finishEdit tells whether anything was changed
     if (!base && pre) { st.editing.title = pre.title || ''; st.editing.body = pre.body || ''; pre.tags.forEach(t => { if (!st.editing.tags.includes(t)) st.editing.tags.push(t); }); }
     $('edTitle').value = st.editing.title;
     $('edBody').value = st.editing.body;
@@ -715,7 +731,15 @@
     if (st.isNew) { if (e.title || e.body) { e.updated = Date.now(); notes.unshift(e); } }
     else {
       const i = notes.findIndex(n => n.id === e.id);
-      if (JSON.stringify({...notes[i], updated:0}) !== JSON.stringify({...e, updated:0})) { e.updated = Date.now(); notes[i] = e; }
+      if (i < 0) {
+        // Deleted for good on another phone while it was open here (a sync took it away). Its id has a
+        // grave, so it isn't put back under that id; what you changed is kept as a new note instead.
+        if (JSON.stringify({...e, updated:0}) !== st.edWas && (e.title || e.body)) {
+          e.id = newId('n'); e.created = e.updated = Date.now(); e.deletedAt = null; notes.unshift(e);
+          toast('That note was deleted on another phone, so your changes were kept as a new note.');
+        } else toast('That note was deleted on another phone.');
+      }
+      else if (JSON.stringify({...notes[i], updated:0}) !== JSON.stringify({...e, updated:0})) { e.updated = Date.now(); notes[i] = e; }
     }
     st.editing = null; save(); closeSheet('editor'); render();
   }
@@ -781,7 +805,7 @@
     if (t.date === todayStr()) day = 'Today';
     else if (t.date === dayOff(1)) day = 'Tomorrow';
     else if (t.date === dayOff(-1)) day = 'Yesterday';
-    else day = new Date(t.date+'T12:00').toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+    else day = new Date(t.date+'T12:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
     return day + (time ? ' ' + time : '');
   }
   function todoRow(t, i){

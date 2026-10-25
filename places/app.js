@@ -87,7 +87,7 @@
     if (!d) return '';
     if (d === today()) return 'Today';
     const t = new Date(d + 'T12:00'), y = new Date().getFullYear();
-    return t.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: t.getFullYear() === y ? undefined : 'numeric' });
+    return t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: t.getFullYear() === y ? undefined : 'numeric' });
   }
   const starsHtml = n => '<span class="stars" aria-label="' + n + ' out of 5 stars">' + '★'.repeat(n) + '<span class="off">' + '★'.repeat(5 - n) + '</span></span>';
   const priceTxt = n => n ? '$'.repeat(n) : '';

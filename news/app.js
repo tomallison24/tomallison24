@@ -432,7 +432,7 @@
 
   function status() {
     if (!data) return '';
-    const sources = [...new Set((data.feeds || []).filter(f => f.ok).map(f => f.source.replace(/ (News|Sport)$/, '')))];
+    const sources = [...new Set((data.feeds || []).filter(f => f.ok).map(f => String(f.source || '').replace(/ (News|Sport)$/, '')).filter(Boolean))];
     const down = (data.feeds || []).filter(f => !f.ok).length;
     const when = ago(data.generatedAt);
     const updated = !when ? '' : /^\d/.test(when) && !when.endsWith('ago') ? `Updated ${when}` : `Updated ${when.toLowerCase()}`;

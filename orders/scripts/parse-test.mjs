@@ -424,6 +424,32 @@ test('not a return: tax and rental returns, and the "start a return" in every or
   assert.equal(f.ret, undefined); assert.equal(f.status, 'ordered');
   assert.equal(P.returnOf('Your refund has been processed', ''), 'refunded'); assert.equal(P.returnOf('Your return is on its way', ''), 'sent');
 });
+test('a backup round trip: saneOrder keeps a valid order exactly, drops what it doesn’t know, mends the rest', () => {
+  // Orders as the app writes them: read from email (with a return folded in), and one added by hand.
+  const list = fold([], [
+    { html: hardwareConfirm, subject: 'We received your order!', from: HARDWARE_FROM, date: at(10, 6), id: 'h1', threadId: 'h1' },
+    { html: hardwareShipped, subject: 'Your order has shipped', from: HARDWARE_FROM, date: at(10, 8), id: 'h2', threadId: 'h2' },
+    { html: wooShipped, subject: 'Your Green Home Supply order has shipped', from: 'Green Home Supply <orders@greenhome.example>', date: at(10, 9) },
+    { text: 'Ordered: "Striped Wool Winter Hat"\nOrder # 111-0000001-0000001\nOrder Total: $23.10', subject: 'Ordered 1 item: "Striped Wool Winter Hat..."', from: 'Amazon.com <auto-confirm@amazon.com>', date: at(10, 10), id: 'o1', threadId: 'o1' },
+    { html: amazonReturn('Thu, Nov 19'), subject: 'Return request confirmed for Striped Wool Winter Hat...', from: AMZ_RET_FROM, date: at(10, 21), id: 'r1', threadId: 't1' },
+    { text: 'Hi Sam,\n\nYour return request (RMA #RTEST001) has been approved.\n\nTracking number: YR000000001GB\n\nDownload Return Label', subject: 'RMA #RTEST001 Your return request has been received', from: 'Beauty Shop <order.update@beautyshop.example>', date: at(4, 17), threadId: 'rma' },
+  ]);
+  assert.ok(list.length >= 4 && list.some(o => o.ret), 'orders, one with a return');
+  list[0].locks = { status: true, total: true }; list[0].checked = true; list[0].private = true; list[0].notes = 'For the hall'; list[0].updated = at(10, 9); list[0].by = 'tom';
+  list.push({ id: 'h-abc123', store: 'Corner Shop', storeKey: 'cornershop', items: [{ name: 'Phone case', qty: 2 }], status: 'ordered', kind: 'package', steps: { ordered: '2026-10-12' }, orderDate: '2026-10-12',
+    notes: '', locks: { store: true, items: true }, created: at(10, 12), checked: true, guess: false, source: null, hide: true, total: null, eta: '', carrier: '', tracking: '', trackUrl: '' });
+  const file = JSON.parse(JSON.stringify({ app: 'allison-orders', v: 1, kind: 'backup', orders: list }));   // as the export writes it
+  assert.deepEqual(file.orders.map(P.saneOrder), file.orders, 'every order comes back as it was');
+  // A file that says anything.
+  const bad = P.saneOrder({ id: 'x1', status: 'shipped', store: 'Shop', trackUrl: 'javascript:alert(1)', junk: 1, kind: 'rocket', total: 'lots', eta: 'soon', orderDate: '2026-10-01',
+    items: [{ name: 'Good', qty: '2', price: 3 }, 'string', { name: '' }, { name: 'Fine', extra: true }], steps: { shipped: '2026-10-02', bogus: 'x', ordered: 'not a day' }, locks: { status: 'yes', 'bad key!': true, items: 0 },
+    source: { msgId: 'm1', date: '123', nested: { a: 1 } }, private: 'yes', ret: { status: 'bogus', trackUrl: 'javascript:1', by: '2026-11-01', refund: '5', items: ['Hat', 7], locks: { by: 1 } } });
+  assert.deepEqual(bad, { id: 'x1', status: 'shipped', store: 'Shop', orderDate: '2026-10-01', items: [{ name: 'Good', price: 3 }, { name: 'Fine' }], steps: { shipped: '2026-10-02' }, locks: { status: true },
+    source: { msgId: 'm1' }, private: true, ret: { by: '2026-11-01', items: ['Hat'], locks: { by: true } } });
+  assert.equal(P.saneOrder({ id: 'x2', status: 'teleported' }), null, 'a status the app doesn’t know: not an order');
+  assert.equal(P.saneOrder({ status: 'shipped' }), null); assert.equal(P.saneOrder('x'), null); assert.equal(P.saneOrder(null), null);
+  assert.deepEqual(P.saneOrder({ id: 'x3', status: 'delivered', trackUrl: 'https://www.ups.com/track?tracknum=1Z1', ret: null, source: null, total: 12.5 }), { id: 'x3', status: 'delivered', trackUrl: 'https://www.ups.com/track?tracknum=1Z1', source: null, total: 12.5 }, 'a web link stays; a null return is left out, a null source kept (an order added by hand)');
+});
 test('helpers', () => {
   assert.equal(P.trackUrl('UPS', '1Z0000000000000001'), 'https://www.ups.com/track?tracknum=1Z0000000000000001');
   assert.equal(P.trackUrl('', 'x'), ''); assert.equal(P.trackUrl('Veho', 'x'), '');
