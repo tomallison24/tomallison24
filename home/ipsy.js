@@ -679,7 +679,9 @@
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
     look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, {
       get: () => ls.get('aos.look', 'vintage'),
-      put: v => { if (window.aosLook) return aosLook.set(v, { apps: SET_APPS }); ls.set('aos.look', v); SET_APPS.forEach(id => putLook(id, v)); } }) },
+      put: v => {   // every app, as aOS's own Look picker writes it (AllisonOS.welcome.data.APPS): Money and Sparkle too, not only the apps with settings here
+        const all = (AOS.welcome && AOS.welcome.data && AOS.welcome.data.APPS) || SET_APPS;
+        if (window.aosLook) return aosLook.set(v, { apps: all }); ls.set('aos.look', v); all.forEach(id => putLook(id, v)); } }) },
     language: { app: '*', live: true, about: 'The language of aOS and every app (drawn again in it after your reply)', ...choice({ en: 'en', ru: 'ru' }, {
       get: () => (window.aosLang ? aosLang.get() : 'en'), put: v => { for (let i = afterReply.length; i--;) if (afterReply[i].lang) afterReply.splice(i, 1); if (window.aosLang && v !== aosLang.get()) afterReply.push(Object.assign(() => aosLang.set(v), { lang: true })); } }) },
     favorites: { app: 'aos', about: 'The apps pinned in Favorites on aOS Home, up to 4, by id (' + SET_APPS.join(', ') + ')', values: ['a comma-separated list of up to 4 app ids'],

@@ -80,11 +80,10 @@ const APPS = constant(W, 'APPS', 'home/welcome.js') || [];
 const NAMES = constant(W, 'NAMES', 'home/welcome.js') || {};
 const TOURS = constant(W, 'TOURS', 'home/welcome.js') || {};
 const DARK_ONLY = constant(W, 'DARK_ONLY', 'home/welcome.js') || [];
-const DESIGNS = constant(W, 'DESIGNS', 'home/welcome.js') || {};
 // Every app carries both designs, Vintage (the default) and Standard (Sea glass), picked in its own
 // Settings: home/design.js (Clock: its own design.js, where it started).
 // aOS and every app's Vintage design show the day and night sky (home/sky.js); Weather draws its own from the forecast
-const SKY = new Set(['aos', ...APPS, ...Object.values(DESIGNS).flatMap(d => d.slice(1).filter(x => x.look === 'vintage').map(x => x.app))].filter(id => id !== 'weather'));
+const SKY = new Set(['aos', ...APPS].filter(id => id !== 'weather'));
 const LINEsrc = (/const LINE = \{/.exec(W) || {}).index;
 const LINE = LINEsrc === undefined ? new Set() : new Set([...literal(W, LINEsrc + 'const LINE = '.length).matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]));
 const S = (read('aOS/app.js') || '') + (read('aOS/index.html') || '');   // aOS's script is app.js (it was inline in index.html)

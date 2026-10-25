@@ -223,5 +223,15 @@ for (const scheme of ['light', 'dark']) {
   report('aOS\'s bar takes the colour the page shows, with Appearance set to Light or Dark, in Vintage and Night Drive, and iOS reads it again on each change', pr); await ctx.close();
 }
 
+// 8. erased (a lost phone, home/welcome.js eraseHere): the aos_look cookie goes with the storage, so the next install starts clean
+{
+  const { ctx, p, errs } = await open('light', {}, { cookie: 'glass' }); const pr = [...errs];
+  if (await p.evaluate(() => document.cookie) !== 'aos_look=glass') pr.push('the cookie was not there to begin with: ' + await p.evaluate(() => document.cookie));
+  await p.evaluate(() => { AllisonOS.erase(); }).catch(() => {}); await p.waitForLoadState('load').catch(() => {}); await p.waitForTimeout(1500);
+  if (await p.evaluate(() => document.cookie) !== '') pr.push('after the erase the cookie is still there: ' + await p.evaluate(() => document.cookie));
+  if (await p.evaluate(() => localStorage.getItem('aos.look')) !== null) pr.push('aos.look is still stored');
+  report('erased from a lost phone: the aos_look cookie goes with the storage', pr); await ctx.close();
+}
+
 await b.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed'); process.exit(failed ? 1 : 0);

@@ -534,13 +534,10 @@
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
-  // Apps that come in more than one design, each design its own app folder: aOS would show one row for
-  // the app and a Design menu on its page. None now: every app carries both its designs itself, Vintage
-  // (the default) and Standard (Sea glass), picked in its own Settings (../home/design.js). The old
-  // Vintage apps' addresses (mealsvintage/ and the rest) open the same app (news.yml copies it there).
-  const DESIGNS = {};
-  const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
-  const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
+  // Every app carries all its designs itself (Vintage, the default, Sea glass and the rest), picked in its own
+  // Settings (../home/design.js) or for every app at once in aOS. The old Vintage apps' addresses
+  // (mealsvintage/ and the rest) open the same app (news.yml copies it there).
+  const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
   const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', money: 'Money', house: 'Home', sparkle: 'Sparkle Kingdom' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
@@ -1325,21 +1322,21 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   function safariDemo(host, name, iconUrl, opts = {}) {   // opts.onDone: once, after the first play-through
     addCss('aos-sd-css', SD_CSS);
     const row = (t, k, cls = '') => `<div class="sd-row ${cls}"><span>${t}</span>${SD_ICON[k]}</div>`;
-    const dom = location.host || 'tomallison24-news.pages.dev';
+    const dom = location.host || 'tomallison24-news.pages.dev', img = esc(iconUrl);   // exported (AllisonOS.welcome.safariDemo): never straight into src=""
     host.innerHTML = `<div class="aos-sd"><div class="sd-phone"><div class="sd-screen"><i class="sd-island"></i>
-      <div class="sd-page"><img src="${iconUrl}" alt=""><b>${esc(name)}</b><i></i><i></i><i></i></div>
+      <div class="sd-page"><img src="${img}" alt=""><b>${esc(name)}</b><i></i><i></i><i></i></div>
       <div class="sd-bar"><span class="sd-round">‹</span><span class="sd-addr">${esc(dom)}</span><span class="sd-round sd-more">•••</span></div>
       <div class="sd-menu">${row('Share', 'share', 'sd-t-share')}${row('Add to Bookmarks', 'book')}${row('Add to Favorites', 'star')}${row('Find on Page', 'find')}${row('Reader', 'glasses')}</div>
       <div class="sd-share"><div class="sd-grab"></div><div class="sd-scroll">
-        <div class="sd-head"><img src="${iconUrl}" alt=""><span><b>${esc(name)}</b><small>${esc(dom)}</small></span><span class="sd-x">✕</span></div>
+        <div class="sd-head"><img src="${img}" alt=""><span><b>${esc(name)}</b><small>${esc(dom)}</small></span><span class="sd-x">✕</span></div>
         <div class="sd-apps"><span><i style="background:linear-gradient(#5AC8FA,#007AFF)"></i>AirDrop</span><span><i style="background:linear-gradient(#5CE27E,#30B94D)"></i>Messages</span><span><i style="background:linear-gradient(#4FB6FF,#1F7BF2)"></i>Mail</span><span><i style="background:linear-gradient(#FFE16B,#FFC800)"></i>Notes</span></div>
         <div class="sd-group">${row('Copy', 'copy')}${row('Add to Reading List', 'glasses')}${row('Add Bookmark', 'book')}${row('Add to Favorites', 'star')}${row('Add to Quick Note', 'note')}${row('Find on Page', 'find')}${row('Add to Home Screen', 'add', 'sd-t-add')}</div>
       </div></div>
       <div class="sd-add"><div class="sd-grab"></div><div class="sd-nav"><span>Cancel</span><b>Add to Home Screen</b><span class="sd-addbtn">Add</span></div>
-        <div class="sd-card"><img src="${iconUrl}" alt=""><span style="flex:1;min-width:0"><b>${esc(name)}</b><small>${esc(dom)}</small></span></div>
+        <div class="sd-card"><img src="${img}" alt=""><span style="flex:1;min-width:0"><b>${esc(name)}</b><small>${esc(dom)}</small></span></div>
         <div class="sd-card" style="padding:7px 9px"><span style="font-size:9.5px">Open as Web App</span><span class="sd-tog"></span></div>
         <div class="sd-note">An icon will be added to your Home Screen so you can quickly access this website.</div></div>
-      <div class="sd-home">${'<span><i></i>&nbsp;</span>'.repeat(6)}<span class="sd-slot"><img src="${iconUrl}" alt=""><span class="sd-lbl">${esc(name)}</span></span></div>
+      <div class="sd-home">${'<span><i></i>&nbsp;</span>'.repeat(6)}<span class="sd-slot"><img src="${img}" alt=""><span class="sd-lbl">${esc(name)}</span></span></div>
       <div class="sd-finger"></div>
     </div></div>
     <div class="sd-cap"><span class="sd-n">1</span><span class="sd-t"></span></div>
@@ -1751,15 +1748,16 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
         <div class="c-btns"><button class="c-back" type="button" aria-label="Back" hidden>‹</button><button class="w-btn" type="button">Continue</button></div></div>`;
     document.body.appendChild(el);
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
-    let done = false;
+    let done = false; const closers = [];   // what a tour on this overlay undoes as it closes (its resize listener)
     const close = () => {
       if (done) return; done = true;
+      for (const f of closers) f();
       if (onClose) onClose();
       el.classList.add('out');
       setTimeout(() => { el.remove(); open = null; resolve(); }, 650);
     };
     el.querySelector('.w-skip').onclick = close;
-    return { el, q: s => el.querySelector(s), close };
+    return { el, q: s => el.querySelector(s), close, closers };
   }
   const run = (label, inner, onClose, body) => {
     if (open) return open;
@@ -1907,9 +1905,10 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
       el.classList.toggle('tall', cards[i].x === 'install' || !!cards[i].tall || over);
     };
     addEventListener('resize', fit);
+    const unfit = () => removeEventListener('resize', fit); if (o.closers) o.closers.push(unfit);   // gone with the tour, or with the overlay (Skip)
     const go = async d => {
       if (cards[i].stay && i + d >= cards.length) return;
-      if (i + d >= cards.length) return next ? next() : close();
+      if (i + d >= cards.length) { unfit(); return next ? next() : close(); }
       if (i + d < 0) return;
       body.classList.add('fade'); await wait(260);
       i += d; draw(); body.classList.remove('fade');
@@ -2331,7 +2330,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     });
   }
 
-  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, CORE, DESIGNS, VARIANTS, FAMILY: FAMILY_APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
+  AOS.welcome = { play, playMajor, playApp, playUpdate, playInstall, theme: { read: readTheme, set: setTheme, list: THEMES }, lines: LINE, safariDemo, data: { RELEASES, TOURS, APPS, CORE, FAMILY: FAMILY_APPS, NAMES, latest, shown, cmp, major, dir: DIR, entry }, seen: () => !!(seenAll() || {}).aos };
 
   // ---- on this phone: an app on the Home Screen tells the family account ----
   // aOS shows ✓ Installed for it. The report needs this app's own session (each
@@ -2533,6 +2532,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   async function eraseHere(remote) {
     const wipe = () => { try { localStorage.clear(); } catch {} };
     wipe();
+    try { document.cookie = 'aos_look=; path=/aOS/; max-age=0; SameSite=Lax'; } catch {}   // aOS's look, carried to the install (aOS/look.js)
     try { sessionStorage.clear(); sessionStorage.setItem(ERASED, remote ? 'remote' : 'here'); } catch {}
     try {
       const dbs = indexedDB.databases ? await indexedDB.databases() : [];
