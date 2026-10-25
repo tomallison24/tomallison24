@@ -319,6 +319,14 @@
     return y;
   }
 
+  // ---------------------------------------------------------------------
+  // Five years kept: this month and the 59 before it, on the phone and in aOS
+  // (functions/money/api keeps the same, KEEP_MONTHS). Anything older is let go.
+  // ---------------------------------------------------------------------
+  const KEEP_MONTHS = 60;
+  const keepFrom = today => ymAdd(ymOf(today), 1 - KEEP_MONTHS);
+  const prune = (txs, today) => { const from = keepFrom(today); return txs.filter(x => ymOf(x.date) >= from); };
+
   root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
-    recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck };
+    recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune };
 })(typeof window !== 'undefined' ? window : globalThis);

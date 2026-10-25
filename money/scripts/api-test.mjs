@@ -1,14 +1,14 @@
 // Checks functions/money/api/[[route]].js in plain Node, on an in-memory stand-in for Workers KV
 // with real sessions from server/auth.js: the header guard, accounts off, signing in, the first
 // phone to send becoming the reader, nobody else seeing anything until the reader shares it, the
-// months (each sent month replacing what was there, an emptied month deleted), settings (newer
+// months (each sent month replacing what was there, an emptied month deleted, five years kept), settings (newer
 // wins), who may push, share and forget, bad input, and removing the reader or a person it was
 // shared with from the family (functions/aOS/api); and Ipsy's daily check (POST check), against a
 // stand-in for Anthropic's API: the reader only, the key, the daily limit, what is sent, and that a
 // correction is kept only with words that really are in the email.
 //   node money/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, cleanTx, cleanSettings, keepResults, CHECK_MODEL, CHECK_DAILY } from '../../functions/money/api/[[route]].js';
+import { onRequest, cleanTx, cleanSettings, keepResults, keepFrom, CHECK_MODEL, CHECK_DAILY } from '../../functions/money/api/[[route]].js';
 import { onRequest as accounts } from '../../functions/aOS/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
@@ -95,6 +95,19 @@ await test('a month sent again replaces it; an emptied month is deleted', async 
   assert.equal(db.m.has('money:tx:2026-09'), false);
   const s = await call('state', { token: pat });
   assert.equal(s.body.meta.hints.length, 1, 'alerts and hints left out of a push stay as they were');
+});
+await test('five years kept: a push lets go of older months, and never takes one in', async () => {
+  assert.equal(keepFrom(Date.parse('2026-10-25T12:00:00Z')), '2021-11'); assert.equal(keepFrom(Date.parse('2027-01-31T12:00:00Z')), '2022-02');
+  const from = keepFrom(), y = +from.slice(0, 4), old = (y - 1) + from.slice(4), older = (y - 2) + from.slice(4);
+  const meta = JSON.parse(db.m.get('money:meta')); meta.months[older] = 1; db.m.set('money:meta', JSON.stringify(meta));
+  db.m.set('money:tx:' + older, JSON.stringify({ at: 1, items: [tx('o', older + '-05', 1)] }));
+  const r = await call('push', { token: pat, body: { months: { [old]: [tx('p', old + '-05', 2)], [from]: [tx('q', from + '-05', 3)] } } });
+  assert.equal(r.status, 200);
+  assert.equal(db.m.has('money:tx:' + older), false, 'the month over five years old is gone');
+  assert.equal(db.m.has('money:tx:' + old), false, 'one that old is never kept');
+  assert.ok(db.m.has('money:tx:' + from), 'the oldest month of the five years is kept');
+  assert.deepEqual(Object.keys(r.body.months).filter(ym => ym < from), []);
+  await call('push', { token: pat, body: { months: { [from]: [] } } });
 });
 await test('settings: anyone who sees it may change them; an older change doesn’t win', async () => {
   const r = await call('settings', { token: alex, body: { settings: { cards: { 'rocket credit card': { base: 3, online: 99, cap: -5 } }, online: ['Amazon', ''], dismissed: ['al1'], at: 1000 } } });

@@ -22,7 +22,8 @@
 //   family account, it sends what it read to aOS (functions/money/api), and the
 //   family members it picks in Settings > Who sees Money see it too; their
 //   phones only ever get it from there. Signed out, it all stays on the phone.
-// - Data on this phone: localStorage allison-money-v1. Settings > Card rewards
+// - Data on this phone: IndexedDB allison-money, five years of it (calc.js, prune), as in
+//   aOS (functions/money/api). Settings > Card rewards
 //   (each card's cash back), the online stores and the alerts marked fixed are
 //   shared with whoever sees Money.
 // - Five designs, picked in Settings > Design (../home/design.js).
@@ -57,7 +58,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
   const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off' };
-  const FIRST_SCAN = 'newer_than:2y';
+  const FIRST_SCAN = 'newer_than:5y';   // as much as Money keeps (calc.js, KEEP_MONTHS)
   const API = '../money/api/';
 
   const I = {
@@ -103,9 +104,35 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ids read], lastScan, readAt }
   // ---------------------------------------------------------------------
   const D = { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, reader: '', checkDay: '', lastCheck: null };
-  function load() {
-    const d = ls.json(KEY, null) || {};
-    D.tx = Array.isArray(d.tx) ? d.tx.filter(C.okTx) : [];
+  // Kept in IndexedDB (allison-money, store kv, key 'data'): five years of transactions is a few MB,
+  // and localStorage's 5 MB or so is shared by every aOS app. A phone that kept Money in localStorage
+  // (KEY, before) has it moved over once; with no IndexedDB (an old private window) it stays there.
+  // Saving stamps KEY + '-at' in localStorage, so another tab of Money reads it again ('storage').
+  const store = (() => {
+    let db = null;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('allison-money', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    }));
+    return { get: k => tx('readonly', s => s.get(k)), set: (k, v) => tx('readwrite', s => s.put(v, k)) };
+  })();
+  let idb = !!window.indexedDB;
+  async function load() {
+    let d = null;
+    if (idb) { try { d = await store.get('data'); } catch { idb = false; } }
+    const old = ls.json(KEY, null);
+    if (idb && old) {
+      if (!d) { try { await store.set('data', old); d = old; } catch { idb = false; } }
+      if (idb) ls.del(KEY);
+    }
+    if (!idb) d = old;
+    d = d || {};
+    D.tx = Array.isArray(d.tx) ? C.prune(d.tx.filter(C.okTx), today()) : [];
     D.alerts = Array.isArray(d.alerts) ? d.alerts.filter(a => a && a.id) : [];
     D.hints = Array.isArray(d.hints) ? d.hints.filter(h => h && h.name) : [];
     D.settings = d.settings && typeof d.settings === 'object' ? d.settings : null;
@@ -116,10 +143,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     D.lastScan = +d.lastScan || 0; D.readAt = +d.readAt || 0; D.reader = d.reader || '';
     D.checkDay = d.checkDay || ''; D.lastCheck = d.lastCheck && typeof d.lastCheck === 'object' ? d.lastCheck : null;
   }
-  let warned = false;
+  let warned = false, saving = null, again = false;
+  const full = () => { if (!warned) { warned = true; toast('This phone couldn’t save Money: its storage is full.'); } };
+  // Five years at most (calc.js, prune), then saved; saves while one is under way fold into one more.
   function persist() {
-    const ok = ls.set(KEY, JSON.stringify(D));
-    if (!ok && !warned) { warned = true; toast('This phone couldn’t save Money: its storage is full.'); }
+    D.tx = C.prune(D.tx, today());
+    const from = C.keepFrom(today());
+    for (const ym of Object.keys(D.mAt)) if (ym < from) delete D.mAt[ym];
+    D.dirty = D.dirty.filter(ym => ym >= from);
+    if (!idb) { if (!ls.set(KEY, JSON.stringify(D))) full(); else ls.set(KEY + '-at', String(Date.now())); return; }
+    if (saving) { again = true; return; }
+    saving = store.set('data', D)
+      .then(() => ls.set(KEY + '-at', String(Date.now())), full)
+      .then(() => { saving = null; if (again) { again = false; persist(); } });
   }
   const settings = () => D.settings || { cards: {}, dismissed: [], at: 0 };
   function changeSettings(fn) {
@@ -532,8 +568,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const header = (m, name) => (((m.payload && m.payload.headers) || []).find(h => h.name.toLowerCase() === name) || {}).value || '';
 
-  // Read what's new from Monarch (the first time, the last two years), fold it in, and send it on.
+  // Read what's new from Monarch (the first time, the last five years), fold it in, and send it on.
   async function scan({ loud, again } = {}) {
+    await ready;
     if (st.reading || !mayRead()) return;
     if (!getToken()) {
       if (mayRenew()) { signIn({ silent: true }); return; }
@@ -554,7 +591,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         const r = await gmail('/messages', { q: since + ' ' + P.QUERY, maxResults: 100, pageToken });
         (r.messages || []).forEach(m => ids.push(m.id));
         pageToken = r.nextPageToken;
-      } while (pageToken && ids.length < 3000);
+      } while (pageToken && ids.length < 15000);
       const seen = new Set(D.seen), todo = ids.filter(id => !seen.has(id)), items = [];
       await pool(todo, 4, async id => {
         const m = await gmail('/messages/' + id, { format: 'full' });
@@ -613,14 +650,18 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (syncing) return syncing;
     syncing = (async () => {
       try {
+        await ready;
         const s = await api('state', undefined, loud);
         st.server = s; D.reader = s.readerName || '';
         if (s.can && s.meta) {
-          // months the family's copy has newer than this phone's (the last 25 at most)
-          const want = Object.entries(s.meta.months || {}).filter(([ym, at]) => at > (D.mAt[ym] || 0)).map(e => e[0]).sort().slice(-25);
-          if (want.length) {
-            const r = await api('months?from=' + want[0] + '&to=' + want[want.length - 1]);
-            for (const ym of want) {
+          // months the family's copy has newer than this phone's (five years at most), 25 months a request
+          const from = C.keepFrom(today());
+          const want = Object.entries(s.meta.months || {}).filter(([ym, at]) => ym >= from && at > (D.mAt[ym] || 0)).map(e => e[0]).sort();
+          for (let i = 0; i < want.length;) {
+            const end = C.ymAdd(want[i], 24), part = [];
+            while (i < want.length && want[i] <= end) part.push(want[i++]);
+            const r = await api('months?from=' + part[0] + '&to=' + part[part.length - 1]);
+            for (const ym of part) {
               const theirs = (r.months[ym] || []).filter(C.okTx), mine = D.tx.filter(x => C.ymOf(x.date) === ym);
               // the reader's own unsent reading stays; everyone else takes the month as it is there
               const keep = s.reader && D.dirty.includes(ym) ? C.merge(mine, theirs).list : theirs;   // this phone's own reading (and checks) win for a month it hasn't sent yet
@@ -868,22 +909,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Start
   // ---------------------------------------------------------------------
-  load();
-  const back = consumeRedirect();
-  render();
-  animateIn(main);
-  if (back && back.error) {
-    if (!(back.silent && /^(interaction|login|consent|account_selection)_required$/.test(back.error))) toast(back.error === 'access_denied' ? 'Gmail access was declined.' : 'Gmail sign-in didn’t work (' + back.error + ').', null, 6000);
-    else toast('Gmail needs one tap to sign in again: Settings, Connect Gmail.', null, 6000);
+  // Start once this phone's copy is read (IndexedDB).
+  const ready = load().catch(() => {});
+  ready.then(start);
+  function start() {
+    const back = consumeRedirect();
+    render();
+    animateIn(main);
+    if (back && back.error) {
+      if (!(back.silent && /^(interaction|login|consent|account_selection)_required$/.test(back.error))) toast(back.error === 'access_denied' ? 'Gmail access was declined.' : 'Gmail sign-in didn’t work (' + back.error + ').', null, 6000);
+      else toast('Gmail needs one tap to sign in again: Settings, Connect Gmail.', null, 6000);
+    }
+    // The family's copy first (it says whether this phone reads Gmail), then Gmail: always after a
+    // sign-in, else when it's been over an hour.
+    (signedIn() ? sync() : Promise.resolve()).then(() => {
+      if (getToken() && (back && back.ok || Date.now() - D.lastScan > H)) scan({ loud: !!(back && back.ok) });
+      else if (getToken()) dailyCheck();
+      else if (!getToken() && mayRenew() && mayRead() && Date.now() - D.lastScan > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
+    });
   }
-  // The family's copy first (it says whether this phone reads Gmail), then Gmail: always after a
-  // sign-in, else when it's been over an hour.
-  (signedIn() ? sync() : Promise.resolve()).then(() => {
-    if (getToken() && (back && back.ok || Date.now() - D.lastScan > H)) scan({ loud: !!(back && back.ok) });
-    else if (getToken()) dailyCheck();
-    else if (!getToken() && mayRenew() && mayRead() && Date.now() - D.lastScan > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
-  });
-  window.addEventListener('storage', e => { if (e.key === KEY) { load(); render(); } });
+  window.addEventListener('storage', e => { if (e.key === KEY + '-at' && !saving) load().then(render, () => {}); });
   let shown = curYm();
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;

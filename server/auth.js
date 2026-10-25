@@ -47,7 +47,8 @@
 //                    today, and how many questions they asked Ipsy (functions/orders/api)
 //   money:share, money:meta, money:tx:<YYYY-MM>   Money's transactions from Monarch's emails
 //                    (functions/money/api): read by one person's phone (money:share.by), seen only by
-//                    them and those they share it with; deleted with the reader (functions/aOS/api, forget)
+//                    them and those they share it with; deleted with the reader (functions/aOS/api, forget);
+//                    five years of months kept (older ones deleted with the reader's next push)
 //   money:check:<id>:<day>   how many times that person's phone had Ipsy check transactions today
 //                    (functions/money/api, POST check); gone after two days
 //   sparkle:<id>, sparkle:clips:<id>   that account's Sparkle Kingdom players (their progress, coins

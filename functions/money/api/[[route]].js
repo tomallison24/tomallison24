@@ -24,6 +24,8 @@
 //   money:tx:YYYY-MM   { at, items: [transactions] }
 // Free plan: a push writes only the months the phone says changed, plus the meta; a request gets
 // 10 ms of CPU, so a month is at most 1,500 transactions and a push at most 6 months.
+// Five years are kept (KEEP_MONTHS, as the phone's money/calc.js): a push lets go of the months
+// older than that, and a month that old is never taken in.
 //
 // The X-Money header stops other web pages calling this (as X-Drinks does), and
 // _middleware.js locks it to signed-in family.
@@ -33,7 +35,12 @@ import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.j
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const ID = /^[A-Za-z0-9_-]{1,40}$/;
-const MAX_BODY = 512 * 1024, MAX_MONTH = 1500, MAX_PUSH = 6, MAX_RANGE = 25;
+const MAX_BODY = 512 * 1024, MAX_MONTH = 1500, MAX_PUSH = 6, MAX_RANGE = 25, KEEP_MONTHS = 60;
+// The oldest month kept: this one (UTC) and the 59 before it.
+export function keepFrom(now = Date.now()) {
+  const d = new Date(now), m = d.getUTCFullYear() * 12 + d.getUTCMonth() + 1 - KEEP_MONTHS;
+  return Math.floor(m / 12) + '-' + String(m % 12 + 1).padStart(2, '0');
+}
 const first = n => String(n || '').trim().split(/\s+/)[0].slice(0, 40);
 const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
 const num = v => typeof v === 'number' && isFinite(v) ? v : null;
@@ -134,7 +141,10 @@ export async function onRequest({ request, params, env }) {
         months[ym] = items.map(cleanTx).filter(x => x && x.date.slice(0, 7) === ym);
       }
       if (!share) await putJSON(db, 'money:share', { by: me.id, with: [], at: now });   // the first phone to send is the reader
+      const from = keepFrom(now);
+      for (const ym of Object.keys(meta.months)) if (ym < from) { await db.delete('money:tx:' + ym); delete meta.months[ym]; }
       for (const [ym, items] of Object.entries(months)) {
+        if (ym < from) continue;
         if (items.length) { await putJSON(db, 'money:tx:' + ym, { at: now, items }); meta.months[ym] = now; }
         else if (meta.months[ym]) { await db.delete('money:tx:' + ym); delete meta.months[ym]; }
       }
