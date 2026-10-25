@@ -31,7 +31,7 @@
     root.setAttribute('data-look', look);
     const v = document.getElementById('vintage'); if (v) v.media = look === 'glass' ? 'not all' : 'all';
     for (const id of ['neon', 'folk']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
-    for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = s.ground[/dark/.test(m.media) ? 1 : 0];
+    for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = s.ground[/dark/.test(m.dataset.media || m.media) ? 1 : 0];   // welcome.js keeps the original media there
     const bar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]'); if (bar) bar.content = s.bar;
     const touch = document.querySelector('link[rel="apple-touch-icon"]'); if (touch) touch.href = s.icon[0];
     const tab = document.querySelector('link[rel="icon"]'); if (tab) tab.href = s.icon[1];

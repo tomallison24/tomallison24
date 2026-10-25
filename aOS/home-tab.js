@@ -351,18 +351,23 @@
   }
   addEventListener('resize', pushInsets);
 
-  // behind the app while it loads, its own background; the status bar, its own bar colour (its
-  // theme-color), as on the Home Screen; aOS's again on Home
+  // behind the app while it loads, its own background; the status bar, the colour at the top of what's
+  // showing: the app's (its top fades into it), else aOS's own ground. Every theme-color meta gets that one
+  // colour, whichever of them iOS goes by: with Appearance set to Light or Dark, the page is not in the
+  // phone's own mode, and a meta per mode would put the other mode's colour over it
   const metas = [...document.querySelectorAll('meta[name="theme-color"]')];
+  const see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
+  const hex = c => { const n = (/rgba?\(([^)]*)\)/.exec(c || '') || [])[1]; return n ? '#' + n.split(',').slice(0, 3).map(x => Math.round(+x).toString(16).padStart(2, '0')).join('').toUpperCase() : c; };
   function tint() {
     let c = '', bar = '';
     const f = current && frames[current] && frames[current].firstChild;
     if (f) try {
-      const d = f.contentDocument, w = f.contentWindow, see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
+      const d = f.contentDocument, w = f.contentWindow;
       c = (w.AllisonOS && w.AllisonOS.topColor && w.AllisonOS.topColor()) || see(d.body) || see(d.documentElement);   // the app's own say (its top fades into it), else its page
       const m = [...d.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || w.matchMedia(m.media).matches);
-      bar = (m && m.content) || c;
+      bar = c || (m && m.content);
     } catch {}
+    if (!f && window.aosLook && aosLook.flat()) bar = see(document.body);   // Sea glass draws under the bar: its metas stay as they are
     $('appwin').style.setProperty('--tint', c || 'var(--bg)');
     // the status bar, when it's solid (an iPhone's, aOS's: ../home/sky.js): iOS colours it from the fixed
     // element at the top of the screen, and keeps that colour once nothing's there. #barcap is always
@@ -371,12 +376,17 @@
     document.documentElement.style.setProperty('--barcap', (f && c) || 'var(--bg)');
     for (const m of metas) {
       if (!m.dataset.home) m.dataset.home = m.content;
-      const want = bar || m.dataset.home;
+      const want = hex(bar) || m.dataset.home;
       if (m.content !== want) m.content = want;
     }
   }
   setInterval(() => { if (current && document.visibilityState === 'visible') tint(); }, 1500);   // an app switched to light or dark
   addEventListener('aos:look', () => { for (const m of metas) delete m.dataset.home; tint(); });   // aOS's own look changed its colours
+  // light or dark changed (Appearance, or the phone's own), or the Vintage sky moved on: once the page has its new colours
+  const retint = () => requestAnimationFrame(tint);
+  addEventListener('aos:theme', retint); addEventListener('aos:sky', retint);
+  { const dk = matchMedia('(prefers-color-scheme: dark)'); dk.addEventListener ? dk.addEventListener('change', retint) : dk.addListener(retint); }
+  retint(); addEventListener('load', retint);   // and as aOS opens
 
   // ---- "‹ aOS": tap to go back, hold for the other open apps; or swipe in from the left edge ----
   let holdT = null, held = false;
