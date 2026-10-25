@@ -493,7 +493,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
+  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
@@ -505,7 +505,7 @@
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home', sparkle: 'Sparkle Kingdom' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "clock": {
@@ -977,6 +977,41 @@
           "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
         }
       ]
+    },
+    "sparkle": {
+      "tag": "A princess and unicorn learning game",
+      "cards": [
+        {
+          "i": "map",
+          "t": "A kingdom to explore",
+          "d": "She rides her unicorn across floating islands. Reading a signpost, mending a bridge and opening a crystal door is how she gets around."
+        },
+        {
+          "i": "note",
+          "t": "Reading first",
+          "d": "Story Tower follows her school's reading plan, from syllables to little stories, with the Gem Mine for math and Star Meadow for memory."
+        },
+        {
+          "i": "chart",
+          "t": "Just hard enough",
+          "d": "Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days."
+        },
+        {
+          "i": "star",
+          "t": "Earned by learning",
+          "d": "Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns."
+        },
+        {
+          "i": "people",
+          "t": "For grown-ups",
+          "d": "Press and hold Grown-ups for the Parent corner: each child's progress, words to practice together, play time and the letter sounds you record."
+        },
+        {
+          "i": "sliders",
+          "t": "Four designs",
+          "d": "Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
+        }
+      ]
     }
   };
 
@@ -1266,7 +1301,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders and Home, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1951,6 +1986,15 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     { sel: '#viewBtn', t: 'Every room and system', d: 'Tap here for Climate, Lights, Media and Security, each on its own page.', g: 'tap' },
     { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
   ] };
+  // Sparkle Kingdom opens on who's playing: its tour says what the game is there, and where the grown-ups go
+  SPOTS.sparkle = { stops: [
+    { sel: ['#players .pcard', '#players'], t: 'A kingdom to explore', d: 'She rides her unicorn across floating islands. Reading a signpost, mending a bridge and opening a crystal door is how she gets around.' },
+    { sel: ['#players .pcard', '#players'], t: 'Reading first', d: 'Story Tower follows her school\'s reading plan, from syllables to little stories, with the Gem Mine for math and Star Meadow for memory.' },
+    { sel: ['#players .pcard', '#players'], t: 'Just hard enough', d: 'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.' },
+    { sel: ['#players .pcard', '#players'], t: 'Earned by learning', d: 'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.' },
+    { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for the Parent corner: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
+    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
+  ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
   const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
   for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
@@ -2237,6 +2281,7 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     meals: [['allison-meals-v2', 'design.meals'], []],
     orders: [['allison-orders-v1', 'design.orders'], []],
     house: [['house.', 'design.house'], []],
+    sparkle: [['sparkle.', 'design.sparkle'], []],
   };
   const CARRY_MAX = 230 * 1024;          // what the account takes for one app (HANDOFF_MAX), with room to spare
   const CARRIED = 'aos.carry2.';         // + app: 'done' (aOS has it), else the day it was last sent

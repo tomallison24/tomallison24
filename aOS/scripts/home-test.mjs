@@ -91,7 +91,7 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
 }
 
 // ---- the page ----
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house'];
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle'];
 const b = await chromium.launch();
 for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block', colorScheme: scheme });
@@ -112,7 +112,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(await pg.evaluate(() => document.getElementById('scroller').scrollTop > 0 && scrollY === 0), `Home scrolls in its own box: the page itself stays put ${tag}`);
   // every app one tap away: all of them as icons, the first three groups on the first screen
   const apps = await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ')].map(a => a.dataset.open));
-  check(apps.length === 14 && new Set(apps).size === 14, `every app, once each, as an icon (${apps.length}) ${tag}`);
+  check(apps.length === APPS.length && new Set(apps).size === APPS.length, `every app, once each, as an icon (${apps.length}) ${tag}`);
   await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 0; });
   const below = await pg.evaluate(() => Math.round(document.querySelector('#spaces .hcat:nth-child(2)').getBoundingClientRect().top));
   check(below < 844, `Every app starts on the first screen (${below}px) ${tag}`);

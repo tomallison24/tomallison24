@@ -45,6 +45,8 @@
 //                    (functions/news/api)
 //   orders:ai:<id>:<day>, orders:ipsy:<id>:<day>   how many emails that person had Claude read
 //                    today, and how many questions they asked Ipsy (functions/orders/api)
+//   sparkle:<id>, sparkle:clips:<id>   that account's Sparkle Kingdom players (their progress, coins
+//                    and treasures) and the letter sounds its grown-up recorded (functions/sparkle/api)
 //   <app>:ipsy:<id>:<day>   how many questions that person asked Ipsy in that app today
 //                    (server/ipsy.js, for travel, meals, calendar, notes and news too)
 // A session is "<payload>.<HMAC>", payload { u: user id, e: expiry, s: sign-out

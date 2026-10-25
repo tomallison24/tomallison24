@@ -60,6 +60,7 @@
     ['Every day', ['weather', 'news', 'mail', 'clock', 'podcasts']],
     ['Out and about', ['travel', 'places']],
     ['You', ['fitness', 'drinks']],
+    ['Games', ['sparkle']],
   ].map(([t, ids]) => [t, ids.filter(id => D.APPS.includes(id))]);
   const ALL = SPACES.flatMap(s => s[1]);
   const known = id => ALL.includes(id);

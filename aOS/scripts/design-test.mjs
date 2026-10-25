@@ -43,14 +43,19 @@ async function phone(scheme, seed) {
 }
 
 // 1. every app is wired to it
+// (an app made after the Vintage apps were folded in, BORN, has no old Vintage app to move data from)
+const BORN = ['sparkle'];
 {
   const pr = [];
   for (const id of APPS) {
     const t = tag(id); if (!t) { pr.push(id + ' does not load ../home/design.js'); continue; }
     const a = attrs(t[1]);
     if (a.app !== id) pr.push(id + ': data-app is ' + a.app);
-    if (a.was !== id + 'vintage') pr.push(id + ': data-was is ' + a.was + ', not ' + id + 'vintage');
-    if (!a.keys || !a.keys.split(',').every(x => /^[^=,\s]+=[^=,\s]+$/.test(x.trim()))) pr.push(id + ': data-keys should be old=new prefixes: ' + a.keys);
+    if (BORN.includes(id)) { if (a.was || a.keys) pr.push(id + ' never had a Vintage app of its own, so nothing to move: no data-was or data-keys'); }
+    else {
+      if (a.was !== id + 'vintage') pr.push(id + ': data-was is ' + a.was + ', not ' + id + 'vintage');
+      if (!a.keys || !a.keys.split(',').every(x => /^[^=,\s]+=[^=,\s]+$/.test(x.trim()))) pr.push(id + ': data-keys should be old=new prefixes: ' + a.keys);
+    }
     if (a.dbs && !a.dbs.split(',').every(x => /^[^=,\s]+=[^=,\s]+$/.test(x.trim()))) pr.push(id + ': data-dbs should be old=new names: ' + a.dbs);
     if (!/<style id="vintage">/.test(fs.readFileSync(path.join(ROOT, id, 'index.html'), 'utf8'))) pr.push(id + ' has no <style id="vintage">');
   }

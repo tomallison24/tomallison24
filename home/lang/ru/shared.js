@@ -36,7 +36,7 @@
     // ---- the app names (NAMES) ----
     'Mail': 'Почта', 'Calendar': 'Календарь', 'Clock': 'Часы', 'News': 'Новости', 'Weather': 'Погода', 'Notes': 'Заметки',
     'Podcasts': 'Подкасты', 'Travel': 'Поездки', 'Places': 'Места', 'Fitness': 'Фитнес', 'Drinks': 'Напитки', 'Meals': 'Меню',
-    'Orders': 'Заказы', 'Home': 'Дом',
+    'Orders': 'Заказы', 'Home': 'Дом', 'Sparkle Kingdom': 'Сверкающее королевство',
 
     // ---- the welcome ----
     'Welcome': 'Добро пожаловать',
@@ -162,6 +162,20 @@
     'Turn on layers for holidays, Notes reminders, trips, Mail reminders, workouts and the weather forecast.': 'Включите слои: праздники, напоминания из Заметок, поездки, напоминания из Почты, тренировки и прогноз погоды.',
     // News
     'Headlines, scores and your teams': 'Заголовки, счёт и ваши команды',
+    // Sparkle Kingdom's tour (TOURS.sparkle)
+    'A princess and unicorn learning game': 'Обучающая игра с принцессой и единорогом',
+    'A kingdom to explore': 'Королевство для путешествий',
+    'She rides her unicorn across floating islands. Reading a signpost, mending a bridge and opening a crystal door is how she gets around.': 'Она летает на единороге по парящим островам. Чтобы пройти дальше, она читает указатели, чинит мост и открывает хрустальную дверь.',
+    'Reading first': 'Сначала чтение',
+    "Story Tower follows her school's reading plan, from syllables to little stories, with the Gem Mine for math and Star Meadow for memory.": 'Башня историй идёт по школьной программе чтения, от слогов до маленьких рассказов; в Самоцветной шахте математика, на Звёздном лугу память.',
+    'Just hard enough': 'В меру сложно',
+    'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.': 'Каждый навык сам становится сложнее или проще, чтобы она чаще отвечала верно, но немного старалась. Слова с ошибками возвращаются в следующие дни.',
+    'Earned by learning': 'Заработано учёбой',
+    'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.': 'На монеты покупаются платья, диадемы и вещи для единорога, а единорог растёт вместе с её знаниями.',
+    'For grown-ups': 'Для взрослых',
+    "Press and hold Grown-ups for the Parent corner: each child's progress, words to practice together, play time and the letter sounds you record.": 'Нажмите и удерживайте «Для взрослых», чтобы открыть уголок родителей: успехи каждого ребёнка, слова для совместных занятий, время игры и записанные вами звуки букв.',
+    'Four designs': 'Четыре дизайна',
+    'Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design.': 'Винтаж, Стандарт в стиле «Морское стекло», Ночная трасса или Народный: для выбора игрока и уголка родителей. Выберите в уголке родителей > Дизайн.',
     'News by topic': 'Новости по темам',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое.',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more. Tap the pill to pick a topic.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое. Нажмите на кнопку, чтобы выбрать тему.',

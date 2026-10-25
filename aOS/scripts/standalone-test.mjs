@@ -37,7 +37,7 @@ const db = { get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { 
   list: async ({ prefix }) => ({ keys: [...m.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }) };
 await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom', role: 'owner', creds: [], created: Date.now() - 864e5 });
 const tok = await issue(db, 'O1');
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];   // and the old Vintage apps' addresses, which open the app itself
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];   // and the old Vintage apps' addresses, which open the app itself
 const b = await chromium.launch();
 const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/sheet\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || p === '/calendar/ical.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
 const DESIGN_OF = Object.fromEntries(APPS.filter(a => /vintage$/.test(a)).map(a => [a, a.replace(/vintage$/, '')]));   // newsvintage -> news
