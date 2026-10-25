@@ -9,6 +9,8 @@
 // - Cards and rewards: spending and cash back per card, the rewards chart and its table, the better
 //   card; changing a card's rate in Settings changes what it earned;
 // - Recurring: what repeats and a year of it;
+// - your own categories: always for a merchant or just one transaction, shared, Monarch's back; Ipsy's
+//   ideas (POST ideas: once a month on its own, and when asked), Accept and No thanks, and a rule removed;
 // - Ipsy's daily check (POST check, against a stand-in for Anthropic's API): a misread merchant
 //   corrected from the email's words (with Undo), one it couldn't confirm marked Check, one that
 //   passed marked and never sent again, all shared through aOS;
@@ -103,10 +105,12 @@ async function gmail(route) {
 }
 
 // ---- Anthropic's API, as the route sees it (Node's fetch): what Ipsy's check answers ----
-const aiCalls = [];
+const aiCalls = [], ideasCalls = [];
+const IDEAS = { ideas: [{ kind: 'move', from: '', merchant: 'Costco', to: 'Groceries', why: 'Costco is mostly groceries: $120 a month.' }, { kind: 'merge', from: 'Auto Maintenance', merchant: '', to: 'Car', why: 'One category for the car.' }] };
 globalThis.fetch = async (url, opts) => {
   if (!String(url).startsWith('https://api.anthropic.com/')) throw new Error('unexpected fetch ' + url);
   const body = JSON.parse(opts.body), words = body.messages[0].content;
+  if (/spending categories/.test(body.system)) { ideasCalls.push(words); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(IDEAS) }] }), { status: 200 }); }
   aiCalls.push(words);
   const results = [...words.matchAll(/<item id="([^"]+)">/g)].map(m => m[1]).map(id => id === 'm5' ? { id, ok: false, note: '', issues: [{ field: 'merchant', value: 'Joe\'s Garage', quote: 'from Joe\'s Garage,' }] }
     : id === 'm1' ? { id, ok: false, note: 'The email names two shops', issues: [{ field: 'merchant', value: 'Book Nook Cafe', quote: 'from Book Nook Cafe' }] }
@@ -304,6 +308,73 @@ await test('Recurring: what repeats, a year of it, and what Monarch named', asyn
   assert.match(t, /Monarch found these too/i); assert.match(t, /Stream Box/);
   await snap(p, 'repeats');
 });
+const asSeen = () => p.evaluate(() => window.__money.st.T.map(x => ({ id: x.id, merchant: x.merchant, cat: x.cat, mcat: x.mcat, how: x.how })));
+await test('your own category: always for the merchant (the default), just one, and Monarch’s back; shared', async () => {
+  await view(p, 'activity');
+  await p.locator('#main [data-tx]', { hasText: 'Corner Diner' }).first().click();
+  await p.waitForSelector('#txSheet:not([hidden])');
+  await p.click('#txBody [data-recat]');
+  await p.waitForSelector('#recatBox:not([hidden])');
+  assert.match(await p.locator('#recatBox').innerText(), /Always for\s+Corner Diner/);
+  assert.equal(await p.locator('#recatAll').getAttribute('aria-checked'), 'true', 'always for the merchant, unless you say not');
+  await p.fill('#newCat', 'Eating out'); await p.click('#newCatGo');
+  const t = await p.locator('#txBody').innerText();
+  assert.match(t, /Eating out/); assert.match(t, /Monarch said:\s+Restaurants/);
+  await snap(p, 'recategorized');
+  assert.ok((await asSeen()).filter(x => x.merchant === 'Corner Diner').every(x => x.cat === 'Eating out' && x.mcat === 'Restaurants'), 'every Corner Diner');
+  assert.equal(await p.evaluate(() => window.__money.D.tx.find(x => x.merchant === 'Corner Diner').cat), 'Restaurants', 'Monarch’s stays underneath');
+  await p.waitForFunction(() => !window.__money.D.setDirty, null, { timeout: 10000 });
+  assert.equal(JSON.parse(kv.get('money:meta')).settings.recat.m['corner diner'].c, 'Eating out', 'shared with whoever sees Money');
+  // just this one: an Amazon charge to Eating out, then back to Monarch's
+  await p.click('#txSheet .okbtn');
+  const amz = (await asSeen()).find(x => x.merchant === 'Amazon');
+  await p.evaluate(id => window.__money.openTx(id), amz.id);
+  await p.click('#txBody [data-recat]');
+  await p.click('#recatAll');
+  await p.click('#recatBox [data-pick="Eating out"]');
+  let all = await asSeen();
+  assert.equal(all.find(x => x.id === amz.id).cat, 'Eating out'); assert.equal(all.find(x => x.id === amz.id).how, 'tx');
+  assert.ok(all.filter(x => x.merchant === 'Amazon' && x.id !== amz.id).every(x => x.cat === 'Shopping'), 'only that one');
+  await p.click('#txBody [data-recat]');
+  await p.click('#recatAll');
+  await p.click('#recatBox [data-pick="Shopping"]');
+  all = await asSeen();
+  assert.equal(all.find(x => x.id === amz.id).cat, 'Shopping'); assert.equal(all.find(x => x.id === amz.id).how, undefined, 'Monarch’s again');
+  await p.click('#txSheet .okbtn');
+  await view(p, 'month');
+  const m = await mainText(p);
+  assert.match(m, /Eating out/); assert.doesNotMatch(m, /Restaurants/);
+});
+await test('Ipsy’s ideas: once a month on its own; Accept, No thanks, asked again, and a rule removed', async () => {
+  await p.waitForFunction(() => ((window.__money.D.settings || {}).ideas || {}).list, null, { timeout: 10000 });
+  assert.equal(ideasCalls.length, 1, 'once this month, on its own');
+  assert.ok(ideasCalls[0].includes('Costco') && !ideasCalls[0].includes('9876'), 'categories and merchants; no card');
+  await view(p, 'month');
+  const card = await mainText(p);
+  assert.match(card, /Ipsy’s ideas for your categories/i); assert.match(card, /Move\s+Costco\s+to\s+Groceries/); assert.match(card, /Merge\s+Auto Maintenance\s+into\s+Car/);
+  await snap(p, 'ideas');
+  await p.click('#main [data-idea-ok="move:costco>groceries"]');
+  assert.ok((await asSeen()).filter(x => x.merchant === 'Costco').every(x => x.cat === 'Groceries'), 'accepted: every Costco is Groceries');
+  await p.click('#main [data-idea-no="merge:automaintenance>car"]');
+  assert.doesNotMatch(await mainText(p), /Ipsy’s ideas/i, 'both answered');
+  assert.ok((await asSeen()).some(x => x.cat === 'Auto Maintenance'), 'said no: nothing changed');
+  // asked again, from Settings: what it learns from goes with it, and what was answered isn't suggested again
+  await p.click('#setBtn');
+  await p.waitForSelector('#setBody #ideasNow');
+  const s = await p.locator('#setBody').innerText();
+  assert.match(s, /Corner Diner → Eating out/); assert.match(s, /Costco → Groceries/);
+  await p.click('#setBody #ideasNow');
+  await p.waitForFunction(() => !window.__money.st.ideasBusy && window.__money.D.settings.ideas.list.length === 0, null, { timeout: 10000 });
+  const last = ideasCalls[ideasCalls.length - 1];
+  assert.equal(ideasCalls.length, 2);
+  assert.ok(last.includes('Eating out') && last.includes('merge:automaintenance>car'), 'your changes, and what you said no to');
+  // a rule removed: Monarch's category is back for Costco
+  await p.click('#setBtn');
+  await p.click('#setBody [data-unrule="m:costco"]');
+  assert.ok((await asSeen()).filter(x => x.merchant === 'Costco').every(x => x.cat === 'Shopping'));
+  await p.click('#setSheet [data-close].iconbtn');
+  await p.waitForFunction(() => !window.__money.D.setDirty, null, { timeout: 10000 });
+});
 await test('kept in IndexedDB, five years of it: moved from localStorage, read back after a reload', async () => {
   const saved = () => new Promise((res, rej) => { const r = indexedDB.open('allison-money'); r.onerror = () => rej(r.error); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('data'); q.onsuccess = () => res(q.result && q.result.tx.length); }; });
   const n = await p.evaluate(() => window.__money.D.tx.length);
@@ -337,6 +408,7 @@ await test('the spouse sees nothing until it’s shared, then the same months, a
   await B.p.waitForSelector('#main .sum', { timeout: 10000 });
   const D = await B.p.evaluate(() => window.__money.D);
   assert.equal(D.tx.length, await p.evaluate(() => window.__money.D.tx.length));
+  assert.ok((await B.p.evaluate(() => window.__money.st.T)).filter(x => x.merchant === 'Corner Diner').every(x => x.cat === 'Eating out'), 'the family’s own categories too');
   assert.equal(await B.p.locator('#readBtn').isHidden(), true, 'no Gmail reading on this phone');
   await B.p.click('#setBtn');
   const s = await B.p.locator('#setBody').innerText();

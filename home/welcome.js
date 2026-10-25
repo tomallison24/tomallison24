@@ -87,7 +87,8 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['Money keeps five years of transactions, on your phone and in aOS, and stores them so they never crowd the other apps',
+      notes: ['Money: change a transaction\'s category (always for its merchant, or just that one), shared with whoever sees Money; Ipsy suggests categories to merge and merchants to move, when asked and once a month, and nothing changes until you accept',
+        'Money keeps five years of transactions, on your phone and in aOS, and stores them so they never crowd the other apps',
         'Money: once a day Ipsy checks this month\'s new transactions against their Monarch emails (the amount, in or out, the merchant, the card and the category). What passed is never checked again; a misreading is corrected from the email\'s own words, with Undo; one it can\'t confirm is marked Check. This month shows what it found',
         'Seven helpers: Mia, the family\'s Australian Shepherd, a fox, an owl, a robot, an octopus, a hedgehog and an otter. The first time you tap Ipsy you see them all, unnamed: pick one and give it a name (up to 16 letters). Until then they take turns peeking out of the corner',
         'Your helper is yours alone, in aOS and every app, and follows you to your other devices. Change it or its name any time: tap its name at the top of the chat, or aOS, Account, Your helper. Or just ask it to change its name',

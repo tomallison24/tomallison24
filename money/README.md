@@ -77,6 +77,31 @@ Etsy, eBay, Wayfair, Chewy, Temu, Shein and Zappos to start). **Groceries and wh
 Monarch's Groceries category, or Costco, Sam's Club or BJ's. A card known by its name keeps its
 rewards when it's replaced (Robinhood's **1111, then **9876, are one card).
 
+## Your own categories, and Ipsy's ideas
+
+Categories are Monarch's, as its emails say, until someone changes one. Monarch's own stays on each
+transaction underneath (the transaction's sheet says "Monarch said", and the export has both).
+
+- **Change one**: tap a transaction, then Change: pick a category in use or type a new one. **Always
+  for** its merchant is on (its other transactions too, and those to come); turn it off for just this
+  one. Picking Monarch's own (marked "Monarch's") puts it back.
+- **Ipsy's ideas**: Settings > Categories > Ask Ipsy for ideas, and once a month on its own (the first
+  phone to open Money that month, with 20 or more transactions). Ipsy (Claude Sonnet 5.5) sees the
+  last 12 months' spending by category with the biggest merchants in each, the changes you made (it
+  follows your taste) and the ideas you said no to, and suggests merging a category into another or
+  moving a merchant to another (or a new) category, with a line saying why. They show on This month:
+  **Accept** makes it a rule, as if made by hand; **No thanks** and it's never suggested again.
+  Nothing changes until someone accepts. Sent to Anthropic: category and merchant names with counts
+  and totals; no cards, dates or emails. A few a day at most per person (`money:ideas:<id>:<day>`);
+  under a cent each.
+- **Shared**: the changes and ideas are in the shared settings (`recat`, `ideas` in `money:meta`), so
+  whoever sees Money sees them and may change them. Two phones' changes both stay: each change has its
+  own time and the newer wins (`calc.js` and the server, `mergeSettings`). Settings > Categories lists
+  the rules, each with Remove.
+- **Where they count**: This month, the categories, the tips, search, the lists and the export. Card
+  rewards keep Monarch's category (a card's bonus goes by how the store charges, not by your name for
+  it), and so does Ipsy's daily check (it checks the app read the email right).
+
 ## Ipsy's daily check
 
 Once a day, the first time Money opens on the reader's phone (after it has read Gmail), Ipsy checks
@@ -151,7 +176,7 @@ Google can't answer quietly.
 - `app.js`: drawing, Gmail, the family's copy, Settings.
 - `parse.js`: Monarch's emails → transactions, alerts and recurring merchants.
 - `calc.js`: the sums: folding in, cards and rewards, what repeats, a month against the usual, tips,
-  which alerts are still open.
+  which alerts are still open, five years kept, your own categories (`recat`, `mergeSettings`, `ideasInput`).
 - `functions/money/api/[[route]].js`: the family's copy; `_middleware.js` locks it to signed-in family.
 - Russian: `home/lang/ru/money.js`.
 
@@ -160,8 +185,8 @@ Google can't answer quietly.
 ```
 node money/scripts/parse-test.mjs    # Monarch's emails (made-up ones in its templates)
 node money/scripts/calc-test.mjs     # the sums
-node money/scripts/api-test.mjs      # the server: who may send, see, share and delete; Ipsy's check
-node money/scripts/app-test.mjs      # the page at iPhone size: every view, a transaction, Settings, Ipsy's check, the designs
+node money/scripts/api-test.mjs      # the server: who may send, see, share and delete; Ipsy's check; categories and ideas
+node money/scripts/app-test.mjs      # the page at iPhone size: every view, a transaction, Settings, Ipsy's check, categories and ideas, the designs
 ```
 
 All made-up data: no one's real transactions are in this repository.
