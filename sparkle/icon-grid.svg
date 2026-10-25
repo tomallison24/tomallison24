@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Grid: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <!-- Tron: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
   <defs>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <path d="M150 440C138 360 146 286 186 232C212 196 248 174 290 168L270 116L312 156C350 166 386 186 404 220C420 248 418 280 398 294C380 306 354 302 334 292C318 286 306 290 298 304C282 334 282 384 300 440Z" fill="#fff"/>

@@ -1,5 +1,5 @@
 // Every app's design: Vintage (mid-century modern, the default), Standard (Sea glass), Night Drive
-// (neon), Folk (Gzhel and Khokhloma) or Grid (light cycles), picked in the app's own Settings > Design, as in Clock, or
+// (neon), Folk (Gzhel and Khokhloma) or Tron (light cycles), picked in the app's own Settings > Design, as in Clock, or
 // for every app at once in aOS (Account > Appearance: aOS/look.js writes each app's design.<id>). Shared by every app (like sky.js), so they can't
 // drift apart. Loaded in <head> after the styles, before ../home/sky.js, so the page is drawn once,
 // in the right design:
@@ -144,6 +144,11 @@
 .aos-design .sw.neon{background:repeating-linear-gradient(to bottom,transparent 0 3px,#120B1F 3px 5px) 0 100%/100% 45% no-repeat,linear-gradient(#FFC75A,#FF8A4C 45%,#FF3D9A)}
 .aos-design .sw.folk{background:radial-gradient(circle,#F5F7FB 0 18%,#1C3F94 19% 46%,#F5F7FB 47% 56%,#C7261C 57% 72%,#D9A630 73%)}
 .aos-design .sw.grid{background:radial-gradient(circle,#FF2A2A 0 12%,#08090B 13% 38%,#FF2A2A 39% 49%,#08090B 50% 70%,#E9EDF1 71% 76%,#08090B 77%)}
+.aos-design .sw.grid{position:relative}
+.aos-design .sw.grid::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;background:conic-gradient(transparent 0 70%,rgba(255,42,42,.25) 80%,#FF2A2A 92%,#fff 95%,transparent 96%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));filter:drop-shadow(0 0 3px #FF2A2A);animation:aosSeSpin 1.8s linear infinite}
+.aos-design .se{display:inline-block;margin-left:7px;padding:2px 7px 1px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.5;vertical-align:2px;white-space:nowrap;color:#fff;background:linear-gradient(100deg,#9E0A14 0%,#FF2A2A 38%,#FF8F8F 50%,#FF2A2A 62%,#9E0A14 100%) 0 0/260% 100%;box-shadow:0 0 8px rgba(255,42,42,.6);text-shadow:0 1px 2px rgba(90,0,0,.55);animation:aosSeShine 2.6s linear infinite}
+@keyframes aosSeShine{from{background-position:100% 0}to{background-position:-160% 0}}@keyframes aosSeSpin{to{transform:rotate(1turn)}}@keyframes aosSeRide{to{left:110%}}@keyframes aosSePulse{from{filter:drop-shadow(0 0 2px #FF2A2A)}to{filter:drop-shadow(0 0 9px #FF2A2A)}}
+@media (prefers-reduced-motion:reduce){.aos-design .se,.aos-design .sw.grid::after{animation:none}}
 .aos-design .grow{flex:1;min-width:0}
 .aos-design b{display:block;font-size:16px;font-weight:600;color:var(--text)}
 .aos-design small{display:block;margin-top:2px;font-size:13px;line-height:1.35;color:var(--muted)}
@@ -151,16 +156,18 @@
 .aos-design .tick path{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .aos-design [aria-checked="true"] .tick{opacity:1}`;
   (document.head || root).appendChild(css);
+  // Tron is a special edition: its name carries a badge with a light running through it, and a light trail circles its swatch
+  const SE = 'Tron <span class="se">Special Edition</span>';
   const TICK = '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>';
   const ROWS = [
     ['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'],
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
     ['neon', 'Night Drive', '80s neon: a striped sunset, magenta and cyan on midnight'],
     ['folk', 'Folk', 'Gzhel by day, Khokhloma by night: cobalt, cinnabar and gold'],
-    ['grid', 'Grid', 'Light cycles: red light on a black grid, as in Tron: Ares'],
+    ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares'],
   ];
   const picker = () => '<div class="aos-design" role="radiogroup" aria-label="Design">' + ROWS.map(([id, name, note]) =>
-    `<button type="button" role="radio" data-design="${id}" aria-checked="${id === look}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${name}</b><small>${note}</small></span>${TICK}</button>`).join('') + '</div>';
+    `<button type="button" role="radio" data-design="${id}" aria-checked="${id === look}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${id === 'grid' ? SE : name}</b><small>${note}</small></span>${TICK}</button>`).join('') + '</div>';
 
   const boxes = new Set();
   const paint = () => { for (const box of boxes) for (const b of box.querySelectorAll('[data-design]')) b.setAttribute('aria-checked', String(b.dataset.design === look)); };

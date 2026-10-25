@@ -1,12 +1,16 @@
 // Checks functions/money/api/[[route]].js in plain Node, on an in-memory stand-in for Workers KV
 // with real sessions from server/auth.js: the header guard, accounts off, signing in, the first
 // phone to send becoming the reader, nobody else seeing anything until the reader shares it, the
-// months (each sent month replacing what was there, an emptied month deleted), settings (newer
+// months (each sent month replacing what was there, an emptied month deleted, five years kept), settings (newer
 // wins), who may push, share and forget, bad input, and removing the reader or a person it was
-// shared with from the family (functions/aOS/api).
+// shared with from the family (functions/aOS/api); and Ipsy's daily check (POST check), against a
+// stand-in for Anthropic's API: the reader only, the key, the daily limit, what is sent, and that a
+// correction is kept only with words that really are in the email; the family's own categories (two
+// phones' changes both kept) and Ipsy's ideas for them (POST ideas: only about what was sent, never one
+// said no to).
 //   node money/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, cleanTx, cleanSettings } from '../../functions/money/api/[[route]].js';
+import { onRequest, cleanTx, cleanSettings, keepResults, keepIdeas, keepFrom, CHECK_MODEL, CHECK_DAILY, IDEAS_DAILY } from '../../functions/money/api/[[route]].js';
 import { onRequest as accounts } from '../../functions/aOS/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
@@ -94,6 +98,19 @@ await test('a month sent again replaces it; an emptied month is deleted', async 
   const s = await call('state', { token: pat });
   assert.equal(s.body.meta.hints.length, 1, 'alerts and hints left out of a push stay as they were');
 });
+await test('five years kept: a push lets go of older months, and never takes one in', async () => {
+  assert.equal(keepFrom(Date.parse('2026-10-25T12:00:00Z')), '2021-11'); assert.equal(keepFrom(Date.parse('2027-01-31T12:00:00Z')), '2022-02');
+  const from = keepFrom(), y = +from.slice(0, 4), old = (y - 1) + from.slice(4), older = (y - 2) + from.slice(4);
+  const meta = JSON.parse(db.m.get('money:meta')); meta.months[older] = 1; db.m.set('money:meta', JSON.stringify(meta));
+  db.m.set('money:tx:' + older, JSON.stringify({ at: 1, items: [tx('o', older + '-05', 1)] }));
+  const r = await call('push', { token: pat, body: { months: { [old]: [tx('p', old + '-05', 2)], [from]: [tx('q', from + '-05', 3)] } } });
+  assert.equal(r.status, 200);
+  assert.equal(db.m.has('money:tx:' + older), false, 'the month over five years old is gone');
+  assert.equal(db.m.has('money:tx:' + old), false, 'one that old is never kept');
+  assert.ok(db.m.has('money:tx:' + from), 'the oldest month of the five years is kept');
+  assert.deepEqual(Object.keys(r.body.months).filter(ym => ym < from), []);
+  await call('push', { token: pat, body: { months: { [from]: [] } } });
+});
 await test('settings: anyone who sees it may change them; an older change doesn’t win', async () => {
   const r = await call('settings', { token: alex, body: { settings: { cards: { 'rocket credit card': { base: 3, online: 99, cap: -5 } }, online: ['Amazon', ''], dismissed: ['al1'], at: 1000 } } });
   assert.equal(r.body.ok, true);
@@ -102,6 +119,99 @@ await test('settings: anyone who sees it may change them; an older change doesn�
   assert.equal(old.body.ok, false); assert.equal(old.body.settings.at, 1000);
   assert.equal((await call('settings', { token: sam, body: { settings: { at: 2000 } } })).status, 403);
   assert.equal((await call('state', { token: pat })).body.meta.settings.dismissed[0], 'al1');
+});
+await test('Ipsy’s check: the reader only, Sonnet 5.5, and a correction kept only with words from the email', async () => {
+  const email = 'We noticed an expense of $1,052.10 from Corner Hardware, which was spent from Rocket Credit Card **9876 (...9876) and has been categorized as 🔨 Home Improvement.';
+  const item = { id: 'm1', subject: '💲 New expense from Corner Hardware in Monarch', text: 'Hi Pat,\n' + email + ' https://email.example/x pat@example.com',
+    parsed: { amt: 1052.1, dir: 'out', merchant: 'Corner Hardwar', account: 'Rocket Credit Card', last4: '9876', cat: 'Home Improvement' } };
+  const item2 = Object.assign({}, item, { id: 'm2', parsed: Object.assign({}, item.parsed, { merchant: 'Corner Hardware' }) });
+  const sent = [], realFetch = globalThis.fetch;
+  let answer = { results: [
+    { id: 'm1', ok: false, note: '', issues: [{ field: 'merchant', value: 'Corner Hardware', quote: 'from Corner Hardware,' }, { field: 'amount', value: '9999.00', quote: 'an expense of $9,999.00' }] },
+    { id: 'm2', ok: true, note: '', issues: [] }, { id: 'zz', ok: true, note: '', issues: [] }] };
+  globalThis.fetch = async (url, opts) => { sent.push({ url, opts, body: JSON.parse(opts.body) }); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(answer) }] }), { status: 200 }); };
+  try {
+    const AI = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test-key' };
+    assert.equal((await call('check', { token: pat, body: { items: [item] } })).body.error, 'no-ai', 'no key: says so, asks nobody');
+    assert.equal((await call('check', { token: alex, body: { items: [item] }, e: AI })).status, 403, 'only the reader');
+    assert.equal((await call('check', { token: pat, body: { items: [] }, e: AI })).status, 400);
+    assert.equal(sent.length, 0);
+    const r = await call('check', { token: pat, body: { items: [item, item2] }, e: AI });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body.results, { m1: { s: 'fix', issues: [{ field: 'merchant', value: 'Corner Hardware', quote: 'from Corner Hardware,' }] }, m2: { s: 'ok' } },
+      'the made-up amount (its words aren’t in the email) and the item nobody sent are thrown away');
+    const b = sent[0].body;
+    assert.equal(b.model, CHECK_MODEL); assert.equal(CHECK_MODEL, 'claude-sonnet-5-5');
+    assert.equal(b.output_config.effort, 'low'); assert.equal(b.output_config.format.type, 'json_schema'); assert.equal(b.fallbacks, 'default');
+    assert.equal(sent[0].opts.headers['anthropic-beta'], 'server-side-fallback-2026-07-01'); assert.equal(sent[0].opts.headers['x-api-key'], 'test-key');
+    const words = b.messages[0].content;
+    assert.ok(words.includes('Corner Hardwar') && words.includes('$1,052.10'));
+    assert.ok(!/pat@example|https?:|Hi Pat/.test(words), 'no address, link or greeting goes to Anthropic');
+    // a refusal checks nothing (the phone sends them again tomorrow)
+    answer = null;
+    globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'refusal', content: [] }), { status: 200 });
+    assert.deepEqual((await call('check', { token: pat, body: { items: [item] }, e: AI })).body, { results: {}, refused: true });
+    // the daily limit, counted before the call
+    for (let i = 3; i <= CHECK_DAILY; i++) await call('check', { token: pat, body: { items: [item] }, e: AI });
+    assert.equal((await call('check', { token: pat, body: { items: [item] }, e: AI })).status, 429);
+  } finally { globalThis.fetch = realFetch; }
+  // unsure, and a "fix" that only says what the app already has
+  const out = keepResults({ results: [{ id: 'a', ok: false, note: 'Two amounts in the email', issues: [] }, { id: 'b', ok: false, note: '', issues: [{ field: 'amount', value: '$1,052.10', quote: 'an expense of $1,052.10' }] }] },
+    [{ id: 'a', subject: '', text: 'x'.repeat(30), parsed: { amt: 1 } }, { id: 'b', subject: '', text: email, parsed: { amt: 1052.1, dir: 'out' } }]);
+  assert.deepEqual(out, { a: { s: 'unsure', note: 'Two amounts in the email' }, b: { s: 'unsure', note: '' } });
+  // a transaction keeps what the check said, and only that
+  assert.deepEqual(cleanTx(Object.assign(tx('c', '2026-10-06', 1), { check: { s: 'fixed', at: 2, issues: [{ field: 'amount', was: 5, now: '6' }, { field: 'nope' }], extra: 1 } })).check,
+    { s: 'fixed', at: 2, issues: [{ field: 'amount', was: '5', now: '6' }] });
+  assert.equal(cleanTx(Object.assign(tx('d', '2026-10-06', 1), { check: { s: 'whatever' } })).check, undefined);
+});
+await test('your own categories: two phones’ changes both stay, the newer of each; an older base still merges them', async () => {
+  const cur = (await call('state', { token: pat })).body.meta.settings;
+  const a = Object.assign({}, cur, { at: 3000, recat: { m: { 'corner diner': { c: 'Eating out', e: '🍔', at: 3000 } }, t: {}, g: { 'coffee shops': { c: 'Eating out', e: '', f: 'Coffee Shops', at: 3000 } } } });
+  assert.equal((await call('settings', { token: pat, body: { settings: a } })).body.ok, true);
+  // Alex's phone, not yet given Pat's change: its own change, and an older one to the same merchant
+  const b = Object.assign({}, cur, { at: 2500, recat: { m: { 'corner diner': { c: 'Restaurants', e: '', at: 2000 }, 'big box': { c: 'Household', e: '', at: 2600 } }, t: { 'x1': { c: 'Gifts', e: '🎁', at: 2600, junk: 1 } } },
+    ideas: { at: 2600, ym: '2026-10', list: [{ id: 'merge:a>b', kind: 'merge', from: 'A', to: 'B', why: 'Small' }, { kind: 'nope' }], no: ['move:x>y'] } });
+  const r = await call('settings', { token: alex, body: { settings: b } });
+  assert.equal(r.body.ok, false, 'the older card rates lose');
+  const rc = r.body.settings.recat;
+  assert.deepEqual(rc.m['corner diner'], { c: 'Eating out', e: '🍔', at: 3000 }, 'the newer change to a merchant wins');
+  assert.deepEqual(rc.m['big box'], { c: 'Household', e: '', at: 2600 }, 'and Alex’s own change stays');
+  assert.deepEqual(rc.t.x1, { c: 'Gifts', e: '🎁', at: 2600 }); assert.equal(rc.g['coffee shops'].f, 'Coffee Shops');
+  assert.deepEqual(r.body.settings.ideas, { at: 2600, ym: '2026-10', list: [{ id: 'merge:a>b', kind: 'merge', from: 'A', to: 'B', merchant: '', why: 'Small' }], no: ['move:x>y'] });
+  assert.equal((await call('state', { token: alex })).body.meta.settings.recat.m['big box'].c, 'Household');
+});
+await test('Ipsy’s ideas: anyone who sees Money, only about what was sent, never one said no to', async () => {
+  const input = { categories: [
+    { name: 'Shopping', charges: 30, spent: 2400, merchants: [{ name: 'Amazon', charges: 20, spent: 1700 }, { name: 'Target', charges: 10, spent: 700 }] },
+    { name: 'Coffee Shops', charges: 3, spent: 14, merchants: [{ name: 'Bean Bar', charges: 3, spent: 14 }] },
+    { name: 'Restaurants', charges: 12, spent: 410, merchants: [{ name: 'Corner Diner', charges: 12, spent: 410 }] }],
+    yourChanges: [{ merchant: 'Big Box', category: 'Household' }], saidNo: ['merge:shopping>household'] };
+  const sent = [], realFetch = globalThis.fetch;
+  const answer = { ideas: [
+    { kind: 'merge', from: 'coffee shops', to: 'restaurants', merchant: '', why: '3 charges, $14 a year: too small to track.' },
+    { kind: 'move', from: '', to: 'Online shopping', merchant: 'Amazon', why: 'Amazon is 71% of Shopping.' },
+    { kind: 'merge', from: 'Shopping', to: 'Household', merchant: '', why: 'Said no to before' },
+    { kind: 'merge', from: 'Gadgets', to: 'Shopping', merchant: '', why: 'Not a category they have' },
+    { kind: 'move', from: '', to: 'Shopping', merchant: 'Target', why: 'Already there' }] };
+  globalThis.fetch = async (url, opts) => { sent.push(JSON.parse(opts.body)); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(answer) }] }), { status: 200 }); };
+  try {
+    const AI = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test-key' };
+    assert.equal((await call('ideas', { token: alex, body: input })).body.error, 'no-ai');
+    assert.equal((await call('ideas', { token: sam, body: input, e: AI })).status, 403, 'not shared with Sam');
+    assert.equal((await call('ideas', { token: alex, body: { categories: [] }, e: AI })).status, 400);
+    const r = await call('ideas', { token: alex, body: input, e: AI });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body.ideas, [
+      { id: 'merge:coffeeshops>restaurants', kind: 'merge', from: 'Coffee Shops', to: 'Restaurants', merchant: '', why: '3 charges, $14 a year: too small to track.' },
+      { id: 'move:amazon>onlineshopping', kind: 'move', from: 'Shopping', to: 'Online shopping', merchant: 'Amazon', why: 'Amazon is 71% of Shopping.' }],
+      'names as the family wrote them; one said no to, one about a category they don’t have and one that changes nothing are thrown away');
+    assert.equal(sent[0].model, CHECK_MODEL); assert.equal(sent[0].fallbacks, 'default');
+    const words = sent[0].messages[0].content;
+    assert.ok(words.includes('Amazon') && words.includes('Big Box') && words.includes('merge:shopping>household'), 'what it learns from goes with it');
+    for (let i = 2; i <= IDEAS_DAILY; i++) await call('ideas', { token: alex, body: input, e: AI });
+    assert.equal((await call('ideas', { token: alex, body: input, e: AI })).status, 429, 'a few a day at most');
+  } finally { globalThis.fetch = realFetch; }
+  assert.deepEqual(keepIdeas(null, input), []);
 });
 await test('bad input', async () => {
   assert.equal((await call('months?from=2026-10&to=2026-09', { token: pat })).status, 400);
@@ -124,7 +234,7 @@ await test('removing someone it was shared with takes them off the list; removin
   // the reader leaves (here the owner removes a member who became the reader: make Sam the reader first)
   await putJSON(db, 'money:share', { by: 'KID1', with: [], at: 1 });
   await removeAs(pat, 'KID1');
-  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:')), []);
+  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:') && !k.startsWith('money:ideas:')), []);
 });
 await test('forget: the reader deletes everything; nobody else can', async () => {
   const pat2 = await issue(db, 'OWNER1');
@@ -134,6 +244,6 @@ await test('forget: the reader deletes everything; nobody else can', async () =>
   const jo = await issue(db, 'SPOUSE2');
   assert.equal((await call('forget', { token: jo, body: {} })).status, 403);
   assert.equal((await call('forget', { token: pat2, body: {} })).body.ok, true);
-  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:')), []);
+  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:') && !k.startsWith('money:ideas:')), []);
 });
 console.log(n + ' api tests passed');

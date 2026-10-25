@@ -9,8 +9,14 @@
 // - Cards and rewards: spending and cash back per card, the rewards chart and its table, the better
 //   card; changing a card's rate in Settings changes what it earned;
 // - Recurring: what repeats and a year of it;
+// - your own categories: always for a merchant or just one transaction, shared, Monarch's back; Ipsy's
+//   ideas (POST ideas: once a month on its own, and when asked), Accept and No thanks, and a rule removed;
+// - Ipsy's daily check (POST check, against a stand-in for Anthropic's API): a misread merchant
+//   corrected from the email's words (with Undo), one it couldn't confirm marked Check, one that
+//   passed marked and never sent again, all shared through aOS;
 // - the spouse's phone: nothing until the reader shares it (Settings > Who sees Money), then the
 //   same months, and no Gmail;
+// - kept in IndexedDB (moved from localStorage), five years of it, and read back after a reload;
 // - signed out with no data: the empty page asks to connect Gmail;
 // - dark mode, the designs (Vintage, the default, and Standard, from Settings > Design), and nothing
 //   tripping the page's Content Security Policy or throwing.
@@ -60,6 +66,7 @@ const on = (n, d) => { const x = new Date(NOW.getFullYear(), NOW.getMonth() + n,
 let k = 0;
 const ROCKET = 'Rocket Credit Card', CUSTOM = 'Customized Cash Rewards Visa Signature';
 const T = (d, amt, merchant, extra = {}) => Object.assign({ id: 'seed' + (++k), at: d.getTime(), date: ymd(d), amt, dir: 'out', merchant, account: ROCKET, last4: '9876', cat: 'Shopping', emoji: '🛍', mid: '', src: 'alert', min: 1 }, extra);
+const RECENT_SEED = Date.now() - 3 * 3600e3;
 const SEED = [];
 for (const n of [-3, -2, -1, 0]) {
   for (const d of [2, 9, 16, 23]) if (n < 0 || d < NOW.getDate()) SEED.push(T(on(n, d), 391.5, 'Little Learners', { cat: 'Child Care', emoji: '👶' }));
@@ -68,6 +75,8 @@ for (const n of [-3, -2, -1, 0]) {
   SEED.push(T(on(n, 6), 120, 'Costco', { account: CUSTOM, last4: '1111' }));
   SEED.push(T(on(n, 7), 24.5, 'Corner Diner', { account: CUSTOM, last4: '1111', cat: 'Restaurants', emoji: '🍽' }));
 }
+SEED.push(T(on(-62, 10), 5, 'Long Ago Shop'));   // over five years ago: let go of
+SEED.push(Object.assign(T(new Date(RECENT_SEED), 88.2, 'Joes Garag', { cat: 'Auto Maintenance', emoji: '🚗' }), { id: 'm5' }));
 SEED.sort((a, b) => b.at - a.at);
 
 // ---- the stand-in Gmail: made-up emails in Monarch's templates ----
@@ -79,6 +88,8 @@ const MAIL = {
   m2: { subject: '✨ You have 2 new updates in Monarch', at: RECENT + 60e3, html: '<html><body><p class="activity-body"><a>A new expense of $42.00 from Book Nook has been categorized as 📚 Books.</a></p><p class="activity-body"><a>A new expense of $15.75 from Corner Diner has been categorized as 🍽 Restaurants.</a></p></body></html>' },
   m3: { subject: '🛠️ Access Expired', at: RECENT, text: 'Hi Pat,\n\nRocket Bank only grants Monarch access for a limited time. To continue syncing, reauthorize the connection.' },
   m4: { subject: 'What’s new at Monarch', at: RECENT, html: '<p>Our new reports are here!</p>' },
+  // read long ago (it's in seen), and read wrong: its merchant is in the phone as "Joes Garag"
+  m5: { subject: '💲 New expense from Joe’s Garage in Monarch', html: alertHtml('We noticed an expense of $88.20 from Joe&#39;s Garage, which was spent from Rocket Credit Card **9876 (...9876) and has been categorized as 🚗 Auto Maintenance.'), at: RECENT - 3600e3 },
 };
 const gmailCalls = [];
 async function gmail(route) {
@@ -93,6 +104,20 @@ async function gmail(route) {
   return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ id, internalDate: String(m.at), payload: { mimeType: 'multipart/alternative', headers: [{ name: 'Subject', value: m.subject }], parts } }) });
 }
 
+// ---- Anthropic's API, as the route sees it (Node's fetch): what Ipsy's check answers ----
+const aiCalls = [], ideasCalls = [];
+const IDEAS = { ideas: [{ kind: 'move', from: '', merchant: 'Costco', to: 'Groceries', why: 'Costco is mostly groceries: $120 a month.' }, { kind: 'merge', from: 'Auto Maintenance', merchant: '', to: 'Car', why: 'One category for the car.' }] };
+globalThis.fetch = async (url, opts) => {
+  if (!String(url).startsWith('https://api.anthropic.com/')) throw new Error('unexpected fetch ' + url);
+  const body = JSON.parse(opts.body), words = body.messages[0].content;
+  if (/spending categories/.test(body.system)) { ideasCalls.push(words); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(IDEAS) }] }), { status: 200 }); }
+  aiCalls.push(words);
+  const results = [...words.matchAll(/<item id="([^"]+)">/g)].map(m => m[1]).map(id => id === 'm5' ? { id, ok: false, note: '', issues: [{ field: 'merchant', value: 'Joe\'s Garage', quote: 'from Joe\'s Garage,' }] }
+    : id === 'm1' ? { id, ok: false, note: 'The email names two shops', issues: [{ field: 'merchant', value: 'Book Nook Cafe', quote: 'from Book Nook Cafe' }] }
+    : { id, ok: true, note: '', issues: [] });
+  return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ results }) }] }), { status: 200 });
+};
+
 // ---- the family account server: the real route, on Workers KV in memory ----
 const kv = new Map();
 const KV = { get: async x => kv.has(x) ? kv.get(x) : null, put: async (x, v) => { kv.set(x, String(v)); }, delete: async x => { kv.delete(x); },
@@ -105,7 +130,7 @@ const PAT = await session('OWNER1', 'Pat Example', 'owner'), ALEX = await sessio
 async function api(route) {
   const req = route.request(), u = new URL(req.url());
   const request = new Request('https://site.example' + u.pathname + u.search, { method: req.method(), headers: req.headers(), body: req.method() === 'POST' ? req.postData() : undefined });
-  const res = await onRequest({ request, params: { route: u.pathname.replace(/^\/money\/api\//, '').split('/') }, env: { ACCOUNTS: KV } });
+  const res = await onRequest({ request, params: { route: u.pathname.replace(/^\/money\/api\//, '').split('/') }, env: { ACCOUNTS: KV, ANTHROPIC_API_KEY: 'test-key' } });
   return route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
 }
 
@@ -145,7 +170,7 @@ const mainText = p => p.locator('#main').innerText();
 
 // The reader's phone: signed in, Gmail connected, three months already read, and the made-up Rocket card's
 // 3% set in Settings (the rates Money starts with are Robinhood's and Customized Cash's).
-const A = await phone({ sess: PAT, token: true, data: JSON.stringify({ tx: SEED, alerts: [], hints: [{ name: 'Stream Box', freq: 'Monthly' }], settings: { cards: { 'rocket credit card': { base: 3, online: 0, grocery: 0, cap: 0 } }, dismissed: [], at: 1 }, setDirty: true, mAt: {}, dirty: [ym(-3), ym(-2), ym(-1), ym(0)], seen: [], lastScan: Date.now() - 2 * 3600e3, readAt: 0 }) });
+const A = await phone({ sess: PAT, token: true, data: JSON.stringify({ tx: SEED, alerts: [], hints: [{ name: 'Stream Box', freq: 'Monthly' }], settings: { cards: { 'rocket credit card': { base: 3, online: 0, grocery: 0, cap: 0 } }, dismissed: [], at: 1 }, setDirty: true, mAt: {}, dirty: [ym(-3), ym(-2), ym(-1), ym(0)], seen: ['m5'], lastScan: Date.now() - 2 * 3600e3, readAt: 0 }) });
 const { p } = A;
 
 await test('reads Monarch’s emails: the alert, the summary’s new one (not its repeat), the can’t-sync email; the newsletter is nothing', async () => {
@@ -156,7 +181,7 @@ await test('reads Monarch’s emails: the alert, the summary’s new one (not it
   assert.equal(book[0].account, ROCKET); assert.equal(book[0].mid, '998877665544332211'); assert.equal(book[0].cat, 'Books');
   assert.ok(D.tx.some(x => x.merchant === 'Corner Diner' && x.amt === 15.75 && x.src === 'summary'));
   assert.deepEqual(D.alerts.map(a => [a.inst, a.what]), [['Rocket Bank', 'Access Expired']]);
-  assert.deepEqual(D.seen.sort(), ['m1', 'm2', 'm3', 'm4']);
+  assert.deepEqual(D.seen.sort(), ['m1', 'm2', 'm3', 'm4', 'm5']);
   assert.ok(gmailCalls.some(c => /q=after%3A\d+\+%7Bfrom%3Amonarch\.com/.test(c)), 'asks for what came since the last read, from Monarch: ' + gmailCalls[0]);
 });
 await test('sends what it read to aOS, a month at a time, and becomes the reader', async () => {
@@ -166,6 +191,35 @@ await test('sends what it read to aOS, a month at a time, and becomes the reader
   assert.ok(month.items.some(x => x.merchant === 'Book Nook'));
   assert.ok(kv.has('money:tx:' + ym(-3)));
   assert.equal(JSON.parse(kv.get('money:meta')).alerts[0].inst, 'Rocket Bank');
+});
+await test('Ipsy’s daily check: a misreading corrected from the email, one it couldn’t confirm, one that passed; shared, and never sent twice', async () => {
+  await p.waitForFunction(() => window.__money.D.lastCheck && !window.__money.st.checking, null, { timeout: 15000 });
+  const D = await p.evaluate(() => window.__money.D);
+  const by = id => D.tx.find(x => x.id === id);
+  assert.equal(by('m5').merchant, 'Joe\'s Garage'); assert.equal(by('m5').check.s, 'fixed');
+  assert.deepEqual(by('m5').check.issues, [{ field: 'merchant', was: 'Joes Garag', now: 'Joe\'s Garage' }]);
+  assert.equal(by('m1').merchant, 'Book Nook', 'a value whose words aren’t in the email is never used'); assert.equal(by('m1').check.s, 'flag');
+  assert.equal(by('m2:1').check.s, 'ok');
+  assert.equal(aiCalls.length, 1, 'one call for the day');
+  assert.ok(aiCalls[0].includes('Joe\'s Garage') && !aiCalls[0].includes('pat@example.com'));
+  assert.equal(D.checkDay, D.checkDay && new Date().toLocaleDateString('en-CA'));
+  await p.waitForFunction(() => window.__money.D.dirty.length === 0, null, { timeout: 10000 });
+  assert.equal(JSON.parse(kv.get('money:tx:' + ymd(new Date(RECENT_SEED)).slice(0, 7))).items.find(x => x.id === 'm5').check.s, 'fixed', 'shared through aOS');
+  // again today: nothing is sent; Check now sends only what hasn't been checked (none here with an email)
+  await p.evaluate(() => window.__money.dailyCheck());
+  assert.equal(aiCalls.length, 1);
+  // This month says so; its list; a correction undone
+  await p.waitForSelector('#main [data-act="checked"]');
+  assert.match(await p.locator('#main [data-act="checked"]').innerText(), /1 correction, 1 to look at/);
+  await p.click('#main [data-act="checked"]');
+  assert.equal(await p.locator('#txBody [data-tx]').count(), 2);
+  await p.click('#txBody [data-tx="m5"]');
+  assert.match(await p.locator('#txBody').innerText(), /Ipsy corrected it from the email:\s*Merchant Joes Garag → Joe's Garage/);
+  await p.click('#txBody [data-undocheck]');
+  const after = await p.evaluate(() => window.__money.D.tx.find(x => x.id === 'm5'));
+  assert.equal(after.merchant, 'Joes Garag'); assert.equal(after.check.s, 'kept');
+  assert.match(await p.locator('#txBody').innerText(), /You kept the app’s reading/);
+  await p.click('#txSheet .okbtn');
 });
 await test('This month: the number, the usual, where to save, the categories', async () => {
   await p.waitForSelector('#main .sum');
@@ -254,6 +308,86 @@ await test('Recurring: what repeats, a year of it, and what Monarch named', asyn
   assert.match(t, /Monarch found these too/i); assert.match(t, /Stream Box/);
   await snap(p, 'repeats');
 });
+const asSeen = () => p.evaluate(() => window.__money.st.T.map(x => ({ id: x.id, merchant: x.merchant, cat: x.cat, mcat: x.mcat, how: x.how })));
+await test('your own category: always for the merchant (the default), just one, and Monarch’s back; shared', async () => {
+  await view(p, 'activity');
+  await p.locator('#main [data-tx]', { hasText: 'Corner Diner' }).first().click();
+  await p.waitForSelector('#txSheet:not([hidden])');
+  await p.click('#txBody [data-recat]');
+  await p.waitForSelector('#recatBox:not([hidden])');
+  assert.match(await p.locator('#recatBox').innerText(), /Always for\s+Corner Diner/);
+  assert.equal(await p.locator('#recatAll').getAttribute('aria-checked'), 'true', 'always for the merchant, unless you say not');
+  await p.fill('#newCat', 'Eating out'); await p.click('#newCatGo');
+  const t = await p.locator('#txBody').innerText();
+  assert.match(t, /Eating out/); assert.match(t, /Monarch said:\s+Restaurants/);
+  await snap(p, 'recategorized');
+  assert.ok((await asSeen()).filter(x => x.merchant === 'Corner Diner').every(x => x.cat === 'Eating out' && x.mcat === 'Restaurants'), 'every Corner Diner');
+  assert.equal(await p.evaluate(() => window.__money.D.tx.find(x => x.merchant === 'Corner Diner').cat), 'Restaurants', 'Monarch’s stays underneath');
+  await p.waitForFunction(() => !window.__money.D.setDirty, null, { timeout: 10000 });
+  assert.equal(JSON.parse(kv.get('money:meta')).settings.recat.m['corner diner'].c, 'Eating out', 'shared with whoever sees Money');
+  // just this one: an Amazon charge to Eating out, then back to Monarch's
+  await p.click('#txSheet .okbtn');
+  const amz = (await asSeen()).find(x => x.merchant === 'Amazon');
+  await p.evaluate(id => window.__money.openTx(id), amz.id);
+  await p.click('#txBody [data-recat]');
+  await p.click('#recatAll');
+  await p.click('#recatBox [data-pick="Eating out"]');
+  let all = await asSeen();
+  assert.equal(all.find(x => x.id === amz.id).cat, 'Eating out'); assert.equal(all.find(x => x.id === amz.id).how, 'tx');
+  assert.ok(all.filter(x => x.merchant === 'Amazon' && x.id !== amz.id).every(x => x.cat === 'Shopping'), 'only that one');
+  await p.click('#txBody [data-recat]');
+  await p.click('#recatAll');
+  await p.click('#recatBox [data-pick="Shopping"]');
+  all = await asSeen();
+  assert.equal(all.find(x => x.id === amz.id).cat, 'Shopping'); assert.equal(all.find(x => x.id === amz.id).how, undefined, 'Monarch’s again');
+  await p.click('#txSheet .okbtn');
+  await view(p, 'month');
+  const m = await mainText(p);
+  assert.match(m, /Eating out/); assert.doesNotMatch(m, /Restaurants/);
+});
+await test('Ipsy’s ideas: once a month on its own; Accept, No thanks, asked again, and a rule removed', async () => {
+  await p.waitForFunction(() => ((window.__money.D.settings || {}).ideas || {}).list, null, { timeout: 10000 });
+  assert.equal(ideasCalls.length, 1, 'once this month, on its own');
+  assert.ok(ideasCalls[0].includes('Costco') && !ideasCalls[0].includes('9876'), 'categories and merchants; no card');
+  await view(p, 'month');
+  const card = await mainText(p);
+  assert.match(card, /Ipsy’s ideas for your categories/i); assert.match(card, /Move\s+Costco\s+to\s+Groceries/); assert.match(card, /Merge\s+Auto Maintenance\s+into\s+Car/);
+  await snap(p, 'ideas');
+  await p.click('#main [data-idea-ok="move:costco>groceries"]');
+  assert.ok((await asSeen()).filter(x => x.merchant === 'Costco').every(x => x.cat === 'Groceries'), 'accepted: every Costco is Groceries');
+  await p.click('#main [data-idea-no="merge:automaintenance>car"]');
+  assert.doesNotMatch(await mainText(p), /Ipsy’s ideas/i, 'both answered');
+  assert.ok((await asSeen()).some(x => x.cat === 'Auto Maintenance'), 'said no: nothing changed');
+  // asked again, from Settings: what it learns from goes with it, and what was answered isn't suggested again
+  await p.click('#setBtn');
+  await p.waitForSelector('#setBody #ideasNow');
+  const s = await p.locator('#setBody').innerText();
+  assert.match(s, /Corner Diner → Eating out/); assert.match(s, /Costco → Groceries/);
+  await p.click('#setBody #ideasNow');
+  await p.waitForFunction(() => !window.__money.st.ideasBusy && window.__money.D.settings.ideas.list.length === 0, null, { timeout: 10000 });
+  const last = ideasCalls[ideasCalls.length - 1];
+  assert.equal(ideasCalls.length, 2);
+  assert.ok(last.includes('Eating out') && last.includes('merge:automaintenance>car'), 'your changes, and what you said no to');
+  // a rule removed: Monarch's category is back for Costco
+  await p.click('#setBtn');
+  await p.click('#setBody [data-unrule="m:costco"]');
+  assert.ok((await asSeen()).filter(x => x.merchant === 'Costco').every(x => x.cat === 'Shopping'));
+  await p.click('#setSheet [data-close].iconbtn');
+  await p.waitForFunction(() => !window.__money.D.setDirty, null, { timeout: 10000 });
+});
+await test('kept in IndexedDB, five years of it: moved from localStorage, read back after a reload', async () => {
+  const saved = () => new Promise((res, rej) => { const r = indexedDB.open('allison-money'); r.onerror = () => rej(r.error); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('data'); q.onsuccess = () => res(q.result && q.result.tx.length); }; });
+  const n = await p.evaluate(() => window.__money.D.tx.length);
+  for (let i = 0; i < 50 && await p.evaluate(saved) !== n; i++) await p.waitForTimeout(200);
+  assert.equal(await p.evaluate(saved), n, 'saved in IndexedDB');
+  assert.equal(await p.evaluate(() => localStorage.getItem('allison-money-v1')), null, 'nothing left in localStorage');
+  assert.equal(await p.evaluate(() => window.__money.D.tx.some(x => x.merchant === 'Long Ago Shop')), false, 'over five years old: let go of');
+  assert.equal(kv.has('money:tx:' + ym(-62)), false);
+  await p.reload();
+  await p.waitForSelector('#main .sum', { timeout: 10000 });
+  assert.equal(await p.evaluate(() => window.__money.D.tx.length), n);
+  assert.equal(await p.evaluate(saved), n);
+});
 assert.deepEqual(A.errs, []);
 
 // The spouse's phone: signed in, no Gmail.
@@ -274,6 +408,7 @@ await test('the spouse sees nothing until it’s shared, then the same months, a
   await B.p.waitForSelector('#main .sum', { timeout: 10000 });
   const D = await B.p.evaluate(() => window.__money.D);
   assert.equal(D.tx.length, await p.evaluate(() => window.__money.D.tx.length));
+  assert.ok((await B.p.evaluate(() => window.__money.st.T)).filter(x => x.merchant === 'Corner Diner').every(x => x.cat === 'Eating out'), 'the family’s own categories too');
   assert.equal(await B.p.locator('#readBtn').isHidden(), true, 'no Gmail reading on this phone');
   await B.p.click('#setBtn');
   const s = await B.p.locator('#setBody').innerText();

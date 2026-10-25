@@ -72,9 +72,9 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
 **Every app has five designs**, as one app: **Vintage** (mid-century modern in the Retro
-colours, the default), **Standard** (Sea glass), **Night Drive**, **Folk** and **Grid**, picked in aOS for
+colours, the default), **Standard** (Sea glass), **Night Drive**, **Folk** and **Tron**, picked in aOS for
 every app at once or in the app's own **Settings → Design** (Meals, `meals/`, is the pattern; Clock
-started it with its own `clock/design.js`). You write two of them: Night Drive, Folk and Grid are
+started it with its own `clock/design.js`). You write two of them: Night Drive, Folk and Tron are
 generated from Vintage by `node aOS/scripts/make-looks.mjs` (their `<style id="neon">`,
 `<style id="folk">` and `<style id="grid">` blocks after the Vintage one, and `icon-neon*` / `icon-folk*` /
 `icon-grid*` from `icon.svg`):

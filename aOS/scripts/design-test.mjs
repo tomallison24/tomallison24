@@ -63,7 +63,7 @@ const BORN = ['sparkle', 'money'];
 }
 
 // 2. every app in each design, light and dark: the right look, icon, status bar and bar colour, no script errors
-const NAME = { vintage: 'Vintage', glass: 'Standard', neon: 'Night Drive', folk: 'Folk', grid: 'Grid' };
+const NAME = { vintage: 'Vintage', glass: 'Standard', neon: 'Night Drive', folk: 'Folk', grid: 'Tron' };
 for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['neon', 'dark'], ['folk', 'light'], ['grid', 'dark']]) {
   const pr = [];
   for (const id of APPS) {
@@ -76,7 +76,7 @@ for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['neon'
     const glass = design === 'glass';
     if (st.look !== design) pr.push(`${id}: data-look ${st.look}`);
     if (st.media !== (glass ? 'not all' : 'all')) pr.push(`${id}: the Vintage styles are "${st.media}"`);
-    if (st.own !== ['neon', 'folk', 'grid'].map(k => k === design ? 'all' : 'not all').join()) pr.push(`${id}: the Night Drive, Folk and Grid blocks are "${st.own}"`);
+    if (st.own !== ['neon', 'folk', 'grid'].map(k => k === design ? 'all' : 'not all').join()) pr.push(`${id}: the Night Drive, Folk and Tron blocks are "${st.own}"`);
     if (!new RegExp(`/icon-${design === 'vintage' ? '' : design + '-'}180\\.png`).test(st.icon)) pr.push(`${id}: icon ${st.icon}`);
     const own = (/name="apple-mobile-web-app-status-bar-style" content="([^"]+)"/.exec(fs.readFileSync(path.join(ROOT, id, 'index.html'), 'utf8')) || [])[1];   // Standard keeps the page's own (Mail's is default)
     if (st.bar !== (glass ? own : 'default')) pr.push(`${id}: status bar ${st.bar}`);

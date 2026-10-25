@@ -1,7 +1,7 @@
 # Money
 
 Where the family's money goes, as a home-screen web app in the five aOS designs (Vintage, the
-default; Standard, in Sea glass; Night Drive, Folk and Grid). It reads **Monarch's alert emails**: Monarch
+default; Standard, in Sea glass; Night Drive, Folk and Tron). It reads **Monarch's alert emails**: Monarch
 (monarch.com) has no API for its members, but it emails each expense and each deposit over the
 amounts set in its notification settings, and tells you when it can no longer sync a bank. Money
 turns those emails into something to act on.
@@ -77,10 +77,62 @@ Etsy, eBay, Wayfair, Chewy, Temu, Shein and Zappos to start). **Groceries and wh
 Monarch's Groceries category, or Costco, Sam's Club or BJ's. A card known by its name keeps its
 rewards when it's replaced (Robinhood's **1111, then **9876, are one card).
 
+## Your own categories, and Ipsy's ideas
+
+Categories are Monarch's, as its emails say, until someone changes one. Monarch's own stays on each
+transaction underneath (the transaction's sheet says "Monarch said", and the export has both).
+
+- **Change one**: tap a transaction, then Change: pick a category in use or type a new one. **Always
+  for** its merchant is on (its other transactions too, and those to come); turn it off for just this
+  one. Picking Monarch's own (marked "Monarch's") puts it back.
+- **Ipsy's ideas**: Settings > Categories > Ask Ipsy for ideas, and once a month on its own (the first
+  phone to open Money that month, with 20 or more transactions). Ipsy (Claude Sonnet 5.5) sees the
+  last 12 months' spending by category with the biggest merchants in each, the changes you made (it
+  follows your taste) and the ideas you said no to, and suggests merging a category into another or
+  moving a merchant to another (or a new) category, with a line saying why. They show on This month:
+  **Accept** makes it a rule, as if made by hand; **No thanks** and it's never suggested again.
+  Nothing changes until someone accepts. Sent to Anthropic: category and merchant names with counts
+  and totals; no cards, dates or emails. A few a day at most per person (`money:ideas:<id>:<day>`);
+  under a cent each.
+- **Shared**: the changes and ideas are in the shared settings (`recat`, `ideas` in `money:meta`), so
+  whoever sees Money sees them and may change them. Two phones' changes both stay: each change has its
+  own time and the newer wins (`calc.js` and the server, `mergeSettings`). Settings > Categories lists
+  the rules, each with Remove.
+- **Where they count**: This month, the categories, the tips, search, the lists and the export. Card
+  rewards keep Monarch's category (a card's bonus goes by how the store charges, not by your name for
+  it), and so does Ipsy's daily check (it checks the app read the email right).
+
+## Ipsy's daily check
+
+Once a day, the first time Money opens on the reader's phone (after it has read Gmail), Ipsy checks
+**this calendar month's new transactions** (and the last 3 days, so the last of a month is checked on
+the 1st) against the Monarch email each was read from: the amount, money in or out, the merchant, the
+card and the category.
+
+- The phone fetches each email from Gmail again and sends its words (up to its footer, at most 1,500
+  characters) with what the app read to `functions/money/api` (POST `check`), 20 at a time, which asks
+  **Claude Sonnet 5.5** (`MONEY_AI_MODEL`, a Pages secret, names another) with the `ANTHROPIC_API_KEY`
+  secret Travel and Orders already use. Links, email addresses and the greeting (your name) are taken
+  out first; nothing is kept on the server.
+- **Passed**: marked, and never sent again. **A misreading**: corrected from the email, but only with
+  words Claude quotes that really are in that email (a value it can't quote is thrown away, as in
+  Travel's extract), and marked **Corrected**; the transaction's sheet says what changed, with **Undo
+  Ipsy's correction** (the app's reading comes back and stays). **Couldn't confirm**: marked **Check**,
+  with Ipsy's note. Nothing corrected or flagged is sent again either.
+- This month shows a card when Ipsy corrected something or wants you to look ("Ipsy's check"), and
+  the check travels with the transaction to whoever sees Money.
+- Settings > Ipsy's daily check (the reader only): **Check each day** (on; kept on this phone), when it
+  last checked and what it found, and **Check now**.
+- Cost: a call holds only the new emails (about 7 a day, a few thousand tokens), at Sonnet 5.5's
+  $2 / $10 per million tokens in / out: well under $1 a month. At most 8 calls a day for the reader
+  (`money:check:<id>:<day>`).
+- It checks the app's reading of Monarch's email, not Monarch itself: it can't find a transaction
+  Monarch never emailed, or a wrong amount on Monarch's side.
+
 ## Who sees it
 
 - **One phone reads the emails**: Money's reader. It reads its own Gmail, read-only (below), the
-  first time two years back, then what's new each time it opens (at most hourly) or when you tap
+  first time five years back, then what's new each time it opens (at most hourly) or when you tap
   the refresh button. Each email is read once.
 - **Signed in to the family account**, the reader's phone sends what it read to aOS
   (`functions/money/api`, in the accounts' Workers KV: `money:share`, `money:meta`,
@@ -90,7 +142,13 @@ rewards when it's replaced (Robinhood's **1111, then **9876, are one card).
   even the family's owner. Their phones get it from aOS each time they open Money, and can change
   the card rewards, the online stores and the alerts marked fixed (shared, the newer change wins);
   they can't read Gmail for it.
-- **Signed out**, it all stays on the phone (localStorage `allison-money-v1`).
+- **Signed out**, it all stays on the phone.
+- **Five years are kept**, on the phones and in aOS: this month and the 59 before it
+  (`money/calc.js`, `KEEP_MONTHS`; the server's `KEEP_MONTHS`). Anything older is let go: the
+  phone drops it when it saves, and aOS deletes those months with the reader's next send. On the
+  phone it's in IndexedDB (`allison-money`), not localStorage, whose 5 MB or so every aOS app
+  shares: five years is about 2 to 6 MB (100 to 300 transactions a month). A phone that had it in
+  localStorage (`allison-money-v1`) moves it over the first time it opens.
 - **Delete all data** on the reader's phone deletes it from aOS too, for everyone; on anyone else's,
   from that phone. Removing the reader from the family deletes it from aOS; removing someone it was
   shared with takes them off the list.
@@ -113,12 +171,12 @@ Google can't answer quietly.
 
 ## Files
 
-- `index.html`: the page (the Sea glass styles, then the Vintage block; Night Drive, Folk and Grid are
+- `index.html`: the page (the Sea glass styles, then the Vintage block; Night Drive, Folk and Tron are
   generated from it by `node aOS/scripts/make-looks.mjs`).
 - `app.js`: drawing, Gmail, the family's copy, Settings.
 - `parse.js`: Monarch's emails → transactions, alerts and recurring merchants.
 - `calc.js`: the sums: folding in, cards and rewards, what repeats, a month against the usual, tips,
-  which alerts are still open.
+  which alerts are still open, five years kept, your own categories (`recat`, `mergeSettings`, `ideasInput`).
 - `functions/money/api/[[route]].js`: the family's copy; `_middleware.js` locks it to signed-in family.
 - Russian: `home/lang/ru/money.js`.
 
@@ -127,8 +185,8 @@ Google can't answer quietly.
 ```
 node money/scripts/parse-test.mjs    # Monarch's emails (made-up ones in its templates)
 node money/scripts/calc-test.mjs     # the sums
-node money/scripts/api-test.mjs      # the server: who may send, see, share and delete
-node money/scripts/app-test.mjs      # the page at iPhone size: every view, a transaction, Settings, both designs
+node money/scripts/api-test.mjs      # the server: who may send, see, share and delete; Ipsy's check; categories and ideas
+node money/scripts/app-test.mjs      # the page at iPhone size: every view, a transaction, Settings, Ipsy's check, categories and ideas, the designs
 ```
 
 All made-up data: no one's real transactions are in this repository.

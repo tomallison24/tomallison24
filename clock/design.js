@@ -1,4 +1,4 @@
-// Clock's design: Vintage (mid-century modern, the default), Standard (Sea glass), Night Drive, Folk or Grid, picked in
+// Clock's design: Vintage (mid-century modern, the default), Standard (Sea glass), Night Drive, Folk or Tron, picked in
 // Settings > Design and kept with the rest of Clock (localStorage, set.design, under the key in the
 // page's aos-store meta). Loaded in <head> after the styles, so the page is drawn once, in the
 // right design, as aOS's look.js does for aOS:

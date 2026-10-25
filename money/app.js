@@ -13,12 +13,22 @@
 //   Recurring (what repeats, and what it costs a year). A bank Monarch can't
 //   sync shows as a card at the top of This month until it syncs again or you
 //   tap Fixed it.
+// - Categories are Monarch's, as its emails say, until someone changes one: on a transaction's sheet
+//   (Change: always for that merchant, or just this one), or by accepting one of Ipsy's ideas (merge a
+//   category into another, move a merchant), from Settings > Categories > Ask Ipsy for ideas and once
+//   a month on its own. Kept in the shared settings (calc.js, recat), so whoever sees Money sees them
+//   and may change them; Monarch's own category stays underneath (Use Monarch's puts it back).
+// - Once a day the reader's phone has Ipsy check this month's new transactions against
+//   their Monarch emails (functions/money/api, POST check: Claude Sonnet 5.5): what passed is
+//   marked and never sent again; a misreading is corrected from the email's own words (Undo
+//   puts the app's reading back); one Ipsy couldn't confirm is marked Check.
 // - One phone reads Monarch's emails from its own Gmail, read-only (with Mail's
 //   Google client, as Orders and Travel do): Money's reader. Signed in to the
 //   family account, it sends what it read to aOS (functions/money/api), and the
 //   family members it picks in Settings > Who sees Money see it too; their
 //   phones only ever get it from there. Signed out, it all stays on the phone.
-// - Data on this phone: localStorage allison-money-v1. Settings > Card rewards
+// - Data on this phone: IndexedDB allison-money, five years of it (calc.js, prune), as in
+//   aOS (functions/money/api). Settings > Card rewards
 //   (each card's cash back), the online stores and the alerts marked fixed are
 //   shared with whoever sees Money.
 // - Five designs, picked in Settings > Design (../home/design.js).
@@ -52,8 +62,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
-  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view' };
-  const FIRST_SCAN = 'newer_than:2y';
+  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off' };
+  const FIRST_SCAN = 'newer_than:5y';   // as much as Money keeps (calc.js, KEEP_MONTHS)
   const API = '../money/api/';
 
   const I = {
@@ -98,10 +108,36 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // copy of that month was last taken }, dirty: [months read here, not sent yet], setDirty, seen: [Gmail
   // ids read], lastScan, readAt }
   // ---------------------------------------------------------------------
-  const D = { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, reader: '' };
-  function load() {
-    const d = ls.json(KEY, null) || {};
-    D.tx = Array.isArray(d.tx) ? d.tx.filter(C.okTx) : [];
+  const D = { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, reader: '', checkDay: '', lastCheck: null };
+  // Kept in IndexedDB (allison-money, store kv, key 'data'): five years of transactions is a few MB,
+  // and localStorage's 5 MB or so is shared by every aOS app. A phone that kept Money in localStorage
+  // (KEY, before) has it moved over once; with no IndexedDB (an old private window) it stays there.
+  // Saving stamps KEY + '-at' in localStorage, so another tab of Money reads it again ('storage').
+  const store = (() => {
+    let db = null;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('allison-money', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    }));
+    return { get: k => tx('readonly', s => s.get(k)), set: (k, v) => tx('readwrite', s => s.put(v, k)) };
+  })();
+  let idb = !!window.indexedDB;
+  async function load() {
+    let d = null;
+    if (idb) { try { d = await store.get('data'); } catch { idb = false; } }
+    const old = ls.json(KEY, null);
+    if (idb && old) {
+      if (!d) { try { await store.set('data', old); d = old; } catch { idb = false; } }
+      if (idb) ls.del(KEY);
+    }
+    if (!idb) d = old;
+    d = d || {};
+    D.tx = Array.isArray(d.tx) ? C.prune(d.tx.filter(C.okTx), today()) : [];
     D.alerts = Array.isArray(d.alerts) ? d.alerts.filter(a => a && a.id) : [];
     D.hints = Array.isArray(d.hints) ? d.hints.filter(h => h && h.name) : [];
     D.settings = d.settings && typeof d.settings === 'object' ? d.settings : null;
@@ -110,13 +146,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     D.setDirty = !!d.setDirty;
     D.seen = Array.isArray(d.seen) ? d.seen : [];
     D.lastScan = +d.lastScan || 0; D.readAt = +d.readAt || 0; D.reader = d.reader || '';
+    D.checkDay = d.checkDay || ''; D.lastCheck = d.lastCheck && typeof d.lastCheck === 'object' ? d.lastCheck : null;
   }
-  let warned = false;
+  let warned = false, saving = null, again = false;
+  const full = () => { if (!warned) { warned = true; toast('This phone couldn’t save Money: its storage is full.'); } };
+  // Five years at most (calc.js, prune), then saved; saves while one is under way fold into one more.
   function persist() {
-    const ok = ls.set(KEY, JSON.stringify(D));
-    if (!ok && !warned) { warned = true; toast('This phone couldn’t save Money: its storage is full.'); }
+    D.tx = C.prune(D.tx, today());
+    const from = C.keepFrom(today());
+    for (const ym of Object.keys(D.mAt)) if (ym < from) delete D.mAt[ym];
+    D.dirty = D.dirty.filter(ym => ym >= from);
+    if (!idb) { if (!ls.set(KEY, JSON.stringify(D))) full(); else ls.set(KEY + '-at', String(Date.now())); return; }
+    if (saving) { again = true; return; }
+    saving = store.set('data', D)
+      .then(() => ls.set(KEY + '-at', String(Date.now())), full)
+      .then(() => { saving = null; if (again) { again = false; persist(); } });
   }
   const settings = () => D.settings || { cards: {}, dismissed: [], at: 0 };
+  // Every transaction as the family sees it: Monarch's category, or the one they gave it (calc.js, recat).
+  const view = () => (st.T = C.recat(D.tx, settings()));
+  const byId = id => (st.T || view()).find(t => t.id === id);
   function changeSettings(fn) {
     const s = JSON.parse(JSON.stringify(settings()));
     s.cards = s.cards || {}; s.dismissed = s.dismissed || [];
@@ -149,6 +198,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const main = $('main');
   function render() {
+    view();
     drawBar();
     $('readBtn').hidden = !hasGmail() || !mayRead();
     if (!D.tx.length && !D.alerts.length) { main.innerHTML = emptyHtml(); return; }
@@ -187,7 +237,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<button class="chip quiet" type="button" data-fixed="' + esc(a.id) + '">' + I.tick + 'Fixed it</button></div></div></div>').join('');
   }
   function monthHtml() {
-    const ym = st.ym, m = C.month(D.tx, ym), cmp = C.compare(D.tx, ym), pace = C.pace(D.tx, ym, today()), min = C.minFor(D.tx, ym, 'out');
+    const ym = st.ym, T = st.T, m = C.month(T, ym), cmp = C.compare(T, ym), pace = C.pace(T, ym, today()), min = C.minFor(T, ym, 'out');
     let delta = '';
     if (cmp && cmp.avg > 0) {
       const d = cmp.diff, pct = Math.round(Math.abs(d) / cmp.avg * 100);
@@ -200,7 +250,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + (delta ? delta : '') + usual
       + (pace ? '<span class="line">At this rate: <b>' + esc(usdR(pace)) + '</b> <span>by the end of the month</span></span>' : '')
       + split + '</div>';
-    const tips = C.tips(D.tx, ym, today(), settings());
+    const tips = C.tips(T, ym, today(), settings());
     const tipsHtml = tips.length ? '<p class="sechead"><span>Where you could save</span></p><div class="rgroup">' + tips.map(tipHtml).join('') + '</div>' : '';
     const top = Math.max(1, ...m.cats.map(c => c.total)), avgOf = name => cmp && (cmp.cats.find(c => c.name === name) || {}).avg;
     const cats = m.cats.length ? '<p class="sechead"><span>By category</span><span>' + esc(plural(m.out, 'charge')) + '</span></p><div class="rgroup">' + m.cats.map(c => {
@@ -209,7 +259,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + (a ? ' · <span>usual</span> ' + esc(usdR(a)) : '') + '</small><span class="bar" aria-hidden="true"><i style="width:' + (c.total / top * 100).toFixed(1) + '%"></i></span></span><span class="rv">' + esc(usdR(c.total)) + '</span></button>';
     }).join('') + '</div>' : '<div class="empty"><strong>Nothing this month yet</strong>Monarch hasn’t emailed anything for ' + esc(monthName(ym)) + '.</div>';
     const cover = min >= 20 ? '<p class="note">Monarch emailed only charges over ' + esc(usdR(min)) + ' in ' + esc(monthName(ym)) + ', so smaller ones aren’t here.</p>' : '';
-    return alertsHtml() + navRow() + sum + tipsHtml + cats + cover;
+    const fixedN = D.tx.filter(x => C.ymOf(x.date) === ym && x.check && x.check.s === 'fixed').length, flagN = D.tx.filter(x => C.ymOf(x.date) === ym && x.check && x.check.s === 'flag').length;
+    const checked = fixedN || flagN ? '<button class="tip row rgroup" type="button" data-act="checked"><span class="em" aria-hidden="true">' + I.tick + '</span><span class="tt"><b>Ipsy’s check</b> '
+      + (fixedN ? '<span>' + esc(plural(fixedN, 'correction')) + '</span>' : '') + (fixedN && flagN ? ', ' : '') + (flagN ? '<span>' + esc(flagN + ' to look at') + '</span>' : '') + '</span><span class="tv">' + I.chevR + '</span></button>' : '';
+    return alertsHtml() + navRow() + sum + checked + (ym === curYm() ? ideasHtml() : '') + tipsHtml + cats + cover;
+  }
+  // Ipsy's ideas for the categories (Settings > Categories, and once a month): Accept or No thanks.
+  const ideaWhat = i => i.kind === 'merge' ? '<span>Merge</span> ' + no(i.from) + ' <span>into</span> ' + no(i.to) : '<span>Move</span> ' + no(i.merchant) + ' <span>to</span> ' + no(i.to);
+  function ideasHtml() {
+    const list = (settings().ideas || {}).list || [];
+    if (!list.length) return '';
+    return '<p class="sechead"><span>Ipsy’s ideas for your categories</span></p><div class="rgroup">' + list.map(i => '<div class="tip"><span class="em" aria-hidden="true">💡</span><span class="tt"><b>' + ideaWhat(i) + '</b> '
+      + (i.why ? '<span translate="no">' + esc(i.why) + '</span>' : '')
+      + '<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="chip" type="button" data-idea-ok="' + esc(i.id) + '">' + I.tick + 'Accept</button><button class="chip quiet" type="button" data-idea-no="' + esc(i.id) + '">No thanks</button></span></span></div>').join('') + '</div>';
   }
   function tipHtml(t) {
     if (t.kind === 'spike') return '<div class="tip"><span class="em" aria-hidden="true">' + esc(t.emoji || '•') + '</span><span class="tt"><b>' + no(t.cat) + '</b> <span>is well over its usual:</span> ' + esc(usdR(t.now)) + ' <span>against</span> ' + esc(usdR(t.avg)) + '<span>.</span></span><span class="tv">+' + esc(usdR(t.diff)) + '</span></div>';
@@ -220,7 +282,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function txRow(x, colour) {
     const acct = st.acct(x), r = st.rw.get(x.id);
-    const bits = [acct.name ? no(acct.name) + (acct.guess ? '<span>?</span>' : '') : '', x.cat ? no(x.cat) : ''].filter(Boolean).join(' · ');
+    const bits = [acct.name ? no(acct.name) + (acct.guess ? '<span>?</span>' : '') : '', x.cat ? no(x.cat) : ''].filter(Boolean).join(' · ')
+      + (x.check && x.check.s === 'fixed' ? ' <span class="badge">Corrected</span>' : x.check && x.check.s === 'flag' ? ' <span class="badge warn">Check</span>' : '');
     return '<button class="row" type="button" data-tx="' + esc(x.id) + '"><span class="em" aria-hidden="true"' + (acct.name ? ' data-k="' + colour(acct.name) + '"' : '') + '>' + esc(x.emoji || '•') + '</span>'
       + '<span class="rt"><b>' + no(x.merchant) + '</b><small>' + bits + '</small></span><span class="rv' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? '+' : '') + esc(usd2(x.amt))
       + (r && r.rate ? '<small>+' + esc(usd2(r.earned)) + ' <span>back</span></small>' : '') + '</span></button>';
@@ -238,7 +301,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function activityHtml() {
     prep();
     const q = st.q.trim().toLowerCase();
-    const list = q ? D.tx.filter(x => [x.merchant, x.account, x.cat, String(x.amt)].some(v => String(v).toLowerCase().includes(q))) : D.tx.filter(x => C.ymOf(x.date) === st.ym);
+    const list = q ? st.T.filter(x => [x.merchant, x.account, x.cat, x.mcat || '', String(x.amt)].some(v => String(v).toLowerCase().includes(q))) : st.T.filter(x => C.ymOf(x.date) === st.ym);
     const total = list.filter(x => x.dir === 'out').reduce((a, x) => a + x.amt, 0);
     return '<label class="search"><span class="vh">Search</span>' + I.search + '<input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="Search every transaction" value="' + esc(st.q) + '"></label>'
       + (q ? '' : navRow())
@@ -318,39 +381,173 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (act === 'prev' || act === 'next') { st.ym = C.ymAdd(st.ym, act === 'prev' ? -1 : 1); if (st.ym > curYm()) st.ym = curYm(); render(); animateIn(main); return; }
       if (act === 'connect') { signIn(); return; }
       if (act === 'read') { scan({ loud: true }); return; }
+      if (act === 'checked') { openList('Ipsy’s check', st.T.filter(x => C.ymOf(x.date) === st.ym && x.check && (x.check.s === 'fixed' || x.check.s === 'flag'))); return; }
     }
     const fx = e.target.closest('[data-fixed]');
     if (fx) { const id = fx.dataset.fixed; changeSettings(s => { if (!s.dismissed.includes(id)) s.dismissed.push(id); }); toast('Marked fixed.', () => changeSettings(s => { s.dismissed = s.dismissed.filter(x => x !== id); })); return; }
+    const io = e.target.closest('[data-idea-ok]'); if (io) { takeIdea(io.dataset.ideaOk, true); return; }
+    const ino = e.target.closest('[data-idea-no]'); if (ino) { takeIdea(ino.dataset.ideaNo, false); return; }
     const vw = e.target.closest('[data-view]'); if (vw) { setView(vw.dataset.view); return; }
     const t = e.target.closest('[data-tx]'); if (t) { openTx(t.dataset.tx); return; }
-    const c = e.target.closest('[data-cat]'); if (c) { openList(c.dataset.cat, D.tx.filter(x => x.dir === 'out' && x.cat === c.dataset.cat && C.ymOf(x.date) === st.ym)); return; }
-    const k = e.target.closest('[data-card]'); if (k) { prep(); const name = k.dataset.card; openList(name || 'Card not known', D.tx.filter(x => x.dir === 'out' && C.ymOf(x.date) === st.ym && st.acct(x).name === name)); return; }
-    const mm = e.target.closest('[data-merchant]'); if (mm) { const n = C.norm(mm.dataset.merchant); openList(mm.dataset.merchant, D.tx.filter(x => C.norm(x.merchant) === n)); }
+    const c = e.target.closest('[data-cat]'); if (c) { openList(c.dataset.cat, st.T.filter(x => x.dir === 'out' && x.cat === c.dataset.cat && C.ymOf(x.date) === st.ym)); return; }
+    const k = e.target.closest('[data-card]'); if (k) { prep(); const name = k.dataset.card; openList(name || 'Card not known', st.T.filter(x => x.dir === 'out' && C.ymOf(x.date) === st.ym && st.acct(x).name === name)); return; }
+    const mm = e.target.closest('[data-merchant]'); if (mm) { const n = C.norm(mm.dataset.merchant); openList(mm.dataset.merchant, st.T.filter(x => C.norm(x.merchant) === n)); }
   });
+  $('txBody').addEventListener('keydown', e => { if (e.target.id === 'newCat' && e.key === 'Enter') { e.preventDefault(); setCat(st.txId, e.target.value, ''); } });
   main.addEventListener('input', e => { if (e.target.id === 'q') { st.q = e.target.value; st.focusQ = true; render(); } });
 
   // ---------------------------------------------------------------------
   // A transaction, and a list of them (a category, a card, a merchant)
   // ---------------------------------------------------------------------
   function openTx(id, back) {
-    prep();
-    const x = D.tx.find(t => t.id === id); if (!x) return;
+    prep(); view();
+    const x = byId(id); if (!x) return;
+    st.txId = id;
     const a = st.acct(x), r = st.rw.get(x.id), gid = x.id.split(':')[0];
     $('txLbl').innerHTML = no(x.merchant);
     $('txBody').innerHTML = (back ? '<button class="chip quiet" type="button" data-back style="align-self:flex-start">' + I.chevL + 'Back</button>' : '')
       + '<p class="bigamt' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? '+' : '') + esc(usd2(x.amt)) + '</p><p class="sub">' + esc(dayName(x.date)) + '</p>'
       + '<dl class="rgroup kv"><dt>' + (x.dir === 'in' ? 'Into' : 'Card') + '</dt><dd>' + (a.name ? no(a.name) + (x.last4 ? ' ···' + esc(x.last4) : '') + (a.guess ? ' <span>(probably: Monarch’s summary didn’t say)</span>' : '') : 'Not known') + '</dd>'
-      + '<dt>Category</dt><dd>' + esc(x.emoji) + ' ' + no(x.cat || '—') + '</dd>'
+      + '<dt>Category</dt><dd>' + esc(x.emoji) + ' ' + no(x.cat || '—') + (x.how ? '<br><small><span>Monarch said:</span> ' + no(x.mcat || '—') + '</small>' : '')
+      + ' <button class="chip quiet" type="button" data-recat="' + esc(x.id) + '" style="margin-top:6px">Change</button></dd>'
       + (x.dir === 'out' ? '<dt>Cash back</dt><dd>' + (r && r.rate != null ? esc(usd2(r.earned)) + ' (' + r.rate + '%' + (r.capped ? ', <span>over the bonus limit</span>' : '') + ')' : 'Not set for this card') + '</dd>' : '')
-      + '<dt>From</dt><dd>' + (x.src === 'summary' ? 'Monarch’s summary email' : 'Monarch’s alert email') + '</dd></dl>'
+      + '<dt>From</dt><dd>' + (x.src === 'summary' ? 'Monarch’s summary email' : 'Monarch’s alert email') + '</dd>'
+      + '<dt>Checked</dt><dd>' + checkHtml(x) + '</dd></dl>'
+      + '<div id="recatBox" hidden></div>'
+      + (x.check && x.check.s === 'fixed' && mayRead() && hasGmail() ? '<button class="chip quiet" type="button" data-undocheck="' + esc(x.id) + '" style="align-self:center">' + I.chevL + 'Undo Ipsy’s correction</button>' : '')
       + '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">'
       + '<a class="chip" href="' + esc(x.mid ? 'https://app.monarch.com/links/transactions/' + x.mid : 'https://app.monarch.com/transactions') + '" target="_blank" rel="noopener">' + I.ext + 'Open in Monarch</a>'
       + (hasGmail() && mayRead() ? '<a class="chip quiet" href="https://mail.google.com/mail/u/0/#all/' + esc(gid) + '" target="_blank" rel="noopener">' + I.mail + 'The email</a>' : '') + '</div>';
     if ($('txSheet').hidden) openSheet('txSheet');
   }
+  const FIELD_NAME = { amount: 'Amount', direction: 'In or out', merchant: 'Merchant', account: 'Card', category: 'Category' };
+  const fieldVal = (f, v) => f === 'amount' ? usd2(parseFloat(v) || 0) : f === 'direction' ? (v === 'in' ? 'Money in' : 'Money out') : v;
+  function checkHtml(x) {
+    const c = x.check;
+    if (!c) return 'Not yet';
+    if (c.s === 'ok') return '✓ <span>Ipsy checked it against the email</span>';
+    if (c.s === 'kept') return 'You kept the app’s reading';
+    if (c.s === 'flag') return '<span>Ipsy couldn’t confirm it against the email</span>' + (c.note ? ': <span translate="no">' + esc(c.note) + '</span>' : '');
+    return '<span>Ipsy corrected it from the email:</span> ' + (c.issues || []).map(i => '<span>' + esc(FIELD_NAME[i.field] || i.field) + '</span> ' + no(fieldVal(i.field, i.was)) + ' → ' + no(fieldVal(i.field, i.now))).join('; ');
+  }
+  const PARSE = { account: P.account, category: P.category };
+  function undoCheck(id) {
+    const i = D.tx.findIndex(t => t.id === id); if (i < 0) return;
+    const x = D.tx[i]; D.tx[i] = C.undoCheck(x, PARSE);
+    D.dirty = [...new Set([...D.dirty, C.ymOf(x.date)])]; persist(); render(); openTx(id, !!st.list); scheduleSync();
+    toast('The app’s reading is back.');
+  }
+  // An email's words for the check: the HTML as text (the plain text drops the merchant and card), up to its footer.
+  const emailText = b => { const t = b.html ? P.htmlText(b.html) : P.decode(b.text || ''); const k = t.search(/If you have any questions|This email was sent to|You can update your\s+notification/i); return (k > 0 ? t.slice(0, k) : t).slice(0, 1500); };
+  // Once a day, on the reader's phone: this month's transactions not checked yet, 20 to a call (POST check).
+  const checkOn = () => ls.get(K.checkOff, '') !== '1';
+  async function dailyCheck({ loud } = {}) {
+    if (st.checking || !signedIn() || !st.server || !st.server.reader || !getToken()) { if (loud) toast(!getToken() ? 'Connect Gmail first, so Ipsy can read the emails.' : 'Only the phone that reads Monarch’s emails can check them.'); return; }
+    if (!loud && (!checkOn() || D.checkDay === today())) return;
+    const todo = C.toCheck(D.tx, today());
+    if (!todo.length) { D.checkDay = today(); persist(); if (loud) toast('Nothing new to check this month.'); return; }
+    st.checking = true; busyPill('Ipsy is checking');
+    let n = 0, fixed = 0, flagged = 0, stop = '';
+    const cache = new Map();
+    try {
+      for (let k = 0; k < todo.length && !stop; k += 20) {
+        const batch = todo.slice(k, k + 20), items = [];
+        await pool(batch, 4, async x => {
+          const gid = x.id.split(':')[0];
+          if (!cache.has(gid)) cache.set(gid, gmail('/messages/' + gid, { format: 'full' }).then(m => ({ subject: header(m, 'subject'), text: emailText(bodies(m.payload)) })).catch(() => null));
+          const e = await cache.get(gid);
+          if (e && e.text.length >= 20) items.push({ id: x.id, subject: e.subject, text: e.text, parsed: { amt: x.amt, dir: x.dir, merchant: x.merchant, account: x.account, last4: x.last4, cat: x.cat } });
+        });
+        if (!items.length) continue;
+        let r;
+        try { r = await api('check', { items }); }
+        catch (err) { stop = err.message || 'error'; break; }
+        const at = Date.now();
+        for (const [id, res] of Object.entries(r.results || {})) {
+          const i = D.tx.findIndex(t => t.id === id); if (i < 0) continue;
+          D.tx[i] = C.applyCheck(D.tx[i], res, at, PARSE);
+          n++; if (D.tx[i].check.s === 'fixed') fixed++; else if (D.tx[i].check.s === 'flag') flagged++;
+          D.dirty = [...new Set([...D.dirty, C.ymOf(D.tx[i].date)])];
+        }
+      }
+      if (!stop || stop === 'limit') D.checkDay = today();
+      D.lastCheck = { at: Date.now(), n, fixed, flagged };
+      persist();
+      pillDone(n ? 'Checked ' + plural(n, 'transaction') : 'Nothing checked');
+      if (stop && stop !== 'limit' && loud) toast(stop === 'no-ai' ? 'Ipsy isn’t set up in aOS yet (its key).' : 'Ipsy couldn’t check just now. Try again later.', null, 5000);
+      else if (fixed || flagged) toast((fixed ? 'Ipsy corrected ' + plural(fixed, 'transaction') : '') + (fixed && flagged ? '. ' : '') + (flagged ? flagged + ' to look at' : '') + '.', null, 5000);
+    } finally {
+      st.checking = false; busyPill(null); render(); if (!$('setSheet').hidden) renderSettings();
+      if (n) sync();
+    }
+  }
+  // Change a transaction's category: one of those in use, or a new one; always for its merchant (the
+  // default) or just this one. Picking Monarch's own puts it back.
+  function recatOpen(id) {
+    const x = byId(id), box = $('recatBox'); if (!x || !box) return;
+    const cats = C.categories(st.T).filter(c => C.catKey(c.name) !== C.catKey(x.cat)).slice(0, 24);
+    if (x.how && x.how !== 'merge' && !cats.some(c => C.catKey(c.name) === C.catKey(x.mcat))) cats.unshift({ name: x.mcat, emoji: x.memoji });
+    box.innerHTML = '<p class="label">Move to</p><div class="rgroup" style="padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap">'
+      + cats.map(c => '<button class="chip quiet" type="button" data-pick="' + esc(c.name) + '" data-emoji="' + esc(c.emoji || '') + '">' + (c.emoji ? '<span aria-hidden="true">' + esc(c.emoji) + '</span> ' : '') + no(c.name)
+        + (x.how && x.how !== 'merge' && C.catKey(c.name) === C.catKey(x.mcat) ? ' <small>(Monarch’s)</small>' : '') + '</button>').join('') + '</div></div>'
+      + '<div class="rgroup"><div class="frow"><label for="newCat">New category</label><input class="txt" id="newCat" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"><button class="chip" type="button" id="newCatGo">Use it</button></div>'
+      + '<button class="rowbtn" type="button" role="switch" id="recatAll" aria-checked="true"><span class="check" aria-hidden="true">' + I.tick + '</span><span><span>Always for</span> ' + no(x.merchant) + '<span class="sub">Its other transactions too, and those to come</span></span></button></div>'
+      + (x.how === 'merge' ? '<p class="note">Its category was merged into another: Settings, Categories.</p>' : '');
+    box.hidden = false;
+    box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  const recatOf = s => { const rc = s.recat = s.recat || {}; rc.t = rc.t || {}; rc.m = rc.m || {}; rc.g = rc.g || {}; return rc; };
+  function setCat(id, name, emoji) {
+    const x = D.tx.find(t => t.id === id), b = $('recatAll'); if (!x) return;
+    name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40); if (!name) { toast('Give the new category a name.'); return; }
+    const all = !b || b.getAttribute('aria-checked') === 'true', mk = C.catKey(x.merchant), monarchs = C.catKey(name) === C.catKey(x.cat);
+    const was = JSON.parse(JSON.stringify({ m: (settings().recat || {}).m && settings().recat.m[mk], t: (settings().recat || {}).t && settings().recat.t[id] }));
+    const gone = at => ({ c: '', e: '', at });
+    changeSettings(s => {
+      const rc = recatOf(s), at = Date.now();
+      if (all) { rc.m[mk] = monarchs ? gone(at) : { c: name, e: emoji, at }; if (rc.t[id]) rc.t[id] = gone(at); }
+      else rc.t[id] = monarchs && !(rc.m[mk] && rc.m[mk].c) ? gone(at) : { c: name, e: emoji, at };
+    });
+    openTx(id, !!st.list);
+    const undo = () => { changeSettings(s => { const rc = recatOf(s), at = Date.now(); rc.m[mk] = was.m ? Object.assign({}, was.m, { at }) : gone(at); rc.t[id] = was.t ? Object.assign({}, was.t, { at }) : gone(at); }); if (!$('txSheet').hidden && st.txId === id) openTx(id, !!st.list); };
+    toast(monarchs ? 'Back to Monarch’s category.' : all ? 'Every ' + x.merchant + ' is ' + name + ' now.' : 'Moved to ' + name + '.', undo);
+  }
+  // An idea of Ipsy's taken (a rule, as if made by hand) or said no to; either way it's never suggested again.
+  function takeIdea(id, ok) {
+    const it = ((settings().ideas || {}).list || []).find(i => i.id === id); if (!it) return;
+    const emoji = (C.categories(st.T).find(c => C.catKey(c.name) === C.catKey(it.to)) || {}).emoji || '';
+    changeSettings(s => {
+      const at = Date.now();
+      if (ok) { const rc = recatOf(s); if (it.kind === 'merge') rc.g[C.catKey(it.from)] = { c: it.to, e: emoji, f: it.from, at }; else rc.m[C.catKey(it.merchant)] = { c: it.to, e: emoji, at }; }
+      s.ideas = Object.assign({}, s.ideas, { at, list: (s.ideas.list || []).filter(i => i.id !== id), no: [...(s.ideas.no || []), id].slice(-200) });
+    });
+    toast(ok ? (it.kind === 'merge' ? it.from + ' is in ' + it.to + ' now.' : 'Every ' + it.merchant + ' is ' + it.to + ' now.') : 'Ipsy won’t suggest that again.');
+  }
+  // Ipsy's ideas (functions/money/api, POST ideas): when asked, and once a month on its own.
+  async function askIdeas({ loud } = {}) {
+    if (st.ideasBusy) return;
+    if (!signedIn() || !st.server || !st.server.can) { if (loud) toast('Sign in, and have Money shared with you, to ask Ipsy.'); return; }
+    const input = C.ideasInput(view(), settings(), today());
+    if (!input.categories.length) { if (loud) toast('Nothing spent in the last year to look at.'); return; }
+    st.ideasBusy = true; if (loud) busyPill('Ipsy is looking');
+    try {
+      const r = await api('ideas', Object.assign(input, { lang: window.aosLang && aosLang.get() === 'ru' ? 'ru' : 'en' }), loud), n = (r.ideas || []).length;
+      changeSettings(s => { s.ideas = { at: Date.now(), ym: curYm(), list: r.ideas || [], no: (s.ideas && s.ideas.no) || [] }; });
+      if (loud) { pillDone(n ? plural(n, 'idea') : 'No ideas'); toast(n ? 'Ipsy’s ideas are on This month.' : 'No ideas this time: your categories look clear.', null, 5000); }
+    } catch (err) {
+      if (loud) { busyPill(null); toast(err.message === 'no-ai' ? 'Ipsy isn’t set up in aOS yet (its key).' : err.message === 'limit' ? 'That’s all Ipsy’s ideas for today. Try again tomorrow.' : 'Ipsy couldn’t look just now. Try again later.', null, 5000); }
+    } finally {
+      st.ideasBusy = false; render(); if (!$('setSheet').hidden) renderSettings();
+    }
+  }
+  function monthlyIdeas() {
+    const i = settings().ideas;
+    if (st.ideasTried || !signedIn() || !st.server || !st.server.can || (i && i.ym === curYm()) || D.tx.length < 20) return;
+    st.ideasTried = true; askIdeas();
+  }
   function openList(title, list) {
     prep();
-    st.list = { title, list };
+    st.list = { title, ids: list.map(x => x.id) };
     const total = list.filter(x => x.dir === 'out').reduce((a, x) => a + x.amt, 0);
     $('txLbl').innerHTML = no(title);
     $('txBody').innerHTML = '<p class="bigamt">' + esc(usd2(total)) + '</p><p class="sub">' + esc(plural(list.length, 'transaction')) + '</p>'
@@ -358,7 +555,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if ($('txSheet').hidden) openSheet('txSheet');
   }
   $('txBody').addEventListener('click', e => {
-    if (e.target.closest('[data-back]') && st.list) { openList(st.list.title, st.list.list); return; }
+    const u = e.target.closest('[data-undocheck]'); if (u) { undoCheck(u.dataset.undocheck); return; }
+    if (e.target.closest('[data-back]') && st.list) { view(); openList(st.list.title, st.list.ids.map(byId).filter(Boolean)); return; }
+    const rb = e.target.closest('[data-recat]'); if (rb) { recatOpen(rb.dataset.recat); return; }
+    const pk = e.target.closest('[data-pick]'); if (pk) { setCat(st.txId, pk.dataset.pick, pk.dataset.emoji || ''); return; }
+    if (e.target.closest('#newCatGo')) { setCat(st.txId, $('newCat').value, ''); return; }
+    if (e.target.closest('#recatAll')) { const b = $('recatAll'); b.setAttribute('aria-checked', String(b.getAttribute('aria-checked') !== 'true')); return; }
     const t = e.target.closest('[data-tx]'); if (t) openTx(t.dataset.tx, !!st.list);
   });
 
@@ -458,8 +660,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const header = (m, name) => (((m.payload && m.payload.headers) || []).find(h => h.name.toLowerCase() === name) || {}).value || '';
 
-  // Read what's new from Monarch (the first time, the last two years), fold it in, and send it on.
+  // Read what's new from Monarch (the first time, the last five years), fold it in, and send it on.
   async function scan({ loud, again } = {}) {
+    await ready;
     if (st.reading || !mayRead()) return;
     if (!getToken()) {
       if (mayRenew()) { signIn({ silent: true }); return; }
@@ -480,7 +683,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         const r = await gmail('/messages', { q: since + ' ' + P.QUERY, maxResults: 100, pageToken });
         (r.messages || []).forEach(m => ids.push(m.id));
         pageToken = r.nextPageToken;
-      } while (pageToken && ids.length < 3000);
+      } while (pageToken && ids.length < 15000);
       const seen = new Set(D.seen), todo = ids.filter(id => !seen.has(id)), items = [];
       await pool(todo, 4, async id => {
         const m = await gmail('/messages/' + id, { format: 'full' });
@@ -515,7 +718,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } finally {
       st.reading = false; render(); if (!$('setSheet').hidden) renderSettings();
     }
-    if (signedIn()) sync();
+    if (signedIn()) sync().then(() => dailyCheck());
   }
 
   // ---------------------------------------------------------------------
@@ -539,17 +742,21 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (syncing) return syncing;
     syncing = (async () => {
       try {
+        await ready;
         const s = await api('state', undefined, loud);
         st.server = s; D.reader = s.readerName || '';
         if (s.can && s.meta) {
-          // months the family's copy has newer than this phone's (the last 25 at most)
-          const want = Object.entries(s.meta.months || {}).filter(([ym, at]) => at > (D.mAt[ym] || 0)).map(e => e[0]).sort().slice(-25);
-          if (want.length) {
-            const r = await api('months?from=' + want[0] + '&to=' + want[want.length - 1]);
-            for (const ym of want) {
+          // months the family's copy has newer than this phone's (five years at most), 25 months a request
+          const from = C.keepFrom(today());
+          const want = Object.entries(s.meta.months || {}).filter(([ym, at]) => ym >= from && at > (D.mAt[ym] || 0)).map(e => e[0]).sort();
+          for (let i = 0; i < want.length;) {
+            const end = C.ymAdd(want[i], 24), part = [];
+            while (i < want.length && want[i] <= end) part.push(want[i++]);
+            const r = await api('months?from=' + part[0] + '&to=' + part[part.length - 1]);
+            for (const ym of part) {
               const theirs = (r.months[ym] || []).filter(C.okTx), mine = D.tx.filter(x => C.ymOf(x.date) === ym);
               // the reader's own unsent reading stays; everyone else takes the month as it is there
-              const keep = s.reader && D.dirty.includes(ym) ? C.merge(theirs, mine).list : theirs;
+              const keep = s.reader && D.dirty.includes(ym) ? C.merge(mine, theirs).list : theirs;   // this phone's own reading (and checks) win for a month it hasn't sent yet
               D.tx = D.tx.filter(x => C.ymOf(x.date) !== ym).concat(keep);
               D.mAt[ym] = s.meta.months[ym];
             }
@@ -558,7 +765,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           // a month gone from the family's copy (the reader deleted it): gone here too, for everyone but the reader
           if (!s.reader) for (const ym of Object.keys(D.mAt)) if (!(s.meta.months || {})[ym]) { D.tx = D.tx.filter(x => C.ymOf(x.date) !== ym); delete D.mAt[ym]; }
           if (!s.reader) { D.alerts = s.meta.alerts || []; D.hints = s.meta.hints || []; D.readAt = s.meta.readAt || 0; }
-          if (s.meta.settings && (!D.settings || s.meta.settings.at > D.settings.at)) { D.settings = s.meta.settings; D.setDirty = false; }
+          if (s.meta.settings) {
+            // the newer copy, with every category change and idea from both (calc.js, mergeSettings); anything newer here is still sent
+            const both = C.mergeSettings(D.settings, s.meta.settings);
+            D.setDirty = D.setDirty && JSON.stringify(both) !== JSON.stringify(s.meta.settings);
+            D.settings = both;
+          }
         } else if (!s.can && !s.open) {
           // not shared with this person (or no longer): nothing of the family's stays here
           if (!hasGmail() || !s.reader) { D.tx = []; D.alerts = []; D.hints = []; D.mAt = {}; D.dirty = []; }
@@ -577,9 +789,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         }
         if (D.setDirty && (st.server.can || st.server.reader)) {
           const r = await api('settings', { settings: D.settings });
-          D.settings = r.settings || D.settings; D.setDirty = false;
+          D.settings = r.settings ? C.mergeSettings(D.settings, r.settings) : D.settings; D.setDirty = false;
         }
         persist();
+        setTimeout(monthlyIdeas, 0);
       } catch (err) {
         if (loud && err.status !== 401) toast('Couldn’t reach aOS just now. Money is safe on this phone.', null, 5000);
       } finally {
@@ -613,7 +826,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       html += '<p class="label">Monarch’s emails</p><div class="rgroup">';
       if (hasGmail()) html += '<div class="acct"><p><strong>Gmail connected</strong>Read ' + esc(ago(D.readAt)) + '. Money reads only Monarch’s emails, and can’t change or send anything.</p></div>'
         + '<button class="rowbtn" type="button" id="readNow"><span class="ic">' + I.refresh + '</span><span>Read now</span></button>'
-        + '<button class="rowbtn" type="button" id="readAgain"><span class="ic">' + I.mail + '</span><span>Read the last 2 years again<span class="sub">Every Monarch email, from the start</span></span></button>'
+        + '<button class="rowbtn" type="button" id="readAgain"><span class="ic">' + I.mail + '</span><span>Read the last 5 years again<span class="sub">Every Monarch email, from the start</span></span></button>'
         + '<button class="rowbtn" type="button" id="gmailOut"><span class="ic">' + I.out + '</span><span>Disconnect Gmail</span></button>';
       else html += '<div class="acct"><p><strong>Gmail not connected</strong>Money reads Monarch’s alert emails, read-only: it can’t change or send anything.</p><button class="btn" type="button" id="gmailIn">Connect Gmail</button></div>';
       html += '</div><p class="note">In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.</p>';
@@ -637,6 +850,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           + '<p class="note">What counts as online shopping for the card rates, separated by commas.</p>';
       }
     }
+    if (D.tx.length && (!viewer || (s && s.can))) {
+      const rc = settings().recat || {}, names = new Map(D.tx.map(x => [C.catKey(x.merchant), x.merchant]));
+      const rules = [...Object.entries(rc.g || {}).filter(([, v]) => v.c).map(([k, v]) => ({ k: 'g:' + k, what: no(v.f || k) + ' → ' + no(v.c), sub: 'Category merged' })),
+        ...Object.entries(rc.m || {}).filter(([, v]) => v.c).map(([k, v]) => ({ k: 'm:' + k, what: no(names.get(k) || k) + ' → ' + no(v.c), sub: 'Always for this merchant' }))];
+      const one = Object.values(rc.t || {}).filter(v => v.c).length;
+      html += '<p class="label">Categories</p><div class="rgroup">'
+        + (rules.length ? rules.map(r => '<div class="frow"><span style="flex:1"><span>' + r.what + '</span><br><small>' + esc(r.sub) + '</small></span><button class="chip quiet" type="button" data-unrule="' + esc(r.k) + '">Remove</button></div>').join('')
+          : '<div class="acct"><p>Monarch’s categories, as its emails say. Change one from a transaction: tap it, then Change.</p></div>')
+        + (one ? '<div class="acct"><p>' + esc(plural(one, 'transaction')) + ' <span>changed on its own</span></p></div>' : '')
+        + (signed && s && s.can ? '<button class="rowbtn" type="button" id="ideasNow"><span class="ic">💡</span><span>Ask Ipsy for ideas<span class="sub">Categories to merge, and merchants to move</span></span></button>' : '') + '</div>'
+        + '<p class="note">Shared with whoever sees Money. Once a month Ipsy also looks on its own; nothing changes until you accept an idea. It uses Claude Sonnet 5.5: under a cent each time.</p>';
+    }
+    if (reader) {
+      const lc = D.lastCheck;
+      html += '<p class="label">Ipsy’s daily check</p><div class="rgroup">'
+        + '<button class="rowbtn" type="button" role="switch" id="checkOn" aria-checked="' + checkOn() + '"><span class="check" aria-hidden="true">' + I.tick + '</span><span>Check each day<span class="sub">Ipsy reads each new transaction’s Monarch email this month, and checks the amount, merchant, card and category</span></span></button>'
+        + '<div class="acct"><p>' + (lc ? '<span>Last checked</span> ' + esc(ago(lc.at)) + ': <span>' + esc(plural(lc.n, 'transaction')) + '</span>' + (lc.fixed ? ', <span>' + esc(plural(lc.fixed, 'correction')) + '</span>' : '') + (lc.flagged ? ', <span>' + esc(lc.flagged + ' to look at') + '</span>' : '') + '.' : 'Not checked yet.') + '</p></div>'
+        + '<button class="rowbtn" type="button" id="checkNow"><span class="ic">' + I.tick + '</span><span>Check now</span></button></div>'
+        + '<p class="note">What passed is never checked again. It uses Claude Sonnet 5.5: a few cents a month.</p>';
+    }
     html += '<p class="label">Your data</p><div class="rgroup">'
       + (D.tx.length ? '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + I.export + '</span><span>Export<span class="sub">As a CSV spreadsheet</span></span></button>' : '')
       + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + I.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">' + (reader ? 'From this phone, and aOS for everyone it’s shared with' : 'From this phone') + '</span></span></button></div>';
@@ -657,6 +890,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (t.closest('#gmailOut')) { signOutGmail(); return; }
     if (t.closest('#readNow')) { closeSheet('setSheet'); scan({ loud: true }); return; }
     if (t.closest('#readAgain')) { closeSheet('setSheet'); scan({ loud: true, again: true }); return; }
+    if (t.closest('#checkOn')) { ls.set(K.checkOff, checkOn() ? '1' : ''); renderSettings(); return; }
+    if (t.closest('#checkNow')) { closeSheet('setSheet'); dailyCheck({ loud: true }); return; }
+    if (t.closest('#ideasNow')) { closeSheet('setSheet'); setView('month'); askIdeas({ loud: true }); return; }
+    const ur = t.closest('[data-unrule]');
+    if (ur) { const [k, key] = [ur.dataset.unrule.slice(0, 1), ur.dataset.unrule.slice(2)]; changeSettings(s => { recatOf(s)[k][key] = { c: '', e: '', at: Date.now() }; }); renderSettings(); toast('Removed: Monarch’s categories are back for it.'); return; }
     const p = t.closest('[data-person]');
     if (p) {
       const id = p.dataset.person, now = new Set(st.server.with || []);
@@ -673,7 +911,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (!w.dataset.armed) { w.dataset.armed = '1'; $('wipeTxt').firstChild.textContent = 'Tap again to delete everything'; setTimeout(() => { if (document.contains(w)) { delete w.dataset.armed; $('wipeTxt').firstChild.textContent = 'Delete all data'; } }, 3500); return; }
       if (st.server && st.server.reader) { try { await api('forget', {}, true); } catch { toast('Couldn’t reach aOS, so nothing was deleted. Try again when you’re online.', null, 6000); return; } }
       const n = D.tx.length;
-      Object.assign(D, { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0 });
+      Object.assign(D, { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, checkDay: '', lastCheck: null });
       persist(); if (signedIn()) await sync(); render(); renderSettings();
       toast('Deleted ' + plural(n, 'transaction') + '.');
     }
@@ -696,8 +934,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function exportCSV() {
     prep();
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const rows = [['Date', 'Merchant', 'Amount', 'In or out', 'Card or account', 'Category', 'Cash back']].concat(
-      [...D.tx].sort((a, b) => a.at - b.at).map(x => { const r = st.rw.get(x.id); return [x.date, x.merchant, x.amt.toFixed(2), x.dir === 'in' ? 'In' : 'Out', st.acct(x).name, x.cat, r && r.rate != null ? r.earned.toFixed(2) : '']; }));
+    const rows = [['Date', 'Merchant', 'Amount', 'In or out', 'Card or account', 'Category', 'Monarch’s category', 'Cash back']].concat(
+      [...view()].sort((a, b) => a.at - b.at).map(x => { const r = st.rw.get(x.id); return [x.date, x.merchant, x.amt.toFixed(2), x.dir === 'in' ? 'In' : 'Out', st.acct(x).name, x.cat, x.how ? x.mcat : x.cat, r && r.rate != null ? r.earned.toFixed(2) : '']; }));
     const blob = new Blob([rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'money-' + today() + '.csv'; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -784,32 +1022,37 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Start
   // ---------------------------------------------------------------------
-  load();
-  const back = consumeRedirect();
-  render();
-  animateIn(main);
-  if (back && back.error) {
-    if (!(back.silent && /^(interaction|login|consent|account_selection)_required$/.test(back.error))) toast(back.error === 'access_denied' ? 'Gmail access was declined.' : 'Gmail sign-in didn’t work (' + back.error + ').', null, 6000);
-    else toast('Gmail needs one tap to sign in again: Settings, Connect Gmail.', null, 6000);
+  // Start once this phone's copy is read (IndexedDB).
+  const ready = load().catch(() => {});
+  ready.then(start);
+  function start() {
+    const back = consumeRedirect();
+    render();
+    animateIn(main);
+    if (back && back.error) {
+      if (!(back.silent && /^(interaction|login|consent|account_selection)_required$/.test(back.error))) toast(back.error === 'access_denied' ? 'Gmail access was declined.' : 'Gmail sign-in didn’t work (' + back.error + ').', null, 6000);
+      else toast('Gmail needs one tap to sign in again: Settings, Connect Gmail.', null, 6000);
+    }
+    // The family's copy first (it says whether this phone reads Gmail), then Gmail: always after a
+    // sign-in, else when it's been over an hour.
+    (signedIn() ? sync() : Promise.resolve()).then(() => {
+      if (getToken() && (back && back.ok || Date.now() - D.lastScan > H)) scan({ loud: !!(back && back.ok) });
+      else if (getToken()) dailyCheck();
+      else if (!getToken() && mayRenew() && mayRead() && Date.now() - D.lastScan > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
+    });
   }
-  // The family's copy first (it says whether this phone reads Gmail), then Gmail: always after a
-  // sign-in, else when it's been over an hour.
-  (signedIn() ? sync() : Promise.resolve()).then(() => {
-    if (getToken() && (back && back.ok || Date.now() - D.lastScan > H)) scan({ loud: !!(back && back.ok) });
-    else if (!getToken() && mayRenew() && mayRead() && Date.now() - D.lastScan > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
-  });
-  window.addEventListener('storage', e => { if (e.key === KEY) { load(); render(); } });
+  window.addEventListener('storage', e => { if (e.key === KEY + '-at' && !saving) load().then(render, () => {}); });
   let shown = curYm();
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (curYm() !== shown) { if (st.ym === shown) st.ym = curYm(); shown = curYm(); }
     render();
-    sync().then(() => { if (getToken() && Date.now() - D.lastScan > H) scan(); });
+    sync().then(() => { if (getToken() && Date.now() - D.lastScan > H) scan(); else if (getToken()) dailyCheck(); });
   });
   window.addEventListener('online', () => sync());
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (money/scripts/app-test.mjs) only.
-  window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings };
+  window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings, dailyCheck, askIdeas };
 })();

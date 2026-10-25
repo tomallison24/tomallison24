@@ -102,7 +102,7 @@ from.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
   steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Night Drive,
-  Folk or Grid), `lang.js` (English or Russian), `sky.js` (the Vintage designs' day and night sky),
+  Folk or Tron), `lang.js` (English or Russian), `sky.js` (the Vintage designs' day and night sky),
   `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the AI helper you
   chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
   `server/ipsy.js`) - plus the Welcome Lab. Its `index.html` is a "moved to aOS" notice.
@@ -125,14 +125,14 @@ from.
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
 - **Five designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
-  glass), Night Drive (80s neon), Folk (Gzhel by day, Khokhloma by night) and Grid (light cycles, after the
+  glass), Night Drive (80s neon), Folk (Gzhel by day, Khokhloma by night) and Tron (light cycles, after the
   Tron: Ares mode in Tesla's cars: red light on a black grid), picked for every
   app at once in aOS (Account > Appearance > Look: `aOS/look.js` writes each app's design) or in
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
   id="vintage">` block on or off, `data-look` on `<html>`, the icon (`icon-*.png` Vintage,
   `icon-glass-*.png` Sea glass, `icon-neon-*.png`, `icon-folk-*.png`, `icon-grid-*.png`), status bar and bar colours.
-  A change to how an app looks is made in Vintage and Sea glass; **Night Drive, Folk and Grid are
+  A change to how an app looks is made in Vintage and Sea glass; **Night Drive, Folk and Tron are
   generated from Vintage** (`<style id="neon">`, `<style id="folk">`, `<style id="grid">` and the icons, by
   `node aOS/scripts/make-looks.mjs`, palettes in `aOS/scripts/looks.mjs`): run it after changing a
   Vintage block or an `icon.svg` (check-apps fails until you do), never edit those blocks by hand.

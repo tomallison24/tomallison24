@@ -272,6 +272,146 @@
     return [...latest.values()].sort((a, b) => b.at - a.at);
   }
 
+  // ---------------------------------------------------------------------
+  // Ipsy's daily check (functions/money/api, POST check): each transaction against its own email.
+  // x.check: { s: 'ok' | 'fixed' | 'flag' | 'kept', at, issues?: [{ field, was, now }], note? }.
+  // Only what hasn't been checked, this calendar month (and the last 3 days, so the last of a month
+  // is checked on the 1st); what passed, was fixed or flagged is never sent again.
+  // ---------------------------------------------------------------------
+  function toCheck(txs, today) {
+    const ym = ymOf(today), t = dayNo(today);
+    return txs.filter(x => !x.check && (ymOf(x.date) === ym || (t - dayNo(x.date) <= 3 && t >= dayNo(x.date)))).sort((a, b) => a.at - b.at);
+  }
+  // A transaction with what the check said applied (a new object; the old one is left as it was).
+  // parse: { account(s) -> { account, last4 }, category(s) -> { cat, emoji } } (money/parse.js).
+  const FIELD_OF = { amount: x => x.amt, direction: x => x.dir, merchant: x => x.merchant, account: x => x.account + (x.last4 ? ' (...' + x.last4 + ')' : ''), category: x => x.cat };
+  function applyCheck(x, r, at, parse) {
+    const y = Object.assign({}, x);
+    if (!r) return y;
+    if (r.s === 'ok') { y.check = { s: 'ok', at }; return y; }
+    if (r.s === 'unsure') { y.check = { s: 'flag', at }; if (r.note) y.check.note = r.note; return y; }
+    const issues = [];
+    for (const i of r.issues || []) {
+      const was = FIELD_OF[i.field] ? String(FIELD_OF[i.field](y)) : '';
+      if (i.field === 'amount') { const n = Math.round(parseFloat(String(i.value).replace(/[^\d.]/g, '')) * 100) / 100; if (!isFinite(n)) continue; y.amt = n; }
+      else if (i.field === 'direction') { if (i.value !== 'in' && i.value !== 'out') continue; y.dir = i.value; }
+      else if (i.field === 'merchant') y.merchant = String(i.value);
+      else if (i.field === 'account') { const a = parse.account(i.value); y.account = a.account; y.last4 = a.last4; }
+      else if (i.field === 'category') { const c = parse.category(i.value); y.cat = c.cat; if (c.emoji) y.emoji = c.emoji; }
+      else continue;
+      issues.push({ field: i.field, was, now: String(FIELD_OF[i.field](y)) });
+    }
+    y.check = issues.length ? { s: 'fixed', at, issues } : { s: 'flag', at };
+    return y;
+  }
+  // Undo a fix: what the app read comes back, and it stays as it is (never checked again).
+  function undoCheck(x, parse) {
+    const y = Object.assign({}, x);
+    if (!x.check || x.check.s !== 'fixed') return y;
+    for (const i of x.check.issues || []) {
+      if (i.field === 'amount') y.amt = parseFloat(i.was) || y.amt;
+      else if (i.field === 'direction') y.dir = i.was === 'in' ? 'in' : 'out';
+      else if (i.field === 'merchant') y.merchant = i.was;
+      else if (i.field === 'account') { const a = parse.account(i.was); y.account = a.account; y.last4 = a.last4; }
+      else if (i.field === 'category') y.cat = i.was;
+    }
+    y.check = { s: 'kept', at: x.check.at };
+    return y;
+  }
+
+  // ---------------------------------------------------------------------
+  // Your own categories (shared settings, recat): Monarch's category stays on each transaction, and
+  // what the family changed sits on top of it.
+  //   t: { txId: { c, e, at } }        just this one
+  //   m: { merchant key: { c, e, at } } always for this merchant (the default)
+  //   g: { category key: { c, e, f, at } } a category folded into another (f: its name as it was)
+  // c '' is a change taken back (kept, with its time, so it wins over an older copy on another
+  // phone). Ipsy's ideas (ideas: { at, ym, list, no: the ids of those accepted or said no to}) are
+  // suggestions until you accept one (functions/money/api, POST ideas).
+  // ---------------------------------------------------------------------
+  const catKey = s => norm(s);
+  function catOf(x, rc) {
+    let c = x.cat, e = x.emoji, how = '';
+    const t = rc.t && rc.t[x.id], m = rc.m && rc.m[catKey(x.merchant)];
+    if (t && t.c) { c = t.c; e = t.e || ''; how = 'tx'; } else if (m && m.c) { c = m.c; e = m.e || ''; how = 'merchant'; }
+    for (let i = 0; i < 4; i++) {
+      const g = rc.g && rc.g[catKey(c)];
+      if (!g || !g.c || catKey(g.c) === catKey(c)) break;
+      c = g.c; e = g.e || e; how = how || 'merge';
+    }
+    return { c, e, how };
+  }
+  // Each transaction as the family sees it: a copy where its category changed (with Monarch's as mcat).
+  function recat(txs, settings) {
+    const rc = settings && settings.recat;
+    if (!rc) return txs;
+    const emoji = new Map();
+    for (const x of txs) if (x.cat && x.emoji && !emoji.has(catKey(x.cat))) emoji.set(catKey(x.cat), x.emoji);
+    return txs.map(x => {
+      const r = catOf(x, rc);
+      if (!r.how || (r.c === x.cat && (r.e || x.emoji) === x.emoji)) return x;
+      return Object.assign({}, x, { cat: r.c, emoji: r.e || emoji.get(catKey(r.c)) || '🏷️', mcat: x.cat, memoji: x.emoji, how: r.how });
+    });
+  }
+  // Every category in use (as the family sees them), most spent first: [{ name, emoji, n, total }].
+  function categories(view) {
+    const by = new Map();
+    for (const x of view) {
+      if (!x.cat) continue;
+      const k = catKey(x.cat), c = by.get(k) || { name: x.cat, emoji: x.emoji, n: 0, total: 0 };
+      c.n++; if (x.dir === 'out') c.total = r2(c.total + x.amt); by.set(k, c);
+    }
+    return [...by.values()].sort((a, b) => b.total - a.total || b.n - a.n);
+  }
+  // Two copies of the settings (this phone's and aOS's): the newer one, with every category change
+  // and idea taken back from both, entry by entry, the newer of each.
+  function mergeSettings(a, b) {
+    if (!a) return b; if (!b) return a;
+    const base = Object.assign({}, (b.at || 0) >= (a.at || 0) ? b : a);
+    const ra = a.recat || {}, rb = b.recat || {}, recat = {};
+    for (const k of ['t', 'm', 'g']) {
+      const o = Object.assign({}, ra[k] || {});
+      for (const [id, v] of Object.entries(rb[k] || {})) if (!o[id] || (v && v.at || 0) >= (o[id].at || 0)) o[id] = v;
+      recat[k] = o;
+    }
+    if (ra.t || ra.m || ra.g || rb.t || rb.m || rb.g) base.recat = recat;
+    const ia = a.ideas, ib = b.ideas;
+    if (ia || ib) {
+      const newer = !ia ? ib : !ib ? ia : (ib.at || 0) >= (ia.at || 0) ? ib : ia;
+      base.ideas = Object.assign({}, newer, { no: [...new Set([...(ia && ia.no) || [], ...(ib && ib.no) || []])].slice(-200) });
+    }
+    return base;
+  }
+  // What Ipsy is shown for its ideas: the last 12 months' spending by category, the merchants in
+  // each, the family's own changes (what it learns from) and the ideas said no to.
+  function ideasInput(view, settings, today) {
+    const from = ymAdd(ymOf(today), -11), cats = new Map();
+    for (const x of view) {
+      if (x.dir !== 'out' || !x.cat || ymOf(x.date) < from) continue;
+      const k = catKey(x.cat), c = cats.get(k) || { name: x.cat, n: 0, amt: 0, m: new Map() };
+      c.n++; c.amt = r2(c.amt + x.amt);
+      const mk = catKey(x.merchant), m = c.m.get(mk) || { name: x.merchant, n: 0, amt: 0 };
+      m.n++; m.amt = r2(m.amt + x.amt); c.m.set(mk, m); cats.set(k, c);
+    }
+    const rc = (settings && settings.recat) || {}, names = new Map(view.map(x => [catKey(x.merchant), x.merchant]));
+    return {
+      categories: [...cats.values()].sort((a, b) => b.amt - a.amt).slice(0, 40).map(c => ({ name: c.name, charges: c.n, spent: c.amt,
+        merchants: [...c.m.values()].sort((a, b) => b.amt - a.amt).slice(0, 8).map(m => ({ name: m.name, charges: m.n, spent: m.amt })) })),
+      yourChanges: [...Object.entries(rc.m || {}).filter(([, v]) => v && v.c).map(([k, v]) => ({ merchant: names.get(k) || k, category: v.c })),
+        ...Object.values(rc.g || {}).filter(v => v && v.c).map(v => ({ merged: v.f, into: v.c }))].slice(0, 80),
+      saidNo: ((settings && settings.ideas && settings.ideas.no) || []).slice(-60),
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Five years kept: this month and the 59 before it, on the phone and in aOS
+  // (functions/money/api keeps the same, KEEP_MONTHS). Anything older is let go.
+  // ---------------------------------------------------------------------
+  const KEEP_MONTHS = 60;
+  const keepFrom = today => ymAdd(ymOf(today), 1 - KEEP_MONTHS);
+  const prune = (txs, today) => { const from = keepFrom(today); return txs.filter(x => ymOf(x.date) >= from); };
+
   root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
-    recurring, minFor, month, pace, compare, tips, openAlerts };
+    recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune,
+    catKey, recat, categories, mergeSettings, ideasInput };
 })(typeof window !== 'undefined' ? window : globalThis);

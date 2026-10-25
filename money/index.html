@@ -33,7 +33,7 @@
   emails), calc.js (the sums).
   Five designs, picked in Settings > Design (../home/design.js): Vintage (the
   default: the <style id="vintage"> block), Standard (Sea glass: that block
-  switched off), and Night Drive, Folk and Grid (generated from Vintage).
+  switched off), and Night Drive, Folk and Tron (generated from Vintage).
 -->
 <style>
 :root{
@@ -407,6 +407,9 @@ button.row:active{background:var(--fill)}
 .search input::placeholder{color:var(--faint)}
 .search svg{color:var(--faint)}
 .note{font-size:13px;color:var(--faint);margin:0 8px;line-height:1.4}
+/* what Ipsy's daily check said, on a transaction's row */
+.badge{display:inline-block;margin-left:4px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;line-height:18px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-text)}
+.badge.warn{background:color-mix(in srgb,var(--flag) 18%,transparent);color:var(--flag)}
 .empty .btn{margin-top:14px}
 /* each card its own colour, on the rewards chart, its legend and its dot */
 .cdot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--k,var(--faint))}
@@ -614,6 +617,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 [aria-checked="true"] > .check{background:var(--mc-teal);color:var(--on-accent)}
 .frow input.num{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
 .bigamt{font-weight:600}
+.badge{background:color-mix(in srgb,var(--mc-teal) 18%,transparent);letter-spacing:.02em}
+.badge.warn{background:color-mix(in srgb,var(--mc-orange) 22%,transparent)}
 </style>
 <style id="neon" media="not all">
 /* Night Drive: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
@@ -677,7 +682,7 @@ body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
 </style>
 <style id="grid" media="not all">
-/* Grid: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+/* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
 :root{--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,.14);--mc-ink:#171B20;--mc-mustard:#FB6049;--mc-teal:#973835;--mc-orange:#E41F24;--mc-olive:#707F92;--mc-walnut:#292D33;--mc-on-mustard:#171B20;--bg:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-text:#973835;--icon:#973835;--cta:#D41C21;--cta-ink:#FCFDFF;--danger:#C11019;--danger-text:#A50310;--flag:#B6191C;--glass:#FAFCFE;--glass-2:#ECEEF0;--sheet:#FAFCFE;--gb-edge:rgba(23,27,32,.14);--hair:rgba(23,27,32,.14);--hair-2:rgba(23,27,32,.08);--fill:rgba(23,27,32,.06);--lift:rgba(23,27,32,.10);--lift-strong:rgba(23,27,32,.22);--scrim:rgba(23,27,32,.35);--grab:rgba(23,27,32,.28);--bar-top:#FAFCFE;--bar-bottom:#FAFCFE;--bar-rim:rgba(23,27,32,.12);--bar-solid:#FAFCFE;--seg-thumb:#FB6049;--lg-bg:#FAFCFE;--lg-rim:inset 0 0 0 1.5px rgba(23,27,32,.12);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,.05);--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,.12);--lgs-field:#F3F5F7;--lgs-scrim:rgba(23,27,32,.30);--up:#4D5B6C;--down:#AD0B14;--af:#526072;--k-beer:#FB6049;--k-wine:#E41F24;--k-spirits:#843327;--k-cocktail:#973835;--k-seltzer:#E76963;--k-cider:#707F92;--k-other:#94979B;--sw-off:rgba(23,27,32,.22)}
 @media (prefers-color-scheme:dark){
 :root:not([data-theme="light"]){--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-ink:#EEF0F2;--mc-teal:#FFA39B;--mc-olive:#C9DBF3;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--icon:#FF8F7F;--cta:#F93433;--cta-ink:#F8FAFC;--danger:#FA6258;--danger-text:#FE9185;--flag:#FE9185;--glass:#0D0F11;--glass-2:#131518;--sheet:#0D0F11;--gb-edge:rgba(238,240,242,.14);--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(0,0,0,.55);--grab:rgba(238,240,242,.28);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,.14);--bar-solid:#0A0C0E;--seg-thumb:#FF8F7F;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,.14);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,.14);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,.5);--up:#C9DBF3;--down:#FE9185;--af:#E4EFFE;--k-spirits:#E86757;--k-cocktail:#FFA39B;--k-seltzer:#FDDBD8;--k-cider:#C9DBF3;--sw-off:rgba(238,240,242,.24)}
@@ -691,7 +696,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 .vbar .vb-chev svg{color:#FB6049}
 [data-k="4"]{--k:#B46354}
 [data-k="5"]{--k:#94979B}
-/* Grid: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
+/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
    the cabin lit red. Red light on black at night, on clean white by day: Orbitron headings (Exo 2 for Cyrillic), Exo 2 for
    the rest (SIL Open Font License, ../home/fonts); an identity disc, a white square and a red light trail for the shapes,
    a grid floor under them, and a glow on what's lit. */

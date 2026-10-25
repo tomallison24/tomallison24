@@ -163,7 +163,7 @@ async function phone(design, scheme) {
   await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
   await ctx.addInitScript(([t, design]) => {
     if (sessionStorage.getItem('seeded')) return;
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ meals: '999' }));
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ meals: '999' }));
     localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.meals', design);
     localStorage.setItem('aos.session', JSON.stringify({ token: t, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
     sessionStorage.setItem('seeded', '1');

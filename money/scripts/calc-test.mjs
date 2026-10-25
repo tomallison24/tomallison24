@@ -3,7 +3,7 @@
 // online and 2% grocery up to a quarterly cap, and a card with no rate set), the better card for a
 // kind of spend, spending by card, what repeats, a month against the three before (like for like
 // while the older months only had alerts over $200), where you could save, and which "can't
-// sync" alerts are still open.
+// sync" alerts are still open, the five years kept, and the family's own categories on top of Monarch's.
 //   node money/scripts/calc-test.mjs
 import assert from 'assert/strict';
 import fs from 'fs';
@@ -160,6 +160,58 @@ test('open alerts: recent, not marked fixed, the newest per bank, and gone once 
   const open = C.openAlerts(alerts, txs, ['a5'], '2026-10-24');
   assert.deepEqual(open.map(a => a.id), ['a3'], 'Rocket synced again after its alert; Old Bank is too old; Shared Bank was marked fixed');
   assert.deepEqual(C.openAlerts(alerts, [], [], '2026-10-24').map(a => a.id), ['a5', 'a3', 'a2']);
+});
+
+test('Ipsy’s check: what to send (this month and the last 3 days, never twice), a correction applied and undone', () => {
+  const P = { account: s => { const m = /^(.*?)\s*\(\.\.\.(\d+)\)$/.exec(s); return m ? { account: m[1], last4: m[2] } : { account: s, last4: '' }; },
+    category: s => { const m = /^([^\p{L}]*)(.*)$/u.exec(s); return { emoji: m[1].trim(), cat: m[2].trim() }; } };
+  const list = [T('2026-11-02', 10, 'A'), T('2026-10-30', 20, 'B'), T('2026-10-20', 30, 'C'), T('2026-11-03', 40, 'D', { check: { s: 'ok', at: 1 } })];
+  assert.deepEqual(C.toCheck(list, '2026-11-02').map(x => x.merchant), ['B', 'A'], 'oldest first; Oct 30 is within 3 days; checked ones never again');
+  const x = T('2026-11-02', 52.1, 'Big Box', ROCKET);
+  const ok = C.applyCheck(x, { s: 'ok' }, 5, P);
+  assert.deepEqual(ok.check, { s: 'ok', at: 5 }); assert.equal(x.check, undefined, 'the old one is left as it was');
+  const flag = C.applyCheck(x, { s: 'unsure', note: 'Two amounts' }, 5, P);
+  assert.deepEqual(flag.check, { s: 'flag', at: 5, note: 'Two amounts' });
+  const fix = C.applyCheck(x, { s: 'fix', issues: [{ field: 'amount', value: '$1,052.10' }, { field: 'account', value: 'Everyday Visa (...1234)' }, { field: 'category', value: '🔨 Home Improvement' }, { field: 'direction', value: 'sideways' }] }, 6, P);
+  assert.equal(fix.amt, 1052.1); assert.equal(fix.account, 'Everyday Visa'); assert.equal(fix.last4, '1234'); assert.equal(fix.cat, 'Home Improvement'); assert.equal(fix.emoji, '🔨'); assert.equal(fix.dir, 'out');
+  assert.deepEqual(fix.check, { s: 'fixed', at: 6, issues: [{ field: 'amount', was: '52.1', now: '1052.1' }, { field: 'account', was: 'Rocket Credit Card (...9876)', now: 'Everyday Visa (...1234)' }, { field: 'category', was: 'Shopping', now: 'Home Improvement' }] });
+  const back = C.undoCheck(fix, P);
+  assert.equal(back.amt, 52.1); assert.equal(back.account, 'Rocket Credit Card'); assert.equal(back.last4, '9876'); assert.equal(back.cat, 'Shopping');
+  assert.deepEqual(back.check, { s: 'kept', at: 6 }, 'kept as the app read it, and never checked again');
+  assert.equal(C.toCheck([back], '2026-11-02').length, 0);
+  assert.deepEqual(C.applyCheck(x, { s: 'fix', issues: [{ field: 'direction', value: 'sideways' }] }, 7, P).check, { s: 'flag', at: 7 }, 'nothing usable: flagged, not fixed');
+});
+
+test('five years kept: this month and the 59 before it, at the end of a month and the start of a year too', () => {
+  assert.equal(C.KEEP_MONTHS, 60);
+  assert.equal(C.keepFrom('2026-10-25'), '2021-11'); assert.equal(C.keepFrom('2026-01-01'), '2021-02'); assert.equal(C.keepFrom('2026-12-31'), '2022-01');
+  const list = [T('2021-10-31', 1, 'Too old'), T('2021-11-01', 2, 'Oldest kept'), T('2026-10-25', 3, 'Today')];
+  assert.deepEqual(C.prune(list, '2026-10-25').map(x => x.merchant), ['Oldest kept', 'Today']);
+});
+
+test('your own categories: just one, always for a merchant, a merge on top; Monarch’s underneath; two phones merged', () => {
+  const list = [T('2026-10-05', 20, 'Corner Diner', { cat: 'Restaurants', emoji: '🍽' }), T('2026-10-06', 30, 'Corner Diner', { cat: 'Restaurants', emoji: '🍽' }),
+    T('2026-10-07', 4, 'Bean Bar', { cat: 'Coffee Shops', emoji: '☕' }), T('2026-10-08', 90, 'Big Box')];
+  assert.equal(C.recat(list, {}), list, 'nothing changed: the same list');
+  const s = { recat: { m: { 'corner diner': { c: 'Eating out', e: '', at: 2 } }, t: { [list[1].id]: { c: 'Gifts', e: '🎁', at: 3 } }, g: { 'coffee shops': { c: 'Eating out', e: '', f: 'Coffee Shops', at: 2 }, 'eating out': { c: 'Food', e: '🍔', f: 'Eating out', at: 4 } } } };
+  const v = C.recat(list, s);
+  assert.deepEqual(v.map(x => [x.cat, x.mcat, x.how]), [['Food', 'Restaurants', 'merchant'], ['Gifts', 'Restaurants', 'tx'], ['Food', 'Coffee Shops', 'merge'], ['Shopping', undefined, undefined]],
+    'just one wins over its merchant; merges follow on (Eating out is in Food); Big Box as Monarch said');
+  assert.equal(v[1].emoji, '🎁'); assert.equal(v[0].emoji, '🍔'); assert.equal(list[0].cat, 'Restaurants', 'Monarch’s stays on the transaction');
+  assert.equal(C.recat(list, { recat: { m: { 'corner diner': { c: '', e: '', at: 5 } } } })[0].cat, 'Restaurants', 'a change taken back');
+  assert.deepEqual(C.categories(v).map(c => [c.name, c.n, c.total]), [['Shopping', 1, 90], ['Gifts', 1, 30], ['Food', 2, 24]]);
+  // this phone's copy and aOS's: the newer base, every change the newer of each, ideas said no to from both
+  const mine = { at: 10, cards: { a: 1 }, recat: { m: { 'corner diner': { c: 'Eating out', at: 9 } } }, ideas: { at: 9, list: [], no: ['x'] } };
+  const theirs = { at: 20, cards: { b: 1 }, recat: { m: { 'corner diner': { c: 'Diner', at: 5 }, 'big box': { c: 'Household', at: 6 } } }, ideas: { at: 8, list: [{ id: 'y' }], no: ['z'] } };
+  const both = C.mergeSettings(mine, theirs);
+  assert.deepEqual(both.cards, { b: 1 }); assert.equal(both.recat.m['corner diner'].c, 'Eating out'); assert.equal(both.recat.m['big box'].c, 'Household');
+  assert.deepEqual(both.ideas, { at: 9, list: [], no: ['x', 'z'] });
+  // what Ipsy is shown: the last 12 months out, by category, with merchants; your changes; what you said no to
+  const inp = C.ideasInput(v.concat(T('2025-09-01', 500, 'Old Shop')), { recat: s.recat, ideas: { no: ['merge:a>b'] } }, '2026-10-25');
+  assert.deepEqual(inp.categories.map(c => c.name), ['Shopping', 'Gifts', 'Food'], 'more than 12 months ago: left out');
+  assert.deepEqual(inp.categories[2].merchants.map(m => m.name), ['Corner Diner', 'Bean Bar']);
+  assert.deepEqual(inp.yourChanges, [{ merchant: 'Corner Diner', category: 'Eating out' }, { merged: 'Coffee Shops', into: 'Eating out' }, { merged: 'Eating out', into: 'Food' }]);
+  assert.deepEqual(inp.saidNo, ['merge:a>b']);
 });
 
 console.log(n + ' calc tests passed');
