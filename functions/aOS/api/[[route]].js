@@ -58,7 +58,7 @@ export const PREF_ITEM = /^(wx\.(places|units)|allison-clock-v1#(cities|alarms|s
 const PREF_MAX = 64 * 1024, PREFS_MAX = 192 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle'];
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'money', 'house', 'sparkle'];
 // Calendar's layers from the other apps. On an iPhone each Home Screen app keeps its
 // own storage, so Calendar can't read theirs: each app keeps a copy of just what
 // Calendar shows in your own account (layer:<app>:<you>), only you can read it, and
@@ -151,6 +151,14 @@ async function forget(db, u) {
   for (const c of u.creds || []) keys.push('cred:' + c);
   await db.delete('user:' + id);   // first: whatever else fails, they're out
   for (const k of keys) await db.delete(k);
+  // Money (functions/money/api): theirs to read goes with them; shared with them, it no longer is
+  const money = await getJSON(db, 'money:share');
+  if (money && money.by === id) {
+    const gone = ['money:share', 'money:meta'];
+    let cursor;
+    do { const page = await db.list({ prefix: 'money:tx:', cursor }); gone.push(...page.keys.map(k => k.name)); cursor = page.list_complete ? null : page.cursor; } while (cursor);
+    for (const k of gone) await db.delete(k);
+  } else if (money && (money.with || []).includes(id)) await putJSON(db, 'money:share', Object.assign({}, money, { with: money.with.filter(x => x !== id) }));
 }
 
 async function everyone(db) {

@@ -5,13 +5,13 @@
   const T = s => aosLang.t(s);
   // the app names, as NAMES in ../../welcome.js has them: in Russian, and after "в" (Что нового в Почте)
   // and as an object (Добавьте Почту): the rest read the same
-  const PREP = { aOS: 'aOS', AllisonOS: 'AllisonOS', Mail: 'Почте', Calendar: 'Календаре', Clock: 'Часах', News: 'Новостях', Weather: 'Погоде', Notes: 'Заметках', Podcasts: 'Подкастах', Travel: 'Поездках', Places: 'Местах', Fitness: 'Фитнесе', Drinks: 'Напитках', Meals: 'Меню', Orders: 'Заказах', Home: 'Доме' };
+  const PREP = { aOS: 'aOS', AllisonOS: 'AllisonOS', Mail: 'Почте', Calendar: 'Календаре', Clock: 'Часах', News: 'Новостях', Weather: 'Погоде', Notes: 'Заметках', Podcasts: 'Подкастах', Travel: 'Поездках', Places: 'Местах', Fitness: 'Фитнесе', Drinks: 'Напитках', Meals: 'Меню', Orders: 'Заказах', Money: 'Деньгах', Home: 'Доме' };
   const ACC = { Mail: 'Почту', Weather: 'Погоду' };
   const inApp = n => PREP[n] || T(n);
   const acc = n => ACC[n] || T(n);
   const app = n => (n === 'aOS' ? 'aOS' : 'приложение «' + T(n) + '»');   // "приложение «Заметки»": no gender or number to agree with
   const appOf = n => (n === 'aOS' ? 'aOS' : 'приложения «' + T(n) + '»');
-  const APPS = 'Mail|Calendar|Clock|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Home';
+  const APPS = 'Mail|Calendar|Clock|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Money|Home';
 
   const W = {
     // ---- every page ----
@@ -36,7 +36,7 @@
     // ---- the app names (NAMES) ----
     'Mail': 'Почта', 'Calendar': 'Календарь', 'Clock': 'Часы', 'News': 'Новости', 'Weather': 'Погода', 'Notes': 'Заметки',
     'Podcasts': 'Подкасты', 'Travel': 'Поездки', 'Places': 'Места', 'Fitness': 'Фитнес', 'Drinks': 'Напитки', 'Meals': 'Меню',
-    'Orders': 'Заказы', 'Home': 'Дом', 'Sparkle Kingdom': 'Сверкающее королевство',
+    'Orders': 'Заказы', 'Money': 'Деньги', 'Home': 'Дом', 'Sparkle Kingdom': 'Сверкающее королевство',
 
     // ---- the welcome ----
     'Welcome': 'Добро пожаловать',
@@ -62,6 +62,9 @@
     'The original look': 'Исходный стиль',
     '80s neon, magenta and cyan': 'Неон 80-х, пурпурный и голубой',
     'Gzhel and Khokhloma': 'Гжель и хохлома',
+    'Grid': 'Сетка',
+    'Light cycles, red on black': 'Световые мотоциклы, красный на чёрном',
+    'Light cycles: red light on a black grid, as in Tron: Ares': 'Световые мотоциклы: красный свет на чёрной сетке, как в «Троне: Арес»',
     'Mid-century: cream and walnut, mustard, teal and orange': 'Середина века: сливочный и орех, горчичный, бирюзовый и оранжевый',
     'Sea glass: frosted glass in the AllisonOS colors': 'Морское стекло: матовое стекло в цветах AllisonOS',
     '80s neon: a striped sunset, magenta and cyan on midnight': 'Неон 80-х: закат в полоску, пурпурный и голубой на тёмно-синем',
@@ -174,8 +177,8 @@
     'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.': 'На монеты покупаются платья, диадемы и вещи для единорога, а единорог растёт вместе с её знаниями.',
     'For grown-ups': 'Для взрослых',
     "Press and hold Grown-ups for the Parent corner: each child's progress, words to practice together, play time and the letter sounds you record.": 'Нажмите и удерживайте «Для взрослых», чтобы открыть уголок родителей: успехи каждого ребёнка, слова для совместных занятий, время игры и записанные вами звуки букв.',
-    'Four designs': 'Четыре дизайна',
-    'Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design.': 'Винтаж, Стандарт в стиле «Морское стекло», Ночная трасса или Народный: для выбора игрока и уголка родителей. Выберите в уголке родителей > Дизайн.',
+    'Five designs': 'Пять дизайнов',
+    'Vintage, Standard in Sea glass, Night Drive, Folk or Grid, for the player picker and the Parent corner. Pick one in the Parent corner > Design.': 'Винтаж, Стандарт в стиле «Морское стекло», Ночная трасса, Народный или Сетка: для выбора игрока и уголка родителей. Выберите в уголке родителей > Дизайн.',
     'News by topic': 'Новости по темам',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое.',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more. Tap the pill to pick a topic.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое. Нажмите на кнопку, чтобы выбрать тему.',
@@ -289,6 +292,23 @@
     'Meds and steps': 'Лекарства и шаги',
     'Tick off your medications and supplements on Meds, a private page, and see each day\'s steps, from your iPhone or typed in.': 'Отмечайте лекарства и добавки на личной странице «Лекарства» и смотрите шаги за каждый день — с iPhone или введённые вручную.',
     'Pick Meds here to tick off your medications and supplements, on a private page of its own. The week shows each day\'s steps, from your iPhone or typed in.': 'Выберите здесь «Лекарства», чтобы отмечать лекарства и добавки на отдельной личной странице. Неделя показывает шаги за каждый день — с iPhone или введённые вручную.',
+    // Money
+    'Where the family\'s money goes': 'Куда уходят деньги семьи',
+    'This month at a glance': 'Этот месяц с одного взгляда',
+    'What you\'ve spent, the pace for the month, and each category against your usual, from Monarch\'s alert emails.': 'Сколько потрачено, темп за месяц и каждая категория по сравнению с обычным — по письмам-оповещениям Monarch.',
+    'Where you could save': 'Где можно сэкономить',
+    'Categories well over their usual, where the most went, and what repeats, with what it costs a year.': 'Категории намного выше обычного, куда ушло больше всего и что повторяется — и сколько это стоит в год.',
+    'Cards and rewards': 'Карты и бонусы',
+    'Spending and cash back on each card, rewards month by month, and the better card for each kind of spend.': 'Траты и кешбэк по каждой карте, бонусы по месяцам и выгодная карта для каждого вида трат.',
+    'A bank stopped syncing': 'Банк перестал синхронизироваться',
+    'When Monarch can\'t sync a bank, Money says so at the top until it\'s fixed.': 'Когда Monarch не может синхронизировать банк, Деньги сообщают об этом наверху, пока это не исправят.',
+    'Shared with the family': 'Вместе с семьёй',
+    'Connect Gmail and Money reads Monarch’s alert emails: what you’ve spent, the pace for the month, and each category against your usual.': 'Подключите Gmail, и Деньги будут читать письма-оповещения Monarch: сколько потрачено, темп за месяц и каждая категория по сравнению с обычным.',
+    'This month shows categories well over their usual and where the most went. Recurring lists what repeats, with what it costs a year.': '«Этот месяц» показывает категории намного выше обычного и куда ушло больше всего. «Регулярные» — что повторяется и сколько это стоит в год.',
+    'When Monarch can’t sync a bank, Money says so at the top until it’s fixed.': 'Когда Monarch не может синхронизировать банк, Деньги сообщают об этом наверху, пока это не исправят.',
+    'One phone reads Monarch’s emails from Gmail, read-only, and shares them with the family members it picks. Pick them in Settings, and set each card’s cash back.': 'Один телефон читает письма Monarch из Gmail, только для чтения, и делится ими с выбранными членами семьи. Выберите их в настройках и задайте кешбэк каждой карты.',
+    'One phone reads Monarch\'s emails from Gmail, read-only, and shares them with the family members it picks.': 'Один телефон читает письма Monarch из Gmail, только для чтения, и делится ими с выбранными членами семьи.',
+    'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Money and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.': 'Основные приложения — Погода, Заметки, Новости, Почта, Календарь и Часы — и собственные приложения семьи Allison — Подкасты, Поездки, Места, Фитнес, Напитки, Меню, Заказы, Деньги и Дом, а для детей — Сверкающее королевство, всё в aOS. И они работают вместе: поездки, напоминания и заметки появляются в Календаре, бронь открывает своё письмо, а Дом знает погоду.',
     // Drinks
     'A simple log of what you drink': 'Простой дневник выпитого',
     'Your week in one number': 'Неделя в одном числе',
@@ -320,7 +340,7 @@
       'За работой помощник показывает, что делает: читает книгу, когда смотрит ваши данные, надевает очки и водит лупой, когда ищет, пишет в блокноте, когда что-то меняет, показывает пальцем, когда открывает что-то на экране, прикладывает руку к уху, пока вы печатаете, и подпрыгивает, когда изменение сохранено. В чате написано, что он делает, например «Мия читает…»',
     'On aOS Home, now and then your helper crosses the Ipsy bar in its own way: Mia\'s zoomies, the fox creeping then pouncing, the owl looping the loop, the robot moonwalking, the octopus jetting, the hedgehog rolling up, the otter belly-sliding (never with Reduce Motion)':
       'На главной aOS помощник время от времени по-своему пробегает по строке Ипси: Мия носится кругами, лиса крадётся и прыгает, сова делает мёртвую петлю, робот идёт лунной походкой, осьминог плывёт рывками, ёжик катится клубком, выдра скользит на животе (никогда при «Уменьшении движения»)',
-    'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots': 'В стиле «Ночная трасса» на каждом помощнике зеркальные очки, а в «Народном» — красный платок в белый горошек',
+    'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Grid, a lit visor': 'В стиле «Ночная трасса» на каждом помощнике зеркальные очки, в «Народном» — красный платок в белый горошек, а в «Сетке» — светящийся визор',
     'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works': 'Ипси больше не стволовая клетка и не превращается в другие клетки за работой',
     'Your language now follows you to your other devices, as your look does': 'Язык теперь переходит с вами на другие устройства, как и оформление',
     'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
@@ -943,7 +963,7 @@
 (() => {
   const ABOUT = {
     'Light or dark, for aOS and every app': 'Светлая или тёмная тема в aOS и всех приложениях',
-    'The look of aOS and every app: Vintage, Sea glass, Night Drive or Folk': 'Стиль aOS и всех приложений',
+    'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Grid': 'Стиль aOS и всех приложений',
     'The language of aOS and every app': 'Язык aOS и всех приложений',
     'The apps pinned in Favorites on aOS Home, up to 4, by id': 'Избранное на главной aOS',
     'Calendar: the day weeks start on': 'Календарь: первый день недели',
@@ -1007,7 +1027,7 @@ aosLang.add({
   'Now in Russian too: aOS, Appearance, Language': 'Теперь и на русском: aOS, Оформление, Язык',
   'In Russian, the clock is 24-hour': 'На русском часы показывают 24-часовое время',
   'Looks and language': 'Стили и язык',
-  'Your name, then Appearance: four looks for aOS and every app, and English or Русский.': 'Ваше имя, затем Оформление: четыре стиля для aOS и всех приложений и выбор языка: English или Русский.',
+  'Your name, then Appearance: five looks for aOS and every app, and English or Русский.': 'Ваше имя, затем Оформление: пять стилей для aOS и всех приложений и выбор языка: English или Русский.',
   'New designs': 'Новые дизайны',
   'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.': 'Настройки, затем Дизайн: рядом с Винтажем и Стандартом появились Ночная трасса и Народный.',
   'Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)':
@@ -1021,5 +1041,6 @@ aosLang.add({
   'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings': 'На русском Часы показывают 24-часовое время, пока вы не выберете формат в их настройках',
   'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour': 'Ночная трасса и Народный: верх каждого приложения сливается со строкой состояния, фигуры проступают из-под неё, как в Винтаже, а строка — цвета самой страницы',
   'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)': 'Строка состояния — цвета страницы и когда в Оформлении выбрана Светлая или Тёмная тема (раньше она могла остаться цвета другого режима, полосой сверху)',
+  'A fifth look, Grid, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design': 'Пятый стиль, Сетка, по мотивам режима «Трон: Арес» в автомобилях Tesla: красный свет на чёрной сетке ночью и на чистом белом днём, заголовки шрифтом Orbitron, красный диск и световой след за каждым заголовком, свои значки приложений и Ипси в светящемся визоре. Профиль > Оформление > Стиль или Настройки > Дизайн в приложении',
   'aOS: the status bar changes with the page when you pick another look, light or dark, or open an app (it could keep the colour it had when aOS opened, another look\'s)': 'aOS: строка состояния меняется вместе со страницей, когда вы выбираете другой стиль, светлую или тёмную тему или открываете приложение (раньше она могла остаться того цвета, что был при открытии aOS, — цвета другого стиля)',
 });

@@ -1,0 +1,17 @@
+{
+  "name": "Money",
+  "short_name": "Money",
+  "description": "Where the family's money goes, from Monarch's alert emails: this month against the usual, spending and rewards by card, what repeats, and where you could save.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#241E1A",
+  "theme_color": "#241E1A",
+  "icons": [
+    { "src": "icon-180.png?v=1", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "related_applications": [
+    { "platform": "webapp", "id": "https://tomallison24-news.pages.dev/money/", "url": "https://tomallison24-news.pages.dev/money/manifest.webmanifest" }
+  ]
+}

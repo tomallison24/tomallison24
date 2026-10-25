@@ -91,7 +91,7 @@
         'Your helper is yours alone, in aOS and every app, and follows you to your other devices. Change it or its name any time: tap its name at the top of the chat, or aOS, Account, Your helper. Or just ask it to change its name',
         'While it works, your helper acts it out: it reads a book while it looks at your things, puts its glasses on and sweeps a magnifying glass to search, writes in a notepad when it changes something, points when it opens something on screen, puts a hand to its ear while you type and hops when a change is saved. The chat says what it\'s doing, like "Mia is reading…"',
         'On aOS Home, now and then your helper crosses the Ipsy bar in its own way: Mia\'s zoomies, the fox creeping then pouncing, the owl looping the loop, the robot moonwalking, the octopus jetting, the hedgehog rolling up, the otter belly-sliding (never with Reduce Motion)',
-        'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots',
+        'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Grid, a lit visor',
         'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
         'Your language now follows you to your other devices, as your look does',
         'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name'],
@@ -106,17 +106,19 @@
         orders: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
         travel: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
       } },
-    { v: '2.1', date: '2026-10-24', title: 'New looks, new language', look: 'vintage',
+    { v: '2.1', date: '2026-10-24', title: 'New looks, new language', look: 'vintage', added: ['money'],
       highlights: ['Two new looks: Night Drive and Folk',
         'aOS in Russian: Appearance, Language',
         'Ask Ipsy to change a setting, or show you where it is'],
-      notes: ['Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)',
+      notes: ['Money, a new app: where the family\'s money goes, from Monarch\'s alert emails. This month against the usual and where you could save, spending and cash back on each card with a chart of rewards, what repeats and what it costs a year, and a card at the top when Monarch can\'t sync a bank. One phone reads Monarch\'s emails from its Gmail, read-only, and shares them with the family members it picks',
+        'Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)',
         'The look you pick in Account > Appearance is every app\'s look now; an app\'s own Settings > Design can still be different',
         'Language, in Account > Appearance: English or Русский, for aOS and every app at once, with Russian dates and times. What the family wrote, emails, news and device names stay as they are. Lost in a language? Type "English" (or «Русский») to Ipsy',
         'Ipsy can change how things look and read for you, with Undo: light or dark, the look, the language, Favorites, Calendar, Clock, Weather\'s units, Podcasts, Fitness goals and what Orders counts. It asks first before a new event\'s defaults or turning its own access down, never touches sign-ins, the plan, privacy or the family\'s allergies, and opens the right screen for those',
         'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings',
         'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour',
         'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)',
+        'A fifth look, Grid, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design',
         'aOS: the status bar changes with the page when you pick another look, light or dark, or open an app (it could keep the colour it had when aOS opened, another look\'s)',
         'aOS: now and then Ipsy rolls across the bar at the top of Home and back (never with Reduce Motion; a tap sends it straight home)',
         'aOS: removing someone from the family takes them out completely: signed out of every app, and their account and everything aOS keeps for them deleted (no more Invite back: inviting them again makes a new account)',
@@ -140,7 +142,7 @@
         aos: { highlights: ['Two new designs: Night Drive and Folk, for aOS and every app',
           'Read aOS in Russian: Appearance, Language',
           'Ask Ipsy to change a setting, or show you where it is'],
-          tour: [{ sel: '[data-acct]', t: 'Looks and language', d: 'Your name, then Appearance: four looks for aOS and every app, and English or Русский.', g: 'tap' }] },
+          tour: [{ sel: '[data-acct]', t: 'Looks and language', d: 'Your name, then Appearance: five looks for aOS and every app, and English or Русский.', g: 'tap' }] },
         calendar: { highlights: ['Two new designs: Night Drive and Folk',
           'Now in Russian too: aOS, Appearance, Language',
           'Ask Ipsy to change a setting, or show you where it is'],
@@ -522,7 +524,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle'];
+  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'money', 'house', 'sparkle'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
@@ -534,7 +536,7 @@
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home', sparkle: 'Sparkle Kingdom' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', money: 'Money', house: 'Home', sparkle: 'Sparkle Kingdom' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "clock": {
@@ -937,6 +939,41 @@
         }
       ]
     },
+    "money": {
+      "tag": "Where the family's money goes",
+      "cards": [
+        {
+          "i": "chart",
+          "t": "This month at a glance",
+          "d": "What you've spent, the pace for the month, and each category against your usual, from Monarch's alert emails."
+        },
+        {
+          "i": "bulb",
+          "t": "Where you could save",
+          "d": "Categories well over their usual, where the most went, and what repeats, with what it costs a year."
+        },
+        {
+          "i": "tag",
+          "t": "Cards and rewards",
+          "d": "Spending and cash back on each card, rewards month by month, and the better card for each kind of spend."
+        },
+        {
+          "i": "alert",
+          "t": "A bank stopped syncing",
+          "d": "When Monarch can't sync a bank, Money says so at the top until it's fixed."
+        },
+        {
+          "i": "people",
+          "t": "Shared with the family",
+          "d": "One phone reads Monarch's emails from Gmail, read-only, and shares them with the family members it picks."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
+        }
+      ]
+    },
     "meals": {
       "tag": "Tell Ipsy what you fancy",
       "cards": [
@@ -1037,8 +1074,8 @@
         },
         {
           "i": "sliders",
-          "t": "Four designs",
-          "d": "Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
+          "t": "Five designs",
+          "d": "Vintage, Standard in Sea glass, Night Drive, Folk or Grid, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
         }
       ]
     }
@@ -1330,7 +1367,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Money and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1391,7 +1428,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   const DIR = id => id === 'aos' ? 'aOS' : id;   // aOS lives at /aOS/
   // an app's icon in its design here (design.<id>, Clock's set.design; aOS: aos.look): icon-512.png is Vintage
   const lookOf = id => { try { return id === 'aos' ? localStorage.getItem('aos.look') : id === 'clock' ? ((JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {}).design : localStorage.getItem('design.' + id); } catch { return null; } };
-  const icon = id => { const l = lookOf(id); return url(`../${DIR(id)}/icon-${/^(glass|neon|folk)$/.test(l || '') ? l + '-' : ''}512.png`); };
+  const icon = id => { const l = lookOf(id); return url(`../${DIR(id)}/icon-${/^(glass|neon|folk|grid)$/.test(l || '') ? l + '-' : ''}512.png`); };
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
 
   const CSS = `
@@ -1577,6 +1614,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-sw.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.95), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.95), transparent 70%), #EEF2F0; }
 #aos-welcome .c-sw.neon { background: #120B1F; } #aos-welcome .c-sw.neon::after { content: ''; position: absolute; right: -12px; top: -12px; width: 32px; height: 32px; border-radius: 50%; background: repeating-linear-gradient(to bottom, transparent 0 4px, #120B1F 4px 6px) 0 100%/100% 45% no-repeat, linear-gradient(#FFC75A, #FF8A4C 45%, #FF3D9A); }
 #aos-welcome .c-sw.folk { background: #F5F7FB; } #aos-welcome .c-sw.folk::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #F5F7FB 0 18%, #C7261C 19% 34%, #1C3F94 35%); }
+#aos-welcome .c-sw.grid { background: #08090B; } #aos-welcome .c-sw.grid::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #FF2A2A 0 12%, transparent 13% 38%, #FF2A2A 39% 50%, transparent 51% 70%, #E9EDF1 71%); filter: drop-shadow(0 0 4px #FF2A2A); }
 #aos-welcome .c-seg button[aria-pressed="true"] { background: var(--w-bg); box-shadow: 0 2px 8px rgba(0,0,0,.18), inset 0 0 0 .5px var(--w-edge); }
 #aos-welcome .c-via { margin: 10px 0 8px; font-size: 13px; line-height: 1.4; color: var(--w-muted); }
 #aos-welcome .c-link { display: block; margin-top: 16px; height: 48px; line-height: 48px; border-radius: 999px; font-size: 16px; font-weight: 600; text-decoration: none; color: var(--w-text); background: var(--w-dot); }
@@ -1649,7 +1687,7 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
 #aos-welcome.mc::after { left: -30px; bottom: 90px; width: 130px; height: 36px; border-radius: 18px; background: #D8572A; transform: rotate(-18deg); opacity: .85; }
 #aos-welcome.mc .c-panel { box-shadow: inset 0 0 0 1.5px var(--w-edge); -webkit-backdrop-filter: none; backdrop-filter: none; }
 #aos-welcome.mc .w-btn { background: #D8572A !important; color: #FFF8EC !important; box-shadow: none; }
-/* Night Drive and Folk (data-look on <html>, home/design.js): the same screens in their colours */
+/* Night Drive, Folk and Grid (data-look on <html>, home/design.js): the same screens in their colours */
 html[data-look="neon"] #aos-welcome.mc.mc { --w-bg: #F6F0FF; --w-text: #22123A; --w-muted: #5A4A78; --w-glass: #FFFFFF; --w-edge: rgba(34,18,58,.14); --w-dot: rgba(34,18,58,.2);
   --w-pastel: linear-gradient(100deg, #C21E78, #C21E78); --w-glow: rgba(255,180,67,.45); --w-hot: linear-gradient(120deg, #0A8AA6 0%, #0A8AA6 45%, #C21E78 100%); --w-hot-glow: rgba(255,61,154,.6); --w-hot-glow2: rgba(34,211,238,.5);
   --w-tube: #C21E78; font-family: "Avenir Next", "Avenir", system-ui, sans-serif; }
@@ -1674,6 +1712,17 @@ html[data-look="folk"] #aos-welcome.mc::after { background: var(--w-leaf); borde
 html[data-look="folk"] #aos-welcome.mc .w-btn { background: var(--w-btn) !important; color: #FFFFFF !important; }
 html[data-look="folk"] #aos-welcome.mc :is(h1, h2) { font-family: "Yeseva One", Georgia, serif; font-weight: 400; }
 html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next Condensed", "Avenir Next", system-ui, sans-serif; font-style: italic; font-weight: 800; }
+html[data-look="grid"] #aos-welcome.mc.mc { --w-bg: #F3F5F7; --w-text: #15171B; --w-muted: #50555D; --w-glass: #FFFFFF; --w-edge: rgba(208,16,30,.28); --w-dot: rgba(21,23,27,.18);
+  --w-pastel: linear-gradient(100deg, #D0101E, #D0101E); --w-glow: rgba(208,16,30,.3); --w-hot: linear-gradient(120deg, #D0101E 0%, #D0101E 45%, #2A2E35 100%); --w-hot-glow: rgba(208,16,30,.5); --w-hot-glow2: rgba(42,46,53,.4);
+  --w-line: #D0101E; --w-heat: #D0101E; --w-shine: 0px; font-family: "Exo 2", "Avenir Next", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="grid"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #08090B; --w-text: #F1F3F5; --w-muted: #A3A8B0; --w-glass: #131519; --w-edge: rgba(255,42,42,.42); --w-dot: rgba(241,243,245,.22);
+  --w-pastel: linear-gradient(100deg, #FF2A2A, #FF2A2A); --w-hot: linear-gradient(120deg, #FF2A2A 0%, #FF2A2A 45%, #E9EDF1 100%); --w-line: #FF2A2A; --w-heat: #FF2A2A; --w-shine: 12px; } }
+html[data-look="grid"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #08090B; --w-text: #F1F3F5; --w-muted: #A3A8B0; --w-glass: #131519; --w-edge: rgba(255,42,42,.42); --w-dot: rgba(241,243,245,.22);
+  --w-pastel: linear-gradient(100deg, #FF2A2A, #FF2A2A); --w-hot: linear-gradient(120deg, #FF2A2A 0%, #FF2A2A 45%, #E9EDF1 100%); --w-line: #FF2A2A; --w-heat: #FF2A2A; --w-shine: 12px; }
+html[data-look="grid"] #aos-welcome.mc::before { opacity: 1; background: radial-gradient(circle, var(--w-line) 0 7%, transparent 7.5% 30%, var(--w-line) 31% 35%, transparent 36% 55%, var(--w-line) 56% 63%, transparent 64%); filter: drop-shadow(0 0 var(--w-shine) var(--w-line)); }
+html[data-look="grid"] #aos-welcome.mc::after { height: 6px; border-radius: 0; background: var(--w-heat); box-shadow: 0 0 var(--w-shine) var(--w-heat); opacity: 1; }
+html[data-look="grid"] #aos-welcome.mc .w-btn { background: var(--w-line) !important; color: #FFFFFF !important; box-shadow: 0 0 var(--w-shine) var(--w-line); }
+html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "Exo 2", system-ui, sans-serif; font-weight: 700; letter-spacing: .02em; font-size-adjust: .5; }
 `;
 
   // ---- the overlay ----
@@ -1684,7 +1733,7 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     }
     const el = document.createElement('div');
     el.id = 'aos-welcome'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label);
-    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage' || /^(neon|folk)$/.test(document.documentElement.dataset.look || '')) el.classList.add('mc');   // aOS2's screens: mid-century (in Night Drive and Folk, theirs)
+    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage' || /^(neon|folk|grid)$/.test(document.documentElement.dataset.look || '')) el.classList.add('mc');   // aOS2's screens: mid-century (in Night Drive, Folk and Grid, theirs)
     el.innerHTML = `<button class="w-skip" type="button">Skip</button>${inner}
       <div class="c-fly"></div>
       <div class="c-panel"><div class="c-body"></div><div class="w-dots"></div>
@@ -1992,6 +2041,13 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     { sel: '#sumBtn', t: 'How it’s going', d: 'Tap the week’s number for Analysis: this week or month against the one before, then 12 weeks of charts. The pill at the bottom picks which.', g: 'tap' },
     { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in the family\'s Google Sheet, where only you can see yours, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
   ] };
+  SPOTS.money = { stops: [
+    { sel: ['#main [data-act="connect"]', '#main .empty'], t: 'This month at a glance', d: 'Connect Gmail and Money reads Monarch’s alert emails: what you’ve spent, the pace for the month, and each category against your usual.', g: 'tap' },
+    { sel: '#vBtn', t: 'Where you could save', d: 'This month shows categories well over their usual and where the most went. Recurring lists what repeats, with what it costs a year.', g: 'tap' },
+    { sel: '#vBtn', t: 'Cards and rewards', d: 'Spending and cash back on each card, rewards month by month, and the better card for each kind of spend.', g: 'tap' },
+    { sel: ['#main .empty', '#vBtn'], t: 'A bank stopped syncing', d: 'When Monarch can’t sync a bank, Money says so at the top until it’s fixed.' },
+    { sel: '#setBtn', t: 'Shared with the family', d: 'One phone reads Monarch’s emails from Gmail, read-only, and shares them with the family members it picks. Pick them in Settings, and set each card’s cash back.', g: 'tap' },
+  ] };
   SPOTS.meals = { stops: [
     { sel: ['#main .card.pick', '#tabs [data-tab="ipsy"]'], t: 'Ipsy plans it', d: 'Pick breakfast, lunch or dinner and what you’d like (chicken, lamb, vegetarian), or what’s in the fridge, and Ipsy writes the recipes.' },
     { sel: ['#main [data-act="pick"]', '#tabs [data-tab="ipsy"]'], t: 'Ipsy asks the rest', d: 'Then it asks how many days, how many you’re cooking for, lunches from leftovers or fresh, and anything else. One question at a time.' },
@@ -2022,10 +2078,10 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     { sel: ['#players .pcard', '#players'], t: 'Just hard enough', d: 'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.' },
     { sel: ['#players .pcard', '#players'], t: 'Earned by learning', d: 'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.' },
     { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for the Parent corner: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
-    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
+    { sel: '#grownBtn', t: 'Five designs', d: 'Vintage, Standard in Sea glass, Night Drive, Folk or Grid, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
-  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
+  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
   for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
   let spotEnd = null;
   const onScreen = e => {
@@ -2231,7 +2287,7 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma']];
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma'], ['grid', 'Grid', 'Light cycles, red on black']];
   const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now

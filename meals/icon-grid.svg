@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Grid: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs></defs>
+  <rect width="512" height="512" fill="#220A16"/>
+  <g><circle cx="404" cy="108" r="135.0" fill="none" stroke="#FF2A2A" stroke-width="18.0"/><circle cx="404" cy="108" r="78.0" fill="none" stroke="#FF2A2A" stroke-width="10.5"/><circle cx="404" cy="108" r="18.0" fill="#FF2A2A"/></g>
+  <rect x="32" y="418" width="136" height="50" rx="25" fill="#FF2A2A" transform="rotate(-18 100 443)"/>
+  <g>
+    <path d="M104 262h304c0 84-68 142-152 142S104 346 104 262z" fill="#F6F7F9"/>
+    <path d="M196 404h120" fill="none" stroke="#F6F7F9" stroke-width="22" stroke-linecap="round"/>
+    <g fill="none" stroke="#F6F7F9" stroke-width="20" stroke-linecap="round">
+      <path d="M196 214c-18-22 18-38 0-62s14-36 4-52"/>
+      <path d="M256 214c-18-22 18-38 0-62s14-36 4-52"/>
+      <path d="M316 214c-18-22 18-38 0-62s14-36 4-52"/>
+    </g>
+  </g>
+</svg>

@@ -7,7 +7,7 @@
 'use strict';
 (() => {
   const t = s => aosLang.t(s), pl = (n, a, b, c) => n + ' ' + aosLang.plural(n, a, b, c);
-  const APP = '(Mail|Clock|Calendar|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Home|Sparkle Kingdom)';
+  const APP = '(Mail|Clock|Calendar|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Money|Home|Sparkle Kingdom)';
   const FUN = ' Just for fun: nothing is charged.', FUN_RU = ' Это всё понарошку: деньги не списываются.';
   const OFF_RU = 'все приложения, кроме aOS, отключатся';
   const plan = n => (n === 'The trial' ? 'Пробный период' : n === 'Trial' ? 'Пробный' : n);
@@ -202,6 +202,7 @@
     'Sea glass': 'Морское стекло', 'The original look': 'Самый первый стиль',
     'Night Drive': 'Ночная трасса', '80s neon, magenta and cyan': 'Неон 80-х, пурпурный и голубой',
     'Folk': 'Народный', 'Gzhel by day, Khokhloma by night': 'Днём гжель, ночью хохлома',
+    'Grid': 'Сетка', 'Light cycles, red on black': 'Световые мотоциклы, красный на чёрном',
     'Subscription': 'Подписка',
     "The family's plan": 'План семьи',
     'Updates': 'Обновления',
