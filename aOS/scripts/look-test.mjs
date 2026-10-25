@@ -53,10 +53,11 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (await css(p, '.quick', 'backgroundColor') !== WALNUT) pr.push('the Home button along the bottom is not on walnut: ' + await css(p, '.quick', 'backgroundColor'));
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
-  const names = await p.locator('#looks .dopt b').allInnerTexts();
-  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Tron') pr.push('the picker offers ' + names.join());
+  const names = await p.locator('#looks .dopt b').allTextContents();
+  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Tron Special Edition') pr.push('the picker offers ' + names.join());
   if (await selected(p) !== 'vintage') pr.push('Vintage is not the one picked: ' + await selected(p));
-  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Night Drive, Folk and Tron, Vintage picked', pr); await ctx.close();
+  if (await p.locator('#looks [data-look="grid"] .se').evaluate(e => getComputedStyle(e).animationName) !== 'aosSeShine') pr.push('Tron\'s Special Edition badge does not animate');
+  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Night Drive, Folk and Tron Special Edition (its badge animated), Vintage picked', pr); await ctx.close();
 }
 
 // 2. Sea glass at once, kept over a reload, with no flash of Vintage; Vintage again
@@ -101,8 +102,8 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   await p.waitForSelector('#aos-welcome .c-panel.on .c-look', { timeout: 15000 });   // .on: the buttons are wired up (the cards are drawn a moment before)
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
-  const names = await p.locator('#aos-welcome .c-look b').allInnerTexts();
-  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Tron') pr.push('the install step offers ' + names.join());
+  const names = await p.locator('#aos-welcome .c-look b').allTextContents();
+  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Tron Special Edition') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());

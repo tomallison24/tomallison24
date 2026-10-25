@@ -356,8 +356,8 @@
     if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
   }
   // Look: Vintage (mid-century, the default), Sea glass, Night Drive, Folk or Tron, kept on this phone (look.js); every app takes it too
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel by day, Khokhloma by night'], ['grid', 'Tron', 'Light cycles, red on black']];
-  const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel by day, Khokhloma by night'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
+  const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${id === 'grid' ? 'Tron <span class="se">Special Edition</span>' : esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
   // a link to Updates or Subscription (a notification, the plan card) opens that one
   // (subId: its line under the heading, kept up to date; anchor: the id a link opens it by, #whats-new, #subscription)

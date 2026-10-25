@@ -63,6 +63,8 @@
     '80s neon, magenta and cyan': 'Неон 80-х, пурпурный и голубой',
     'Gzhel and Khokhloma': 'Гжель и хохлома',
     'Tron': 'Трон',
+    'Special Edition': 'Специальная серия',
+    'Tron Special Edition': 'Трон, специальная серия',
     'Light cycles, red on black': 'Световые мотоциклы, красный на чёрном',
     'Light cycles: red light on a black grid, as in Tron: Ares': 'Световые мотоциклы: красный свет на чёрной сетке, как в «Троне: Арес»',
     'Mid-century: cream and walnut, mustard, teal and orange': 'Середина века: сливочный и орех, горчичный, бирюзовый и оранжевый',
@@ -963,7 +965,7 @@
 (() => {
   const ABOUT = {
     'Light or dark, for aOS and every app': 'Светлая или тёмная тема в aOS и всех приложениях',
-    'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron': 'Стиль aOS и всех приложений',
+    'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron Special Edition': 'Стиль aOS и всех приложений',
     'The language of aOS and every app': 'Язык aOS и всех приложений',
     'The apps pinned in Favorites on aOS Home, up to 4, by id': 'Избранное на главной aOS',
     'Calendar: the day weeks start on': 'Календарь: первый день недели',
@@ -1041,6 +1043,6 @@ aosLang.add({
   'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings': 'На русском Часы показывают 24-часовое время, пока вы не выберете формат в их настройках',
   'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour': 'Ночная трасса и Народный: верх каждого приложения сливается со строкой состояния, фигуры проступают из-под неё, как в Винтаже, а строка — цвета самой страницы',
   'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)': 'Строка состояния — цвета страницы и когда в Оформлении выбрана Светлая или Тёмная тема (раньше она могла остаться цвета другого режима, полосой сверху)',
-  'A fifth look, Tron, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design': 'Пятый стиль, Трон, по мотивам режима «Трон: Арес» в автомобилях Tesla: красный свет на чёрной сетке ночью и на чистом белом днём, заголовки шрифтом Orbitron, красный диск и световой след за каждым заголовком, свои значки приложений и Ипси в светящемся визоре. Профиль > Оформление > Стиль или Настройки > Дизайн в приложении',
+  'A fifth look, Tron Special Edition, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design': 'Пятый стиль, Трон (специальная серия), по мотивам режима «Трон: Арес» в автомобилях Tesla: красный свет на чёрной сетке ночью и на чистом белом днём, заголовки шрифтом Orbitron, красный диск и световой след за каждым заголовком, свои значки приложений и Ипси в светящемся визоре. Профиль > Оформление > Стиль или Настройки > Дизайн в приложении',
   'aOS: the status bar changes with the page when you pick another look, light or dark, or open an app (it could keep the colour it had when aOS opened, another look\'s)': 'aOS: строка состояния меняется вместе со страницей, когда вы выбираете другой стиль, светлую или тёмную тему или открываете приложение (раньше она могла остаться того цвета, что был при открытии aOS, — цвета другого стиля)',
 });

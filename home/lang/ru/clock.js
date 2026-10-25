@@ -154,6 +154,7 @@
     'Folk': 'Народный',
     'Gzhel by day, Khokhloma by night': 'Днём гжель, ночью хохлома',
     'Tron': 'Трон',
+    'Special Edition': 'Специальная серия',
     'Light cycles: red light on a black grid': 'Световые мотоциклы: красный свет на чёрной сетке',
     'City': 'Город',
     '24-Hour Time': '24-часовой формат',

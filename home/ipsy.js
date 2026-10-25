@@ -672,7 +672,7 @@
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, {
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, {
       get: () => ls.get('aos.look', 'vintage'),
       put: v => { if (window.aosLook) return aosLook.set(v, { apps: SET_APPS }); ls.set('aos.look', v); SET_APPS.forEach(id => putLook(id, v)); } }) },
     language: { app: '*', live: true, about: 'The language of aOS and every app (drawn again in it after your reply)', ...choice({ en: 'en', ru: 'ru' }, {

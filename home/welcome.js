@@ -91,7 +91,7 @@
         'Your helper is yours alone, in aOS and every app, and follows you to your other devices. Change it or its name any time: tap its name at the top of the chat, or aOS, Account, Your helper. Or just ask it to change its name',
         'While it works, your helper acts it out: it reads a book while it looks at your things, puts its glasses on and sweeps a magnifying glass to search, writes in a notepad when it changes something, points when it opens something on screen, puts a hand to its ear while you type and hops when a change is saved. The chat says what it\'s doing, like "Mia is reading…"',
         'On aOS Home, now and then your helper crosses the Ipsy bar in its own way: Mia\'s zoomies, the fox creeping then pouncing, the owl looping the loop, the robot moonwalking, the octopus jetting, the hedgehog rolling up, the otter belly-sliding (never with Reduce Motion)',
-        'A fifth look, Tron, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design',
+        'A fifth look, Tron Special Edition, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design',
         'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Tron, a lit visor',
         'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
         'Your language now follows you to your other devices, as your look does',
@@ -1615,6 +1615,10 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-sw.neon { background: #120B1F; } #aos-welcome .c-sw.neon::after { content: ''; position: absolute; right: -12px; top: -12px; width: 32px; height: 32px; border-radius: 50%; background: repeating-linear-gradient(to bottom, transparent 0 4px, #120B1F 4px 6px) 0 100%/100% 45% no-repeat, linear-gradient(#FFC75A, #FF8A4C 45%, #FF3D9A); }
 #aos-welcome .c-sw.folk { background: #F5F7FB; } #aos-welcome .c-sw.folk::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #F5F7FB 0 18%, #C7261C 19% 34%, #1C3F94 35%); }
 #aos-welcome .c-sw.grid { background: #08090B; } #aos-welcome .c-sw.grid::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #FF2A2A 0 12%, transparent 13% 38%, #FF2A2A 39% 50%, transparent 51% 70%, #E9EDF1 71%); filter: drop-shadow(0 0 4px #FF2A2A); }
+#aos-welcome .c-sw.grid::after { animation: aosSePulse 1.1s ease-in-out infinite alternate; } #aos-welcome .c-sw.grid::before {content:'';position:absolute;left:-60%;bottom:9px;width:60%;height:2px;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent,#FF2A2A 80%,#fff);box-shadow:0 0 6px #FF2A2A;animation:aosSeRide 2.2s cubic-bezier(.5,0,.5,1) infinite}
+#aos-welcome .c-look .se {display:inline-block;margin-left:7px;padding:2px 7px 1px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.5;vertical-align:2px;white-space:nowrap;color:#fff;background:linear-gradient(100deg,#9E0A14 0%,#FF2A2A 38%,#FF8F8F 50%,#FF2A2A 62%,#9E0A14 100%) 0 0/260% 100%;box-shadow:0 0 8px rgba(255,42,42,.6);text-shadow:0 1px 2px rgba(90,0,0,.55);animation:aosSeShine 2.6s linear infinite}
+@keyframes aosSeShine{from{background-position:100% 0}to{background-position:-160% 0}}@keyframes aosSeSpin{to{transform:rotate(1turn)}}@keyframes aosSeRide{to{left:110%}}@keyframes aosSePulse{from{filter:drop-shadow(0 0 2px #FF2A2A)}to{filter:drop-shadow(0 0 9px #FF2A2A)}}
+@media (prefers-reduced-motion: reduce) { #aos-welcome .c-look .se, #aos-welcome .c-sw.grid::before, #aos-welcome .c-sw.grid::after { animation: none; } }
 #aos-welcome .c-seg button[aria-pressed="true"] { background: var(--w-bg); box-shadow: 0 2px 8px rgba(0,0,0,.18), inset 0 0 0 .5px var(--w-edge); }
 #aos-welcome .c-via { margin: 10px 0 8px; font-size: 13px; line-height: 1.4; color: var(--w-muted); }
 #aos-welcome .c-link { display: block; margin: 16px 0 12px; height: 48px; line-height: 48px; border-radius: 999px; font-size: 16px; font-weight: 600; text-decoration: none; color: var(--w-text); background: var(--w-dot); }
@@ -1870,7 +1874,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
       const c = cards[i];
       el.classList.toggle('tall', c.x === 'install' || !!c.tall);
       const extra = c.x === 'theme' ? `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>`
-        : c.x === 'look' ? `<div class="c-looks" role="listbox" aria-label="Look">${LOOKS.map(([v, n, d]) => `<button type="button" role="option" class="c-look" data-look="${v}" aria-selected="${v === window.aosLook.get()}"><i class="c-sw ${v}" aria-hidden="true"></i><span><b>${n}</b><small>${d}</small></span></button>`).join('')}</div>`
+        : c.x === 'look' ? `<div class="c-looks" role="listbox" aria-label="Look">${LOOKS.map(([v, n, d]) => `<button type="button" role="option" class="c-look" data-look="${v}" aria-selected="${v === window.aosLook.get()}"><i class="c-sw ${v}" aria-hidden="true"></i><span><b>${v === 'grid' ? 'Tron <span class="se">Special Edition</span>' : n}</b><small>${d}</small></span></button>`).join('')}</div>`
         : c.x === 'store' ? `<a class="c-link" href="${url('../aOS/')}">Open aOS</a>`
         : c.x === 'notes' ? `<ul class="c-notes">${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>${c.more ? `<a class="c-link" href="${url('../aOS/#whats-new')}">${c.more}</a>` : ''}` : '';
       body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.dh ? `<p>${c.dh}</p>` : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
@@ -2287,7 +2291,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma'], ['grid', 'Tron', 'Light cycles, red on black']];
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
   const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now
