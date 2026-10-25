@@ -62,6 +62,9 @@
     'The original look': 'Исходный стиль',
     '80s neon, magenta and cyan': 'Неон 80-х, пурпурный и голубой',
     'Gzhel and Khokhloma': 'Гжель и хохлома',
+    'Grid': 'Сетка',
+    'Light cycles, red on black': 'Световые мотоциклы, красный на чёрном',
+    'Light cycles: red light on a black grid, as in Tron: Ares': 'Световые мотоциклы: красный свет на чёрной сетке, как в «Троне: Арес»',
     'Mid-century: cream and walnut, mustard, teal and orange': 'Середина века: сливочный и орех, горчичный, бирюзовый и оранжевый',
     'Sea glass: frosted glass in the AllisonOS colors': 'Морское стекло: матовое стекло в цветах AllisonOS',
     '80s neon: a striped sunset, magenta and cyan on midnight': 'Неон 80-х: закат в полоску, пурпурный и голубой на тёмно-синем',
@@ -174,8 +177,8 @@
     'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.': 'На монеты покупаются платья, диадемы и вещи для единорога, а единорог растёт вместе с её знаниями.',
     'For grown-ups': 'Для взрослых',
     "Press and hold Grown-ups for the Parent corner: each child's progress, words to practice together, play time and the letter sounds you record.": 'Нажмите и удерживайте «Для взрослых», чтобы открыть уголок родителей: успехи каждого ребёнка, слова для совместных занятий, время игры и записанные вами звуки букв.',
-    'Four designs': 'Четыре дизайна',
-    'Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design.': 'Винтаж, Стандарт в стиле «Морское стекло», Ночная трасса или Народный: для выбора игрока и уголка родителей. Выберите в уголке родителей > Дизайн.',
+    'Five designs': 'Пять дизайнов',
+    'Vintage, Standard in Sea glass, Night Drive, Folk or Grid, for the player picker and the Parent corner. Pick one in the Parent corner > Design.': 'Винтаж, Стандарт в стиле «Морское стекло», Ночная трасса, Народный или Сетка: для выбора игрока и уголка родителей. Выберите в уголке родителей > Дизайн.',
     'News by topic': 'Новости по темам',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое.',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more. Tap the pill to pick a topic.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое. Нажмите на кнопку, чтобы выбрать тему.',
@@ -913,7 +916,7 @@
 (() => {
   const ABOUT = {
     'Light or dark, for aOS and every app': 'Светлая или тёмная тема в aOS и всех приложениях',
-    'The look of aOS and every app: Vintage, Sea glass, Night Drive or Folk': 'Стиль aOS и всех приложений',
+    'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Grid': 'Стиль aOS и всех приложений',
     'The language of aOS and every app': 'Язык aOS и всех приложений',
     'The apps pinned in Favorites on aOS Home, up to 4, by id': 'Избранное на главной aOS',
     'Calendar: the day weeks start on': 'Календарь: первый день недели',
@@ -974,7 +977,7 @@ aosLang.add({
   'Now in Russian too: aOS, Appearance, Language': 'Теперь и на русском: aOS, Оформление, Язык',
   'In Russian, the clock is 24-hour': 'На русском часы показывают 24-часовое время',
   'Looks and language': 'Стили и язык',
-  'Your name, then Appearance: four looks for aOS and every app, and English or Русский.': 'Ваше имя, затем Оформление: четыре стиля для aOS и всех приложений и выбор языка: English или Русский.',
+  'Your name, then Appearance: five looks for aOS and every app, and English or Русский.': 'Ваше имя, затем Оформление: пять стилей для aOS и всех приложений и выбор языка: English или Русский.',
   'New designs': 'Новые дизайны',
   'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.': 'Настройки, затем Дизайн: рядом с Винтажем и Стандартом появились Ночная трасса и Народный.',
   'Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)':
@@ -988,5 +991,6 @@ aosLang.add({
   'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings': 'На русском Часы показывают 24-часовое время, пока вы не выберете формат в их настройках',
   'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour': 'Ночная трасса и Народный: верх каждого приложения сливается со строкой состояния, фигуры проступают из-под неё, как в Винтаже, а строка — цвета самой страницы',
   'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)': 'Строка состояния — цвета страницы и когда в Оформлении выбрана Светлая или Тёмная тема (раньше она могла остаться цвета другого режима, полосой сверху)',
+  'A fifth look, Grid, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design': 'Пятый стиль, Сетка, по мотивам режима «Трон: Арес» в автомобилях Tesla: красный свет на чёрной сетке ночью и на чистом белом днём, заголовки шрифтом Orbitron, красный диск и световой след за каждым заголовком, свои значки приложений и Ипси в светящемся визоре. Профиль > Оформление > Стиль или Настройки > Дизайн в приложении',
   'aOS: the status bar changes with the page when you pick another look, light or dark, or open an app (it could keep the colour it had when aOS opened, another look\'s)': 'aOS: строка состояния меняется вместе со страницей, когда вы выбираете другой стиль, светлую или тёмную тему или открываете приложение (раньше она могла остаться того цвета, что был при открытии aOS, — цвета другого стиля)',
 });

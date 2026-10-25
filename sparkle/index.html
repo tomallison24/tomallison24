@@ -30,9 +30,9 @@
   app.js (the screens). The server is ../sparkle/api/ (functions/sparkle/api): each family
   account's players, and the letter sounds a grown-up recorded.
 
-  Four designs, picked in the Parent corner > Design or for every app in aOS (../home/design.js): Vintage
-  (mid-century, the default: the <style id="vintage"> block), Standard (Sea glass), and Night Drive and
-  Folk (generated from Vintage by aOS/scripts/make-looks.mjs). They dress the frame - the
+  Five designs, picked in the Parent corner > Design or for every app in aOS (../home/design.js): Vintage
+  (mid-century, the default: the <style id="vintage"> block), Standard (Sea glass), and Night Drive, Folk and
+  Grid (generated from Vintage by aOS/scripts/make-looks.mjs). They dress the frame - the
   player picker, the Parent corner and its sheets; the kingdom and the game itself are the same
   storybook art in both.
 -->
@@ -577,6 +577,35 @@ svg{display:block}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;border-radius:0;opacity:1}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
+</style>
+<style id="grid" media="not all">
+/* Grid: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FAFCFE;--mc-teal:#973835;--mc-orange:#E41F24;--mc-mustard:#FB6049;--bg:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-text:#973835;--cta:#D41C21;--cta-ink:#FCFDFF;--danger-text:#A50310;--sheet:#FAFCFE;--hair:rgba(23,27,32,.14);--hair-2:rgba(23,27,32,.08);--fill:rgba(23,27,32,.06);--scrim:rgba(23,27,32,.35);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,.05);--font:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){--mc-card:#0D0F11;--mc-teal:#FFA39B;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--cta:#F93433;--cta-ink:#F8FAFC;--danger-text:#FE9185;--sheet:#0D0F11;--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--scrim:rgba(0,0,0,.55);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05)}
+}
+:root[data-theme="dark"]{--mc-card:#0D0F11;--mc-teal:#FFA39B;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--cta:#F93433;--cta-ink:#F8FAFC;--danger-text:#FE9185;--sheet:#0D0F11;--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--scrim:rgba(0,0,0,.55);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05)}
+.pcard.add .plus{color:#171B20}
+.seg button[aria-pressed="true"]{color:#FCFDFF}
+/* Grid: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
+   the cabin lit red. Red light on black at night, on clean white by day: Orbitron headings (Exo 2 for Cyrillic), Exo 2 for
+   the rest (SIL Open Font License, ../home/fonts); an identity disc, a white square and a red light trail for the shapes,
+   a grid floor under them, and a glow on what's lit. */
+@font-face{font-family:"Orbitron";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/orbitron-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Exo 2";font-style:normal;font-weight:400 700;font-display:swap;src:url("../home/fonts/exo-2-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Exo 2";font-style:normal;font-weight:400 700;font-display:swap;src:url("../home/fonts/exo-2-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif;font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
+:root{--tr-line:#D0101E;--tr-hot:#2A2E35;--tr-glow:.35;--tr-grid:rgba(208,16,30,.16)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.28)}}
+:root[data-theme="dark"]{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.28)}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:radial-gradient(circle,var(--tr-line) 0 7%,transparent 7.5% 30%,var(--tr-line) 31% 35%,transparent 36% 55%,var(--tr-line) 56% 63%,transparent 64%);filter:drop-shadow(0 0 calc(var(--tr-glow) * 12px) var(--tr-line));opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:transparent;border-radius:4px;box-shadow:inset 0 0 0 3px var(--tr-hot),0 0 calc(var(--tr-glow) * 10px) color-mix(in srgb,var(--tr-hot) 60%,transparent)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:linear-gradient(90deg,transparent,var(--tr-line) 35%,var(--tr-line)) center/100% 22% no-repeat;border-radius:0;filter:drop-shadow(0 0 calc(var(--tr-glow) * 8px) var(--tr-line))}
+:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
+  background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
+  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
 </style>
 <script src="../home/design.js" data-app="sparkle"></script>
 <script src="../home/sky.js"></script>

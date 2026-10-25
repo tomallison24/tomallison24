@@ -21,7 +21,7 @@
 // - Data on this phone: localStorage allison-money-v1. Settings > Card rewards
 //   (each card's cash back), the online stores and the alerts marked fixed are
 //   shared with whoever sees Money.
-// - Four designs, picked in Settings > Design (../home/design.js).
+// - Five designs, picked in Settings > Design (../home/design.js).
 
 // Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
 if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {

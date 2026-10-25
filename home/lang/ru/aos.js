@@ -185,6 +185,7 @@
     'Sea glass': 'Морское стекло', 'The original look': 'Самый первый стиль',
     'Night Drive': 'Ночная трасса', '80s neon, magenta and cyan': 'Неон 80-х, пурпурный и голубой',
     'Folk': 'Народный', 'Gzhel by day, Khokhloma by night': 'Днём гжель, ночью хохлома',
+    'Grid': 'Сетка', 'Light cycles, red on black': 'Световые мотоциклы, красный на чёрном',
     'Subscription': 'Подписка',
     "The family's plan": 'План семьи',
     'Updates': 'Обновления',

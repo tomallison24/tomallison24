@@ -68,7 +68,7 @@
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
-  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} return `../${id}/icon${/^(glass|neon|folk)$/.test(d || '') ? '-' + d : ''}-180.png`; };
+  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} return `../${id}/icon${/^(glass|neon|folk|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
   // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
@@ -131,7 +131,7 @@
   function prefsCame(apps) {
     for (const id of apps) {
       if (id === 'aos') {
-        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|folk)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
+        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|folk|grid)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
         if (W.theme) W.theme.set(W.theme.read());
         try { const lg = localStorage.getItem('aos.lang'); if (window.aosLang && lg && lg !== aosLang.get()) aosLang.set(lg); } catch {}   // the language came from another device: drawn again in it
         pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
