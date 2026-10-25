@@ -191,5 +191,29 @@ for (const scheme of ['light', 'dark']) {
   report(`under a solid status bar (${scheme}), an app's shapes fade in from its own ground in Vintage, Night Drive and Folk, and the tint matches`, pr); await ctx.close();
 }
 
+// 8. aOS's bar is the colour of the page, whichever mode's meta iOS goes by: Appearance set to Dark on a phone in
+// light mode, at night, in Vintage and then Night Drive; then Light again. Under a solid bar (an iPhone's), iOS 26
+// goes by #barcap: over 10px tall, so iOS takes its colour as it is, and taken off and put back on each change
+// of colour, so iOS reads it again (without both, the bar kept its first colour: another look's)
+{
+  const { ctx, p, errs } = await open('light', { 'aos.sky': 'night', 'aos.bar': 'solid', 'home.settings': JSON.stringify({ theme: 'dark' }) }); const pr = [...errs];
+  await p.evaluate(() => { window.capOff = 0; new MutationObserver(ms => { for (const m of ms) if (/display:\s*none/.test(m.oldValue || '')) capOff++; }).observe(document.getElementById('barcap'), { attributes: true, attributeOldValue: true, attributeFilter: ['style'] }); });
+  const bar = async () => { await p.waitForTimeout(300); return p.evaluate(() => { const hex = c => '#' + c.match(/\d+/g).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase(), cap = document.getElementById('barcap');
+    const off = capOff; capOff = 0;
+    return { ground: hex(getComputedStyle(document.body).backgroundColor), metas: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content.toUpperCase()),
+      cap: hex(getComputedStyle(cap).backgroundColor), capH: cap.getBoundingClientRect().height, capTop: cap.getBoundingClientRect().top, off }; }); };
+  const check = async (what, changed = true) => { const s = await bar();
+    if (s.metas.some(m => m !== s.ground)) pr.push(`${what}: the bar's metas ${s.metas.join(', ')} are not the page's ${s.ground}`);
+    if (s.cap !== s.ground) pr.push(`${what}: #barcap is ${s.cap}, not the page's ${s.ground}`);
+    if (s.capTop !== 0 || s.capH <= 10) pr.push(`${what}: #barcap is ${s.capH}px tall at ${s.capTop}px: iOS samples a strip 10px or less once and keeps that colour`);
+    if (changed && !s.off) pr.push(`${what}: #barcap changed colour but was not taken off and put back, so iOS keeps the old colour`); };
+  await check('Vintage, Dark on a light phone', false);
+  await openLook(p); await p.click('#looks [data-look="neon"]');
+  await check('Night Drive, Dark on a light phone');
+  await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('home.settings')); s.theme = 'light'; localStorage.setItem('home.settings', JSON.stringify(s)); document.documentElement.setAttribute('data-theme', 'light'); dispatchEvent(new CustomEvent('aos:theme', { detail: 'light' })); });
+  await check('Night Drive, Light');
+  report('aOS\'s bar takes the colour the page shows, with Appearance set to Light or Dark, in Vintage and Night Drive, and iOS reads it again on each change', pr); await ctx.close();
+}
+
 await b.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed'); process.exit(failed ? 1 : 0);
