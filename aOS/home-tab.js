@@ -358,6 +358,7 @@
   const metas = [...document.querySelectorAll('meta[name="theme-color"]')];
   const see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
   const hex = c => { const n = (/rgba?\(([^)]*)\)/.exec(c || '') || [])[1]; return n ? '#' + n.split(',').slice(0, 3).map(x => Math.round(+x).toString(16).padStart(2, '0')).join('').toUpperCase() : c; };
+  let capWas = '';   // #barcap's colour, as iOS last read it
   function tint() {
     let c = '', bar = '';
     const f = current && frames[current] && frames[current].firstChild;
@@ -372,8 +373,12 @@
     // the status bar, when it's solid (an iPhone's, aOS's: ../home/sky.js): iOS colours it from the fixed
     // element at the top of the screen, and keeps that colour once nothing's there. #barcap is always
     // there, in the colour of what's showing: the app's own background (its top fades into it, in
-    // ../home/welcome.js), else aOS's
+    // ../home/welcome.js), else aOS's. iOS reads the bar's colour again only when a fixed element comes or
+    // goes (WebKit: didAddOrRemoveViewportConstrainedObjects), so once #barcap's colour changes it is taken
+    // off and put back: without that the bar kept the colour it had at launch (another look's, the day sky's)
     document.documentElement.style.setProperty('--barcap', (f && c) || 'var(--bg)');
+    const cap = $('barcap'), now = cap && getComputedStyle(cap).backgroundColor;
+    if (cap && now !== capWas) { capWas = now; cap.style.display = 'none'; void cap.offsetHeight; cap.style.display = ''; }
     for (const m of metas) {
       if (!m.dataset.home) m.dataset.home = m.content;
       const want = hex(bar) || m.dataset.home;

@@ -97,6 +97,7 @@
         'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour',
         'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)',
         'A fifth look, Grid, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design',
+        'aOS: the status bar changes with the page when you pick another look, light or dark, or open an app (it could keep the colour it had when aOS opened, another look\'s)',
         'aOS: now and then Ipsy rolls across the bar at the top of Home and back (never with Reduce Motion; a tap sends it straight home)',
         'aOS: removing someone from the family takes them out completely: signed out of every app, and their account and everything aOS keeps for them deleted (no more Invite back: inviting them again makes a new account)',
         'aOS: Home is where it opens (in place of Apps): the Ipsy bar at the top, your Favorites with a Weather and a Calendar widget (today\'s weather, what\'s next), then every app as an icon in four groups (Family, Every day, Out and about, You): one tap opens any app',
