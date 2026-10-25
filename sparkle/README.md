@@ -21,8 +21,9 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   spelled. Tapping the fog says it will lift if she keeps learning.
   **Today's quest** is three stops, always starting at Story Tower; finishing it gives a present.
 - **A round** (6 to 8 questions) in a land: Story Tower (reading, Professor Hoot), the Tiara Workshop
-  (spelling, Gemma the fairy), the Gem Mine (math, Pebble the dragon), Star Meadow (the wand's sparkle
-  sequences, with her own unicorn) and the Fairy Garden (memory, Bloom the fairy: Flower Match, What's
+  (spelling, Gemma the fairy), the Gem Mine (math, Pebble the dragon), Star Meadow (with her own
+  unicorn: the wand's sparkle sequences, or **Pattern Parade**, a game a round, the one she's played
+  least first) and the Fairy Garden (memory, Bloom the fairy: Flower Match, What's
   Missing and Story Recall, a game a round, the one she's played least first; Flower Match rounds are
   2 games, the others 5 questions). Every question is spoken, and
   shown in the school letters as it's said; tapping the host says it again. No timers, lives or
@@ -57,13 +58,44 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   under the fog on the map and gets its colour back a chapter at a time, all of it at chapter 10.
   Chapters 5 and 10 give a present that is never sold (a piece for a castle room, the fairy wings, the
   Rainbow Tiara). The castle's **Stories** shelf plays any chapter heard again.
-- **Castle rooms** (`rooms.js`): a bedroom, a library and a ballroom to decorate, in the castle's
+- **Pattern Parade** (Star Meadow, `content.js` pattern): finish the parade's pattern of floats (AB,
+  AAB, ABB, ABC, AABB, a gap in the middle, colour only, then growing patterns), 8 levels.
+- **The Unicorn Bakery** (the castle's kitchen, with Pebble, `content.js` bake): tap the right number
+  of things into the bowl, tap one to take it out, then Bake: count to 5 and to 10, two ingredients, one
+  more or one fewer, put together, take away, make 10, tens and ones (a sack of ten), share cookies
+  fairly on plates, within 20; 10 levels, 5 bakes a round. Each thing put in is counted out loud; a
+  wrong bake counts the bowl with her, a second says the recipe. Every bake that comes out right is a
+  treat for her unicorn's pantry. Not in the story's chapters or the quest; a Parent corner switch
+  (Lands open > Bakery) rests it.
+- **Her castle** (`stable-art.js` castle): the castle's button on the map opens it cut away like a
+  dollhouse: tap the bedroom, the library, the ballroom, the dressing room (the Boutique, the
+  stories, the treasures), the kitchen (the bakery) or the stables. The stables glow, and the map's
+  castle button shows what's wanted, when her unicorn needs her.
+- **The stables** (`care.js`, `stable-art.js`): her unicorn, like a Tamagotchi. Food, clean, fun and
+  rest fall as real time passes (food and fun fastest: empty in about 17 hours) and a little after
+  each round (the Gem Mine is muddiest); a unicorn left alone looks sad, on the map too (never ill,
+  never gone). She feeds it (oats and apples are always free; baked treats and the shop's carrots,
+  clover and sugar fill more), rubs it with the sponge until it's foamy and rinses it with the bucket,
+  brushes the mane, plays with the ball (and the bubble wand, ribbon and kite from the shop), pats it,
+  and puts it to bed with the lantern: asleep, rest fills (faster while she watches) and it wakes when
+  rested, or when she rides off. Too tired or hungry, it won't play. Coins only buy extras.
+  Left be, it wanders the stable (each leg swinging, a little trot, facing the way it goes; slower
+  when sad or tired), nods and nibbles the straw, its tail always swishing; it stands still to be fed,
+  washed or played with, and only breathes slowly asleep (none of it with Reduce Motion).
+- **Her bedroom** (`bedroom.js`): tap things to play with them: the bed puts her to sleep (night,
+  a lullaby, her head on the pillow; a tap wakes her), lamps and fairy lights, curtains, the music
+  box, the toy chest, the star nightlight, the plant blooms, plush toys hop, the wardrobe and vanity
+  open the dressing room, the bookshelf the stories; tap the floor and she walks there. Decorate
+  (the paintbrush): drag anything anywhere (wall things on the wall, the rest on the floor), turn it
+  around or put it away; add her things, buy more in the shop, change the wallpaper and the floor.
+  Her old bedroom pieces and the story's presents carry over.
+- **Castle rooms** (`rooms.js`): a library and a ballroom to decorate, in the dressing room's
   Rooms tab. Each has four places (the wallpaper, a big piece, a rug or dance floor, a small piece),
   each with a free piece to start, two to buy (20 to 75 coins) and a present from the story. The
   first tap says the price and a second buys, as in the Boutique; she can move any piece she has
   back in. Pieces to buy can come as a surprise present too.
 - **Her rank**: Little Princess, Princess (20), Royal Princess (32), Princess of Sparkle Kingdom (45):
-  every skill's highest level added up (7 to 55), never going back down. It shows in the castle, the
+  the first seven skills' highest levels added up (7 to 55; Pattern Parade and the bakery don't count), never going back down. It shows in the castle, the
   end of the round that earns it, and the Parent corner.
 - **Coins and the castle**: 1 coin a right answer (first or second try), 3 for finishing a round,
   never taken away. In her castle she tries on what she has, and in the Royal Boutique the first
@@ -125,12 +157,16 @@ syncs at the end of a round, when the game is put away and when a grown-up signs
 answer (the free plan's writes are scarce). Two phones' copies merge without losing anything: coins
 and play time are kept per phone and added up, things bought and found are joined, each skill takes
 the copy with more answers (`engine.js` merge; a stale save is answered 409 with the newer copy).
+Her unicorn (`pet`: the needs, when they were last brought up to date, its pantry and toys) is the
+copy cared for last; her bedroom (`bedroom`: the wallpaper, the floor, each thing and where it is)
+comes with the newer copy of her.
 A child is never asked to sign in.
 
 ## Tests
 
 - `node sparkle/scripts/logic-test.mjs`: the ladder, the warm-up, review, a round's plan, coins,
-  merging, the story's chapters and colour, and thousands of questions from every level, each well formed.
+  merging, the story's chapters and colour, and thousands of questions from every level, each well formed;
+  every parade's answer follows its pattern, every bake can be made, and the stables' needs over time.
 - `node sparkle/scripts/letters-test.mjs`: the school letters.
 - `node sparkle/scripts/api-test.mjs`: the server route on an in-memory KV, and the natural voices
   against a stand-in for Google.

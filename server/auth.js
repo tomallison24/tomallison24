@@ -51,6 +51,10 @@
 //                    five years of months kept (older ones deleted with the reader's next push)
 //   money:check:<id>:<day>   how many times that person's phone had Ipsy check transactions today
 //                    (functions/money/api, POST check); gone after two days
+//   money:ipsy:<id>:<day>, money:ipsy:steps:<id>:<day>   that person's questions to Ipsy in Money
+//                    today, and the steps they took (server/ipsy.js); gone after two days
+//   money:ideas:<id>:<day>   how many times that person asked Ipsy for category ideas today
+//                    (functions/money/api, POST ideas); gone after two days
 //   sparkle:<id>, sparkle:clips:<id>   that account's Sparkle Kingdom players (their progress, coins
 //                    and treasures) and the letter sounds its grown-up recorded (functions/sparkle/api)
 //   <app>:ipsy:<id>:<day>   how many questions that person asked Ipsy in that app today

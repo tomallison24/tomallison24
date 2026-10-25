@@ -82,6 +82,14 @@ const state = async p => { await p.waitForFunction(() => { const R = window.spar
 async function solve(p, q, root = '') {
   if (q.kind === 'build') { await p.waitForSelector(root + ' .tile'); const used = new Set();
     for (const l of q.word) { const k = q.tiles.findIndex((t, i) => t === l && !used.has(i)); used.add(k); await p.click(`${root} .tile[data-t="${k}"]`); } return true; }
+  // the Unicorn Bakery: put in (or take out) what the recipe needs, then Bake; or share the cookies, then Done
+  if (q.kind === 'bake') { await p.waitForSelector('#bakeBtn');
+    if (q.mode === 'share') for (let k = 0; k < q.n; k++) await p.click(`.plate[data-plate="${k % q.plates}"]`);
+    else for (const [id, n] of Object.entries(q.need)) { const have = (q.start || {})[id] || 0, sack = q.sack && n >= 10;
+      if (sack) await p.click('[data-sack]');
+      for (let k = have + (sack ? 10 : 0); k < n; k++) await p.click(`[data-add="${id}"]`);
+      for (let k = n; k < have; k++) await p.click(`[data-out="${id}"] >> nth=0`); }
+    await p.click('#bakeBtn'); await p.waitForTimeout(1600); return true; }
   if (q.kind === 'match') { const by = {}; q.cards.forEach((c, i) => (by[c.pair] = by[c.pair] || []).push(i));
     for (const [a, c] of Object.values(by)) { await p.click(`.card[data-k="${a}"]`); await p.click(`.card[data-k="${c}"]`); await p.waitForTimeout(450); } return true; }
   if (q.kind === 'missing') { await p.waitForSelector('#choices .choice', { timeout: 15000 }); for (const a of q.answers) await p.click(`#choices .choice[data-c="${a}"]`); return true; }
@@ -215,7 +223,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   for (const k of d.back ? d.seq.slice().reverse() : d.seq) await p.click(`.gatebox .wand button[data-k="${k}"]`);
   await p.waitForFunction(() => window.sparkle.screen === 'round', null, { timeout: 12000 }).catch(() => pr.push('the crystal door did not open to Star Meadow'));
   st = await state(p);
-  if (!st.q || st.q.kind !== 'wand') pr.push('Star Meadow is not the sparkle sequences');
+  if (!st.q || !(st.q.kind === 'wand' || st.q.skill === 'pattern')) pr.push('Star Meadow is not the sparkle sequences or Pattern Parade: ' + (st.q && st.q.kind));
   await shot(p, '8-meadow');
   st = await playRound(p);
   if (st.screen !== 'reward') pr.push('Star Meadow\'s round did not end');
@@ -228,7 +236,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
 {
   const { ctx, p, errs } = await phone({ seed: seedOf(AVA) }); const pr = [];
   await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
-  await sp(p, () => { window.sparkle.openCastle(); }); await p.waitForTimeout(200);
+  await sp(p, () => { window.sparkle.openWardrobe(); }); await p.waitForTimeout(200);
   await p.click('[data-item="gown-lilac"]');
   if (await coins(p) !== 40) pr.push('one tap on something not hers spent coins');
   if (!(await p.locator('[data-item="gown-lilac"].ask').count())) pr.push('one tap does not ask about the price');
@@ -384,7 +392,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await sp(p, () => { window.sparkle.startRound('read'); }); await playRound(p);
   if ((await p.locator('#chapterBtn').count())) pr.push('a chapter came again before its rounds');
   // the castle: her rank, the Stories shelf, a story present that can't be bought
-  await sp(p, () => window.sparkle.openCastle()); await p.waitForTimeout(200);
+  await sp(p, () => window.sparkle.openWardrobe()); await p.waitForTimeout(200);
   if (!(await p.locator('#castleRank').innerText()).includes('Princess')) pr.push('the castle does not show her rank');
   await p.click('[data-tab="stories"]');
   if (await p.locator('[data-chapter^="read:"]').count() !== 5) pr.push('the Stories shelf should have 5 Story Tower chapters to hear');
@@ -395,17 +403,19 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.click('#chBack'); await p.waitForTimeout(150);
   if ((await sp(p, () => window.sparkle.screen)) !== 'castle') pr.push('hearing a chapter again does not come back to the castle');
   if ((await sp(p, () => window.sparkle.save.players.p1.chapters.read)) !== 5) pr.push('hearing chapter 2 again changed what she has heard');
-  // the Rooms: a piece to buy (ask, then buy), the owl lamp from the story goes in the library, a story piece can't be bought
+  // the Rooms (the library and the ballroom; the bedroom has its own screen): a piece to buy (ask, then buy),
+  // the owl lamp from the story goes in the library, a story piece can't be bought
   await p.click('[data-tab="rooms"]'); await p.waitForTimeout(100);
   if (!(await p.locator('#dress .roomview svg').count())) pr.push('the Rooms tab does not show the room');
+  if (await p.locator('[data-room="bedroom"]').count()) pr.push('the bedroom is still a Rooms tab room');
   const r0 = await coins(p);
-  await p.click('[data-piece="bedroom-wall-hearts"]');
+  await p.click('[data-piece="library-wall-moons"]');
   if ((await coins(p)) !== r0) pr.push('one tap bought a room piece');
-  await p.click('[data-piece="bedroom-wall-hearts"]');
-  const bed = await sp(p, () => { const me = window.sparkle.save.players.p1; return { own: me.owned.includes('bedroom-wall-hearts'), on: (me.rooms || {}).bedroom && me.rooms.bedroom.wall }; });
-  if (!bed.own || bed.on !== 'bedroom-wall-hearts' || (await coins(p)) !== r0 - 20) pr.push('buying the hearts wallpaper: ' + JSON.stringify(bed));
-  await p.click('[data-piece="bedroom-bed-stars"]');
-  if (await sp(p, () => window.sparkle.save.players.p1.owned.includes('bedroom-bed-stars'))) pr.push('a story bed was given by tapping it');
+  await p.click('[data-piece="library-wall-moons"]');
+  const lib = await sp(p, () => { const me = window.sparkle.save.players.p1; return { own: me.owned.includes('library-wall-moons'), on: (me.rooms || {}).library && me.rooms.library.wall }; });
+  if (!lib.own || lib.on !== 'library-wall-moons' || (await coins(p)) !== r0 - 25) pr.push('buying the moon wallpaper: ' + JSON.stringify(lib));
+  await p.click('[data-piece="library-shelf-golden"]');
+  if (await sp(p, () => window.sparkle.save.players.p1.owned.includes('library-shelf-golden'))) pr.push('a story bookshelf was given by tapping it');
   await p.click('[data-room="library"]'); await p.click('[data-piece="library-owl-lamp"]');
   if ((await sp(p, () => (window.sparkle.save.players.p1.rooms.library || {}).small)) !== 'library-owl-lamp') pr.push('the owl lamp from the story did not go in the library');
   await shot(p, '18-rooms');
@@ -476,11 +486,18 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (!cards) pr.push('Flower Match runs off the screen');
   await shot(p, '22-ipad-match');
   if (await wide()) pr.push('the round is wider than the screen');
-  await sp(p, () => window.sparkle.openCastle()); await p.click('[data-tab="rooms"]'); await p.waitForTimeout(200);
+  await sp(p, () => window.sparkle.openWardrobe('rooms')); await p.waitForTimeout(200);
   const castle = await sp(p, () => { const d = document.getElementById('dress').getBoundingClientRect(), sh = document.querySelector('.shelf').getBoundingClientRect(); return sh.left >= d.right - 1; });
   if (!castle) pr.push('the castle\'s shelf is not beside the room');
   await shot(p, '23-ipad-castle');
   if (await wide()) pr.push('the castle is wider than the screen');
+  // the castle cut away, the stables and the bedroom fit too
+  for (const [open, name] of [['openCastle', 'home'], ['openStable', 'stable'], ['openBedroom', 'bedroom']]) {
+    await sp(p, f => window.sparkle[f](), open); await p.waitForTimeout(250); await shot(p, '23-ipad-' + name);
+    if (await wide()) pr.push(`the ${name} screen is wider than the screen`);
+    const off = await sp(p, () => [...document.querySelectorAll('.game:not([hidden]) .stall, .game:not([hidden]) .care, .game:not([hidden]) .broomIn, .game:not([hidden]) .cutaway svg')].some(e => { const r = e.getBoundingClientRect(); return r.bottom > innerHeight + 2 || r.right > innerWidth + 2; }));
+    if (off) pr.push(`the ${name} screen runs off the screen`);
+  }
   pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
   report('an iPad sideways: answers beside the question, Flower Match on the screen, the kingdom full width, the room beside its shelf', pr); await ctx.close();
 }
@@ -579,6 +596,173 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   }
   pr.push(...errs); await ctx.close();
   report('the map: hello only on picking her princess; a trip is one smooth glide that ends on the place', pr);
+}
+
+// 14. Pattern Parade in Star Meadow and the Unicorn Bakery in the castle's kitchen: a round of each; a wrong bake
+// counts with her first; every right bake is a treat in her unicorn's pantry; back to the castle after the bakery
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.demos = { 'pattern:2': 1, 'bake:3': 1 };
+  ava.skills.pattern = { level: 2, hist: [], streak: 0, misses: 0, answers: 0, placed: true, best: 2 };
+  ava.skills.bake = { level: 3, hist: [], streak: 0, misses: 0, answers: 0, placed: true, best: 3 };
+  ava.skills.wand = { level: 2, hist: [], streak: 0, misses: 0, answers: 20, placed: true, best: 2 };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava) }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  await sp(p, () => { window.sparkle.startRound('meadow'); }); let st = await state(p);
+  if (st.skill !== 'pattern') pr.push('Star Meadow did not pick the game she has played least: ' + st.skill);
+  if (await p.locator('#show .parade .fl').count() < 6) pr.push('the parade is not drawn');
+  if (await p.locator('#show .parade .fl.gap').count() !== 1) pr.push('the parade has no one empty float');
+  if (await p.locator('.choice.shape svg').count() !== st.q.ids.length) pr.push('the choices are not drawn pieces');
+  await shot(p, '24-parade');
+  st = await playRound(p);
+  if (st.screen !== 'reward') pr.push('the Pattern Parade round did not end');
+  await sp(p, () => window.sparkle.openCastle()); await p.waitForTimeout(300);
+  if (await p.locator('#cutaway [data-go]').count() !== 6) pr.push('the castle does not have its six rooms');
+  await shot(p, '25-castle');
+  await p.click('#cutaway [data-go="kitchen"] .hit'); st = await state(p);
+  if (st.skill !== 'bake' || st.q.kind !== 'bake') pr.push('the kitchen did not start the Unicorn Bakery');
+  await p.waitForSelector('#bakeBtn');
+  await shot(p, '26-bakery');
+  // a wrong bake (the bowl still empty): no move on, she counts with Pebble
+  const i0 = st.i; await p.click('#bakeBtn'); await p.waitForTimeout(400);
+  if ((await state(p)).i !== i0) pr.push('a wrong bake moved on');
+  st = await playRound(p);
+  if (st.screen !== 'reward') pr.push('the bakery round did not end');
+  const baked = await sp(p, () => window.sparkle.save.players.p1.pet);
+  const n = Object.values((baked || {}).pantry || {}).reduce((a, b) => a + b, 0);
+  if (n < 4) pr.push('the bakes did not become treats in the pantry: ' + JSON.stringify(baked && baked.pantry));
+  if (!(await p.locator('#mapBtn').innerText()).includes('Castle')) pr.push('after the bakery the way back is not the castle');
+  await p.click('#mapBtn'); await p.waitForTimeout(200);
+  if ((await sp(p, () => window.sparkle.screen)) !== 'home') pr.push('the castle button did not go back to the castle');
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c)); await ctx.close();
+  report('Pattern Parade in Star Meadow; the castle cut away; the Unicorn Bakery in the kitchen, its treats in the pantry', pr);
+}
+
+// 15. the stables: a unicorn left a day is sad and hungry (and the castle says so); feeding, a baked treat,
+// scrubbing with the sponge and rinsing, the ball, bed; full is full; and the needs fall as hours pass
+{
+  const ava = JSON.parse(JSON.stringify(AVA));
+  ava.pet = { food: 90, clean: 90, fun: 90, rest: 90, at: Date.now() - 30 * 36e5, asleep: false, pantry: { cupcake: 1 }, toys: ['ball'] };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava) }); const pr = [];
+  const pet = () => sp(p, () => JSON.parse(JSON.stringify(window.sparkle.save.players.p1.pet)));
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  if (!(await p.locator('#castleBtn .nb').count())) pr.push('the castle button does not show that her unicorn needs her');
+  await sp(p, () => window.sparkle.openCastle()); await p.waitForTimeout(200);
+  if (!(await p.locator('#cutaway [data-go="stable"].want').count())) pr.push('the stables do not glow when her unicorn needs her');
+  await p.click('#cutaway [data-go="stable"] .hit'); await p.waitForTimeout(300);
+  if ((await sp(p, () => window.sparkle.screen)) !== 'stable') pr.push('the stables did not open');
+  let v = await pet();
+  if (!(v.food < 20 && v.fun < 20)) pr.push('a day alone did not make her hungry and bored: ' + JSON.stringify(v));
+  if (await p.locator('#needs .need.low').count() < 2) pr.push('the low needs are not shown low');
+  await shot(p, '27-stable-sad');
+  await p.click('[data-care="oats"]'); await p.waitForTimeout(2200);
+  const f1 = (await pet()).food; if (f1 < v.food + 20) pr.push('oats did not feed her: ' + v.food + ' -> ' + f1);
+  await p.click('[data-care="cupcake"]'); await p.waitForTimeout(2200);
+  v = await pet(); if (v.food < f1 + 30 || (v.pantry.cupcake || 0) !== 0) pr.push('the baked cupcake did not feed her: ' + JSON.stringify(v));
+  // wash: the sponge, rubbed across her, then the bucket
+  await p.click('[data-ct="wash"]'); await p.click('[data-care="sponge"]');
+  const c0 = (await pet()).clean, u = await p.locator('#uni').boundingBox();
+  await p.mouse.move(u.x + u.width * 0.3, u.y + u.height * 0.5); await p.mouse.down();
+  for (let k = 0; k < 30; k++) await p.mouse.move(u.x + u.width * (0.3 + (k % 2) * 0.35), u.y + u.height * (0.4 + (k % 3) * 0.1), { steps: 3 });
+  await p.mouse.up(); await p.waitForTimeout(200);
+  const c1 = (await pet()).clean; if (c1 < c0 + 15) pr.push('rubbing with the sponge did not clean her: ' + c0 + ' -> ' + c1);
+  await shot(p, '28-stable-foam');
+  await p.click('[data-care="bucket"]'); await p.waitForTimeout(300);
+  // too tired to play after a day alone; rested, the ball cheers her up; then bed
+  await p.click('[data-ct="play"]'); const fun1 = (await pet()).fun; await p.click('[data-care="ball"]'); await p.waitForTimeout(200);
+  if ((await pet()).fun !== fun1) pr.push('she played though too tired');
+  await sp(p, () => { window.sparkle.save.players.p1.pet.rest = 80; }); const fun0 = (await pet()).fun; await p.click('[data-care="ball"]'); await p.waitForTimeout(300);
+  if ((await pet()).fun < fun0 + 10) pr.push('the ball did not cheer her up');
+  await p.click('[data-ct="sleep"]'); await p.click('[data-care="lantern"]'); await p.waitForTimeout(1300);
+  v = await pet(); if (!v.asleep) pr.push('the lantern did not put her to bed');
+  await shot(p, '29-stable-night');
+  await p.click('[data-care="lantern"]'); await p.waitForTimeout(200);
+  if ((await pet()).asleep) pr.push('the lantern did not wake her');
+  // full is full
+  await p.click('[data-ct="food"]'); await sp(p, () => { window.sparkle.save.players.p1.pet.food = 99; });
+  await p.click('[data-care="oats"]'); await p.waitForTimeout(300);
+  if ((await pet()).food !== 99) pr.push('she ate when full');
+  // the shop: a carrot, asked then bought
+  await p.click('[data-ct="shop"]'); const k0 = await coins(p);
+  await p.click('[data-buy="carrot"]'); await p.click('[data-buy="carrot"]'); await p.waitForTimeout(200);
+  if ((await coins(p)) !== k0 - 2 || (await pet()).pantry.carrot !== 1) pr.push('buying a carrot: ' + (await coins(p)) + ' coins, ' + JSON.stringify((await pet()).pantry));
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c)); await ctx.close();
+  report('the stables: sad after a day alone, fed, a baked treat, washed and rinsed, played with, put to bed; full is full; the shop', pr);
+}
+
+// 16. her bedroom: tap the lamp, the bed puts her to sleep (and a tap wakes her); decorate: drag the bed, buy
+// something and it's in the room, a new wallpaper, put something away; all kept after a reload
+{
+  const { ctx, p, errs } = await phone({ seed: seedOf(AVA) }); const pr = [];
+  const bed = () => sp(p, () => JSON.parse(JSON.stringify(window.sparkle.save.players.p1.bedroom || null)));
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  await sp(p, () => window.sparkle.openCastle()); await p.waitForTimeout(200);
+  await p.click('#cutaway [data-go="bedroom"] .hit'); await p.waitForTimeout(300);
+  if ((await sp(p, () => window.sparkle.screen)) !== 'bedroom') pr.push('the bedroom did not open');
+  let b = await bed();
+  const iOf = id => b.items.findIndex(x => x.id === id);
+  if (iOf('bedroom-bed-pink') < 0 || iOf('bed-window') < 0) pr.push('the bedroom does not start with its bed and window');
+  await shot(p, '30-bedroom');
+  await p.click(`.bi[data-i="${iOf('bedroom-lamp')}"]`); await p.waitForTimeout(200);
+  if (!(await bed()).items[iOf('bedroom-lamp')].on) pr.push('tapping the lamp did not turn it on');
+  await p.click(`.bi[data-i="${iOf('bedroom-bed-pink')}"]`); await p.waitForTimeout(400);
+  if (!(await p.locator('#broomIn.dark').count()) || (await p.locator('#bpr').count())) pr.push('the bed did not put her to sleep');
+  await shot(p, '31-bedroom-night');
+  await p.click('#broomIn'); await p.waitForTimeout(300);
+  if (await p.locator('#broomIn.dark').count()) pr.push('a tap did not wake her');
+  // decorate
+  await p.click('#bedEdit'); await p.waitForTimeout(200);
+  if (await p.locator('#bshelf').isHidden()) pr.push('Decorate does not open the shelf');
+  const x0 = b.items[iOf('bedroom-bed-pink')].x, bb = await p.locator(`.bi[data-i="${iOf('bedroom-bed-pink')}"]`).boundingBox();
+  await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.mouse.down(); await p.mouse.move(bb.x + bb.width / 2 - 120, bb.y + bb.height / 2, { steps: 8 }); await p.mouse.up();
+  b = await bed(); if (!(b.items[iOf('bedroom-bed-pink')].x < x0 - 40)) pr.push('dragging the bed did not move it: ' + x0 + ' -> ' + b.items[iOf('bedroom-bed-pink')].x);
+  await p.click('[data-bt="shop"]'); const k0 = await coins(p);
+  await p.click('[data-bed="bed-teddy"]'); if ((await coins(p)) !== k0) pr.push('one tap bought the teddy');
+  await p.click('[data-bed="bed-teddy"]'); await p.waitForTimeout(200);
+  b = await bed(); if (iOf('bed-teddy') < 0 || (await coins(p)) !== k0 - 15) pr.push('buying the teddy: ' + (await coins(p)) + ' coins, in the room ' + (iOf('bed-teddy') >= 0));
+  await p.click('[data-bt="walls"]'); await p.click('[data-bed="wall-dots"]'); await p.click('[data-bed="wall-dots"]'); await p.waitForTimeout(200);
+  if ((await bed()).wall !== 'wall-dots') pr.push('the new wallpaper is not up');
+  await p.click('[data-bt="shop"]'); await p.click('[data-bed="bedroom-bed-stars"]');
+  if (await sp(p, () => window.sparkle.save.players.p1.owned.includes('bedroom-bed-stars'))) pr.push('a story present could be bought');
+  // put the lamp away: it goes back to My things
+  const lamp = p.locator(`.bi[data-i="${iOf('bedroom-lamp')}"]`);   // (the bed may be over it now)
+  await lamp.dispatchEvent('pointerdown'); await p.locator('#broomIn').dispatchEvent('pointerup'); await p.waitForTimeout(150);
+  await p.click('[data-sb="away"]'); await p.waitForTimeout(150);
+  b = await bed(); if (iOf('bedroom-lamp') >= 0) pr.push('putting the lamp away left it in the room');
+  await p.click('[data-bt="mine"]'); if (!(await p.locator('[data-bed="bedroom-lamp"]').count())) pr.push('the lamp is not in My things');
+  await shot(p, '32-bedroom-decorate');
+  await p.click('#bedEdit'); await p.reload(); await p.waitForTimeout(500);
+  const kept = await sp(p, () => window.sparkle.save.players.p1.bedroom);
+  if (!kept || kept.wall !== 'wall-dots' || !kept.items.some(x => x.id === 'bed-teddy')) pr.push('after a reload the bedroom is not as she left it');
+  pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c)); await ctx.close();
+  report('her bedroom: the lamp, sleeping and waking; decorating: drag, buy, wallpaper, put away; kept after a reload', pr);
+}
+
+// 17. her unicorn about the stables, with motion on: she walks (legs swinging, facing the way she goes), nods
+// and grazes on her own, and stands still to be fed; asleep, she only breathes
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.pet = { food: 70, clean: 90, fun: 70, rest: 90, at: Date.now(), asleep: false, pantry: {}, toys: ['ball'] };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava), motion: 'no-preference' }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  await sp(p, () => window.sparkle.openStable());
+  const walked = await p.waitForFunction(() => { const u = document.getElementById('uni'); return u && u.classList.contains('walk') && u.style.getPropertyValue('--x') !== '0px'; }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+  if (!walked) pr.push('her unicorn never walked about the stable');
+  else {
+    const legs = await sp(p, () => document.querySelector('#uni .l92').getAnimations().length > 0 && document.querySelector('#uni .tl').getAnimations().length > 0);
+    if (!legs) pr.push('walking, her legs and tail do not move');
+    const way = await sp(p, () => { const u = document.getElementById('uni'); return { left: u.classList.contains('left'), f: getComputedStyle(u).getPropertyValue('--f').trim() }; });
+    if ((way.left ? '-1' : '1') !== way.f) pr.push('she does not face the way she walks: ' + JSON.stringify(way));
+    await p.waitForTimeout(500); await shot(p, '33-stable-walk');
+  }
+  // fed: she stops where she is, and the food goes to her mouth
+  await p.click('[data-care="apple"]'); await p.waitForTimeout(100);
+  if (await sp(p, () => document.getElementById('uni').classList.contains('walk'))) pr.push('she kept walking while being fed');
+  await p.waitForTimeout(2200);
+  await p.click('[data-ct="sleep"]'); await p.click('[data-care="lantern"]'); await p.waitForTimeout(400);
+  if (!(await sp(p, () => document.getElementById('uni').classList.contains('breathe')))) pr.push('asleep, she does not breathe slowly');
+  await p.waitForTimeout(6000);
+  if (await sp(p, () => document.getElementById('uni').classList.contains('walk'))) pr.push('she walked in her sleep');
+  pr.push(...errs); await ctx.close();
+  report('her unicorn about the stables: walking with swinging legs, facing her way, still to be fed, breathing asleep', pr);
 }
 
 await b.close(); server.close();
