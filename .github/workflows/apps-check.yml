@@ -47,6 +47,8 @@ jobs:
       - run: node clock/scripts/logic-test.mjs
       # Sparkle Kingdom: the learning engine and every question it makes, the school letters, its server
       - run: node sparkle/scripts/logic-test.mjs && node sparkle/scripts/letters-test.mjs && node sparkle/scripts/api-test.mjs
+      # Money: reading Monarch's emails, the sums (cards, rewards, what repeats), and its server (who may see it)
+      - run: node money/scripts/parse-test.mjs && node money/scripts/calc-test.mjs && node money/scripts/api-test.mjs
 
   # What the pull request changes: each browser group keeps only the tests that need it.
   changes:
@@ -162,12 +164,13 @@ jobs:
               orders/scripts/ipsy-test.mjs
               news/scripts/ipsy-test.mjs
               aOS/scripts/ipsy-settings-test.mjs
-          # Ipsy in Calendar and Notes; Mail's two designs
+          # Ipsy in Calendar and Notes; Mail's two designs; Money
           - group: calendar-ipsy
             tests: |
               calendar/scripts/ipsy-test.mjs
               notes/scripts/ipsy-test.mjs
               mail/scripts/design-test.mjs
+              money/scripts/app-test.mjs
           # Notes; Ipsy in Meals; Fitness's Meds and Steps; home/design.js
           - group: notes
             tests: |

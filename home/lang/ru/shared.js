@@ -5,13 +5,13 @@
   const T = s => aosLang.t(s);
   // the app names, as NAMES in ../../welcome.js has them: in Russian, and after "в" (Что нового в Почте)
   // and as an object (Добавьте Почту): the rest read the same
-  const PREP = { aOS: 'aOS', AllisonOS: 'AllisonOS', Mail: 'Почте', Calendar: 'Календаре', Clock: 'Часах', News: 'Новостях', Weather: 'Погоде', Notes: 'Заметках', Podcasts: 'Подкастах', Travel: 'Поездках', Places: 'Местах', Fitness: 'Фитнесе', Drinks: 'Напитках', Meals: 'Меню', Orders: 'Заказах', Home: 'Доме' };
+  const PREP = { aOS: 'aOS', AllisonOS: 'AllisonOS', Mail: 'Почте', Calendar: 'Календаре', Clock: 'Часах', News: 'Новостях', Weather: 'Погоде', Notes: 'Заметках', Podcasts: 'Подкастах', Travel: 'Поездках', Places: 'Местах', Fitness: 'Фитнесе', Drinks: 'Напитках', Meals: 'Меню', Orders: 'Заказах', Money: 'Деньгах', Home: 'Доме' };
   const ACC = { Mail: 'Почту', Weather: 'Погоду' };
   const inApp = n => PREP[n] || T(n);
   const acc = n => ACC[n] || T(n);
   const app = n => (n === 'aOS' ? 'aOS' : 'приложение «' + T(n) + '»');   // "приложение «Заметки»": no gender or number to agree with
   const appOf = n => (n === 'aOS' ? 'aOS' : 'приложения «' + T(n) + '»');
-  const APPS = 'Mail|Calendar|Clock|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Home';
+  const APPS = 'Mail|Calendar|Clock|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Money|Home';
 
   const W = {
     // ---- every page ----
@@ -36,7 +36,7 @@
     // ---- the app names (NAMES) ----
     'Mail': 'Почта', 'Calendar': 'Календарь', 'Clock': 'Часы', 'News': 'Новости', 'Weather': 'Погода', 'Notes': 'Заметки',
     'Podcasts': 'Подкасты', 'Travel': 'Поездки', 'Places': 'Места', 'Fitness': 'Фитнес', 'Drinks': 'Напитки', 'Meals': 'Меню',
-    'Orders': 'Заказы', 'Home': 'Дом', 'Sparkle Kingdom': 'Сверкающее королевство',
+    'Orders': 'Заказы', 'Money': 'Деньги', 'Home': 'Дом', 'Sparkle Kingdom': 'Сверкающее королевство',
 
     // ---- the welcome ----
     'Welcome': 'Добро пожаловать',
@@ -289,6 +289,23 @@
     'Meds and steps': 'Лекарства и шаги',
     'Tick off your medications and supplements on Meds, a private page, and see each day\'s steps, from your iPhone or typed in.': 'Отмечайте лекарства и добавки на личной странице «Лекарства» и смотрите шаги за каждый день — с iPhone или введённые вручную.',
     'Pick Meds here to tick off your medications and supplements, on a private page of its own. The week shows each day\'s steps, from your iPhone or typed in.': 'Выберите здесь «Лекарства», чтобы отмечать лекарства и добавки на отдельной личной странице. Неделя показывает шаги за каждый день — с iPhone или введённые вручную.',
+    // Money
+    'Where the family\'s money goes': 'Куда уходят деньги семьи',
+    'This month at a glance': 'Этот месяц с одного взгляда',
+    'What you\'ve spent, the pace for the month, and each category against your usual, from Monarch\'s alert emails.': 'Сколько потрачено, темп за месяц и каждая категория по сравнению с обычным — по письмам-оповещениям Monarch.',
+    'Where you could save': 'Где можно сэкономить',
+    'Categories well over their usual, where the most went, and what repeats, with what it costs a year.': 'Категории намного выше обычного, куда ушло больше всего и что повторяется — и сколько это стоит в год.',
+    'Cards and rewards': 'Карты и бонусы',
+    'Spending and cash back on each card, rewards month by month, and the better card for each kind of spend.': 'Траты и кешбэк по каждой карте, бонусы по месяцам и выгодная карта для каждого вида трат.',
+    'A bank stopped syncing': 'Банк перестал синхронизироваться',
+    'When Monarch can\'t sync a bank, Money says so at the top until it\'s fixed.': 'Когда Monarch не может синхронизировать банк, Деньги сообщают об этом наверху, пока это не исправят.',
+    'Shared with the family': 'Вместе с семьёй',
+    'Connect Gmail and Money reads Monarch’s alert emails: what you’ve spent, the pace for the month, and each category against your usual.': 'Подключите Gmail, и Деньги будут читать письма-оповещения Monarch: сколько потрачено, темп за месяц и каждая категория по сравнению с обычным.',
+    'This month shows categories well over their usual and where the most went. Recurring lists what repeats, with what it costs a year.': '«Этот месяц» показывает категории намного выше обычного и куда ушло больше всего. «Регулярные» — что повторяется и сколько это стоит в год.',
+    'When Monarch can’t sync a bank, Money says so at the top until it’s fixed.': 'Когда Monarch не может синхронизировать банк, Деньги сообщают об этом наверху, пока это не исправят.',
+    'One phone reads Monarch’s emails from Gmail, read-only, and shares them with the family members it picks. Pick them in Settings, and set each card’s cash back.': 'Один телефон читает письма Monarch из Gmail, только для чтения, и делится ими с выбранными членами семьи. Выберите их в настройках и задайте кешбэк каждой карты.',
+    'One phone reads Monarch\'s emails from Gmail, read-only, and shares them with the family members it picks.': 'Один телефон читает письма Monarch из Gmail, только для чтения, и делится ими с выбранными членами семьи.',
+    'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Money and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.': 'Основные приложения — Погода, Заметки, Новости, Почта, Календарь и Часы — и собственные приложения семьи Allison — Подкасты, Поездки, Места, Фитнес, Напитки, Меню, Заказы, Деньги и Дом, а для детей — Сверкающее королевство, всё в aOS. И они работают вместе: поездки, напоминания и заметки появляются в Календаре, бронь открывает своё письмо, а Дом знает погоду.',
     // Drinks
     'A simple log of what you drink': 'Простой дневник выпитого',
     'Your week in one number': 'Неделя в одном числе',

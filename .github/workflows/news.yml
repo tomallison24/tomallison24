@@ -62,6 +62,7 @@ on:
       - 'sparkle/**'
       - 'meals/**'
       - 'orders/**'
+      - 'money/**'
       - 'clock/**'
       - 'aOS/**'
       - 'labs/**'
@@ -224,7 +225,7 @@ jobs:
           # radar run time, /weather/api/*, Meals' plans, /meals/api/*, and News's summaries, /news/api/*, and Orders' Fix with Claude, /orders/api/*,
           # and Fitness's steps from Home Assistant, /fitness/api/*, and Sparkle Kingdom's players, /sparkle/api/*)
           # as Pages Functions.
-          mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar places house fitness drinks meals orders clock sparkle aOS aos _headers _site/ && if [ -d labs ]; then cp -r labs _site/; fi
+          mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar places house fitness drinks meals orders money clock sparkle aOS aos _headers _site/ && if [ -d labs ]; then cp -r labs _site/; fi
           # The Vintage designs were apps of their own (mailvintage/ and the rest). Every app now carries
           # both designs (home/design.js), and each old address gets a copy of the app, so a phone that
           # added a Vintage app keeps it (on iOS a Home Screen app stays in its own folder): the first

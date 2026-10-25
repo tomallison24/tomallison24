@@ -85,11 +85,12 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
-    { v: '2.1', date: '2026-10-24', title: 'New looks, new language', look: 'vintage',
+    { v: '2.1', date: '2026-10-24', title: 'New looks, new language', look: 'vintage', added: ['money'],
       highlights: ['Two new looks: Night Drive and Folk',
         'aOS in Russian: Appearance, Language',
         'Ask Ipsy to change a setting, or show you where it is'],
-      notes: ['Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)',
+      notes: ['Money, a new app: where the family\'s money goes, from Monarch\'s alert emails. This month against the usual and where you could save, spending and cash back on each card with a chart of rewards, what repeats and what it costs a year, and a card at the top when Monarch can\'t sync a bank. One phone reads Monarch\'s emails from its Gmail, read-only, and shares them with the family members it picks',
+        'Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)',
         'The look you pick in Account > Appearance is every app\'s look now; an app\'s own Settings > Design can still be different',
         'Language, in Account > Appearance: English or Русский, for aOS and every app at once, with Russian dates and times. What the family wrote, emails, news and device names stay as they are. Lost in a language? Type "English" (or «Русский») to Ipsy',
         'Ipsy can change how things look and read for you, with Undo: light or dark, the look, the language, Favorites, Calendar, Clock, Weather\'s units, Podcasts, Fitness goals and what Orders counts. It asks first before a new event\'s defaults or turning its own access down, never touches sign-ins, the plan, privacy or the family\'s allergies, and opens the right screen for those',
@@ -497,7 +498,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle'];
+  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'money', 'house', 'sparkle'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
@@ -509,7 +510,7 @@
   const VARIANTS = new Set(Object.values(DESIGNS).flatMap(d => d.slice(1).map(x => x.app)));
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id) && !VARIANTS.has(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', house: 'Home', sparkle: 'Sparkle Kingdom' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', money: 'Money', house: 'Home', sparkle: 'Sparkle Kingdom' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "clock": {
@@ -912,6 +913,41 @@
         }
       ]
     },
+    "money": {
+      "tag": "Where the family's money goes",
+      "cards": [
+        {
+          "i": "chart",
+          "t": "This month at a glance",
+          "d": "What you've spent, the pace for the month, and each category against your usual, from Monarch's alert emails."
+        },
+        {
+          "i": "bulb",
+          "t": "Where you could save",
+          "d": "Categories well over their usual, where the most went, and what repeats, with what it costs a year."
+        },
+        {
+          "i": "tag",
+          "t": "Cards and rewards",
+          "d": "Spending and cash back on each card, rewards month by month, and the better card for each kind of spend."
+        },
+        {
+          "i": "alert",
+          "t": "A bank stopped syncing",
+          "d": "When Monarch can't sync a bank, Money says so at the top until it's fixed."
+        },
+        {
+          "i": "people",
+          "t": "Shared with the family",
+          "d": "One phone reads Monarch's emails from Gmail, read-only, and shares them with the family members it picks."
+        },
+        {
+          "i": "star",
+          "t": "Two designs",
+          "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
+        }
+      ]
+    },
     "meals": {
       "tag": "Tell Ipsy what you fancy",
       "cards": [
@@ -1305,7 +1341,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Money and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
@@ -1967,6 +2003,13 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     { sel: '#sumBtn', t: 'How it’s going', d: 'Tap the week’s number for Analysis: this week or month against the one before, then 12 weeks of charts. The pill at the bottom picks which.', g: 'tap' },
     { sel: '#moreBtn', t: 'Private to you', d: 'Signed in, your log is kept in the family\'s Google Sheet, where only you can see yours, and follows you to another phone. Sign in and set your goals here.', g: 'tap' },
   ] };
+  SPOTS.money = { stops: [
+    { sel: ['#main [data-act="connect"]', '#main .empty'], t: 'This month at a glance', d: 'Connect Gmail and Money reads Monarch’s alert emails: what you’ve spent, the pace for the month, and each category against your usual.', g: 'tap' },
+    { sel: '#vBtn', t: 'Where you could save', d: 'This month shows categories well over their usual and where the most went. Recurring lists what repeats, with what it costs a year.', g: 'tap' },
+    { sel: '#vBtn', t: 'Cards and rewards', d: 'Spending and cash back on each card, rewards month by month, and the better card for each kind of spend.', g: 'tap' },
+    { sel: ['#main .empty', '#vBtn'], t: 'A bank stopped syncing', d: 'When Monarch can’t sync a bank, Money says so at the top until it’s fixed.' },
+    { sel: '#setBtn', t: 'Shared with the family', d: 'One phone reads Monarch’s emails from Gmail, read-only, and shares them with the family members it picks. Pick them in Settings, and set each card’s cash back.', g: 'tap' },
+  ] };
   SPOTS.meals = { stops: [
     { sel: ['#main .card.pick', '#tabs [data-tab="ipsy"]'], t: 'Ipsy plans it', d: 'Pick breakfast, lunch or dinner and what you’d like (chicken, lamb, vegetarian), or what’s in the fridge, and Ipsy writes the recipes.' },
     { sel: ['#main [data-act="pick"]', '#tabs [data-tab="ipsy"]'], t: 'Ipsy asks the rest', d: 'Then it asks how many days, how many you’re cooking for, lunches from leftovers or fresh, and anything else. One question at a time.' },
@@ -2000,7 +2043,7 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
-  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
+  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
   for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
   let spotEnd = null;
   const onScreen = e => {

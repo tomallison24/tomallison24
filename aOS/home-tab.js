@@ -59,7 +59,7 @@
     ['Family', ['calendar', 'meals', 'notes', 'house', 'orders']],
     ['Every day', ['weather', 'news', 'mail', 'clock', 'podcasts']],
     ['Out and about', ['travel', 'places']],
-    ['You', ['fitness', 'drinks']],
+    ['You', ['fitness', 'drinks', 'money']],
     ['Games', ['sparkle']],
   ].map(([t, ids]) => [t, ids.filter(id => D.APPS.includes(id))]);
   const ALL = SPACES.flatMap(s => s[1]);
