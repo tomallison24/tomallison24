@@ -188,6 +188,7 @@
     const h = helper();
     cells.forEach(c => { if (!c.fixed) { c.peeking = false; drawChar(c, h ? h.who : c.peek); } });
     onHelper.forEach(fn => { try { fn(h); } catch {} });
+    if (window.aosLang && aosLang.helper) aosLang.helper();   // the words on the page that say Ipsy say the new name (home/lang.js)
   }
   addEventListener('storage', e => { if (e.key === HELPER_KEY) helperChanged(); });   // changed in another app or frame
 

@@ -343,6 +343,8 @@
     'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Grid, a lit visor': 'В стиле «Ночная трасса» на каждом помощнике зеркальные очки, в «Народном» — красный платок в белый горошек, а в «Сетке» — светящийся визор',
     'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works': 'Ипси больше не стволовая клетка и не превращается в другие клетки за работой',
     'Your language now follows you to your other devices, as your look does': 'Язык теперь переходит с вами на другие устройства, как и оформление',
+    'Once your helper has a name, every app says it where it said Ipsy: "Or just tell Mia…", "Hides this note from Mia", "Mia keeps orders up to date"':
+      'Когда у помощника есть имя, все приложения называют его так там, где было «Ипси»: «Или просто скажите Mia…», «Mia не увидит эту заметку», «Mia следит за заказами»',
     'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
     'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name':
       'aOS: «Пройти настройку» в начале Аккаунта проводит по вашим настройкам по одной: язык, стиль, светлая или тёмная тема, помощник и его имя',

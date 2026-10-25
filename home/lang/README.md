@@ -39,6 +39,9 @@ aosLang.add({
   Russian (`21:41`, `24 октября`, `1 234,5`). Day and month names the app writes out itself
   (`['Sun', 'Mon', ...]`) need words or patterns.
 - **Ipsy** is told to answer in Russian; what Ipsy and the person write is `translate="no"`.
+- **Your helper's name**, in English too: once the person has named their helper (`aos.helper`), `lang.js` puts the
+  name wherever the words say Ipsy (or Ипси), so write "Ipsy" in an app's words and its Russian. Not inside
+  `translate="no"`, nor `data-ipsy="as-is"`: the release log, which keeps what each version said.
 
 Check with `node aOS/scripts/lang-scan.mjs <app>`: the English still on the page (shown or not), in
 Russian. It sees the page as it opens with no data; sheets, empty states and errors built by the app's

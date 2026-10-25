@@ -61,7 +61,8 @@ try {
         await page.locator('.ipsy-btn .ipsy-host').evaluate((e,m)=>e.dataset.mood=m,mood);
         assert.ok((await page.locator('.ipsy-btn ' + sel).first().evaluate(e=>getComputedStyle(e).animationName)).includes(anim),label + ': ' + mood);
       }
-      assert.equal(await page.locator('.ipsy-btn .h-specs').evaluate(e=>getComputedStyle(e).opacity),'0',label + ': glasses off but for scanning');
+      const specsOff = await page.waitForFunction(() => getComputedStyle(document.querySelector('.ipsy-btn .h-specs')).opacity === '0', null, { timeout: 3000 }).then(() => true, () => false);   // they fade off (a transition): waited for
+      assert.ok(specsOff,label + ': glasses off but for scanning');
       await page.locator('.ipsy-btn .ipsy-host').evaluate(e=>e.dataset.mood='idle');
       await page.emulateMedia({reducedMotion:'reduce'});
       for (const selector of ['.h-bob','.h-lids','.h-shadow']) assert.equal(await page.locator('.ipsy-btn ' + selector).evaluate(e=>getComputedStyle(e).animationName),'none',label + ': reduced motion ' + selector);

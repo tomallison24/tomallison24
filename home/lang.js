@@ -12,12 +12,16 @@
 //     what the family wrote (notes, lists, mail, events) and outside content (news, podcasts);
 //   - dates and numbers in Russian: toLocale*String and the Intl formats, asked for in the phone's
 //     language or in English, are given Russian (21:41, 24 октября, 1 234,5).
+// In either language, once your helper has a name (home/ipsy.js, aos.helper {who, name}), the words say
+// that name where they said Ipsy (or Ипси): "Or just tell Mia…". Not inside translate="no" (what the family
+// wrote, the chat itself) or data-ipsy="as-is" (the release log: what each version said then).
 // A word file:
 //   aosLang.add({ 'Done': 'Готово', 'Grocery list': 'Список покупок' },
 //     [[/^(\d+) items?$/, m => m[1] + ' ' + aosLang.plural(m[1], 'позиция', 'позиции', 'позиций')]]);
 // A pattern's function gets the match; aosLang.t(text) translates a part of it (or gives it back as it was).
 // window.aosLang: get() 'en' | 'ru'; set(lang) (every open page is drawn again in it); add(words, patterns);
-// t(text); plural(n, one, few, many); list [[id, name]]. 'aos:lang' fires on window before a change reloads.
+// t(text); plural(n, one, few, many); list [[id, name]]; helper() (the helper's name changed: draw it again).
+// 'aos:lang' fires on window before a change reloads.
 'use strict';
 (() => {
   if (window.aosLang) return;
@@ -62,20 +66,46 @@
   };
   // another page (aOS's Appearance, an app in another frame) changed it: draw this one again in it
   addEventListener('storage', e => { if (e.key === KEY && ok(e.newValue) !== lang) location.reload(); });
-  if (lang !== 'ru') return;
-  root.lang = 'ru';
+  const ru = lang === 'ru';
+
+  // ---- your helper's name ----
+  const HELPER = 'aos.helper', IPSY = /\bIpsy\b|Ипси/g, HAS = /\bIpsy\b|Ипси/;
+  const nameNow = () => {   // '' while it's Ipsy (not picked, no name, or a name that is Ipsy)
+    try { const n = String((JSON.parse(localStorage.getItem(HELPER)) || {}).name || '').replace(/\s+/g, ' ').trim().slice(0, 16); return /\bipsy\b|ипси/i.test(n) ? '' : n; } catch { return ''; }
+  };
+  let NAME = nameNow();
+  const asIs = el => !!(el && el.closest && el.closest('[data-ipsy="as-is"]'));
+  const named = (s, el) => (NAME && HAS.test(s) && !asIs(el) ? s.replace(IPSY, () => NAME) : s);
+  const words = s => /[A-Za-z]/.test(s) || (NAME && s.includes('Ипси'));
+  window.aosLang.helper = () => {
+    const n = nameNow(); if (n === NAME) return;
+    NAME = n;
+    if (!started) { if (NAME) start(); return; }
+    for (const x of drawn) {   // what has a name in it: drawn again from what it said
+      if (!x.isConnected) { drawn.delete(x); continue; }
+      if (x.nodeType === 3) { const o = src.get(x); if (o && done.get(x) === x.data) { done.delete(x); x.data = o; text(x); } continue; }
+      const o = srcAttr.get(x) || {}, mine = doneAttr.get(x) || {};
+      for (const a in o) if (x.getAttribute(a) === mine[a]) { delete mine[a]; x.setAttribute(a, o[a]); }
+      attrs(x);
+    }
+    sweep(root);
+  };
+  addEventListener('storage', e => { if (e.key === HELPER) window.aosLang.helper(); });   // named in another app or frame
+  if (ru) root.lang = 'ru';
 
   // ---- dates and numbers in Russian ----
   // a locale marked -x-keep ('en-US-x-keep') stays as asked: for text that leaves aOS (an email's quoted date)
-  const swap = l => { const f = Array.isArray(l) ? l[0] : l; return f != null && /-x-keep$/i.test(String(f)) ? l : f == null || /^en\b/i.test(String(f)) ? 'ru-RU' : l; };
-  for (const [proto, names] of [[Date.prototype, ['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString']], [Number.prototype, ['toLocaleString']]]) {
-    for (const n of names) { const f = proto[n]; proto[n] = function (l, o) { return f.call(this, swap(l), o); }; }
-  }
-  for (const k of ['DateTimeFormat', 'NumberFormat', 'RelativeTimeFormat', 'PluralRules', 'ListFormat', 'DisplayNames']) {
-    const C = Intl[k]; if (!C) continue;
-    const W = function (l, o) { return new C(swap(l), o); };
-    W.prototype = C.prototype; W.supportedLocalesOf = C.supportedLocalesOf.bind(C);
-    Intl[k] = W;
+  if (ru) {
+    const swap = l => { const f = Array.isArray(l) ? l[0] : l; return f != null && /-x-keep$/i.test(String(f)) ? l : f == null || /^en\b/i.test(String(f)) ? 'ru-RU' : l; };
+    for (const [proto, names] of [[Date.prototype, ['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString']], [Number.prototype, ['toLocaleString']]]) {
+      for (const n of names) { const f = proto[n]; proto[n] = function (l, o) { return f.call(this, swap(l), o); }; }
+    }
+    for (const k of ['DateTimeFormat', 'NumberFormat', 'RelativeTimeFormat', 'PluralRules', 'ListFormat', 'DisplayNames']) {
+      const C = Intl[k]; if (!C) continue;
+      const W = function (l, o) { return new C(swap(l), o); };
+      W.prototype = C.prototype; W.supportedLocalesOf = C.supportedLocalesOf.bind(C);
+      Intl[k] = W;
+    }
   }
 
   // ---- the words on the page ----
@@ -83,22 +113,33 @@
   const ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
   const done = new WeakMap();              // text node -> what we put there (so our own change isn't redone)
   const doneAttr = new WeakMap();          // element -> { attr: what we put there }
+  const src = new WeakMap(), srcAttr = new WeakMap();   // ... and what it said before, where a name went in
+  const drawn = new Set();                 // the nodes and elements with a name in them (drawn again on a new name)
+  let cap = 400;
+  const keep = x => { drawn.add(x); if (drawn.size > cap) { for (const y of drawn) if (!y.isConnected) drawn.delete(y); cap = Math.max(400, drawn.size * 2); } };   // not what's gone from the page
+  const say = (s, el) => named(ru ? t(s) : s, el);
   const kept = el => !el || !!(el.closest && el.closest('[translate="no"],[contenteditable="true"],[contenteditable=""]'));
   function text(n) {
     const p = n.parentElement;
     if (!p || SKIP.test(p.nodeName) || done.get(n) === n.data || kept(p)) return;
-    const s = n.data; if (!/[A-Za-z]/.test(s)) return;
-    const r = t(s);
-    if (r !== s) { const lead = /^\s*/.exec(s)[0], trail = /\s*$/.exec(s)[0]; n.data = lead + r + trail; done.set(n, n.data); changed = true; }   // only what we changed: the rest is looked at again when more words come
+    const s = n.data; if (!words(s)) return;
+    const r = say(s, p);
+    if (r !== s) {   // only what we changed: the rest is looked at again when more words come
+      const lead = /^\s*/.exec(s)[0], trail = /\s*$/.exec(s)[0]; n.data = lead + r + trail; done.set(n, n.data); changed = true;
+      if (HAS.test(s)) { src.set(n, s); keep(n); }
+    }
   }
   function attrs(el) {
     if (kept(el)) return;
     let mine = doneAttr.get(el);
     const names = el.nodeName === 'INPUT' && /^(button|submit|reset)$/i.test(el.type) ? [...ATTRS, 'value'] : ATTRS;
     for (const a of names) {
-      const v = el.getAttribute(a); if (v == null || !/[A-Za-z]/.test(v) || (mine && mine[a] === v)) continue;
-      const r = t(v);
-      if (r !== v) { el.setAttribute(a, r); (mine || (doneAttr.set(el, mine = {}), mine))[a] = r; }
+      const v = el.getAttribute(a); if (v == null || !words(v) || (mine && mine[a] === v)) continue;
+      const r = say(v, el);
+      if (r !== v) {
+        el.setAttribute(a, r); (mine || (doneAttr.set(el, mine = {}), mine))[a] = r;
+        if (HAS.test(v)) { (srcAttr.get(el) || (srcAttr.set(el, {}), srcAttr.get(el)))[a] = v; keep(el); }
+      }
     }
   }
   function sweep(node) {
@@ -125,7 +166,10 @@
     }
     if (changed) tell();
   });
-  mo.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...ATTRS, 'value'] });
-  started = true;
-  sweep(root);
+  function start() {   // in Russian, or once the helper has a name (in English, until then, nothing to do)
+    started = true;
+    mo.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...ATTRS, 'value'] });
+    sweep(root);
+  }
+  if (ru || NAME) start();
 })();
