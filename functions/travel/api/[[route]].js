@@ -44,8 +44,8 @@
 // questions). It sends nothing of its own: the conversation comes from the phone, which runs Ipsy's
 // tools on the bookings there (IPSY_CLIENT_TOOLS, IPSY_SYSTEM; server/ipsy.js does the rest).
 
-import { kv, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, T, DAY as YMD, modelOf, persona, requestHead, ipsyStep } from '../../../server/ipsy.js';
+import { reply, kv, sessionUser } from '../../../server/auth.js';
+import { IPSY_MODEL, T, DAY as YMD, modelOf, persona, requestHead, ipsyStep, today } from '../../../server/ipsy.js';
 
 const HOST = 'aerodatabox.p.rapidapi.com';
 const TIMEOUT_MS = 15000;
@@ -78,8 +78,7 @@ export const FLIGHTS_DAILY = 60, AI_DAILY = 40;
 async function countFor(env, request, what, daily) {
   const db = kv(env); if (!db) return true;   // accounts off: the lock has already refused strangers, or this is a test
   const me = await sessionUser(db, request); if (!me) return true;
-  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const key = 'travel:' + what + ':' + me.id + ':' + day, n = (+(await db.get(key)) || 0) + 1;
+  const key = 'travel:' + what + ':' + me.id + ':' + today(), n = (+(await db.get(key)) || 0) + 1;
   if (n > daily) return false;
   await db.put(key, String(n), { expirationTtl: 2 * 86400 });
   return true;
@@ -449,16 +448,3 @@ function trim(f) {
   };
 }
 const s = v => v == null ? '' : String(v).slice(0, 120);
-
-function reply(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      'Content-Security-Policy': "sandbox; default-src 'none'",
-      'Referrer-Policy': 'no-referrer',
-    },
-  });
-}

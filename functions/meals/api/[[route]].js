@@ -78,7 +78,7 @@
 // The X-Meals header stops other web pages calling this (as X-Drinks does).
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, IPSY_DAILY, T, DAY, persona, modelOf as ipsyModelFor, requestHead, ipsyStep } from '../../../server/ipsy.js';
+import { IPSY_MODEL, IPSY_DAILY, T, DAY, persona, modelOf as ipsyModelFor, requestHead, ipsyStep, fail, today } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-haiku-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -103,7 +103,6 @@ export const BREAKFASTS = ['eggs (scrambled, an omelette or a frittata)', 'Greek
 
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 const int = (v, lo, hi, d) => { if (v == null || v === '') return d; const n = Math.round(+v); return isFinite(n) && n >= lo && n <= hi ? n : d; };
-const fail = (message, status) => Object.assign(new Error(message), { status });
 // Plans cost money (a few Claude calls each): at most AI_DAILY a person a day, counted in the
 // accounts' KV as meals:ai:<user id>:<day> (gone after two days), written before the call.
 export const AI_DAILY = 20;
@@ -114,8 +113,8 @@ async function countAi(db, me) {
   return true;
 }
 
-// dates in Cary's time, as YYYY-MM-DD
-export const today = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(now));
+// dates in Cary's time, as YYYY-MM-DD (today: server/ipsy.js)
+export { today };
 export const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const isDay = s => ISO.test(s) && !isNaN(Date.parse(s + 'T12:00:00Z'));

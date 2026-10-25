@@ -40,7 +40,7 @@
 // The X-News header stops other web pages calling this (as X-Meals does).
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, IPSY_DAILY, T, modelOf as ipsyModelFor, persona, requestHead, ipsyStep } from '../../../server/ipsy.js';
+import { IPSY_MODEL, IPSY_DAILY, T, modelOf as ipsyModelFor, persona, requestHead, ipsyStep, fail, today } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-sonnet-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -56,7 +56,6 @@ export const DAILY_LIMIT = 60;
 const HISTORY = 8;                    // earlier questions kept in a conversation
 
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
-const fail = (message, status) => Object.assign(new Error(message), { status });
 export const modelOf = env => str(env && env.NEWS_AI_MODEL, 60) || MODEL;
 export const aiOf = env => env && env.ANTHROPIC_API_KEY ? 'anthropic' : null;
 
@@ -272,7 +271,6 @@ async function body(request) {
   try { return JSON.parse(t || '{}'); } catch { throw fail('bad-json', 400); }
 }
 async function sha(s) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join(''); }
-const day = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(now));
 
 export async function onRequest({ request, params, env }, f = fetch) {
   if (request.headers.get('X-News') !== '1') return reply({ error: 'not-found' }, 404);
@@ -292,7 +290,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
     const old = route === 'summarize' ? await getJSON(db, key) : null;
     if (old) return reply({ ...old, cached: true });
     // Counted before the model is asked, so a failing call can't be repeated for free forever.
-    const used = 'news:ai:' + me.id + ':' + day(), n = (+(await db.get(used)) || 0) + 1;
+    const used = 'news:ai:' + me.id + ':' + today(), n = (+(await db.get(used)) || 0) + 1;
     if (n > DAILY_LIMIT) return reply({ error: 'limit' }, 429);
     await db.put(used, String(n), { expirationTtl: 2 * 86400 });
     const read = await readStory(story, f);

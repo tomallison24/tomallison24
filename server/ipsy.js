@@ -26,9 +26,10 @@ const TIMEOUT_MS = 110e3;
 const FALLBACK_OK = /^claude-(sonnet-5-5|opus-5-5|opus-5|fable-5-1|fable-5)$/;
 const WEB_NEW = /^claude-(sonnet-5-5|sonnet-5|sonnet-4-6|opus-5-5|opus-5|opus-4-[678]|fable-5-1|fable-5)$/;
 
-const fail = (message, status) => Object.assign(new Error(message), { status });
+export const fail = (message, status) => Object.assign(new Error(message), { status });
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, n);
-const today = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(now));
+// The day it is on the family's calendar (Apex, NC), YYYY-MM-DD: every per-person daily count is keyed by it.
+export const today = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(now));
 
 // A tool the phone runs: name, what it does (Claude reads this), its input.
 export const T = (name, description, properties, required = []) => ({ name, description, input_schema: { type: 'object', additionalProperties: false, properties, required } });

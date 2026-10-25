@@ -31,6 +31,7 @@
 // _middleware.js locks it to signed-in family.
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
+import { today } from '../../../server/ipsy.js';
 
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -289,8 +290,7 @@ async function check(request, env, db, me) {
     items.push({ id: x.id, subject: scrub(x.subject).slice(0, 200), text,
       parsed: { amt: num(p.amt), dir: p.dir === 'in' ? 'in' : 'out', merchant: str(p.merchant, 120), account: str(p.account, 120) + (/^\d{3,5}$/.test(p.last4 || '') ? ' (...' + p.last4 + ')' : ''), cat: str(p.cat, 60) } });
   }
-  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const ck = 'money:check:' + me.id + ':' + day, n = (+(await db.get(ck)) || 0) + 1;
+  const ck = 'money:check:' + me.id + ':' + today(), n = (+(await db.get(ck)) || 0) + 1;
   if (n > CHECK_DAILY) return reply({ error: 'limit' }, 429);
   await db.put(ck, String(n), { expirationTtl: 2 * 86400 });
   const prompt = items.map(it => [

@@ -36,7 +36,7 @@
 // The X-Orders header stops other web pages calling this (as X-News does).
 
 import { reply, kv, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, modelOf as ipsyModelFor, turnKind, requestHead, ipsyStep } from '../../../server/ipsy.js';
+import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, modelOf as ipsyModelFor, turnKind, requestHead, ipsyStep, fail, today } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-haiku-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -45,7 +45,6 @@ export const MAX_BODY = 60 * 1024;
 export const MAX_TEXT = 12000;
 export const DAILY_LIMIT = 40;
 
-const fail = (message, status) => Object.assign(new Error(message), { status });
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, n);
 export const modelOf = env => str(env && env.ORDERS_AI_MODEL, 60) || MODEL;
 export const aiOf = env => env && env.ANTHROPIC_API_KEY ? 'anthropic' : null;
@@ -252,7 +251,6 @@ async function body(request) {
   if (t.length > MAX_BODY) throw fail('too-big', 413);
   try { return JSON.parse(t || '{}'); } catch { throw fail('bad-json', 400); }
 }
-const day = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(now));
 
 export async function onRequest({ request, params, env }, f = fetch) {
   if (request.headers.get('X-Orders') !== '1') return reply({ error: 'not-found' }, 404);
@@ -270,7 +268,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
     if (text.length < 40) return reply({ error: 'empty' }, 400);
     let date = +b.date; if (!isFinite(date) || date < 9e11 || date > Date.now() + 864e5) date = Date.now();
     // Counted before the model is asked, so a failing call can't be repeated for free forever.
-    const used = 'orders:ai:' + me.id + ':' + day(), n = (+(await db.get(used)) || 0) + 1;
+    const used = 'orders:ai:' + me.id + ':' + today(), n = (+(await db.get(used)) || 0) + 1;
     if (n > DAILY_LIMIT) return reply({ error: 'limit' }, 429);
     await db.put(used, String(n), { expirationTtl: 2 * 86400 });
     const fact = await read(env, { subject: str(b.subject, 300), from: str(b.from, 200), date, text }, f);

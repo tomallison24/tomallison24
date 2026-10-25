@@ -45,8 +45,8 @@
 // again here) with the owner's Anthropic key (ANTHROPIC_API_KEY; without it { error: 'no-ai' }), and
 // at most IPSY_DAILY questions a person a day (calendar:ipsy:<user id>:<day> in the accounts' KV).
 
-import { kv, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, persona, modelOf, requestHead, ipsyStep } from '../../../server/ipsy.js';
+import { reply, kv, sessionUser } from '../../../server/auth.js';
+import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, persona, modelOf, requestHead, ipsyStep, today } from '../../../server/ipsy.js';
 
 const ROOT = 'https://caldav.icloud.com/';
 const HOST_OK = /^([a-z0-9-]+\.)*icloud\.com$/i;
@@ -100,7 +100,7 @@ export async function onRequest(ctx, f = fetch) {
 
 // ---- talking to iCloud ----
 const err = (c, status, extra) => Object.assign(new Error(c), { code: c, status: status || 502 }, extra || {});
-const code = e => e && e.code ? e.code : e && e.name === 'TimeoutError' ? 'unreachable' : 'unreachable';
+const code = e => e && e.code ? e.code : 'unreachable';
 
 // One CalDAV request, with iCloud's redirects followed (only to icloud.com)
 // and the address it ended up at, so relative hrefs resolve against it.
@@ -228,8 +228,7 @@ const looksLikeCalendar = ics => /^\s*BEGIN:VCALENDAR/i.test(ics) && /BEGIN:VEVE
 // events is one), so a phone can't fill the family's calendar. Counted before the write.
 async function countWrite(db, me) {
   if (!db || !me) return;
-  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const key = 'calendar:writes:' + me.id + ':' + day, n = (+(await db.get(key)) || 0) + 1;
+  const key = 'calendar:writes:' + me.id + ':' + today(), n = (+(await db.get(key)) || 0) + 1;
   if (n > WRITES_DAILY) throw err('limit', 429);
   await db.put(key, String(n), { expirationTtl: 2 * 86400 });
 }
@@ -375,17 +374,4 @@ async function ipsy(request, env, f) {
   if (!me) return reply({ error: 'signin' }, 401);
   if (!env.ANTHROPIC_API_KEY) return reply({ error: 'no-ai' }, 503);
   return ipsyStep({ env, request, db, me, app: 'calendar', head: ipsyRequestHead(env) }, f);
-}
-
-function reply(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      'Content-Security-Policy': "sandbox; default-src 'none'",
-      'Referrer-Policy': 'no-referrer',
-    },
-  });
 }

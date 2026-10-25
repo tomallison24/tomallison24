@@ -220,9 +220,9 @@ export async function onRequest({ request, params, env }) {
 
     if (route === 'signup/finish' && method === 'POST') {
       const b = await body(request);
-      const ch = await getJSON(db, 'chal:' + String(b.id || ''));
+      const chal = 'chal:' + String(b.id || ''), ch = await getJSON(db, chal);
       if (!ch || ch.kind !== 'signup') return reply({ error: 'expired' }, 400);
-      await db.delete('chal:' + b.id);
+      await db.delete(chal);
       const cred = await verifyRegistration(b, ch.challenge, P);
       if (ch.role === 'owner' && await db.get('owner')) return reply({ error: 'owner-exists' }, 409);
       if (ch.invite && !(await db.get('invite:' + ch.invite))) return reply({ error: 'invite' }, 403);   // used meanwhile
