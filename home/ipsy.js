@@ -212,11 +212,11 @@
 .ipsy-neon .i-cheek{fill:#FF3D9A;opacity:.55}
 .ipsy-grid .i-visor{display:inline}
 .ipsy-grid .i-eye{opacity:0}
-.i-vband{fill:#05080C;stroke:var(--tr-line,#3CEBFF);stroke-width:2.4}
-.i-vlight{fill:none;stroke:var(--tr-line,#3CEBFF);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:14 30;animation:ipsyScan 2.4s ease-in-out infinite alternate;filter:drop-shadow(0 0 3px var(--tr-line,#3CEBFF))}
+.i-vband{fill:#08090B;stroke:var(--tr-line,#FF2A2A);stroke-width:2.4}
+.i-vlight{fill:none;stroke:var(--tr-line,#FF2A2A);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:14 30;animation:ipsyScan 2.4s ease-in-out infinite alternate;filter:drop-shadow(0 0 3px var(--tr-line,#FF2A2A))}
 @keyframes ipsyScan{from{stroke-dashoffset:0}to{stroke-dashoffset:-30}}
 @media (prefers-reduced-motion:reduce){.i-vlight{animation:none}}
-.ipsy-grid .i-cheek{fill:var(--tr-hot,#FF9A2E);opacity:.7}
+.ipsy-grid .i-cheek{fill:var(--tr-line,#FF2A2A);opacity:.6}
 .ipsy-folk .i-scarf{display:inline}
 .ipsy-folk .i-nucleus,.ipsy-folk .i-gloss{opacity:0}
 .i-hood{fill:var(--fk-scarf,#C7261C)}

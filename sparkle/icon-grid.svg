@@ -9,9 +9,9 @@
       <path d="M318 138L350 120M326 112L356 96" stroke="#000" stroke-width="9" stroke-linecap="round"/>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#2B1705"/>
-  <g><circle cx="420" cy="96" r="126.0" fill="none" stroke="#3CEBFF" stroke-width="16.8"/><circle cx="420" cy="96" r="72.8" fill="none" stroke="#3CEBFF" stroke-width="9.8"/><circle cx="420" cy="96" r="16.8" fill="#3CEBFF"/></g>
-  <circle cx="92" cy="96" r="30" fill="#0CB8C6"/>
-  <rect x="330" y="420" width="150" height="50" rx="25" fill="#FF9A2E" transform="rotate(-18 405 445)"/>
-  <rect width="512" height="512" fill="#F4FAFC" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#200B15"/>
+  <g><circle cx="420" cy="96" r="126.0" fill="none" stroke="#FF2A2A" stroke-width="16.8"/><circle cx="420" cy="96" r="72.8" fill="none" stroke="#FF2A2A" stroke-width="9.8"/><circle cx="420" cy="96" r="16.8" fill="#FF2A2A"/></g>
+  <circle cx="92" cy="96" r="30" fill="#CB504C"/>
+  <rect x="330" y="420" width="150" height="50" rx="25" fill="#FF2A2A" transform="rotate(-18 405 445)"/>
+  <rect width="512" height="512" fill="#F6F7F9" mask="url(#cut)"/>
 </svg>

@@ -36,8 +36,8 @@ for (const app of pages) {
 
 // ---- the icons ----
 // Night Drive: a deep neon-tinted ground in the app's own hue, a striped sunset for the disc, a magenta tube.
-// Folk: the Gzhel palette, and the disc becomes a six-petalled flower. Grid: a near-black ground in the app's own
-// hue, the night palette's light, the disc an identity disc and the pill an orange light trail. Masks (black and white)
+// Folk: the Gzhel palette, and the disc becomes a six-petalled flower. Grid: a near-black ground with a hint of the
+// app's own hue, the night palette's light, the disc a red identity disc and the pill a red light trail. Masks (black and white)
 // are left as they are.
 const SIZE = /viewBox="0 0 (\d+) (\d+)"/;
 function iconFor(look, svg) {
@@ -57,7 +57,7 @@ function iconFor(look, svg) {
       return `<g clip-path="url(#ndc)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#nds)"/>${bars}</g>`;
     }
     if (look === 'grid') {
-      const ring = (rr, w) => `<circle cx="${cx}" cy="${cy}" r="${(r * rr).toFixed(1)}" fill="none" stroke="@CY@" stroke-width="${(r * w).toFixed(1)}"/>`;   // its own cyan, not repainted below
+      const ring = (rr, w) => `<circle cx="${cx}" cy="${cy}" r="${(r * rr).toFixed(1)}" fill="none" stroke="@CY@" stroke-width="${(r * w).toFixed(1)}"/>`;   // its own red, not repainted below
       return `<g>${ring(0.9, 0.12)}${ring(0.52, 0.07)}<circle cx="${cx}" cy="${cy}" r="${(r * 0.12).toFixed(1)}" fill="@CY@"/></g>`;
     }
     const petal = a => `<ellipse cx="${cx}" cy="${(cy - r * 0.52).toFixed(1)}" rx="${(r * 0.25).toFixed(1)}" ry="${(r * 0.44).toFixed(1)}" transform="rotate(${a} ${cx} ${cy})" fill="${mapColor('folk', fill, false)}"/>`;
@@ -73,13 +73,13 @@ function iconFor(look, svg) {
     svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`).split('@BG@').join(deep);
     svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF3D9A${b}`);
   }
-  if (look === 'grid' && bg) {   // the ground: the app's hue, all but black, and the pill an orange light trail
-    const deep = deepen(mapColor('grid', bg, true), 0.32);
+  if (look === 'grid' && bg) {   // the ground: all but black, a hint of the app's hue; the pill a red light trail
+    const deep = deepen(mapColor('neon', bg, true), 0.2);
     svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`);
-    svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF9A2E${b}`);
+    svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF2A2A${b}`);
   }
   svg = svg.split('@BG@').join('#120B1F');
-  svg = svg.split('@CY@').join('#3CEBFF');
+  svg = svg.split('@CY@').join('#FF2A2A');
   if (defs) svg = /<defs>/.test(svg) ? svg.replace('<defs>', '<defs>' + defs) : svg.replace(/(<svg[^>]*>)/, `$1<defs>${defs}</defs>`);
   return svg.replace(/\u0000(\d+)\u0000/g, (_, i) => masks[+i]);
 }

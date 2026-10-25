@@ -13,8 +13,8 @@
       <circle cx="256" cy="268" r="15" fill="#000"/>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#0F1D23"/>
-  <g><circle cx="420" cy="96" r="115.2" fill="none" stroke="#3CEBFF" stroke-width="15.4"/><circle cx="420" cy="96" r="66.6" fill="none" stroke="#3CEBFF" stroke-width="9.0"/><circle cx="420" cy="96" r="15.4" fill="#3CEBFF"/></g>
-  <rect x="24" y="420" width="150" height="50" rx="25" fill="#FF9A2E" transform="rotate(-18 99 445)"/>
-  <rect width="512" height="512" fill="#F4FAFC" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#0E0E15"/>
+  <g><circle cx="420" cy="96" r="115.2" fill="none" stroke="#FF2A2A" stroke-width="15.4"/><circle cx="420" cy="96" r="66.6" fill="none" stroke="#FF2A2A" stroke-width="9.0"/><circle cx="420" cy="96" r="15.4" fill="#FF2A2A"/></g>
+  <rect x="24" y="420" width="150" height="50" rx="25" fill="#FF2A2A" transform="rotate(-18 99 445)"/>
+  <rect width="512" height="512" fill="#F6F7F9" mask="url(#cut)"/>
 </svg>

@@ -21,7 +21,7 @@
     glass: { ground: ['#EEF2F0', '#0D1213'], icon: ['icon-glass-180.png?v=1', 'icon-glass-512.png?v=1'], bar: 'black-translucent' },
     neon: { ground: ['#F5F2FD', '#140A22'], icon: ['icon-neon-180.png?v=1', 'icon-neon-512.png?v=1'], bar: 'default' },
     folk: { ground: ['#F4F7FD', '#0F0B07'], icon: ['icon-folk-180.png?v=1', 'icon-folk-512.png?v=1'], bar: 'default' },
-    grid: { ground: ['#F0F6F9', '#01090F'], icon: ['icon-grid-180.png?v=1', 'icon-grid-512.png?v=1'], bar: 'default' },
+    grid: { ground: ['#F3F5F7', '#050608'], icon: ['icon-grid-180.png?v=1', 'icon-grid-512.png?v=1'], bar: 'default' },
   };
   const ok = v => v in SET ? v : 'vintage';
   let stored = null;

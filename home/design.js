@@ -42,7 +42,7 @@
   const APP = data.app || '';
   const KEY = 'design.' + APP;
   const root = document.documentElement;
-  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], neon: ['#F5F2FD', '#140A22'], folk: ['#F4F7FD', '#0F0B07'], grid: ['#F0F6F9', '#01090F'] };
+  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], neon: ['#F5F2FD', '#140A22'], folk: ['#F4F7FD', '#0F0B07'], grid: ['#F3F5F7', '#050608'] };
   const LOOKS = ['vintage', 'glass', 'neon', 'folk', 'grid'];
   const ok = v => LOOKS.includes(v) ? v : 'vintage';
   const pairs = s => String(s || '').split(',').map(p => p.split('=').map(x => x.trim())).filter(p => p.length === 2 && p[0] && p[1]);
@@ -143,7 +143,7 @@
 .aos-design .sw.glass{background:linear-gradient(135deg,#6FA597,#8193BC 40%,#BE918F 70%,#BC9C68)}
 .aos-design .sw.neon{background:repeating-linear-gradient(to bottom,transparent 0 3px,#120B1F 3px 5px) 0 100%/100% 45% no-repeat,linear-gradient(#FFC75A,#FF8A4C 45%,#FF3D9A)}
 .aos-design .sw.folk{background:radial-gradient(circle,#F5F7FB 0 18%,#1C3F94 19% 46%,#F5F7FB 47% 56%,#C7261C 57% 72%,#D9A630 73%)}
-.aos-design .sw.grid{background:radial-gradient(circle,#3CEBFF 0 12%,#05080C 13% 38%,#3CEBFF 39% 49%,#05080C 50% 70%,#FF9A2E 71% 78%,#05080C 79%)}
+.aos-design .sw.grid{background:radial-gradient(circle,#FF2A2A 0 12%,#08090B 13% 38%,#FF2A2A 39% 49%,#08090B 50% 70%,#E9EDF1 71% 76%,#08090B 77%)}
 .aos-design .grow{flex:1;min-width:0}
 .aos-design b{display:block;font-size:16px;font-weight:600;color:var(--text)}
 .aos-design small{display:block;margin-top:2px;font-size:13px;line-height:1.35;color:var(--muted)}
@@ -157,7 +157,7 @@
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
     ['neon', 'Night Drive', '80s neon: a striped sunset, magenta and cyan on midnight'],
     ['folk', 'Folk', 'Gzhel by day, Khokhloma by night: cobalt, cinnabar and gold'],
-    ['grid', 'Grid', 'Light cycles: cyan and orange light on a black grid'],
+    ['grid', 'Grid', 'Light cycles: red light on a black grid, as in Tron: Ares'],
   ];
   const picker = () => '<div class="aos-design" role="radiogroup" aria-label="Design">' + ROWS.map(([id, name, note]) =>
     `<button type="button" role="radio" data-design="${id}" aria-checked="${id === look}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${name}</b><small>${note}</small></span>${TICK}</button>`).join('') + '</div>';

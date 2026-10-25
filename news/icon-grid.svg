@@ -11,8 +11,8 @@
       </g>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#012122"/>
-  <g><circle cx="404" cy="108" r="135.0" fill="none" stroke="#3CEBFF" stroke-width="18.0"/><circle cx="404" cy="108" r="78.0" fill="none" stroke="#3CEBFF" stroke-width="10.5"/><circle cx="404" cy="108" r="18.0" fill="#3CEBFF"/></g>
-  <rect x="40" y="396" width="190" height="50" rx="25" fill="#FF9A2E" transform="rotate(-18 135 421)"/>
-  <rect width="512" height="512" fill="#F4FAFC" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#120F1C"/>
+  <g><circle cx="404" cy="108" r="135.0" fill="none" stroke="#FF2A2A" stroke-width="18.0"/><circle cx="404" cy="108" r="78.0" fill="none" stroke="#FF2A2A" stroke-width="10.5"/><circle cx="404" cy="108" r="18.0" fill="#FF2A2A"/></g>
+  <rect x="40" y="396" width="190" height="50" rx="25" fill="#FF2A2A" transform="rotate(-18 135 421)"/>
+  <rect width="512" height="512" fill="#F6F7F9" mask="url(#cut)"/>
 </svg>

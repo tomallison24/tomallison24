@@ -6,8 +6,8 @@
       <path d="M134 214l122 86 122-86" fill="none" stroke="#000" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#022023"/>
-  <g><circle cx="404" cy="108" r="135.0" fill="none" stroke="#3CEBFF" stroke-width="18.0"/><circle cx="404" cy="108" r="78.0" fill="none" stroke="#3CEBFF" stroke-width="10.5"/><circle cx="404" cy="108" r="18.0" fill="#3CEBFF"/></g>
-  <rect x="40" y="396" width="190" height="50" rx="25" fill="#FF9A2E" transform="rotate(-18 135 421)"/>
-  <rect width="512" height="512" fill="#F4FAFC" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#041316"/>
+  <g><circle cx="404" cy="108" r="135.0" fill="none" stroke="#FF2A2A" stroke-width="18.0"/><circle cx="404" cy="108" r="78.0" fill="none" stroke="#FF2A2A" stroke-width="10.5"/><circle cx="404" cy="108" r="18.0" fill="#FF2A2A"/></g>
+  <rect x="40" y="396" width="190" height="50" rx="25" fill="#FF2A2A" transform="rotate(-18 135 421)"/>
+  <rect width="512" height="512" fill="#F6F7F9" mask="url(#cut)"/>
 </svg>

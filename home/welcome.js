@@ -96,7 +96,7 @@
         'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings',
         'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour',
         'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)',
-        'A fifth look, Grid: light cycles, cyan and orange light on a black grid at night and on cool white by day, Orbitron headings, an identity disc behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design',
+        'A fifth look, Grid, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design',
         'aOS: now and then Ipsy rolls across the bar at the top of Home and back (never with Reduce Motion; a tap sends it straight home)',
         'aOS: removing someone from the family takes them out completely: signed out of every app, and their account and everything aOS keeps for them deleted (no more Invite back: inviting them again makes a new account)',
         'aOS: Home is where it opens (in place of Apps): the Ipsy bar at the top, your Favorites with a Weather and a Calendar widget (today\'s weather, what\'s next), then every app as an icon in four groups (Family, Every day, Out and about, You): one tap opens any app',
@@ -1556,7 +1556,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-sw.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.95), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.95), transparent 70%), #EEF2F0; }
 #aos-welcome .c-sw.neon { background: #120B1F; } #aos-welcome .c-sw.neon::after { content: ''; position: absolute; right: -12px; top: -12px; width: 32px; height: 32px; border-radius: 50%; background: repeating-linear-gradient(to bottom, transparent 0 4px, #120B1F 4px 6px) 0 100%/100% 45% no-repeat, linear-gradient(#FFC75A, #FF8A4C 45%, #FF3D9A); }
 #aos-welcome .c-sw.folk { background: #F5F7FB; } #aos-welcome .c-sw.folk::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #F5F7FB 0 18%, #C7261C 19% 34%, #1C3F94 35%); }
-#aos-welcome .c-sw.grid { background: #05080C; } #aos-welcome .c-sw.grid::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #3CEBFF 0 12%, transparent 13% 38%, #3CEBFF 39% 50%, transparent 51% 70%, #FF9A2E 71%); filter: drop-shadow(0 0 4px #3CEBFF); }
+#aos-welcome .c-sw.grid { background: #08090B; } #aos-welcome .c-sw.grid::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #FF2A2A 0 12%, transparent 13% 38%, #FF2A2A 39% 50%, transparent 51% 70%, #E9EDF1 71%); filter: drop-shadow(0 0 4px #FF2A2A); }
 #aos-welcome .c-seg button[aria-pressed="true"] { background: var(--w-bg); box-shadow: 0 2px 8px rgba(0,0,0,.18), inset 0 0 0 .5px var(--w-edge); }
 #aos-welcome .c-via { margin: 10px 0 8px; font-size: 13px; line-height: 1.4; color: var(--w-muted); }
 #aos-welcome .c-link { display: block; margin-top: 16px; height: 48px; line-height: 48px; border-radius: 999px; font-size: 16px; font-weight: 600; text-decoration: none; color: var(--w-text); background: var(--w-dot); }
@@ -1654,16 +1654,16 @@ html[data-look="folk"] #aos-welcome.mc::after { background: var(--w-leaf); borde
 html[data-look="folk"] #aos-welcome.mc .w-btn { background: var(--w-btn) !important; color: #FFFFFF !important; }
 html[data-look="folk"] #aos-welcome.mc :is(h1, h2) { font-family: "Yeseva One", Georgia, serif; font-weight: 400; }
 html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next Condensed", "Avenir Next", system-ui, sans-serif; font-style: italic; font-weight: 800; }
-html[data-look="grid"] #aos-welcome.mc.mc { --w-bg: #F1F5F8; --w-text: #0B1B26; --w-muted: #3E5563; --w-glass: #FFFFFF; --w-edge: rgba(0,137,168,.28); --w-dot: rgba(11,27,38,.18);
-  --w-pastel: linear-gradient(100deg, #0089A8, #0089A8); --w-glow: rgba(0,137,168,.35); --w-hot: linear-gradient(120deg, #0089A8 0%, #0089A8 45%, #E2600E 100%); --w-hot-glow: rgba(0,137,168,.5); --w-hot-glow2: rgba(226,96,14,.45);
-  --w-line: #0089A8; --w-heat: #E2600E; --w-shine: 0px; font-family: "Exo 2", "Avenir Next", system-ui, sans-serif; }
-@media (prefers-color-scheme: dark) { html[data-look="grid"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #05080C; --w-text: #E6FBFF; --w-muted: #8FB3BF; --w-glass: #0B141C; --w-edge: rgba(60,235,255,.38); --w-dot: rgba(230,251,255,.22);
-  --w-pastel: linear-gradient(100deg, #3CEBFF, #3CEBFF); --w-hot: linear-gradient(120deg, #3CEBFF 0%, #3CEBFF 45%, #FF9A2E 100%); --w-line: #3CEBFF; --w-heat: #FF9A2E; --w-shine: 12px; } }
-html[data-look="grid"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #05080C; --w-text: #E6FBFF; --w-muted: #8FB3BF; --w-glass: #0B141C; --w-edge: rgba(60,235,255,.38); --w-dot: rgba(230,251,255,.22);
-  --w-pastel: linear-gradient(100deg, #3CEBFF, #3CEBFF); --w-hot: linear-gradient(120deg, #3CEBFF 0%, #3CEBFF 45%, #FF9A2E 100%); --w-line: #3CEBFF; --w-heat: #FF9A2E; --w-shine: 12px; }
+html[data-look="grid"] #aos-welcome.mc.mc { --w-bg: #F3F5F7; --w-text: #15171B; --w-muted: #50555D; --w-glass: #FFFFFF; --w-edge: rgba(208,16,30,.28); --w-dot: rgba(21,23,27,.18);
+  --w-pastel: linear-gradient(100deg, #D0101E, #D0101E); --w-glow: rgba(208,16,30,.3); --w-hot: linear-gradient(120deg, #D0101E 0%, #D0101E 45%, #2A2E35 100%); --w-hot-glow: rgba(208,16,30,.5); --w-hot-glow2: rgba(42,46,53,.4);
+  --w-line: #D0101E; --w-heat: #D0101E; --w-shine: 0px; font-family: "Exo 2", "Avenir Next", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="grid"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #08090B; --w-text: #F1F3F5; --w-muted: #A3A8B0; --w-glass: #131519; --w-edge: rgba(255,42,42,.42); --w-dot: rgba(241,243,245,.22);
+  --w-pastel: linear-gradient(100deg, #FF2A2A, #FF2A2A); --w-hot: linear-gradient(120deg, #FF2A2A 0%, #FF2A2A 45%, #E9EDF1 100%); --w-line: #FF2A2A; --w-heat: #FF2A2A; --w-shine: 12px; } }
+html[data-look="grid"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #08090B; --w-text: #F1F3F5; --w-muted: #A3A8B0; --w-glass: #131519; --w-edge: rgba(255,42,42,.42); --w-dot: rgba(241,243,245,.22);
+  --w-pastel: linear-gradient(100deg, #FF2A2A, #FF2A2A); --w-hot: linear-gradient(120deg, #FF2A2A 0%, #FF2A2A 45%, #E9EDF1 100%); --w-line: #FF2A2A; --w-heat: #FF2A2A; --w-shine: 12px; }
 html[data-look="grid"] #aos-welcome.mc::before { opacity: 1; background: radial-gradient(circle, var(--w-line) 0 7%, transparent 7.5% 30%, var(--w-line) 31% 35%, transparent 36% 55%, var(--w-line) 56% 63%, transparent 64%); filter: drop-shadow(0 0 var(--w-shine) var(--w-line)); }
 html[data-look="grid"] #aos-welcome.mc::after { height: 6px; border-radius: 0; background: var(--w-heat); box-shadow: 0 0 var(--w-shine) var(--w-heat); opacity: 1; }
-html[data-look="grid"] #aos-welcome.mc .w-btn { background: var(--w-line) !important; color: var(--w-bg) !important; box-shadow: 0 0 var(--w-shine) var(--w-line); }
+html[data-look="grid"] #aos-welcome.mc .w-btn { background: var(--w-line) !important; color: #FFFFFF !important; box-shadow: 0 0 var(--w-shine) var(--w-line); }
 html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "Exo 2", system-ui, sans-serif; font-weight: 700; letter-spacing: .02em; font-size-adjust: .5; }
 `;
 
@@ -2222,7 +2222,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma'], ['grid', 'Grid', 'Light cycles, cyan and orange']];
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma'], ['grid', 'Grid', 'Light cycles, red on black']];
   const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now

@@ -125,8 +125,8 @@ from.
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
 - **Five designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
-  glass), Night Drive (80s neon), Folk (Gzhel by day, Khokhloma by night) and Grid (light cycles:
-  cyan and orange light on a black grid), picked for every
+  glass), Night Drive (80s neon), Folk (Gzhel by day, Khokhloma by night) and Grid (light cycles, after the
+  Tron: Ares mode in Tesla's cars: red light on a black grid), picked for every
   app at once in aOS (Account > Appearance > Look: `aOS/look.js` writes each app's design) or in
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
