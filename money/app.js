@@ -684,33 +684,45 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         (r.messages || []).forEach(m => ids.push(m.id));
         pageToken = r.nextPageToken;
       } while (pageToken && ids.length < 15000);
-      const seen = new Set(D.seen), todo = ids.filter(id => !seen.has(id)), items = [];
-      await pool(todo, 4, async id => {
-        const m = await gmail('/messages/' + id, { format: 'full' });
-        const b = bodies(m.payload);
-        const r = P.parse({ id, at: +m.internalDate || Date.now(), subject: header(m, 'subject'), html: b.html, text: b.text });
-        seen.add(id);
-        if (!r) return;
-        if (r.kind === 'tx') items.push(...r.items);
-        else if (r.kind === 'alert' && !D.alerts.some(a => a.id === r.alert.id)) { D.alerts.push(r.alert); alerts++; }
-        else if (r.kind === 'recurring') for (const h of r.merchants) if (!D.hints.some(x => C.norm(x.name) === C.norm(h.name))) D.hints.push(h);
-      });
-      const before = new Map(D.tx.map(x => [x.id, x]));
-      const res = C.merge(D.tx, items);
-      added = res.added;
-      // the months to send: those with a transaction that wasn't there, or one that went
-      const months = new Set();
-      const after = new Set(res.list.map(x => x.id));
-      for (const x of res.list) if (!before.has(x.id)) months.add(C.ymOf(x.date));
-      for (const [id, x] of before) if (!after.has(id)) months.add(C.ymOf(x.date));
-      D.tx = res.list;
-      D.dirty = [...new Set([...D.dirty, ...months])];
-      D.alerts = D.alerts.sort((a, b) => a.at - b.at).slice(-50);
-      D.seen = [...seen].slice(-6000);
-      D.lastScan = started; D.readAt = Date.now();
+      // Each email on its own: one that can't be fetched (gone, the connection dropped, the page
+      // went away) stops nothing, and isn't marked read, so the next read tries it again. What was
+      // read is folded in every 40 emails, so a long first read keeps what it got this far.
+      const seen = new Set(D.seen), todo = ids.filter(id => !seen.has(id));
+      let items = [], failed = 0;
+      const fold = () => {
+        const before = new Map(D.tx.map(x => [x.id, x]));
+        const res = C.merge(D.tx, items);
+        added += res.added; items = [];
+        // the months to send: those with a transaction that wasn't there, or one that went
+        const months = new Set(), after = new Set(res.list.map(x => x.id));
+        for (const x of res.list) if (!before.has(x.id)) months.add(C.ymOf(x.date));
+        for (const [id, x] of before) if (!after.has(id)) months.add(C.ymOf(x.date));
+        D.tx = res.list;
+        D.dirty = [...new Set([...D.dirty, ...months])];
+        D.alerts = D.alerts.sort((a, b) => a.at - b.at).slice(-50);
+        D.seen = [...seen].slice(-6000);
+        persist();
+      };
+      try {
+        await pool(todo, 4, async (id, k) => {
+          let m;
+          try { m = await gmail('/messages/' + id, { format: 'full' }); }
+          catch (err) { if (err instanceof AuthError) throw err; failed++; return; }
+          seen.add(id);
+          let r = null;
+          try { const b = bodies(m.payload); r = P.parse({ id, at: +m.internalDate || Date.now(), subject: header(m, 'subject'), html: b.html, text: b.text }); } catch {}   // one Money can't make sense of: passed over
+          if (r && r.kind === 'tx') items.push(...r.items);
+          else if (r && r.kind === 'alert' && !D.alerts.some(a => a.id === r.alert.id)) { D.alerts.push(r.alert); alerts++; }
+          else if (r && r.kind === 'recurring') for (const h of r.merchants) if (!D.hints.some(x => C.norm(x.name) === C.norm(h.name))) D.hints.push(h);
+          if ((k + 1) % 40 === 0) fold();
+        });
+      } finally { fold(); }
+      if (!failed) D.lastScan = started;   // else the next read looks back as far again, for what's left
+      D.readAt = Date.now();
       persist();
+      if (failed && loud) toast(plural(failed, 'email') + ' couldn’t be read just now: Money tries again next time.', null, 5000);
       pillDone(added ? 'Found ' + plural(added, 'transaction') : 'Up to date');
-      if (loud && !added && !alerts) toast('Nothing new from Monarch.');
+      if (loud && !added && !alerts && !failed) toast('Nothing new from Monarch.');
     } catch (err) {
       busyPill(null);
       if (err instanceof AuthError) { if (mayRenew()) signIn({ silent: true }); else if (loud) toast('Gmail needs you to sign in again: Settings, Connect Gmail.', null, 6000); }
