@@ -17,6 +17,7 @@
 // - the spouse's phone: nothing until the reader shares it (Settings > Who sees Money), then the
 //   same months, and no Gmail;
 // - kept in IndexedDB (moved from localStorage), five years of it, and read back after a reload;
+// - back from Google's sign-in inside aOS: the token kept before the page goes back into aOS;
 // - signed out with no data: the empty page asks to connect Gmail;
 // - dark mode, the designs (Vintage, the default, and Standard, from Settings > Design), and nothing
 //   tripping the page's Content Security Policy or throwing.
@@ -421,6 +422,16 @@ await test('the spouse sees nothing until it’s shared, then the same months, a
   await B.ctx.close();
 });
 
+await test('back from Google’s sign-in inside aOS: the token is kept before the page goes back into aOS', async () => {
+  const G = await phone({});
+  await G.p.evaluate(() => { localStorage.setItem('money.state', 'n1'); localStorage.setItem('aos.away', 'money|' + Date.now()); });
+  await G.p.goto('about:blank');   // Google's page, as far as Money knows
+  await G.p.goto(BASE + '/money/#access_token=fake-token&token_type=Bearer&expires_in=3599&state=n1&scope=https://www.googleapis.com/auth/gmail.readonly');
+  await G.p.waitForURL(/\/aOS\//, { timeout: 10000 });
+  const tok = JSON.parse(await G.p.evaluate(() => localStorage.getItem('money.token')) || 'null');
+  assert.equal(tok && tok.t, 'fake-token', 'Gmail stays connected');
+  await G.ctx.close();
+});
 await test('signed out with nothing yet: asks to connect Gmail', async () => {
   const C = await phone({});
   const t = await mainText(C.p);
