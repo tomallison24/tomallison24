@@ -342,7 +342,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await ctx.route('**/aOS/api/move/take', r => { took++; const d = fresh ? left : null; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: d }) }); });
     await ctx.addInitScript(([apps, fresh, tab]) => { if (!tab) Object.defineProperty(navigator, 'standalone', { get: () => true }); if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
       const s = { aos: '999' }; for (const a of apps) s[a] = '999';
-      localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
+      localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
       localStorage.setItem('aos.session', JSON.stringify({ token: fresh ? 'new' : 'old', user: { id: 'O1', name: 'Tom', role: 'member' }, at: Date.now() }));
       if (fresh) localStorage.setItem('allison-clock-v1', '{"alarms":[]}');   // the other icon had its own (older) copy
     if (!fresh) { localStorage.setItem('allison-clock-v1', '{"alarms":[{"at":"07:00"}]}'); localStorage.setItem('mail.token', 'secret');
@@ -392,7 +392,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     });
     await ctx.addInitScript(([apps, tok, seed]) => { if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
       const s = { aos: '999' }; for (const a of apps) s[a] = '999';
-      localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
+      localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1');
       localStorage.setItem('aos.session', JSON.stringify({ token: tok, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
       for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v); }, [APPS, tok, seed]);
     const pg = await ctx.newPage(), errs = []; pg.on('pageerror', e => errs.push(e.message));
@@ -470,7 +470,7 @@ for (const signedIn of [false, true]) {
     Object.defineProperty(navigator, 'standalone', { get: () => true });
     if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
     const s = { aos: '999' }; for (const a of apps) s[a] = '999';
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('news.test', 'icon');
+    localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('news.test', 'icon');
     if (signedIn) localStorage.setItem('aos.session', JSON.stringify({ token: 't', user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
   }, [APPS, signedIn]);
   const pg = await ctx.newPage(), errs = [];
@@ -506,9 +506,10 @@ for (const signedIn of [false, true]) {
   check(JSON.parse(await pg.evaluate(() => localStorage.getItem('home.settings'))).theme === 'dark', 'light or dark, saved');
   await pg.click('#setupBox [data-snext]');
   check(await pg.locator('#setupBox .ipsy-whobtn').count() === 7 && await pg.locator('#setupBox .ipsy-whobtn[aria-checked="true"]').count() === 0, 'then every helper, none picked yet');
-  await pg.click('#setupBox .ipsy-whobtn[data-who="otter"]'); await pg.fill('#ipsyAcctName', 'Biscuit');
+  await pg.click('#setupBox .ipsy-whobtn[data-who="otter"]'); await pg.fill('#setupBox .ipsy-name', 'Biscuit');
   await pg.click('#setupBox [data-snext]');
   check(/You’re all set/.test(await pg.textContent('#setupBox')) && /Biscuit · Otter/.test(await pg.textContent('#setupBox')), 'all set, with what was picked');
+  check(await pg.textContent('#helperSub') === 'Biscuit · Otter' && await pg.locator('#helperPick .ipsy-whobtn[data-who="otter"][aria-checked="true"]').count() === 1, 'Account\'s Your helper, under it, follows');
   const h = await pg.evaluate(() => ({ h: AllisonOS.ipsy.helper(), who: document.querySelector('#ipsySlot .ipsy-char').dataset.who, label: document.querySelector('#ipsySlot .ipsy-btn').getAttribute('aria-label') }));
   check(h.h && h.h.who === 'otter' && h.h.name === 'Biscuit' && h.who === 'otter' && h.label === 'Ask Biscuit', `the helper is yours at once, on Home too (${JSON.stringify(h)})`);
   await pg.click('#setupBox [data-snext]'); await pg.waitForTimeout(500);

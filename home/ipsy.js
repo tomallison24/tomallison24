@@ -291,24 +291,34 @@
       + '<label class="ipsy-namel" for="' + id + '">Name</label><input class="ipsy-name" id="' + id + '" maxlength="16" autocomplete="off" spellcheck="false" placeholder="' + (h ? 'Give them a name' : 'Pick a helper first') + '"' + (h ? ' value="' + esc(h.name) + '"' : ' disabled') + '>';
   }
   function bindPicker(root, done) {
-    let who = (helper() || {}).who || '';
+    const who = () => { const b = root.querySelector('.ipsy-whobtn[aria-checked="true"]'); return b ? b.dataset.who : ''; };   // as shown (another picker may have changed it)
     root.addEventListener('click', e => {
       const b = e.target.closest('.ipsy-whobtn'); if (!b) return;
-      who = b.dataset.who;
       root.querySelectorAll('.ipsy-whobtn').forEach(x => x.setAttribute('aria-checked', String(x === b)));
       const n = root.querySelector('.ipsy-name'); n.disabled = false; n.placeholder = 'Give them a name'; n.focus();
-      if (done) done(who, n.value, false);
+      if (done) done(who(), n.value, false);
     });
-    root.addEventListener('input', e => { if (e.target.classList.contains('ipsy-name') && who && done) done(who, e.target.value, false); });
-    return { who: () => who, name: () => (root.querySelector('.ipsy-name') || {}).value || '' };
+    root.addEventListener('input', e => { if (e.target.classList.contains('ipsy-name') && who() && done) done(who(), e.target.value, false); });
+    return { who, name: () => (root.querySelector('.ipsy-name') || {}).value || '' };
   }
   // In aOS Account, Your helper: picks and names it as you go (saved at once); changed(helper) after each change
+  let pickers = 0;
   function picker(host, changed) {
     addStyle();
-    const h = helper();
-    host.innerHTML = '<div class="ipsy-picker">' + pickerHtml('ipsyAcctName', h) + '</div>';
-    follow(host.firstChild);
-    bindPicker(host.firstChild, (who, name) => { setHelper(who, name); if (changed) changed(helper()); });
+    const id = 'ipsyName' + (++pickers);   // one page can hold two (Account's, and Run through setup's over it)
+    host.innerHTML = '<div class="ipsy-picker">' + pickerHtml(id, helper()) + '</div>';
+    const root = host.firstChild;
+    follow(root);
+    bindPicker(root, (who, name) => { setHelper(who, name); if (changed) changed(helper()); });
+    // picked or named elsewhere (another picker, Ipsy, another app): this one shows it too
+    const sync = h => {
+      if (!root.isConnected) { onHelper.delete(sync); return; }
+      root.querySelectorAll('.ipsy-whobtn').forEach(b => b.setAttribute('aria-checked', String(!!h && b.dataset.who === h.who)));
+      const n = root.querySelector('.ipsy-name');
+      if (h && document.activeElement !== n) { n.disabled = false; n.placeholder = 'Give them a name'; n.value = h.name; }
+      if (changed) changed(h);
+    };
+    onHelper.add(sync);
   }
 
   // ---------------------------------------------------------------------------
