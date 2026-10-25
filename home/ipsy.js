@@ -61,6 +61,8 @@
     return m ? (/^(english|eng|английский|англ)$/.test(m[1]) ? 'en' : 'ru') : null;
   };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);   // a key of the list itself, never 'constructor' or '__proto__'
+  const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const ls = {
     get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
     set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } },
@@ -176,12 +178,12 @@
   // and it follows you to your other devices with your settings: aOS/prefs-sync.js). None yet: the helpers take
   // turns peeking out of the corner, and the chat starts by asking you to pick one.
   const HELPER_KEY = 'aos.helper';
-  const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && HELPERS[h.who] ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
+  const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && own(HELPERS, h.who) ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
   const helperName = () => { const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
   // the chat's title: its name, or with none, what it is (Mia is Mia; in Russian, Ipsy)
   const title = () => { const h = helper(); return !h || h.name.trim() ? helperName() : (ru => h.who === 'mia' ? (ru ? 'Мия' : 'Mia') : ru ? 'Ipsy' : HELPERS[h.who].label)(window.aosLang && aosLang.get() === 'ru'); };
   function setHelper(who, name) {
-    if (!HELPERS[who]) return;
+    if (!own(HELPERS, who)) return;
     ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
     helperChanged();
   }
@@ -723,7 +725,7 @@
     return {
       get_settings: async () => ({ content: Object.entries(SETTINGS).map(([id, s]) => ({ id, now: shown(id, s), values: s.values, about: s.about, ...(s.ask ? { asks_first: true } : {}) })) }),
       change_setting: async ({ setting, value } = {}, { confirm }) => {
-        const s = SETTINGS[setting];
+        const s = own(SETTINGS, setting) ? SETTINGS[setting] : null;
         if (!s) return { error: true, content: 'That isn\'t a setting Ipsy can change. Use open_setting to show the person where it is.' };
         value = String(value == null ? '' : value).trim().replace(/\s+/g, ' '); if (!s.keepCase) value = value.toLowerCase();
         if (s.ok ? !s.ok(value) : !s.values.includes(value)) return { error: true, content: `${setting} takes: ${s.values.join(', ')}.` };
@@ -737,13 +739,13 @@
       },
       open_setting: async ({ place } = {}) => {
         const top = aosTop();
-        if (place in ACCOUNT) {
+        if (own(ACCOUNT, place)) {
           if (!top || !top.aosAccount) return { error: true, content: 'This is in aOS (Account). Ask the person to open aOS, then their name at the top of Home.' };
           closeChat(); if (top !== window) top.aosHomeTab.show(null);
           top.aosAccount.open(ACCOUNT[place]);
           return { content: 'Opened ' + place.replace('aos.', 'aOS > Account > ').replace(/_/g, ' ') + '.' };
         }
-        if (!OPENER[place]) return { error: true, content: 'No such place. Places: ' + [...Object.keys(ACCOUNT), ...SET_APPS].join(', ') + '.' };
+        if (!own(OPENER, place)) return { error: true, content: 'No such place. Places: ' + [...Object.keys(ACCOUNT), ...SET_APPS].join(', ') + '.' };
         if (place === here) { closeChat(); const b = document.querySelector(OPENER[place]); if (b) b.click(); return { content: 'Opened Settings in this app.' }; }
         if (top) { closeChat(); top.aosHomeTab.openSettings(place, OPENER[place]); return { content: 'Opened ' + place + '\'s Settings in aOS.' }; }
         return { error: true, content: `Settings for ${place} are in that app: ask the person to open it from aOS and tap its Settings button.` };
@@ -999,7 +1001,7 @@
     function add(v) { view.push(v); if (!wrap.hidden) { if (showing) { showing = false; draw(); return; } log.insertAdjacentHTML('beforeend', item(v)); log.scrollTop = log.scrollHeight; } }
     function persist() {
       // A chat too big to keep is kept on screen only (the phone's storage is shared by every app).
-      const s = JSON.stringify({ messages, view: view.map(v => v.t === 'change' ? { ...v } : v) });
+      const s = JSON.stringify({ messages, view });
       if (s.length > 1.5e6 || !ls.set(K.chat, s)) ls.del(K.chat);
     }
 
@@ -1020,7 +1022,7 @@
     // a card in the chat with exactly what will change, and Yes / No buttons. Nothing happens until a
     // button is tapped; the tool gets true for Yes, false for No.
     function confirm(text, opt = {}) {
-      const id = 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const id = uid('q');
       return new Promise(resolve => {
         asks.set(id, resolve);
         if (wrap.hidden) open();
@@ -1034,7 +1036,7 @@
       try {
         const res = await fn(u.input || {}, { confirm }) || {};
         if (res.change && res.change.text) {
-          const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+          const id = uid('c');
           if (typeof res.change.undo === 'function') undos.set(id, res.change.undo);
           add({ t: 'change', id, text: res.change.text });
         }
@@ -1164,7 +1166,7 @@
       note: text => { if (wrap.hidden) freshIfDone(); add({ t: 'act', text }); persist(); },
       change: (text, undo) => {
         if (wrap.hidden) freshIfDone();
-        const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const id = uid('c');
         if (typeof undo === 'function') undos.set(id, undo);
         add({ t: 'change', id, text }); persist();
       },
