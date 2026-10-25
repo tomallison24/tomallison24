@@ -62,7 +62,9 @@
     'The original look': 'Исходный стиль',
     '80s neon, magenta and cyan': 'Неон 80-х, пурпурный и голубой',
     'Gzhel and Khokhloma': 'Гжель и хохлома',
-    'Grid': 'Сетка',
+    'Tron': 'Трон',
+    'Special Edition': 'Специальная серия',
+    'Tron Special Edition': 'Трон, специальная серия',
     'Light cycles, red on black': 'Световые мотоциклы, красный на чёрном',
     'Light cycles: red light on a black grid, as in Tron: Ares': 'Световые мотоциклы: красный свет на чёрной сетке, как в «Троне: Арес»',
     'Mid-century: cream and walnut, mustard, teal and orange': 'Середина века: сливочный и орех, горчичный, бирюзовый и оранжевый',
@@ -178,7 +180,7 @@
     'For grown-ups': 'Для взрослых',
     "Press and hold Grown-ups for the Parent corner: each child's progress, words to practice together, play time and the letter sounds you record.": 'Нажмите и удерживайте «Для взрослых», чтобы открыть уголок родителей: успехи каждого ребёнка, слова для совместных занятий, время игры и записанные вами звуки букв.',
     'Five designs': 'Пять дизайнов',
-    'Vintage, Standard in Sea glass, Night Drive, Folk or Grid, for the player picker and the Parent corner. Pick one in the Parent corner > Design.': 'Винтаж, Стандарт в стиле «Морское стекло», Ночная трасса, Народный или Сетка: для выбора игрока и уголка родителей. Выберите в уголке родителей > Дизайн.',
+    'Vintage, Standard in Sea glass, Night Drive, Folk or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design.': 'Винтаж, Стандарт в стиле «Морское стекло», Ночная трасса, Народный или Трон: для выбора игрока и уголка родителей. Выберите в уголке родителей > Дизайн.',
     'News by topic': 'Новости по темам',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое.',
     'Browse the latest headlines from free sources across World, UK, US, Business, Tech, AI, Science and more. Tap the pill to pick a topic.': 'Свежие заголовки из бесплатных источников: Мир, Великобритания, США, Бизнес, Технологии, ИИ, Наука и другое. Нажмите на кнопку, чтобы выбрать тему.',
@@ -340,7 +342,7 @@
       'За работой помощник показывает, что делает: читает книгу, когда смотрит ваши данные, надевает очки и водит лупой, когда ищет, пишет в блокноте, когда что-то меняет, показывает пальцем, когда открывает что-то на экране, прикладывает руку к уху, пока вы печатаете, и подпрыгивает, когда изменение сохранено. В чате написано, что он делает, например «Мия читает…»',
     'On aOS Home, now and then your helper crosses the Ipsy bar in its own way: Mia\'s zoomies, the fox creeping then pouncing, the owl looping the loop, the robot moonwalking, the octopus jetting, the hedgehog rolling up, the otter belly-sliding (never with Reduce Motion)':
       'На главной aOS помощник время от времени по-своему пробегает по строке Ипси: Мия носится кругами, лиса крадётся и прыгает, сова делает мёртвую петлю, робот идёт лунной походкой, осьминог плывёт рывками, ёжик катится клубком, выдра скользит на животе (никогда при «Уменьшении движения»)',
-    'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Grid, a lit visor': 'В стиле «Ночная трасса» на каждом помощнике зеркальные очки, в «Народном» — красный платок в белый горошек, а в «Сетке» — светящийся визор',
+    'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Tron, a lit visor': 'В стиле «Ночная трасса» на каждом помощнике зеркальные очки, в «Народном» — красный платок в белый горошек, а в «Троне» — светящийся визор',
     'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works': 'Ипси больше не стволовая клетка и не превращается в другие клетки за работой',
     'Your language now follows you to your other devices, as your look does': 'Язык теперь переходит с вами на другие устройства, как и оформление',
     'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
@@ -963,7 +965,7 @@
 (() => {
   const ABOUT = {
     'Light or dark, for aOS and every app': 'Светлая или тёмная тема в aOS и всех приложениях',
-    'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Grid': 'Стиль aOS и всех приложений',
+    'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron Special Edition': 'Стиль aOS и всех приложений',
     'The language of aOS and every app': 'Язык aOS и всех приложений',
     'The apps pinned in Favorites on aOS Home, up to 4, by id': 'Избранное на главной aOS',
     'Calendar: the day weeks start on': 'Календарь: первый день недели',
@@ -1041,6 +1043,6 @@ aosLang.add({
   'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings': 'На русском Часы показывают 24-часовое время, пока вы не выберете формат в их настройках',
   'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour': 'Ночная трасса и Народный: верх каждого приложения сливается со строкой состояния, фигуры проступают из-под неё, как в Винтаже, а строка — цвета самой страницы',
   'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)': 'Строка состояния — цвета страницы и когда в Оформлении выбрана Светлая или Тёмная тема (раньше она могла остаться цвета другого режима, полосой сверху)',
-  'A fifth look, Grid, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design': 'Пятый стиль, Сетка, по мотивам режима «Трон: Арес» в автомобилях Tesla: красный свет на чёрной сетке ночью и на чистом белом днём, заголовки шрифтом Orbitron, красный диск и световой след за каждым заголовком, свои значки приложений и Ипси в светящемся визоре. Профиль > Оформление > Стиль или Настройки > Дизайн в приложении',
+  'A fifth look, Tron Special Edition, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design': 'Пятый стиль, Трон (специальная серия), по мотивам режима «Трон: Арес» в автомобилях Tesla: красный свет на чёрной сетке ночью и на чистом белом днём, заголовки шрифтом Orbitron, красный диск и световой след за каждым заголовком, свои значки приложений и Ипси в светящемся визоре. Профиль > Оформление > Стиль или Настройки > Дизайн в приложении',
   'aOS: the status bar changes with the page when you pick another look, light or dark, or open an app (it could keep the colour it had when aOS opened, another look\'s)': 'aOS: строка состояния меняется вместе со страницей, когда вы выбираете другой стиль, светлую или тёмную тему или открываете приложение (раньше она могла остаться того цвета, что был при открытии aOS, — цвета другого стиля)',
 });

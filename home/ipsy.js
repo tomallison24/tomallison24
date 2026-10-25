@@ -44,7 +44,7 @@
   const me = document.currentScript;
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
-  // Night Drive, Folk and Grid wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-folk, ipsy-grid on top of ipsy-vintage).
+  // Night Drive, Folk and Tron wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-folk, ipsy-grid on top of ipsy-vintage).
   const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|folk|grid)$/.test(l || '') ? l : 'glass'; };
   const followers = new Set();                       // elements that wear the page's look
   const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'folk', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'folk' || l === 'grid'))); };
@@ -80,7 +80,7 @@
   //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
   //   write (a notepad: create_*, set_*, update_*…), show (points: show_*), talk (the answer appearing),
   //   done (a hop: a change saved).
-  // Night Drive puts mirror shades on every helper, Folk a red neckerchief with white dots, Grid a lit visor.
+  // Night Drive puts mirror shades on every helper, Folk a red neckerchief with white dots, Tron a lit visor.
   // ---------------------------------------------------------------------------
   const EGG = 'M100 56C134 56 152 80 152 114C152 150 130 168 100 168C70 168 48 150 48 114C48 80 66 56 100 56Z';
   const SPIKES = (() => {
@@ -364,7 +364,7 @@
 .h-specs{opacity:0;transform:translateY(-40px);transition:transform .55s cubic-bezier(.3,1.5,.5,1),opacity .2s}
 .h-lens{fill:#DCEBE9;stroke:#1F6F6B;stroke-width:4} .h-handle{stroke:var(--line);stroke-width:5;stroke-linecap:round}
 .h-bubble{fill:#FFFDF7;stroke:var(--line);stroke-width:2} .h-star{fill:#D8572A} .h-wave{fill:none;stroke:#1F6F6B;stroke-width:3;stroke-linecap:round}
-/* Night Drive: mirror shades (off while the glasses are on); Folk: a red neckerchief with white dots; Grid: a lit visor */
+/* Night Drive: mirror shades (off while the glasses are on); Folk: a red neckerchief with white dots; Tron: a lit visor */
 .h-shades,.h-scarf,.h-visor{display:none}
 .ipsy-grid .h-visor{display:inline}
 .ipsy-grid .h-lids{opacity:0}
@@ -672,7 +672,7 @@
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Grid', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, {
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, {
       get: () => ls.get('aos.look', 'vintage'),
       put: v => { if (window.aosLook) return aosLook.set(v, { apps: SET_APPS }); ls.set('aos.look', v); SET_APPS.forEach(id => putLook(id, v)); } }) },
     language: { app: '*', live: true, about: 'The language of aOS and every app (drawn again in it after your reply)', ...choice({ en: 'en', ru: 'ru' }, {

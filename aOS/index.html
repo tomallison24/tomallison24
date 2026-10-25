@@ -368,6 +368,10 @@
   .dth.folk::before { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #F5F7FB 0 18%, #C7261C 19% 34%, #1C3F94 35%); }
   .dth.grid { background: #08090B; } .dth.grid i { background: #131519; box-shadow: inset 0 0 0 1px rgba(255,42,42,.6), 0 0 6px rgba(255,42,42,.35); }
   .dth.grid::before { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #FF2A2A 0 12%, transparent 13% 38%, #FF2A2A 39% 50%, transparent 51% 70%, #E9EDF1 71%); filter: drop-shadow(0 0 4px #FF2A2A); }
+  .dth.grid::before { animation: aosSePulse 1.1s ease-in-out infinite alternate; } .dth.grid::after {content:'';position:absolute;left:-60%;bottom:9px;width:60%;height:2px;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent,#FF2A2A 80%,#fff);box-shadow:0 0 6px #FF2A2A;animation:aosSeRide 2.2s cubic-bezier(.5,0,.5,1) infinite}   /* a special edition: a light cycle rides across, the disc glows */
+  .dopt .se {display:inline-block;margin-left:7px;padding:2px 7px 1px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.5;vertical-align:2px;white-space:nowrap;color:#fff;background:linear-gradient(100deg,#9E0A14 0%,#FF2A2A 38%,#FF8F8F 50%,#FF2A2A 62%,#9E0A14 100%) 0 0/260% 100%;box-shadow:0 0 8px rgba(255,42,42,.6);text-shadow:0 1px 2px rgba(90,0,0,.55);animation:aosSeShine 2.6s linear infinite}
+  @keyframes aosSeShine{from{background-position:100% 0}to{background-position:-160% 0}}@keyframes aosSeSpin{to{transform:rotate(1turn)}}@keyframes aosSeRide{to{left:110%}}@keyframes aosSePulse{from{filter:drop-shadow(0 0 2px #FF2A2A)}to{filter:drop-shadow(0 0 9px #FF2A2A)}}
+  @media (prefers-reduced-motion: reduce) { .dopt .se, .dth.grid::before, .dth.grid::after { animation: none; } }
   .dsheet h1 { margin: 6px 0 6px; font-size: 28px; letter-spacing: -.5px; } .dsheet p { margin: 0 0 16px; color: var(--muted); font-size: 15.5px; line-height: 1.4; }
   .dlist { display: grid; gap: 8px; } .dlist .dopt { background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); } .dlist .dopt[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
   .dgo { display: flex; margin-top: 20px; } .dgo .get.big { flex: 1; min-width: 0; height: 52px; border-radius: 17px; font-size: 17px; }
@@ -786,7 +790,7 @@ body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
 </style>
 <style id="grid" media="not all">
-/* Grid: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+/* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
 :root{--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,.14);--mc-mustard:#FB6049;--mc-teal:#973835;--mc-orange:#E41F24;--mc-walnut:#292D33;--mc-on-mustard:#171B20;--bg:#F3F5F7;--card:#FAFCFE;--solid:#FAFCFE;--text:#171B20;--muted:#3D4146;--line:rgba(23,27,32,.12);--dot:rgba(23,27,32,.07);--glass:#FAFCFE;--edge:rgba(23,27,32,.10);--accent:#973835;--sand:#821709;--on:#FCFDFF;--pastel:#FB6049;--cta:#C11019;--cta-ink:#FCFDFF;--ink2:#C11019;--danger-text:#A50310}
 @media (prefers-color-scheme: dark){
 :root:not([data-theme="light"]){--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-teal:#FFA39B;--bg:#050608;--card:#0D0F11;--solid:#0D0F11;--text:#EEF0F2;--muted:#C8CACD;--line:rgba(238,240,242,.12);--dot:rgba(238,240,242,.07);--glass:#0D0F11;--edge:rgba(238,240,242,.12);--accent:#FCB5AE;--sand:#FCBAAF;--on:#040506;--ink2:#FCBAAF;--danger-text:#FE9185}
@@ -820,7 +824,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 .hero .art img{box-shadow:0 0 0 8px rgba(252,253,255,.9)}
 .ptitle::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23973835'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FB6049'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23E41F24'/%3E%3C/svg%3E") no-repeat}
 .dmenu{box-shadow:inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px rgba(23,27,32,.4)}
-/* Grid: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
+/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
    the cabin lit red. Red light on black at night, on clean white by day: Orbitron headings (Exo 2 for Cyrillic), Exo 2 for
    the rest (SIL Open Font License, ../home/fonts); an identity disc, a white square and a red light trail for the shapes,
    a grid floor under them, and a glow on what's lit. */

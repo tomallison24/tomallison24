@@ -53,10 +53,11 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (await css(p, '.quick', 'backgroundColor') !== WALNUT) pr.push('the Home button along the bottom is not on walnut: ' + await css(p, '.quick', 'backgroundColor'));
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
-  const names = await p.locator('#looks .dopt b').allInnerTexts();
-  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Grid') pr.push('the picker offers ' + names.join());
+  const names = await p.locator('#looks .dopt b').allTextContents();
+  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Tron Special Edition') pr.push('the picker offers ' + names.join());
   if (await selected(p) !== 'vintage') pr.push('Vintage is not the one picked: ' + await selected(p));
-  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Night Drive, Folk and Grid, Vintage picked', pr); await ctx.close();
+  if (await p.locator('#looks [data-look="grid"] .se').evaluate(e => getComputedStyle(e).animationName) !== 'aosSeShine') pr.push('Tron\'s Special Edition badge does not animate');
+  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Night Drive, Folk and Tron Special Edition (its badge animated), Vintage picked', pr); await ctx.close();
 }
 
 // 2. Sea glass at once, kept over a reload, with no flash of Vintage; Vintage again
@@ -101,8 +102,8 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   await p.waitForSelector('#aos-welcome .c-panel.on .c-look', { timeout: 15000 });   // .on: the buttons are wired up (the cards are drawn a moment before)
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
-  const names = await p.locator('#aos-welcome .c-look b').allInnerTexts();
-  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Grid') pr.push('the install step offers ' + names.join());
+  const names = await p.locator('#aos-welcome .c-look b').allTextContents();
+  if (names.join() !== 'Vintage,Sea glass,Night Drive,Folk,Tron Special Edition') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());
@@ -164,12 +165,12 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'folk') pr.push('Folk is not kept over a reload');
   await openLook(p); await p.click('#looks [data-look="grid"]'); await p.waitForTimeout(200);
   st = await state();
-  if (st.look !== 'grid' || await p.evaluate(() => document.getElementById('grid').media) !== 'all') pr.push('Grid did not apply: ' + st.look);
-  if (!/^grid,grid,grid,grid$/.test(st.designs) || st.clock !== 'grid') pr.push('not every app took Grid: ' + st.designs + ' / clock ' + st.clock);
-  if (!/icon-grid-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Grid\'s: ' + st.icon);
+  if (st.look !== 'grid' || await p.evaluate(() => document.getElementById('grid').media) !== 'all') pr.push('Tron did not apply: ' + st.look);
+  if (!/^grid,grid,grid,grid$/.test(st.designs) || st.clock !== 'grid') pr.push('not every app took Tron: ' + st.designs + ' / clock ' + st.clock);
+  if (!/icon-grid-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Tron\'s: ' + st.icon);
   const gfont = await p.evaluate(async () => { await Promise.all(['700 16px "Orbitron"', '16px "Exo 2"'].map(f => document.fonts.load(f, 'Home Дом'))); return document.fonts.check('700 16px "Orbitron"', 'Home') && document.fonts.check('16px "Exo 2"', 'Дом'); });
-  if (!gfont) pr.push('Grid\'s fonts (Orbitron, Exo 2 with Cyrillic) did not load from ../home/fonts');
-  report('Night Drive, Folk and Grid: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts', pr); await ctx.close();
+  if (!gfont) pr.push('Tron\'s fonts (Orbitron, Exo 2 with Cyrillic) did not load from ../home/fonts');
+  report('Night Drive, Folk and Tron: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts', pr); await ctx.close();
 }
 
 // 7. under an iPhone's solid status bar, an app's shapes fade in from its ground in every flat look (../home/sky.js),
@@ -195,7 +196,7 @@ for (const scheme of ['light', 'dark']) {
     }
     await p.close();
   }
-  report(`under a solid status bar (${scheme}), an app's shapes fade in from its own ground in Vintage, Night Drive, Folk and Grid, and the tint matches`, pr); await ctx.close();
+  report(`under a solid status bar (${scheme}), an app's shapes fade in from its own ground in Vintage, Night Drive, Folk and Tron, and the tint matches`, pr); await ctx.close();
 }
 
 // 8. aOS's bar is the colour of the page, whichever mode's meta iOS goes by: Appearance set to Dark on a phone in

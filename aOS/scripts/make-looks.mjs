@@ -1,4 +1,4 @@
-// Writes the Night Drive, Folk and Grid looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
+// Writes the Night Drive, Folk and Tron looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
 // says how a colour moves). Run it after changing a page's <style id="vintage"> block or an icon.svg:
 //
 //   node aOS/scripts/make-looks.mjs            the <style id="neon">, <style id="folk"> and <style id="grid">
@@ -36,7 +36,7 @@ for (const app of pages) {
 
 // ---- the icons ----
 // Night Drive: a deep neon-tinted ground in the app's own hue, a striped sunset for the disc, a magenta tube.
-// Folk: the Gzhel palette, and the disc becomes a six-petalled flower. Grid: a near-black ground with a hint of the
+// Folk: the Gzhel palette, and the disc becomes a six-petalled flower. Tron: a near-black ground with a hint of the
 // app's own hue, the night palette's light, the disc a red identity disc and the pill a red light trail. Masks (black and white)
 // are left as they are.
 const SIZE = /viewBox="0 0 (\d+) (\d+)"/;

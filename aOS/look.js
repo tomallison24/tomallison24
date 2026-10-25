@@ -1,10 +1,10 @@
 // aOS's look: Vintage (mid-century modern, the default), Sea glass, Night Drive (neon), Folk
-// (Gzhel and Khokhloma) or Grid (light cycles). Picked in the install steps before aOS is added to the Home Screen
+// (Gzhel and Khokhloma) or Tron (light cycles). Picked in the install steps before aOS is added to the Home Screen
 // (home/welcome.js), or later under the account (Appearance > Look), where it is every app's look
 // too: set(look, { apps }) writes each app's design (design.<id>, Clock's set.design; home/design.js).
 // Loaded in <head> after the styles, so the page is drawn once, in the right look. Vintage is the
 // <style id="vintage"> block: Sea glass is that block switched off, the styles above it showing as
-// they always did; Night Drive, Folk and Grid keep it on and switch on their own block after it
+// they always did; Night Drive, Folk and Tron keep it on and switch on their own block after it
 // (<style id="neon">, <style id="folk">, <style id="grid">, generated from it by aOS/scripts/make-looks.mjs).
 //
 // Where the choice is kept, and how it reaches the Home Screen app (which has storage of its
