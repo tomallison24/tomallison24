@@ -339,6 +339,8 @@
 .ipsy-char{width:100%;height:100%;display:block;overflow:visible;--line:#2B2522;--limb:var(--line);--limbw:6;--paw:#FFFDF7;--pawedge:var(--line);--foot:var(--line)}
 .ipsy-char g,.ipsy-char path,.ipsy-char ellipse,.ipsy-char circle,.ipsy-char rect{transform-box:view-box}
 .ipsy-glass .ipsy-char{filter:drop-shadow(0 6px 12px rgba(129,147,188,.35))}
+.ipsy-grid .ipsy-char{filter:drop-shadow(0 0 2.5px var(--tr-line,#FF2A2A))}   /* a rim of light, so a dark helper (Mia) shows on black */
+.ipsy-neon .ipsy-char{filter:drop-shadow(0 0 2.5px #FF3D9A)}
 .ipsy-char .h-shadow{fill:#2B2522;opacity:.12;transform-origin:100px 182px;animation:ipsyShade 4.8s ease-in-out infinite}
 .h-pose{transform-origin:100px 120px}
 .h-lim{fill:none;stroke:var(--limb);stroke-width:var(--limbw);stroke-linecap:round}
