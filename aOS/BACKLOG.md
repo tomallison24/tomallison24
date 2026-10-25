@@ -111,6 +111,9 @@ date parameters' round-trip check.
 
 ### Working together: cross-app improvements
 
+App by app, with what each would give the family and where the change goes:
+`aOS/UPGRADES.md`. The themes:
+
 1. **More layers in Calendar.** Meals' dinners, Orders' deliveries and pickups
    (`eta`, `pickupBy`), News' followed teams' fixtures and Clock's wake-up time
    could each share a layer (`AllisonOS.layer.share`, as Mail's reminders do);
