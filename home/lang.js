@@ -12,15 +12,16 @@
 //     what the family wrote (notes, lists, mail, events) and outside content (news, podcasts);
 //   - dates and numbers in Russian: toLocale*String and the Intl formats, asked for in the phone's
 //     language or in English, are given Russian (21:41, 24 октября, 1 234,5).
-// In either language, once your helper has a name (home/ipsy.js, aos.helper {who, name}), the words say
-// that name where they said Ipsy (or Ипси): "Or just tell Mia…". Not inside translate="no" (what the family
+// In either language, once you've picked your helper (home/ipsy.js, aos.helper {who, name}), the words say
+// its name where they said Ipsy (or Ипси): "Or just tell Biscuit…", or with no name, "Ask the fox". Not inside translate="no" (what the family
 // wrote, the chat itself) or data-ipsy="as-is" (the release log: what each version said then).
 // A word file:
 //   aosLang.add({ 'Done': 'Готово', 'Grocery list': 'Список покупок' },
 //     [[/^(\d+) items?$/, m => m[1] + ' ' + aosLang.plural(m[1], 'позиция', 'позиции', 'позиций')]]);
 // A pattern's function gets the match; aosLang.t(text) translates a part of it (or gives it back as it was).
 // window.aosLang: get() 'en' | 'ru'; set(lang) (every open page is drawn again in it); add(words, patterns);
-// t(text); plural(n, one, few, many); list [[id, name]]; helper() (the helper's name changed: draw it again).
+// t(text); plural(n, one, few, many); list [[id, name]]; helper() (the helper's name changed: draw it again);
+// named(text) (Ipsy in it as your helper).
 // 'aos:lang' fires on window before a change reloads.
 'use strict';
 (() => {
@@ -70,12 +71,20 @@
 
   // ---- your helper's name ----
   const HELPER = 'aos.helper', IPSY = /\bIpsy\b|Ипси/g, HAS = /\bIpsy\b|Ипси/;
-  const nameNow = () => {   // '' while it's Ipsy (not picked, no name, or a name that is Ipsy)
-    try { const n = String((JSON.parse(localStorage.getItem(HELPER)) || {}).name || '').replace(/\s+/g, ' ').trim().slice(0, 16); return /\bipsy\b|ипси/i.test(n) ? '' : n; } catch { return ''; }
+  // a helper picked but not named goes by what it is: "Ask the fox" (Mia is Mia). In Russian, where a word like
+  // лиса would need its case ("скажите лисе"), it stays Ипси, which never changes.
+  const KINDS = { fox: 'the fox', owl: 'the owl', robot: 'the robot', octopus: 'the octopus', hedgehog: 'the hedgehog', otter: 'the otter' };
+  const nameNow = () => {   // '' while it's Ipsy (not picked, or a name that is Ipsy)
+    try {
+      const h = JSON.parse(localStorage.getItem(HELPER)) || {}, n = String(h.name || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+      if (n) return /\bipsy\b|ипси/i.test(n) ? '' : n;
+      return h.who === 'mia' ? (ru ? 'Мия' : 'Mia') : ru ? '' : KINDS[h.who] || '';
+    } catch { return ''; }
   };
   let NAME = nameNow();
   const asIs = el => !!(el && el.closest && el.closest('[data-ipsy="as-is"]'));
-  const named = (s, el) => (NAME && HAS.test(s) && !asIs(el) ? s.replace(IPSY, () => NAME) : s);
+  const named = (s, el) => (NAME && HAS.test(s) && !asIs(el) ? s.replace(IPSY, (m, at) => (/^the /.test(NAME) && /(^\s*["“‘(]?|[.!?…]\s+)$/.test(s.slice(0, at)) ? 'T' + NAME.slice(1) : NAME)) : s);   // "The fox is reading…"
+  window.aosLang.named = s => named(String(s));
   const words = s => /[A-Za-z]/.test(s) || (NAME && s.includes('Ипси'));
   window.aosLang.helper = () => {
     const n = nameNow(); if (n === NAME) return;

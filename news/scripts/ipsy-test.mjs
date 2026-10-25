@@ -165,7 +165,7 @@ async function open(design, scheme, store = {}) {
   await ctx.addInitScript(([design, store]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ news: '999' }));
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ news: '999' }));
     localStorage.setItem('aos.sky', 'day');
     localStorage.setItem('design.news', design);
     for (const [k, v] of Object.entries(store)) localStorage.setItem(k, JSON.stringify(v));

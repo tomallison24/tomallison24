@@ -370,7 +370,7 @@
   const langNow = () => (window.aosLang ? aosLang.get() : 'en');
   const looksLine = () => `${THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
-  const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return (h.name.trim() || 'Ipsy') + ' · ' + (k ? k.label : ''); };
+  const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
   function acctPage(at) {
     const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>

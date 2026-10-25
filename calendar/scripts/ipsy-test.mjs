@@ -116,7 +116,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
   await ctx.addInitScript(d => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ calendar: '999' }));
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ calendar: '999' }));
     localStorage.setItem('aos.sky', 'day');
     localStorage.setItem('design.calendar', d);
   }, design);

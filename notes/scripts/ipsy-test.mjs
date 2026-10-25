@@ -125,7 +125,7 @@ const texts = (page, sel) => page.$$eval(sel, els => els.map(e => e.textContent.
 for (const design of ['glass', 'vintage']) for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block', timezoneId: TZ });
   await ctx.addInitScript(([d, seed]) => {
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
     if (!localStorage.getItem('allison-notes-v1')) localStorage.setItem('allison-notes-v1', JSON.stringify(seed));
   }, [design, { ...SEED, notes: [...SEED.notes, ...Array.from({ length: 12 }, (_, i) => N('nfill' + i, 'Note ' + i, 'Some words\nand more words', { tags: ['t' + (i % 4)] }))] }]);
   const page = await ctx.newPage();
@@ -159,7 +159,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   const tag = 'notes (' + design + ')';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block', timezoneId: TZ });
   await ctx.addInitScript(([d, seed]) => {
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('allison-notes-v1', JSON.stringify(seed));

@@ -343,8 +343,8 @@
     'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Grid, a lit visor': 'В стиле «Ночная трасса» на каждом помощнике зеркальные очки, в «Народном» — красный платок в белый горошек, а в «Сетке» — светящийся визор',
     'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works': 'Ипси больше не стволовая клетка и не превращается в другие клетки за работой',
     'Your language now follows you to your other devices, as your look does': 'Язык теперь переходит с вами на другие устройства, как и оформление',
-    'Once your helper has a name, every app says it where it said Ipsy: "Or just tell Mia…", "Hides this note from Mia", "Mia keeps orders up to date"':
-      'Когда у помощника есть имя, все приложения называют его так там, где было «Ипси»: «Или просто скажите Mia…», «Mia не увидит эту заметку», «Mia следит за заказами»',
+    'Every app calls your helper by its name where it said Ipsy: "Or just tell Biscuit…", "Hides this note from Biscuit". With no name yet, by what it is: "Ask the fox"':
+      'Все приложения называют помощника по имени там, где было «Ипси»: «Или просто скажите Biscuit…», «Biscuit не увидит эту заметку». Пока имени нет, по-русски это Ипси (а Мия — Мия)',
     'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
     'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name':
       'aOS: «Пройти настройку» в начале Аккаунта проводит по вашим настройкам по одной: язык, стиль, светлая или тёмная тема, помощник и его имя',
@@ -890,6 +890,7 @@
     'Analysis shows your drinks from Drinks beside your training: standard drinks and alcohol-free days, this window and the one before': '«Анализ» показывает напитки из Напитков рядом с тренировками: стандартные порции и дни без алкоголя за этот период и предыдущий',
   };
 
+  const KIND = { 'Australian Shepherd': 'австралийская овчарка', Fox: 'лиса', Owl: 'сова', Robot: 'робот', Octopus: 'осьминог', Hedgehog: 'ёжик', Otter: 'выдра' };   // the helpers, in Account's line
   const P = [
     // ---- the welcome and walkthroughs ----
     // your helper's name where the words say Ipsy ("Ask Mia about meals", "Mia is reading…"): Ipsy's own words, with the name kept
@@ -901,7 +902,8 @@
       const r = T(m[1].replace(re, '$1Ipsy'));
       return r === m[1].replace(re, '$1Ipsy') ? null : r.replace(/Ипси|Ipsy/g, n);
     }],
-    [/^(.+) · (Australian Shepherd|Fox|Owl|Robot|Octopus|Hedgehog|Otter)$/, m => (m[1] === 'Ipsy' ? 'Ипси' : m[1]) + ' · ' + ({ 'Australian Shepherd': 'австралийская овчарка', Fox: 'лиса', Owl: 'сова', Robot: 'робот', Octopus: 'осьминог', Hedgehog: 'ёжик', Otter: 'выдра' })[m[2]]],
+    [/^(.+) · (Australian Shepherd|Fox|Owl|Robot|Octopus|Hedgehog|Otter)$/, m => (m[1] === 'Ipsy' ? 'Ипси' : m[1] === 'Mia' && !((window.AllisonOS && AllisonOS.ipsy && AllisonOS.ipsy.helper()) || {}).name ? 'Мия' : m[1]) + ' · ' + KIND[m[2]]],
+    [/^(Fox|Owl|Robot|Octopus|Hedgehog|Otter), no name yet$/, m => KIND[m[1]][0].toUpperCase() + KIND[m[1]].slice(1) + ', пока без имени'],
     [/^Welcome to (.+)$/, m => 'Добро пожаловать в ' + acc(m[1])],
     [/^Add (.+) to your Home Screen$/, m => 'Добавьте ' + acc(m[1]) + ' на экран «Домой»'],
     [/^Add (.+) to this device, so it opens on its own like any other app\.$/, m => 'Добавьте ' + acc(m[1]) + ' на это устройство, чтобы открывать отдельно, как любое приложение.'],

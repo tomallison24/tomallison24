@@ -7,7 +7,8 @@
 //   - the engine: whole texts and patterns, attributes, text drawn later, translate="no" left alone,
 //     Russian plurals, dates and times in Russian;
 //   - your helper's name where the words say Ipsy, in English and in Russian ("Or just tell Mia…"), a new
-//     name at once, and the release log and translate="no" left as they were;
+//     name at once, with none what it is ("the fox"; Ипси in Russian), and the release log and translate="no"
+//     left as they were;
 //   - every app opens with no English left on its page (aOS/scripts/lang-scan.mjs, the names in KEEP aside).
 // The accounts server is stood in for.
 //
@@ -28,7 +29,7 @@ const report = (name, problems) => { if (problems.length) { failed++; console.lo
 async function phone(seed = {}) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps: {} };
-  await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999', meals: '999', notes: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' }));
+  await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999', meals: '999', notes: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' }));
     for (const k in s) if (!sessionStorage.getItem('seeded.' + k)) { localStorage.setItem(k, s[k]); sessionStorage.setItem('seeded.' + k, '1'); } } catch {} }, seed);
   await ctx.route('**/*', r => {
     const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort();
@@ -146,10 +147,10 @@ for (const lang of ['en', 'ru']) {
   await p.goto(BASE + '/meals/'); await p.waitForSelector('#askIn'); await p.waitForTimeout(300);
   const look = () => p.evaluate(() => {
     const kept = document.createElement('div');
-    kept.innerHTML = '<ul data-ipsy="as-is"><li id="k1">Ipsy is yours now</li></ul><p id="k2" translate="no">Ipsy, plan dinner</p>';
+    kept.innerHTML = '<ul data-ipsy="as-is"><li id="k1">Ipsy is yours now</li></ul><p id="k2" translate="no">Ipsy, plan dinner</p><p id="k3">Ipsy is reading…</p>';
     document.body.append(kept);
     return new Promise(res => setTimeout(() => {
-      const r = { text: document.body.innerText, ph: $q('#askIn').placeholder, k1: $q('#k1').textContent, k2: $q('#k2').textContent };
+      const r = { text: document.body.innerText, ph: $q('#askIn').placeholder, k1: $q('#k1').textContent, k2: $q('#k2').textContent, k3: $q('#k3').textContent };
       kept.remove(); res(r);
     }, 50));
     function $q(s) { return document.querySelector(s); }
@@ -167,7 +168,11 @@ for (const lang of ['en', 'ru']) {
   if (/\bMia\b/.test(r.text)) pr.push('the old name is still on the page');
   await p.evaluate(() => AllisonOS.ipsy.setHelper('fox', ''));
   r = await look();
-  if (!r.text.includes(lang === 'ru' ? 'Или просто скажите Ипси…' : 'Or just tell Ipsy…')) pr.push('with no name, it does not say Ipsy again');
+  if (!r.text.includes(lang === 'ru' ? 'Или просто скажите Ипси…' : 'Or just tell the fox…')) pr.push('with no name, it does not go by what it is (in Russian, Ипси)');
+  if (r.k3 !== (lang === 'ru' ? 'Ипси читает…' : 'The fox is reading…')) pr.push('with no name, to begin a line: ' + r.k3);
+  await p.evaluate(() => AllisonOS.ipsy.setHelper('mia', ''));
+  r = await look();
+  if (!r.text.includes(lang === 'ru' ? 'Или просто скажите Мия…' : 'Or just tell Mia…')) pr.push('Mia with no name is not Mia');
   report(`your helper's name where the words say Ipsy (${lang}), a new name at once, the release log and translate="no" as they were`, pr); await ctx.close();
 }
 
