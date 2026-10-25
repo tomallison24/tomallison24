@@ -486,7 +486,7 @@ await step('Settings > Design: the first section of Settings; Standard and back,
   await page.waitForSelector('#backupSheet:not([hidden])');
   assert.equal(await page.textContent('#bkLbl'), 'Settings');
   assert.equal(await page.$eval('#bkBody > :first-child .label', e => e.textContent), 'Design', 'Design is the first section');
-  assert.equal(await page.$$eval('#bkBody > :first-child [data-design]', bs => bs.map(b => b.dataset.design + ':' + b.getAttribute('aria-checked')).join(' ')), 'vintage:true glass:false neon:false folk:false');
+  assert.equal(await page.$$eval('#bkBody > :first-child [data-design]', bs => bs.map(b => b.dataset.design + ':' + b.getAttribute('aria-checked')).join(' ')), 'vintage:true glass:false neon:false folk:false grid:false');
   assert.equal(await page.$('#bkBody > :first-child .hint'), null, 'no explanation under Design');
   await shot(page, 'settings-vintage-light');
   await page.click('#bkDesign [data-design="glass"]'); await page.waitForTimeout(250);

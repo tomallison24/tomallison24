@@ -153,6 +153,8 @@
     '80s neon: a striped sunset, magenta and cyan': 'Неон 80-х: закат в полоску, пурпурный и бирюзовый',
     'Folk': 'Народный',
     'Gzhel by day, Khokhloma by night': 'Днём гжель, ночью хохлома',
+    'Grid': 'Сетка',
+    'Light cycles: cyan and orange on a black grid': 'Световые мотоциклы: голубой и оранжевый на чёрной сетке',
     'City': 'Город',
     '24-Hour Time': '24-часовой формат',
     '13:00 rather than 1:00 PM': '13:00 вместо 1:00 PM',

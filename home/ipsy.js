@@ -41,10 +41,10 @@
   const me = document.currentScript;
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
-  // Night Drive and Folk wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-folk on top of ipsy-vintage).
-  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|folk)$/.test(l || '') ? l : 'glass'; };
+  // Night Drive, Folk and Grid wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-folk, ipsy-grid on top of ipsy-vintage).
+  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|folk|grid)$/.test(l || '') ? l : 'glass'; };
   const followers = new Set();                       // elements that wear the page's look
-  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'folk']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'folk'))); };
+  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'folk', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'folk' || l === 'grid'))); };
   const wear = (el, l) => dress(el, l || LOOK());
   const follow = el => { followers.add(el); wear(el); };
   for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(el => wear(el)));
@@ -97,8 +97,9 @@
       + '<ellipse class="i-gloss" cx="72" cy="82" rx="11" ry="6" transform="rotate(-34 72 82)"/>'
       + '<g class="i-sparks">' + '<circle class="i-spark" cx="100" cy="108" r="5"/>'.repeat(5) + '</g>'
       + '<g class="i-look"><g class="i-eyes"><ellipse class="i-eye" cx="86" cy="104" rx="6" ry="8.5"/><ellipse class="i-eye" cx="114" cy="104" rx="6" ry="8.5"/></g>'
-      // Night Drive: mirror shades (they follow the eyes); Folk: a matryoshka's headscarf, with a flower (ipsy-neon, ipsy-folk)
-      + '<g class="i-shades"><rect class="i-lens" x="73" y="96" width="25" height="15" rx="6"/><rect class="i-lens" x="102" y="96" width="25" height="15" rx="6"/><path class="i-bridge" d="M98 101h4"/><path class="i-glint" d="M78 107l7-8M107 107l7-8"/></g></g>'
+      // Night Drive: mirror shades (they follow the eyes); Folk: a matryoshka's headscarf, with a flower; Grid: a lit visor (ipsy-neon, ipsy-folk, ipsy-grid)
+      + '<g class="i-shades"><rect class="i-lens" x="73" y="96" width="25" height="15" rx="6"/><rect class="i-lens" x="102" y="96" width="25" height="15" rx="6"/><path class="i-bridge" d="M98 101h4"/><path class="i-glint" d="M78 107l7-8M107 107l7-8"/></g>'
+      + '<g class="i-visor"><rect class="i-vband" x="70" y="96" width="60" height="15" rx="7.5"/><path class="i-vlight" d="M78 103.5h44"/></g></g>'
       + '<g class="i-scarf"><path class="i-hood" d="M44 116C38 62 68 42 100 42s62 20 56 74c-8-26-28-40-56-40s-48 14-56 40z"/>'
       + '<g class="i-dots"><circle cx="66" cy="74" r="3.2"/><circle cx="134" cy="74" r="3.2"/><circle cx="56" cy="96" r="2.6"/><circle cx="144" cy="96" r="2.6"/></g>'
       + '<g class="i-flower">' + [0, 72, 144, 216, 288].map(a => '<ellipse cx="100" cy="47" rx="4.6" ry="7.5" transform="rotate(' + a + ' 100 55)"/>').join('') + '<circle class="i-fheart" cx="100" cy="55" r="4"/></g></g>'
@@ -202,13 +203,20 @@
 .ipsy-vintage .ipsy-cell[data-form="neuron"] .i-eye,.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-mouth{fill:#FBF5E9}
 .i-cheek{fill:rgba(214,140,134,.55)}
 .ipsy-vintage .i-cheek{fill:var(--mc-orange,#D8572A)}
-.i-shades,.i-scarf{display:none}
+.i-shades,.i-scarf,.i-visor{display:none}
 .ipsy-neon .i-shades{display:inline}
 .ipsy-neon .i-eye{opacity:0}
 .i-lens{fill:#120B1F;stroke:#FF3D9A;stroke-width:2.6}
 .i-bridge{fill:none;stroke:#FF3D9A;stroke-width:2.6;stroke-linecap:round}
 .i-glint{fill:none;stroke:#22D3EE;stroke-width:2.2;stroke-linecap:round;opacity:.9}
 .ipsy-neon .i-cheek{fill:#FF3D9A;opacity:.55}
+.ipsy-grid .i-visor{display:inline}
+.ipsy-grid .i-eye{opacity:0}
+.i-vband{fill:#05080C;stroke:var(--tr-line,#3CEBFF);stroke-width:2.4}
+.i-vlight{fill:none;stroke:var(--tr-line,#3CEBFF);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:14 30;animation:ipsyScan 2.4s ease-in-out infinite alternate;filter:drop-shadow(0 0 3px var(--tr-line,#3CEBFF))}
+@keyframes ipsyScan{from{stroke-dashoffset:0}to{stroke-dashoffset:-30}}
+@media (prefers-reduced-motion:reduce){.i-vlight{animation:none}}
+.ipsy-grid .i-cheek{fill:var(--tr-hot,#FF9A2E);opacity:.7}
 .ipsy-folk .i-scarf{display:inline}
 .ipsy-folk .i-nucleus,.ipsy-folk .i-gloss{opacity:0}
 .i-hood{fill:var(--fk-scarf,#C7261C)}
@@ -389,7 +397,7 @@
   // family's things, and Meals' "Never in a plan" (the family's allergies): for those, open_setting shows where.
   // ---------------------------------------------------------------------------
   const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
-  const LOOKS = ['vintage', 'glass', 'neon', 'folk'];
+  const LOOKS = ['vintage', 'glass', 'neon', 'folk', 'grid'];
   const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
   const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const CLOCK = 'allison-clock-v1', CAL = 'allison-calendar-v1-settings', POD = 'allison-podcasts-v1', ORD = 'allison-orders-v1';
@@ -412,7 +420,7 @@
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive or Folk', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk' }, {
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Grid', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, {
       get: () => ls.get('aos.look', 'vintage'),
       put: v => { if (window.aosLook) return aosLook.set(v, { apps: SET_APPS }); ls.set('aos.look', v); SET_APPS.forEach(id => putLook(id, v)); } }) },
     language: { app: '*', live: true, about: 'The language of aOS and every app (drawn again in it after your reply)', ...choice({ en: 'en', ru: 'ru' }, {
@@ -443,7 +451,7 @@
     'orders.ipsy_keeps_orders_up_to_date': { app: 'orders', ask: true, about: 'Orders: Ipsy rereads and fixes orders by itself (can only be turned off here)', ...choice({ off: '0' }, raw(ORD + '-ipsy-auto', '')), from: s => (s === '1' ? 'on' : 'off') },
     'travel.ipsy_fills_in': { app: 'travel', ask: true, about: 'Travel: Ipsy fills in what\'s missing from bookings (can only be turned off here)', ...choice({ off: '0' }, raw('allison-travel-v1-ai-on', '1')), from: s => (s === '0' ? 'off' : 'on') },
     'travel.ipsy_checks_by_itself': { app: 'travel', ask: true, about: 'Travel: Ipsy checks new bookings by itself (can only be turned off here)', ...choice({ off: '0' }, raw('allison-travel-v1-ipsy-auto', '')), from: s => (s === '1' ? 'on' : 'off') },
-    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
+    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
   };
   // where a setting is: each app's Settings (the button that opens it), and aOS's Account sections
   const OPENER = { calendar: '#setBtn', clock: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', house: '#gear', mail: '#gear', meals: '#setBtn', news: '#setBtn', notes: '#setBtn', orders: '#setBtn', places: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', weather: '[data-action="location"]' };
@@ -949,5 +957,5 @@
     },
   };
 
-  AOS.ipsy = { mount, character, privacy, wear, forms: Object.keys(FORMS), look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'folk'
+  AOS.ipsy = { mount, character, privacy, wear, forms: Object.keys(FORMS), look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'folk' | 'grid'
 })();

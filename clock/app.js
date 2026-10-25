@@ -107,7 +107,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     S.sw.laps = Array.isArray(S.sw.laps) ? S.sw.laps.filter(n => typeof n === 'number' && n >= 0) : [];
     S.sw.acc = +S.sw.acc || 0; S.sw.t0 = +S.sw.t0 || 0; S.sw.run = !!S.sw.run && S.sw.t0 > 0;
     if (S.sw.face !== 'analog') S.sw.face = 'digital';
-    if (!['glass', 'neon', 'folk'].includes(S.set.design)) S.set.design = 'vintage';
+    if (!['glass', 'neon', 'folk', 'grid'].includes(S.set.design)) S.set.design = 'vintage';
     const hm = S.set.home;   // the main clock's city: null is this phone's own time zone
     S.set.home = hm && typeof hm.name === 'string' && L.validZone(hm.tz) ? { name: hm.name.slice(0, 60), where: String(hm.where || '').slice(0, 60), tz: hm.tz } : null;
     ['h', 'm', 's'].forEach(k => { const v = Math.floor(+S.pick[k] || 0); S.pick[k] = Math.max(0, Math.min(k === 'h' ? 23 : 59, v)); });
@@ -820,7 +820,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('setAnalog').setAttribute('aria-checked', String(!!S.set.analog));
   }
   $('setBtn').addEventListener('click', () => { paintSettings(); openSheet('setSheet'); });
-  // Design: Vintage, Standard, Night Drive or Folk, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
+  // Design: Vintage, Standard, Night Drive, Folk or Grid, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
   $('setDesign').addEventListener('click', e => {
     const b = e.target.closest('[data-design]'); if (!b || b.dataset.design === S.set.design) return;
     S.set.design = b.dataset.design; save();

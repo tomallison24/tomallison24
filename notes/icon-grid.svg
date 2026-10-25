@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Grid: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs><mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect x="86" y="118" width="58" height="58" rx="18" fill="#fff"/>
+      <path d="M101 148l12 12 17-25" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask></defs>
+  <rect width="512" height="512" fill="#171B1D"/>
+  <g><circle cx="404" cy="108" r="135.0" fill="none" stroke="#3CEBFF" stroke-width="18.0"/><circle cx="404" cy="108" r="78.0" fill="none" stroke="#3CEBFF" stroke-width="10.5"/><circle cx="404" cy="108" r="18.0" fill="#3CEBFF"/></g>
+  <rect x="32" y="418" width="136" height="50" rx="25" fill="#FF9A2E" transform="rotate(-18 100 443)"/>
+  <g>
+    <rect width="512" height="512" fill="#F4FAFC" mask="url(#cut)"/>
+    <rect x="166" y="118" width="260" height="58" rx="29" fill="#F4FAFC"/>
+    <g fill="#F4FAFC" fill-opacity="0.78">
+      <rect x="86" y="214" width="340" height="32" rx="16"/><rect x="86" y="270" width="260" height="32" rx="16"/>
+      <rect x="86" y="326" width="340" height="32" rx="16"/><rect x="86" y="382" width="170" height="32" rx="16"/>
+    </g>
+  </g>
+</svg>

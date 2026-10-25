@@ -71,12 +71,13 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
-**Every app has four designs**, as one app: **Vintage** (mid-century modern in the Retro
-colours, the default), **Standard** (Sea glass), **Night Drive** and **Folk**, picked in aOS for
+**Every app has five designs**, as one app: **Vintage** (mid-century modern in the Retro
+colours, the default), **Standard** (Sea glass), **Night Drive**, **Folk** and **Grid**, picked in aOS for
 every app at once or in the app's own **Settings → Design** (Meals, `meals/`, is the pattern; Clock
-started it with its own `clock/design.js`). You write two of them: Night Drive and Folk are
-generated from Vintage by `node aOS/scripts/make-looks.mjs` (their `<style id="neon">` and
-`<style id="folk">` blocks after the Vintage one, and `icon-neon*` / `icon-folk*` from `icon.svg`):
+started it with its own `clock/design.js`). You write two of them: Night Drive, Folk and Grid are
+generated from Vintage by `node aOS/scripts/make-looks.mjs` (their `<style id="neon">`,
+`<style id="folk">` and `<style id="grid">` blocks after the Vintage one, and `icon-neon*` / `icon-folk*` /
+`icon-grid*` from `icon.svg`):
 - The Sea glass styles are the page's main `<style>`; the Vintage look is a second
   `<style id="vintage">` right after it (cream and walnut, mustard, teal, burnt orange, flat
   cards, atomic shapes in `.ambient`, Futura).

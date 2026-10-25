@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Grid: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs></defs>
+  <rect width="512" height="512" fill="#321505"/>
+  <g><circle cx="404" cy="108" r="135.0" fill="none" stroke="#3CEBFF" stroke-width="18.0"/><circle cx="404" cy="108" r="78.0" fill="none" stroke="#3CEBFF" stroke-width="10.5"/><circle cx="404" cy="108" r="18.0" fill="#3CEBFF"/></g>
+  <rect x="32" y="418" width="136" height="50" rx="25" fill="#FF9A2E" transform="rotate(-18 100 443)"/>
+  <g>
+    <g transform="scale(.5)"><g fill="none" stroke="#F4FAFC" stroke-linecap="round" stroke-width="56">
+      <path d="M358 648a220 220 0 1 1 308 0"/>
+      <path d="M256 752a364 364 0 1 1 512 0" stroke-opacity="0.55"/>
+    </g>
+    <circle cx="512" cy="492" r="86" fill="#F4FAFC"/>
+    <rect x="478" y="600" width="68" height="236" rx="34" fill="#F4FAFC"/></g>
+  </g>
+</svg>

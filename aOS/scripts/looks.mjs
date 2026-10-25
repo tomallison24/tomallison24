@@ -1,5 +1,5 @@
-// The looks that are drawn from Vintage: Night Drive (neon) and Folk (Gzhel by day, Khokhloma by
-// night). Each keeps Vintage's flat shapes and repaints them: every colour in a page's Vintage block
+// The looks that are drawn from Vintage: Night Drive (neon), Folk (Gzhel by day, Khokhloma by
+// night) and Grid (light cycles: cyan and orange light on a black grid). Each keeps Vintage's flat shapes and repaints them: every colour in a page's Vintage block
 // is moved to the same role in the look's palette (the cream ground to the look's ground, the walnut
 // ink to its ink, mustard, teal, burnt orange and olive to its four accents), in the OKLCH colour
 // space so lightness, and with it contrast, stays as Vintage had it. Used by make-looks.mjs (the
@@ -81,6 +81,22 @@ export const LOOKS = {
     font: '"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif',
     display: '"Yeseva One","Georgia","Times New Roman",serif',
     ground: ['#F5F7FB', '#0D0B0A'],
+  },
+  grid: {
+    name: 'Grid',
+    light: {   // the grid by day: cool white, deep cyan and orange lines
+      neutral: { L: [[0.2, 0.18], [0.27, 0.23], [0.55, 0.5], [0.94, 0.965], [0.97, 0.988], [1, 1]], h: 230, C: L => 0.006 + 0.06 * (1 - L) },
+      orange: { h: 52, C: 1.3, dL: 0 }, mustard: { h: 62, C: 1.25, dL: 0 }, olive: { h: 205, C: 1.3, dL: -0.03 },
+      teal: { h: 215, C: 1.5, dL: 0 }, blue: { h: 240, C: 1.2, dL: 0 }, pink: { h: 40, C: 1.2, dL: 0 },
+    },
+    dark: {    // the grid at night: black, cyan light and orange
+      neutral: { L: [[0.2, 0.11], [0.245, 0.135], [0.29, 0.175], [0.36, 0.23], [0.6, 0.66], [0.94, 0.96], [1, 1]], h: 230, C: L => (L < 0.5 ? 0.022 : 0.006 + 0.04 * (1 - L)) },
+      orange: { h: 55, C: 1.45, dL: 0.08 }, mustard: { h: 65, C: 1.35, dL: 0.06 }, olive: { h: 200, C: 1.6, dL: 0.16 },
+      teal: { h: 205, C: 1.9, dL: 0.22 }, blue: { h: 230, C: 1.4, dL: 0.12 }, pink: { h: 45, C: 1.3, dL: 0.06 },
+    },
+    font: '"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif',
+    display: '"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif',
+    ground: ['#F1F5F8', '#05080C'],
   },
 };
 
@@ -230,6 +246,28 @@ ${darkBoth('--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:
 ${SHAPE(1)}{background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:${svgUrl(ROSETTE)} center/contain no-repeat;mask:${svgUrl(ROSETTE)} center/contain no-repeat;border-radius:0;opacity:1}
 ${SHAPE(2)}{background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
 ${SHAPE(3)}{background:var(--fk-leaf);border-radius:100% 0}
+`;
+  }
+  if (look === 'grid') {
+    const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+    const CYR = 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116';
+    const face = (fam, w, file, range) => `@font-face{font-family:"${fam}";font-style:normal;font-weight:${w};font-display:swap;src:url("../home/fonts/${file}.woff2") format("woff2");unicode-range:${range}}`;
+    return `/* Grid: light cycles. Cyan and orange light on a black grid at night, on cool white by day: Orbitron headings
+   (Exo 2 for Cyrillic), Exo 2 for the rest (SIL Open Font License, ../home/fonts); an identity disc, a hot square and a
+   light trail for the shapes, a grid floor under them, and a glow on what's lit. */
+${face('Orbitron', 700, 'orbitron-700-latin', LAT)}
+${face('Exo 2', '400 700', 'exo-2-latin', LAT)}
+${face('Exo 2', '400 700', 'exo-2-cyrillic', CYR)}
+${HEADS}{font-family:${LOOKS.grid.display};font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
+:root{--tr-line:#0089A8;--tr-hot:#E2600E;--tr-glow:.35;--tr-grid:rgba(0,137,168,.2)}
+${darkBoth('--tr-line:#3CEBFF;--tr-hot:#FF9A2E;--tr-glow:1;--tr-grid:rgba(60,235,255,.26)')}
+${SHAPE(1)}{background:radial-gradient(circle,var(--tr-line) 0 7%,transparent 7.5% 30%,var(--tr-line) 31% 35%,transparent 36% 55%,var(--tr-line) 56% 63%,transparent 64%);filter:drop-shadow(0 0 calc(var(--tr-glow) * 10px) var(--tr-line));opacity:1}
+${SHAPE(2)}{background:transparent;border-radius:4px;box-shadow:inset 0 0 0 3px var(--tr-hot),0 0 calc(var(--tr-glow) * 14px) var(--tr-hot)}
+${SHAPE(3)}{background:linear-gradient(transparent 40%,var(--tr-line) 40% 60%,transparent 60%);border-radius:0;filter:drop-shadow(0 0 calc(var(--tr-glow) * 6px) var(--tr-line))}
+${BAND}::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
+  background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
+  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
 `;
   }
   return '';

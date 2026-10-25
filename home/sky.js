@@ -52,7 +52,7 @@ html[data-sky="day"] :is(.ambient, .aurora, .atoms) > :nth-child(1)::before {
   animation: aos-sky-spin 80s linear infinite; }
 .aos-sky-cap { position: absolute; left: -50%; right: -50%; height: 44px; z-index: 9; display: none; pointer-events: none; background: linear-gradient(var(--sky-ground, var(--aos-cap)), transparent);
   opacity: 1 !important; border-radius: 0 !important; transform: none !important; animation: none !important; filter: none !important; margin: 0 !important; }   /* not one of the shapes (an app's .ambient > * rules) */
-html[data-bar="solid"]:is([data-sky], [data-look="neon"], [data-look="folk"]) .aos-sky-cap { display: block; }
+html[data-bar="solid"]:is([data-sky], [data-look="neon"], [data-look="folk"], [data-look="grid"]) .aos-sky-cap { display: block; }
 .aos-star { position: absolute; display: none; border-radius: 50%; background: var(--sky-star, #F4ECDD); pointer-events: none; animation: aos-sky-twinkle ease-in-out infinite alternate; }
 html[data-sky="night"] .aos-star { display: block; }
 @keyframes aos-sky-spin { to { transform: rotate(360deg); } }
@@ -189,8 +189,8 @@ html[data-sky="night"] .aos-star { display: block; }
   // once, when the app is added) has a solid strip above the page, in the page's own ground colour
   // (iOS 26: the body's background, or a full-width fixed element's at the top, such as aOS's frame
   // around an app). The shapes and the sun's rays would stop flat under it, a band across the top of
-  // every page; here they fade in from the ground instead: the sky's in Vintage, the page's own in Night Drive
-  // and Folk (their sunsets and flowers run to the top too). Inside aOS, an app goes by aOS's bar.
+  // every page; here they fade in from the ground instead: the sky's in Vintage, the page's own in Night Drive,
+  // Folk and Grid (their sunsets, flowers and discs run to the top too). Inside aOS, an app goes by aOS's bar.
   // localStorage aos.bar = 'solid' shows it anywhere (the tests).
   function solidBar() {
     try { if (localStorage.getItem('aos.bar') === 'solid') return true; } catch {}
@@ -207,7 +207,7 @@ html[data-sky="night"] .aos-star { display: block; }
     if (!solidBar()) return root.removeAttribute('data-bar');
     root.setAttribute('data-bar', 'solid');
     const see = el => { const b = el && getComputedStyle(el).backgroundColor; return b && b !== 'transparent' && !/,\s*0\)$/.test(b) ? b : ''; };
-    root.style.setProperty('--aos-cap', see(document.body) || see(root) || 'transparent');   // Night Drive's and Folk's ground (Vintage's is the sky's)
+    root.style.setProperty('--aos-cap', see(document.body) || see(root) || 'transparent');   // the other flat looks' ground (Vintage's is the sky's)
     for (const host of document.querySelectorAll('.ambient, .aurora, .atoms')) {
       let c = host.querySelector(':scope > .aos-sky-cap');
       if (!c) { c = document.createElement('i'); c.className = 'aos-sky-cap'; host.appendChild(c); }
