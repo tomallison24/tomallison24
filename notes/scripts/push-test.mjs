@@ -5,7 +5,7 @@
 //   node notes/scripts/push-test.mjs
 import crypto from 'node:crypto';
 import { b64u } from '../../mail/push/webpush.js';
-import { handle, tick, fireAt, localTime, slim, dueFor, when } from '../push/worker.js';
+import { handle, tick, fireAt, localTime, slim, dueFor, when, _resetPull } from '../push/worker.js';
 
 // The fixtures live on 2 Oct 2026, and the Worker keeps only reminders from the last
 // 2 days of "now": so the test's own clock is pinned there (the Worker's real paths -
@@ -242,21 +242,31 @@ const A = phone('a'), B = phone('b');
   await tick(w3.env, w3.fetch, due + 9 * MIN);
   ok('4. up to 10 minutes late: sent', w3.pushed.length === 1);
 
-  // Sheet reads: every 15 minutes, not every minute; and KV only written on change.
+  // Sheet reads: 15 minutes after the last one (kept in the isolate's memory, never written to KV), not
+  // every minute; the items only written to KV on change.
   const w4 = world();
   w4.todos = [{ id: 'y', title: 'Later', list: 'l1', date: '2026-10-05', time: '09:00', done: false }];
   await call(w4, '/key');                                     // as the phone does first
   w4.sheet();
   await call(w4, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
-  const base = Math.floor(due / (15 * MIN)) * 15 * MIN;       // a quarter hour
-  const c0 = w4.sheetCalls, kv0 = w4.env.PUSH.writes;
+  const base = Math.floor(due / (15 * MIN)) * 15 * MIN + 7 * MIN;   // seven past a quarter hour: the clock's quarters don't matter
+  _resetPull();                                               // a fresh isolate: it has never read the Sheet
+  let c0 = w4.sheetCalls, kv0 = w4.env.PUSH.writes;
+  r = await tick(w4.env, w4.fetch, base);
+  ok('4. a fresh isolate\'s first tick reads the Sheet once, writing nothing (unchanged)', r.pulled === true && w4.sheetCalls === c0 + 1 && w4.env.PUSH.writes === kv0);
+  c0 = w4.sheetCalls; kv0 = w4.env.PUSH.writes;
   for (let i = 1; i < 15; i++) await tick(w4.env, w4.fetch, base + i * MIN);
   ok('4. 14 quiet minutes: the Sheet isn\'t read and nothing is written', w4.sheetCalls === c0 && w4.env.PUSH.writes === kv0, (w4.sheetCalls - c0) + ' reads, ' + (w4.env.PUSH.writes - kv0) + ' writes');
   await tick(w4.env, w4.fetch, base + 15 * MIN);
-  ok('4. on the quarter hour: read once, unchanged, so not written', w4.sheetCalls === c0 + 1 && w4.env.PUSH.writes === kv0);
+  ok('4. at 15 minutes: read once; unchanged, so nothing written', w4.sheetCalls === c0 + 1 && w4.env.PUSH.writes === kv0, (w4.sheetCalls - c0) + ' reads, ' + (w4.env.PUSH.writes - kv0) + ' writes');
+  await tick(w4.env, w4.fetch, base + 29 * MIN);
+  ok('4. 14 minutes after that read: not yet', w4.sheetCalls === c0 + 1);
+  // The tick at 30 minutes never ran (Cloudflare skipped it): the next one reads, rather than waiting for the quarter hour after.
+  r = await tick(w4.env, w4.fetch, base + 31 * MIN);
+  ok('4. a skipped tick: the next one reads the Sheet, 16 minutes on', r.pulled === true && w4.sheetCalls === c0 + 2 && w4.env.PUSH.writes === kv0);
   w4.sheetDown = true;
   w4.todos = [];
-  r = await tick(w4.env, w4.fetch, base + 30 * MIN);
+  r = await tick(w4.env, w4.fetch, base + 46 * MIN);
   ok('4. the Sheet unreachable: carries on with what it last read', r.pulled === 'network' && r.sent === 0);
 
   // The phone turned notifications off (Apple says 410): forgotten.

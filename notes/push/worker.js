@@ -49,6 +49,8 @@ const SHEET_URL = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/;
 const MIN = 60e3, DAY = 864e5;
 const LATE = 10 * MIN;         // an alert up to 10 minutes late still goes out (a missed minute, a slow Sheet)
 const PULL_EVERY = 15;         // minutes between Sheet reads when nobody pinged
+let lastPull = 0;              // when this isolate last read the Sheet (in memory, not KV: a KV write a quarter hour is too many of the free plan's 1,000 a day; a fresh isolate just reads once on its first tick)
+export const _resetPull = () => { lastPull = 0; };   // tests only
 const MAX_AT_ONCE = 3;         // more than this due together for one phone: one notification listing them
 
 export default {
@@ -163,6 +165,7 @@ async function refresh(env, fetchImpl, now = Date.now()) {
   if (!sheet) throw new SheetError('no-sheet');
   const items = await pull(sheet, fetchImpl, now);
   const changed = await keepItems(env, items);
+  lastPull = now;
   return { items, changed };
 }
 
@@ -335,7 +338,9 @@ export async function tick(env, fetchImpl = fetch, now = Date.now()) {
   if (!Object.keys(subs).length) return { skipped: 'nobody subscribed' };
 
   let items = await env.PUSH.get('items', 'json'), pulled = null;
-  if (!items || Math.floor(now / MIN) % PULL_EVERY === 0) {
+  // Read the Sheet again once PULL_EVERY minutes have passed since the last read (lastPull, set by
+  // refresh), not on the clock's quarter hours: a skipped tick on one would wait another 15 minutes.
+  if (!items || now - lastPull >= PULL_EVERY * MIN) {
     try { items = (await refresh(env, fetchImpl, now)).items; pulled = true; }
     catch (e) { pulled = e.message; if (!items) return { error: 'sheet-' + e.message }; }
   }
