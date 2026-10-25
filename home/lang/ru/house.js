@@ -32,6 +32,7 @@
   aosLang.add({
     // ---- the page ----
     'Home': 'Дом',
+    'Home can’t be opened inside another page.': 'Дом нельзя открыть внутри другой страницы.',
     'Preview': 'Демо',
     'Sample readings.': 'Примерные показания.',
     'Connect': 'Подключить',
@@ -789,6 +790,7 @@
     [/^Joined, but could not make this device its own token: (.+)$/, m => 'Подключено, но не удалось создать токен для этого устройства: ' + t(m[1])],
     [/^Made (.+)$/, m => 'Создано ' + m[1]],
     [/^Joined (.+)$/, m => 'Подключено ' + m[1]],
+    [/^This link joins (\S+)\. Tap Join again if that is your Home Assistant\.$/, m => 'Эта ссылка подключает к ' + m[1] + '. Нажмите «Подключиться» ещё раз, если это ваш Home Assistant.'],
     [/^Signed in (.+)$/, m => 'Вход ' + m[1]],
     [/^Couldn't draw (.+?): (.+)$/, m => 'Не удалось показать ' + ({ 'the app': 'приложение', 'the page': 'страницу', 'the dehumidifiers': 'осушители', 'the thermostats': 'термостаты',
       'the menu': 'меню', 'the popup': 'окно', 'the background': 'фон', 'the views': 'разделы' }[m[1]] || lc(t(m[1]))) + ': ' + m[2]],

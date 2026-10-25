@@ -1303,7 +1303,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     };
     const endFor = (startAt, startIso, endAt, endIso, fallbackMin) => {
       if (endIso && startIso && !isNaN(Date.parse(endIso))) return 'DTEND:' + utcS(Date.parse(endIso));
-      if (startIso && !isNaN(Date.parse(startIso))) return 'DTEND:' + utcS(Date.parse(startIso) + (endAt && startAt ? Math.max(30, (Date.parse(endAt) - Date.parse(startAt)) / 6e4) : fallbackMin) * 6e4);
+      // the start's zone known but not the end's: the two wall-clock times are in different zones (DEN 07:05 → BOS 12:45
+      // is 3h40, not 5h40), so the usual length rather than their difference
+      if (startIso && !isNaN(Date.parse(startIso))) return 'DTEND:' + utcS(Date.parse(startIso) + fallbackMin * 6e4);
       if (endAt && endAt.length >= 16) return 'DTEND:' + floating(endAt);
       const d = new Date(Date.parse(startAt) + fallbackMin * 6e4);
       return 'DTEND:' + floating(ymd(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()));
@@ -1484,7 +1486,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // looked at, what changed ({id, before, after} for Undo), and why it stopped early ('' if it didn't). quiet: no Face ID
   // prompt (Ipsy's own check uses the session it has, or stops).
   async function aiPass(queue, quiet) {
-    const out = { asked: 0, filled: 0, nothing: 0, done: new Set(), changes: [], stop: '' };
+    const out = { asked: 0, filled: 0, nothing: 0, unread: 0, done: new Set(), changes: [], stop: '' };
     if (!aiOn() || !queue.length) return out;
     if (aiAvail === null) await pingLive();
     if (!aiAvail) return out;
@@ -1502,7 +1504,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const ask = [...new Set(miss.map(m => map[m]).filter(Boolean))];
       if (!ask.length) { out.nothing++; out.done.add(q.bid); continue; }
       const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
-        body: JSON.stringify({ type: b.type, missing: ask, known: knownFor(b), text: q.text.slice(0, 12000), subject: q.subject, emailDate: new Date(q.date).toISOString() }) };
+        body: JSON.stringify({ type: b.type, missing: ask, known: knownFor(b), text: q.text.slice(0, 8000), subject: q.subject, emailDate: new Date(q.date).toISOString() }) };
       const tok = quiet && acct && acct.token && acct.token();      // no session: tried as is (a 401 stops it), never a Face ID prompt
       if (tok) init.headers.Authorization = 'Bearer ' + tok;
       out.asked++;
@@ -1515,6 +1517,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (d && d.error === 'no-key') { aiAvail = false; out.stop = 'no-key'; break; }
       if (!d || d.error === 'limit') { out.stop = 'limit'; break; }
       out.done.add(q.bid);
+      if (d.error === 'too-big') { out.unread++; continue; }      // the server would not take the email: not read, said so (below), not asked again
       const before = JSON.parse(JSON.stringify(b)), had = Object.keys(b.filled || {}).length;
       if (d.ok) noteModel('check', d.model);
       if (d.ok && applyAi(b, d.fields || {})) {
@@ -1575,7 +1578,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       await findNumbers();
       const bits = [];
       if (r.filled) bits.push('Ipsy filled in ' + plural(r.filled, 'detail') + '. They’re marked to check.');
-      else if (r.asked) bits.push('Ipsy read the email. It doesn’t say anything more.');
+      else if (r.asked > r.unread) bits.push('Ipsy read the email. It doesn’t say anything more.');
+      else if (r.unread) bits.push('Ipsy couldn’t read the emails just now.');
       else if (r.nothing) bits.push('The email doesn’t state what’s missing, so Ipsy has nothing to read. Your calendar, or you, can add it.');
       if (noMail) bits.push(plural(noMail, 'booking') + ' didn’t come from an email.');
       const undo = r.changes.length ? undoChanges(r.changes) : null;
@@ -1687,7 +1691,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         try { m = await newestMail(b); } catch (e) { if (e instanceof AuthError) throw e; continue; }
         if (m.text.length < 40) continue;
         const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
-          body: JSON.stringify({ check: true, type: b.type, missing: CHECK_ASK[b.type], known: onFile(b), text: m.text.slice(0, 12000), subject: m.subject, emailDate: new Date(m.date).toISOString() }) };
+          body: JSON.stringify({ check: true, type: b.type, missing: CHECK_ASK[b.type], known: onFile(b), text: m.text.slice(0, 8000), subject: m.subject, emailDate: new Date(m.date).toISOString() }) };
         let d = null;
         try { d = await (await aosFetch(API + 'extract', init)).json(); } catch { stop = 'offline'; break; }
         if (d && d.error === 'no-key') { aiAvail = false; stop = 'no-key'; break; }

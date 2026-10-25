@@ -367,7 +367,7 @@ for (const scheme of ['light', 'dark']) {
 
 for (const scheme of ['light', 'dark']) {
   // Standard: Sea glass, the Vintage block switched off: the gradient sky over the whole screen, glowing icons, glass chips
-  const { ctx, page, problems } = await newPage(scheme, { design: 'glass', weather: { alerts: true } });
+  const { ctx, page, problems } = await newPage(scheme, { design: 'glass', weather: { alerts: 'odd' } });
   await page.goto(BASE + '/weather/');
   await ready(page);
   const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
@@ -388,6 +388,13 @@ for (const scheme of ['light', 'dark']) {
     assert.match(await page.$eval('.hx-col[data-hour] .hx-ico svg', e => e.style.filter), /drop-shadow/);
     assert.equal((await q('#hours', ['backgroundColor']))[0], 'rgba(255, 255, 255, 0.05)', 'a faint tile');
     assert.equal(await page.$eval('#alerts .alert .dot', e => getComputedStyle(e).color), rgb(255, 69, 58), 'severe is red');
+  });
+  await step(scheme + ' Standard: an alert with no name is a "Weather alert", and an end that is not a date is left out', async () => {
+    assert.deepEqual(await texts(page, '#alerts .alert b'), ['Flood Watch', 'Wind Advisory', 'Weather alert']);
+    const smalls = await texts(page, '#alerts .alert small');
+    assert.match(smalls[0], /^Until /); assert.equal(smalls[2], 'Minor', 'its severity instead of "Until Invalid Date"');
+    assert.ok(!smalls.some(s => /Invalid|undefined/.test(s)));
+    assert.equal(await page.$eval('#alerts .alert:nth-child(3) b', e => e.getAttribute('translate')), null, 'the stand-in word can be translated; NWS names are not');
   });
   await step(scheme + ' Standard: the Sea glass icon, a translucent status bar, the Sea glass bar colour', async () => {
     assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /icon-glass-180\.png/);

@@ -3,6 +3,11 @@
 // Two designs, picked in Settings > Design: Vintage (the default) and Standard (Sea glass), kept on
 // this phone (../home/design.js, as in Clock); the colours drawn here follow it (dual(), below).
 'use strict';
+// Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
+if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
+  document.body.textContent = 'Home can’t be opened inside another page.';
+  throw new Error('Home refuses to run inside a frame');
+}
 // ---------------------------------------------------------------------------
 // Icons: MDI paths (@mdi/js 7.4.47), inline so the app works offline.
 const ICONS = {
@@ -1648,7 +1653,7 @@ const b64u = {
 };
 const SHARE = {
   LIFE: 5 * 60000, PREFIX: 'Home share ',
-  cur: null, timer: 0, tidied: false, link: '',
+  cur: null, timer: 0, tidied: false, link: '', confirm: '',
   async key(code, salt) {
     const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
@@ -1723,7 +1728,7 @@ const SHARE = {
   // ---- the other device, joining
   openJoin(link) {
     const go = () => {
-      this.link = link;
+      this.link = link; this.confirm = '';
       showView('join');
       $('jnFrom').textContent = 'Enter the code they told you.';
       $('jnCode').value = ''; $('jnStatus').className = 'status'; $('jnStatus').textContent = '';
@@ -1743,6 +1748,14 @@ const SHARE = {
     if (!p || p.v !== 1 || !p.u || !p.t) return bad('That link is damaged. Ask for a new one.');
     if (Date.now() > p.x) return bad('This link has expired. Ask for a new one.');
     let url; try { url = cleanUrl(p.u); } catch (e) { return bad(e.message); }
+    // The address is sealed inside the link, so this is the first moment it is known: shown, and nothing is sent to it
+    // until Join is tapped again (a crafted link could otherwise connect a phone with nothing saved to a stranger's Home Assistant).
+    if (this.confirm !== url) {
+      this.confirm = url;
+      $('jnStatus').className = 'status'; $('jnStatus').textContent = `This link joins ${url}. Tap Join again if that is your Home Assistant.`;
+      return;
+    }
+    this.confirm = '';
     $('jnGo').disabled = true;
     // Connect with the share token; once live, swap it for this device's own (onLive).
     store.set('ha', { url, token: p.t, swap: name });
@@ -1783,7 +1796,7 @@ $('shDone').onclick = () => showView('locked');
 $('vJoin').addEventListener('submit', e => { e.preventDefault(); SHARE.join(); });
 $('jnCancel').onclick = () => showView(saved().token ? 'locked' : 'edit');
 $('jnCopy').onclick = () => SHARE.copy(SHARE.link, $('jnStatus'));
-$('jnCode').oninput = () => { $('jnStatus').textContent = ''; };
+$('jnCode').oninput = () => { $('jnStatus').textContent = ''; SHARE.confirm = ''; };
 
 // ---------------------------------------------------------------------------
 // Devices with access: this Home Assistant user's tokens and sign-ins (HA's

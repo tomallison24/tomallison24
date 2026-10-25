@@ -326,7 +326,14 @@
   const KEEP_MONTHS = 60;
   const keepFrom = today => ymAdd(ymOf(today), 1 - KEEP_MONTHS);
   const prune = (txs, today) => { const from = keepFrom(today); return txs.filter(x => ymOf(x.date) >= from); };
+  // aOS keeps at most MAX_MONTH transactions a month (functions/money/api): the newest n, by date and then by when
+  // they were read, so a busier month is sent and not refused (and the months after it still go).
+  const MAX_MONTH = 1500;
+  const newest = (txs, n = MAX_MONTH) => txs.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.at || 0) - (a.at || 0))).slice(0, n);
+  // A CSV cell: quoted, quotes doubled. A cell starting with =, +, - or @ is a formula to Excel or Numbers (CSV
+  // injection); it gets a ' in front, as a spreadsheet keeps text, unless it is just a number (-12.50).
+  const csvCell = v => { const s = String(v == null ? '' : v); return '"' + (/^[=+\-@]/.test(s) && !/^[+-]?\d+(\.\d+)?$/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"'; };
 
   root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
-    recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune };
+    recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune, MAX_MONTH, newest, csvCell };
 })(typeof window !== 'undefined' ? window : globalThis);

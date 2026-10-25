@@ -318,6 +318,54 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   await test('old address: no script errors', async () => { assert.deepEqual(errors, []); });
   await ctx.close();
 }
+{ // a share link (#join=) on a phone with nothing saved: the address sealed inside it is shown first, and nothing is sent until Join is tapped again
+  const { ctx, page, errors } = await phone('light');
+  const CODE = 'ABCDEFGHJK';
+  const blob = await page.evaluate(code => SHARE.seal({ v: 1, u: 'https://ha.example', t: 'share-token', x: Date.now() + 5 * 60000 }, code), CODE);
+  let sockets = 0;
+  await page.routeWebSocket(/ha\.example/, () => { sockets++; });   // a stand-in: counts the connections, answers nothing
+  await page.evaluate(b => { location.hash = '#join=' + b; }, blob);   // then opened again with it: a hash alone is no new page
+  await page.reload();
+  await page.waitForSelector('#vJoin:not([hidden])');
+  await test('join link: the Join sheet opens, the link is out of the address bar, nothing is saved or sent yet', async () => {
+    assert.equal(await page.evaluate(() => location.hash), '');
+    assert.equal(await page.textContent('#jnFrom'), 'Enter the code they told you.');
+    assert.equal(await page.evaluate(() => localStorage.getItem('house.ha')), null);
+    assert.equal(sockets, 0);
+  });
+  await test('join link: the first Join shows the address it would connect to, and still sends nothing', async () => {
+    await page.fill('#jnCode', CODE.slice(0, 5) + ' ' + CODE.slice(5));
+    await page.click('#jnGo');
+    await page.waitForFunction(() => /ha\.example/.test(document.getElementById('jnStatus').textContent));
+    assert.equal(await page.textContent('#jnStatus'), 'This link joins https://ha.example. Tap Join again if that is your Home Assistant.');
+    assert.equal(await page.$eval('#jnStatus', e => e.className), 'status', 'a notice, not an error');
+    await page.waitForTimeout(500);
+    assert.equal(await page.evaluate(() => localStorage.getItem('house.ha')), null);
+    assert.equal(sockets, 0);
+    assert.equal(await page.$eval('#jnGo', e => e.disabled), false);
+  });
+  await test('join link: a changed code starts over', async () => {
+    await page.fill('#jnCode', CODE.slice(0, 9) + '2');
+    assert.equal(await page.textContent('#jnStatus'), '');
+    await page.click('#jnGo');
+    await page.waitForFunction(() => document.getElementById('jnStatus').textContent !== '');
+    assert.equal(await page.textContent('#jnStatus'), "That code doesn't match this link.");
+    await page.fill('#jnCode', CODE);
+    await page.click('#jnGo');
+    await page.waitForFunction(() => /ha\.example/.test(document.getElementById('jnStatus').textContent));
+    assert.equal(sockets, 0, 'the address is shown again first');
+  });
+  await test('join link: the second Join connects to it with the shared token', async () => {
+    await page.click('#jnGo');
+    await page.waitForFunction(() => localStorage.getItem('house.ha'));
+    assert.deepEqual(JSON.parse(await page.evaluate(() => localStorage.getItem('house.ha'))), { url: 'https://ha.example', token: 'share-token', swap: 'This device' });
+    await page.waitForTimeout(800);
+    assert.equal(sockets, 1);
+    assert.equal(await page.$eval('#jnGo', e => e.disabled), true);
+  });
+  await test('join link: no script errors', async () => { assert.deepEqual(errors, []); });
+  await ctx.close();
+}
 { // a phone with both: Home's own data is kept, the old app's is not copied over it
   const seed = { 'aos.seen': JSON.stringify({ house: '999', housevintage: '999' }), 'house.bg': '"aurora"', 'housev.bg': '"ripples"' };
   const { ctx, page } = await phone('light', { seed });

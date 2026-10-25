@@ -25,6 +25,7 @@ aosLang.add({
   'Thunderstorms': 'Грозы',
   'Windy': 'Ветрено',
   'Severe': 'Опасная погода',
+  'Weather alert': 'Погодное предупреждение',   // an alert NWS gave no name
   // an alert's severity, when it has no end time
   'Extreme': 'Чрезвычайная опасность',
   'Moderate': 'Умеренная опасность',
@@ -33,6 +34,7 @@ aosLang.add({
 
   // the page
   'Weather': 'Погода',
+  'Weather can’t be opened inside another page.': 'Погоду нельзя открыть внутри другой страницы.',
   'Places': 'Места',
   'My Location': 'Моя геопозиция',
   'Use your location, or search for a city.': 'Используйте геопозицию или найдите город.',

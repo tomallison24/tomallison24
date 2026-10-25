@@ -17,6 +17,7 @@
 
   aosLang.add({
     'Podcasts': 'Подкасты',
+    'Podcasts can’t be opened inside another page.': 'Подкасты нельзя открыть внутри другой страницы.',
     'Listen Now': 'Слушать',
     'Library': 'Медиатека',
     'Search': 'Поиск',

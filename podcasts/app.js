@@ -4,6 +4,11 @@
 // this phone (../home/design.js, as in Clock).
 (function(){
   'use strict';
+  // Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
+  if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
+    document.body.textContent = 'Podcasts can’t be opened inside another page.';
+    throw new Error('Podcasts refuses to run inside a frame');
+  }
   const KEY = 'allison-podcasts-v1';
   const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
   const MAX_EPS = 250;                     // newest episodes kept for each show

@@ -189,4 +189,28 @@ test('five years kept: this month and the 59 before it, at the end of a month an
   assert.deepEqual(C.prune(list, '2026-10-25').map(x => x.merchant), ['Oldest kept', 'Today']);
 });
 
+test('a month sent to aOS is capped at the 1,500 it keeps: the newest by date, then by when they were read', () => {
+  assert.equal(C.MAX_MONTH, 1500);
+  const many = Array.from({ length: 1600 }, (_, i) => T('2026-10-' + String(1 + (i % 28)).padStart(2, '0'), 1, 'Shop ' + i, { at: 1e12 + i }));
+  const sent = C.newest(many);
+  assert.equal(sent.length, 1500); assert.equal(many.length, 1600, 'the phone keeps them all');
+  assert.ok(sent.every((x, i) => !i || sent[i - 1].date > x.date || (sent[i - 1].date === x.date && sent[i - 1].at >= x.at)), 'newest first');
+  const dropped = many.filter(x => !sent.includes(x));
+  assert.ok(dropped.every(x => x.date <= sent[sent.length - 1].date), 'what is left out is the oldest');
+  assert.deepEqual(C.newest([T('2026-10-05', 1, 'a', { at: 5 }), T('2026-10-05', 1, 'b', { at: 9 }), T('2026-10-01', 1, 'c', { at: 99 })], 2).map(x => x.merchant), ['b', 'a'], 'same day: the one read last first');
+  assert.equal(C.newest(many.slice(0, 10)).length, 10, 'a small month goes whole');
+});
+
+test('a CSV cell: quoted, quotes doubled, and a cell a spreadsheet would run as a formula kept as text', () => {
+  assert.equal(C.csvCell('Corner Diner'), '"Corner Diner"');
+  assert.equal(C.csvCell('Joe "The Mechanic" Garage'), '"Joe ""The Mechanic"" Garage"');
+  assert.equal(C.csvCell(null), '""'); assert.equal(C.csvCell(''), '""');
+  assert.equal(C.csvCell('=HYPERLINK("http://evil.example")'), `"'=HYPERLINK(""http://evil.example"")"`);
+  assert.equal(C.csvCell('+1 (555) 010-0000'), `"'+1 (555) 010-0000"`);
+  assert.equal(C.csvCell('-cmd|calc'), `"'-cmd|calc"`);
+  assert.equal(C.csvCell('@SUM(A1)'), `"'@SUM(A1)"`);
+  assert.equal(C.csvCell('-12.50'), '"-12.50"', 'a plain negative number is a number, not a formula');
+  assert.equal(C.csvCell((5).toFixed(2)), '"5.00"'); assert.equal(C.csvCell('2026-10-25'), '"2026-10-25"');
+});
+
 console.log(n + ' calc tests passed');
