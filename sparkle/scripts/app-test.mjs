@@ -47,8 +47,8 @@ const b = await chromium.launch();
 let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
 
-async function phone({ look = 'vintage', scheme = 'light', signed = false, seed = null, size = [390, 844] } = {}) {
-  const ctx = await b.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block', reducedMotion: 'reduce', locale: 'en-US' });
+async function phone({ look = 'vintage', scheme = 'light', signed = false, seed = null, size = [390, 844], motion = 'reduce' } = {}) {
+  const ctx = await b.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block', reducedMotion: motion, locale: 'en-US' });
   await ctx.route('**/*', async route => {
     const u = new URL(route.request().url());
     if (u.origin !== BASE) return route.abort();
@@ -549,6 +549,36 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   }
   pr.push(...errs); await ctx.close();
   report('the syllable drum: a beat and a dot for every tap, however quick', pr);
+}
+
+// 13. on the map: the storyteller says hello once, when she picks her princess, not again back from a game; a trip
+// through a place on the way is one smooth glide (no stop at the place, no jumps), and she ends on the place
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.introSeen = true; ava.world = Object.assign({}, ava.world, { at: 'sign' });
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava), motion: 'no-preference' }); const pr = [];
+  await sp(p, () => { window.__said = []; const say = SparkleVoice.say; SparkleVoice.say = (parts, o) => { window.__said.push([].concat(parts).filter(x => typeof x === 'string').join(' ')); return say(parts, o); }; });
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(500);
+  if (!(await sp(p, () => window.__said.some(t => t.startsWith('Hi Ava'))))) pr.push('no hello when she picked her princess');
+  await sp(p, () => { window.__said = []; window.sparkle.enterWorld(); }); await p.waitForTimeout(300);
+  const again = await sp(p, () => window.__said);
+  if (again.length) pr.push('the kingdom spoke again on coming back: ' + JSON.stringify(again));
+  const track = await sp(p, async () => {
+    const r = document.getElementById('rider'), box = document.getElementById('mapIn'), out = [];
+    const go = window.sparkle.travel('bridgeA');
+    let on = true; go.then(() => { on = false; });
+    while (on) { await new Promise(f => requestAnimationFrame(f)); const a = r.getBoundingClientRect(), m = box.getBoundingClientRect(); out.push([a.left - m.left, a.top - m.top]); }
+    return { out, at: window.sparkle.me.world.at };
+  });
+  const steps = track.out.slice(1).map((q, i) => Math.hypot(q[0] - track.out[i][0], q[1] - track.out[i][1]));
+  const mid = steps.slice(Math.floor(steps.length * 0.2), Math.ceil(steps.length * 0.8)), avg = mid.reduce((a, x) => a + x, 0) / (mid.length || 1);
+  if (track.at !== 'bridgeA') pr.push('she did not end at the bridge: ' + track.at);
+  if (steps.length < 20) pr.push('the trip was not animated: ' + steps.length + ' frames');
+  else {
+    if (mid.some(x => x < avg * 0.2)) pr.push('she stopped part way (at the castle?): ' + mid.map(x => x.toFixed(1)).join(' '));
+    if (steps.some(x => x > avg * 3 + 2)) pr.push('she jumped: ' + steps.map(x => x.toFixed(1)).join(' '));
+  }
+  pr.push(...errs); await ctx.close();
+  report('the map: hello only on picking her princess; a trip is one smooth glide that ends on the place', pr);
 }
 
 await b.close(); server.close();

@@ -8,7 +8,9 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 - **Who's playing**: a portrait for each child (her princess), so nobody needs to read to pick.
   The first player is made right there; more are added by a grown-up.
 - **The kingdom** (`world.js`): one big scrolling picture. She taps where to go and her unicorn
-  walks the paths. The paths themselves are practice, at her level:
+  glides along the paths in one smooth trip up to each shut gate (a transform each frame, the view
+  easing after her). The storyteller says hello and where to go once, when she picks her princess;
+  back from a game the kingdom is quiet. The paths themselves are practice, at her level:
   - a **signpost** to read on the way to Story Tower,
   - the **rainbow bridge** to mend by counting planks, on the way to the Gem Mine,
   - the **crystal door** that opens to a sparkle pattern, on the way to Star Meadow.
