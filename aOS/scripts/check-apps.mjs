@@ -187,7 +187,7 @@ for (const id of ids) {
     rule(own || list.includes('../home/design.js'), 'sw.js SHELL should list ../home/design.js');
     rule(/<style id="vintage">/.test(html), 'has no <style id="vintage">: the Vintage design, switched off for Standard');
     for (const f of ['icon-glass-180.png', 'icon-glass-512.png']) rule(exists(dir + '/' + f), 'no ' + f + ': the Standard (Sea glass) design\'s icon');
-    for (const f of ['neon', 'folk']) rule(new RegExp('<style id="' + f + '"').test(html), 'has no <style id="' + f + '">: run node aOS/scripts/make-looks.mjs');
+    for (const f of ['neon', 'folk', 'grid']) rule(new RegExp('<style id="' + f + '"').test(html), 'has no <style id="' + f + '">: run node aOS/scripts/make-looks.mjs');
   }
   // the language (../home/lang.js): English or Russian, in <head>, with the shared words and the app's own, offline too
   const words = '../home/lang/ru/' + id + '.js';

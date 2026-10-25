@@ -1,9 +1,9 @@
-// Writes the Night Drive and Folk looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
+// Writes the Night Drive, Folk and Grid looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
 // says how a colour moves). Run it after changing a page's <style id="vintage"> block or an icon.svg:
 //
-//   node aOS/scripts/make-looks.mjs            the <style id="neon"> and <style id="folk"> blocks, right
-//                                               after each page's Vintage block; icon-neon.svg and
-//                                               icon-folk.svg beside each icon.svg, and their 180 and 512
+//   node aOS/scripts/make-looks.mjs            the <style id="neon">, <style id="folk"> and <style id="grid">
+//                                               blocks, right after each page's Vintage block; icon-neon.svg,
+//                                               icon-folk.svg and icon-grid.svg beside each icon.svg, and their 180 and 512
 //                                               pngs (needs Playwright with Chromium: npm i -g playwright)
 //   node aOS/scripts/make-looks.mjs --check     only says what is out of date (check-apps.mjs runs it), exit 1 if any
 //
@@ -14,7 +14,7 @@ import path from 'path';
 import { lookBlock, signature, mapColor, LOOKS } from './looks.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const NEW = ['neon', 'folk'];
+const NEW = ['neon', 'folk', 'grid'];
 const check = process.argv.includes('--check');
 const pages = readdirSync(ROOT, { withFileTypes: true }).filter(d => d.isDirectory() && existsSync(path.join(ROOT, d.name, 'index.html')))
   .map(d => d.name).filter(d => /^<style id="vintage">/m.test(readFileSync(path.join(ROOT, d, 'index.html'), 'utf8')));
@@ -36,7 +36,9 @@ for (const app of pages) {
 
 // ---- the icons ----
 // Night Drive: a deep neon-tinted ground in the app's own hue, a striped sunset for the disc, a magenta tube.
-// Folk: the Gzhel palette, and the disc becomes a six-petalled flower. Masks (black and white) are left as they are.
+// Folk: the Gzhel palette, and the disc becomes a six-petalled flower. Grid: a near-black ground with a hint of the
+// app's own hue, the night palette's light, the disc a red identity disc and the pill a red light trail. Masks (black and white)
+// are left as they are.
 const SIZE = /viewBox="0 0 (\d+) (\d+)"/;
 function iconFor(look, svg) {
   const masks = [];
@@ -54,28 +56,38 @@ function iconFor(look, svg) {
       const bars = [0.12, 0.3, 0.46, 0.6, 0.72, 0.84].map((y, i) => `<rect x="${cx - r}" y="${(cy + r * y).toFixed(1)}" width="${2 * r}" height="${(r * (0.04 + i * 0.012)).toFixed(1)}" fill="@BG@"/>`).join('');
       return `<g clip-path="url(#ndc)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#nds)"/>${bars}</g>`;
     }
+    if (look === 'grid') {
+      const ring = (rr, w) => `<circle cx="${cx}" cy="${cy}" r="${(r * rr).toFixed(1)}" fill="none" stroke="@CY@" stroke-width="${(r * w).toFixed(1)}"/>`;   // its own red, not repainted below
+      return `<g>${ring(0.9, 0.12)}${ring(0.52, 0.07)}<circle cx="${cx}" cy="${cy}" r="${(r * 0.12).toFixed(1)}" fill="@CY@"/></g>`;
+    }
     const petal = a => `<ellipse cx="${cx}" cy="${(cy - r * 0.52).toFixed(1)}" rx="${(r * 0.25).toFixed(1)}" ry="${(r * 0.44).toFixed(1)}" transform="rotate(${a} ${cx} ${cy})" fill="${mapColor('folk', fill, false)}"/>`;
     return `<g>${[0, 60, 120, 180, 240, 300].map(petal).join('')}<circle cx="${cx}" cy="${cy}" r="${(r * 0.24).toFixed(1)}" fill="#C7261C"/><circle cx="${cx}" cy="${cy}" r="${(r * 0.1).toFixed(1)}" fill="#F5F7FB"/></g>`;
   });
   // every other colour (the masks are out of the way)
   svg = svg.replace(/(fill|stroke|stop-color)="(#[0-9A-Fa-f]{3,8})"/g, (m, k, c) => {
-    if (look === 'neon' && c === bg) return m;
-    return `${k}="${mapColor(look, c, false)}"`;
+    if ((look === 'neon' || look === 'grid') && c === bg) return m;
+    return `${k}="${mapColor(look, c, look === 'grid')}"`;
   });
   if (look === 'neon' && bg) {   // the ground: the app's hue, deep, under the sunset
     const deep = deepen(mapColor('neon', bg, true));
     svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`).split('@BG@').join(deep);
     svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF3D9A${b}`);
   }
+  if (look === 'grid' && bg) {   // the ground: all but black, a hint of the app's hue; the pill a red light trail
+    const deep = deepen(mapColor('neon', bg, true), 0.2);
+    svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`);
+    svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF2A2A${b}`);
+  }
   svg = svg.split('@BG@').join('#120B1F');
+  svg = svg.split('@CY@').join('#FF2A2A');
   if (defs) svg = /<defs>/.test(svg) ? svg.replace('<defs>', '<defs>' + defs) : svg.replace(/(<svg[^>]*>)/, `$1<defs>${defs}</defs>`);
   return svg.replace(/\u0000(\d+)\u0000/g, (_, i) => masks[+i]);
 }
 // a colour taken down to a deep ground, keeping its hue (for Night Drive's icon grounds)
-function deepen(hex) {
+function deepen(hex, f = 0.55) {
   const n = parseInt(hex.slice(1), 16), rgb = [n >> 16, (n >> 8) & 255, n & 255];
   const k = 0.32 / Math.max(0.32, (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255);
-  return '#' + rgb.map(v => Math.round(v * k * 0.55).toString(16).padStart(2, '0')).join('').toUpperCase();
+  return '#' + rgb.map(v => Math.round(v * k * f).toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 
 const icons = pages.filter(app => existsSync(path.join(ROOT, app, 'icon.svg')));

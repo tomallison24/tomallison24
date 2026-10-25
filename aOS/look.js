@@ -1,11 +1,11 @@
-// aOS's look: Vintage (mid-century modern, the default), Sea glass, Night Drive (neon) or Folk
-// (Gzhel and Khokhloma). Picked in the install steps before aOS is added to the Home Screen
+// aOS's look: Vintage (mid-century modern, the default), Sea glass, Night Drive (neon), Folk
+// (Gzhel and Khokhloma) or Grid (light cycles). Picked in the install steps before aOS is added to the Home Screen
 // (home/welcome.js), or later under the account (Appearance > Look), where it is every app's look
 // too: set(look, { apps }) writes each app's design (design.<id>, Clock's set.design; home/design.js).
 // Loaded in <head> after the styles, so the page is drawn once, in the right look. Vintage is the
 // <style id="vintage"> block: Sea glass is that block switched off, the styles above it showing as
-// they always did; Night Drive and Folk keep it on and switch on their own block after it
-// (<style id="neon">, <style id="folk">, generated from it by aOS/scripts/make-looks.mjs).
+// they always did; Night Drive, Folk and Grid keep it on and switch on their own block after it
+// (<style id="neon">, <style id="folk">, <style id="grid">, generated from it by aOS/scripts/make-looks.mjs).
 //
 // Where the choice is kept, and how it reaches the Home Screen app (which has storage of its
 // own, apart from Safari's): localStorage aos.look; and, for the install, ?look= on the
@@ -22,6 +22,7 @@
     glass: { ground: ['#EEF2F0', '#0D1213'], icon: ['icon-glass-180.png?v=1', 'icon-glass-512.png?v=1'], bar: 'black-translucent' },
     neon: { ground: ['#F5F2FD', '#140A22'], icon: ['icon-neon-180.png?v=1', 'icon-neon-512.png?v=1'], bar: 'default' },
     folk: { ground: ['#F4F7FD', '#0F0B07'], icon: ['icon-folk-180.png?v=1', 'icon-folk-512.png?v=1'], bar: 'default' },
+    grid: { ground: ['#F3F5F7', '#050608'], icon: ['icon-grid-180.png?v=1', 'icon-grid-512.png?v=1'], bar: 'default' },
   };
   const ok = v => v in SET ? v : null;
   const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -33,7 +34,7 @@
     const s = SET[look];
     root.setAttribute('data-look', look);
     const mc = document.getElementById('vintage'); if (mc) mc.media = look === 'glass' ? 'not all' : 'all';
-    for (const id of ['neon', 'folk']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
+    for (const id of ['neon', 'folk', 'grid']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
     for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = s.ground[/dark/.test(m.dataset.media || m.media) ? 1 : 0];   // welcome.js keeps the original media there
     const bar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]'); if (bar) bar.content = s.bar;
     const touch = document.querySelector('link[rel="apple-touch-icon"]'); if (touch) touch.href = s.icon[0];
