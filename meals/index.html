@@ -297,9 +297,6 @@ button.card:active{transform:scale(.985)}
 .busy strong{color:var(--text);font-size:17px}
 .spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--fill);border-top-color:var(--accent);animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-textarea.paste{width:100%;min-height:180px;border:0;border-radius:22px;padding:14px 16px;font:15px/1.45 var(--font);color:var(--text);resize:vertical;
-  background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);outline:none}
-textarea.paste::placeholder{color:var(--faint)}
 .frow input.txt.wide{text-align:right}
 .src{font-size:12px;color:var(--faint);margin:0 8px;overflow-wrap:anywhere}
 .src a{color:var(--accent-text)}
@@ -495,8 +492,9 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .frow select,.frow input[type="time"]{background-color:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
 .frow input.txt:focus-visible{outline:none}
 .frow:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
-textarea.paste{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge);border-radius:20px}
-textarea.paste:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent)}
+/* the ring follows the group's round corners, which would otherwise clip it */
+.frow:first-child:focus-within{border-top-left-radius:inherit;border-top-right-radius:inherit}
+.frow:last-child:focus-within{border-bottom-left-radius:inherit;border-bottom-right-radius:inherit}
 
 /* the shopping list: round ticks, teal when done */
 .irow .box{box-shadow:inset 0 0 0 2px var(--muted)}
