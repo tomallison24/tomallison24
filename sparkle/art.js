@@ -123,11 +123,24 @@
   }
 
   // ---- the unicorn ----
-  // stage 0 foal, 1 young, 2 unicorn, 3 winged, 4 rainbow. wear: { mane, saddle, horn }. mood: 'happy' | 'calm' | 'sleepy'
+  // stage 0 foal, 1 young, 2 unicorn, 3 winged, 4 rainbow. wear: { mane, saddle, horn }.
+  // opt (all optional, for the stable):
+  //   mood   'happy' | 'calm' (the default: big open eye) | 'sleepy' | 'sad' (droopy half-closed eye
+  //          looking down, a small frown, an ear flopped back over her mane) | 'sleep' (eye closed
+  //          in a content curve, lashes) | 'eat' (happy eye, mouth open chewing)
+  //   dirt   0..1 mud: a wavy band up each leg that rises with it, and splotches on her tummy that
+  //          grow in number and size (0: none)
+  //   foam   0..1 soap foam on her body and mane, more as it rises (0: none)
+  //   shine  true: twinkles all around her (clean and happy)
+  // In her viewBox (0 -6 250 210, at stage 2 and up): the mouth is at about (220, 106), the muzzle
+  // (222, 98), the eye (198, 76), the mane down the neck from (172, 40) to (150, 96), the middle of
+  // her back (112, 92), the hooves' bottoms at y 195. A foal or young one is drawn smaller about the
+  // point (125, 200): x' = 125 + (x - 125) * s, y' = 200 + (y - 200) * s, s 0.82 (stage 0) or 0.9 (1).
   function unicorn(stage = 0, wear = {}, opt = {}) {
     const mane = ITEMS[wear.mane] || ITEMS['mane-candy'], cols = stage >= 4 ? ['#FF7AA8', '#FFB257', '#FFE066', '#7FE0A0', '#7FC8FF', '#B79BFF'] : mane.cols;
     const body = '#FFFFFF', bodyS = '#EFE6FF', hoof = stage >= 4 ? C.gold : '#C9B6F2';
     const s = [0.82, 0.9, 1, 1, 1][stage] || 1, mood = opt.mood || 'calm';
+    const dirt = Math.max(0, Math.min(1, +opt.dirt || 0)), foam = Math.max(0, Math.min(1, +opt.foam || 0));
     const g = uid('ug'), parts = [];
     parts.push(`<defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${body}"/><stop offset="1" stop-color="${bodyS}"/></linearGradient></defs>`);
     if (stage >= 4) parts.push(`<ellipse cx="128" cy="110" rx="118" ry="96" fill="${C.lav}" opacity=".35"/>`);
@@ -138,10 +151,33 @@
     if (stage >= 3) parts.push(`<path d="M104 96C92 54 120 30 150 40C138 50 160 52 148 64C162 68 152 82 138 82C142 92 124 100 104 96Z" fill="#fff" ${OUT}/><path d="M118 70C126 60 136 56 146 56M120 84C128 78 138 76 144 76" fill="none" stroke="${C.lav}" stroke-width="3" stroke-linecap="round"/>`);
     // legs (back pair a little darker)
     const leg = (x, back) => `<path d="M${x} 150V188" stroke="${INK}" stroke-width="20" stroke-linecap="round"/><path d="M${x} 150V188" stroke="${back ? bodyS : body}" stroke-width="13" stroke-linecap="round"/><rect x="${x - 9}" y="184" width="18" height="11" rx="5" fill="${hoof}" ${THIN}/>`;
+    // mud (opt.dirt): a wavy band of mud up each leg that rises with it, and soft splotches on her
+    // tummy; all kept inside the legs and body they sit on
+    const MUD = '#A87A5A', MUDL = '#C79D7B', mc = (x, y, r, fill) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}"/>`;
+    const clipped = (shape, body) => { const cl = uid('um'); return `<defs><clipPath id="${cl}">${shape}</clipPath></defs><g clip-path="url(#${cl})">${body}</g>`; };
+    const legMud = xs => {
+      if (!dirt) return '';
+      const top = 188 - 26 * dirt;
+      const band = (x, i) => { const t = top + (i % 2 ? 3 : 0);
+        return `M${x - 12} ${t + 2}Q${x - 6} ${t - 3} ${x - 1} ${t + 1.5}Q${x + 5} ${t + 5} ${x + 12} ${t}V200H${x - 12}Z`; };
+      const d = xs.map(band).join(''), drips = dirt > 0.4 ? xs.map((x, i) => { const dx = x + (i % 2 ? 4 : -3), dy = top - 4 - 8 * dirt * (i % 2 ? 0.6 : 1), r = 1.8 + 1.4 * dirt; return mc(dx, dy, r + 1.3, INK) + mc(dx, dy, r, MUD); }).join('') : '';
+      return clipped(xs.map(x => `<rect x="${x - 10}" y="140" width="20" height="57" rx="9"/>`).join(''),
+        `<path d="${d}" fill="${MUD}" stroke="${INK}" stroke-width="2.8" stroke-linejoin="round"/>${drips}` + xs.map((x, i) => mc(x - 3, top + 7 + (i % 2 ? 3 : 0), 1.8, MUDL)).join(''));
+    };
+    const bodyMud = () => {
+      if (!dirt) return '';
+      const k = 0.75 + 0.4 * dirt, spots = [[120, 160, 8], [78, 154, 7], [154, 152, 6.5], [100, 146, 5], [62, 138, 5.5]].slice(0, Math.ceil(dirt * 5));
+      const dots = spots.flatMap(([x, y, r]) => { r *= k; return [[x, y, r], [x + r * 0.75, y - r * 0.3, r * 0.6], [x - r * 0.65, y + r * 0.35, r * 0.55]]; });
+      return clipped('<ellipse cx="112" cy="130" rx="62" ry="38"/>', dots.map(([x, y, r]) => mc(x, y, r + 1.4, INK)).join('') + dots.map(([x, y, r]) => mc(x, y, r, MUD)).join('')
+        + spots.map(([x, y, r]) => mc(x - r * k * 0.3, y - r * k * 0.3, r * k * 0.28, MUDL)).join(''));
+    };
     parts.push(leg(76, true) + leg(150, true));
+    parts.push(legMud([76, 150]));
     // body
     parts.push(`<ellipse cx="112" cy="130" rx="64" ry="40" fill="url(#${g})" ${OUT}/>`);
+    parts.push(bodyMud());
     parts.push(leg(92, false) + leg(166, false));
+    parts.push(legMud([92, 166]));
     // saddle
     if (wear.saddle && ITEMS[wear.saddle]) parts.push(ITEMS[wear.saddle].draw());
     // neck and head
@@ -149,22 +185,42 @@
     parts.push(`<path d="M168 52C190 40 226 50 232 78C238 102 222 116 204 112C190 110 176 98 170 84C162 72 160 60 168 52Z" fill="${body}" ${OUT}/>`);
     parts.push(`<ellipse cx="222" cy="98" rx="14" ry="11" fill="${C.blush}" ${THIN}/><circle cx="220" cy="96" r="2.4" fill="${INK}"/><circle cx="229" cy="99" r="2.2" fill="${INK}"/>`);
     // ear
-    parts.push(`<path d="M176 56L170 30L190 48Z" fill="${body}" ${OUT}/><path d="M176 50L174 38L184 47Z" fill="${C.pink}"/>`);
+    const ear = `<path d="M176 56L170 30L190 48Z" fill="${body}" ${OUT}/><path d="M176 50L174 38L184 47Z" fill="${C.pink}"/>`;
+    if (mood !== 'sad') parts.push(ear);
     // horn (none on the foal's first days: a tiny bump), spiral lines
     const hornC = (ITEMS[wear.horn] || {}).c || C.gold;
     if (stage === 0) parts.push(`<path d="M186 44L194 26L200 44Z" fill="${hornC}" ${THIN}/>`);
     else parts.push(`<path d="M184 44L204 ${stage >= 2 ? 2 : 14}L208 50Z" fill="${hornC}" ${OUT}/><path d="M189 38L204 34M192 28L205 24M196 18L205 15" stroke="${shade(hornC, -0.25)}" stroke-width="2.5" stroke-linecap="round"/>`);
     if (wear.horn && ITEMS[wear.horn] && ITEMS[wear.horn].glow) parts.push(twinkle(212, 12, 8, '#fff') + twinkle(176, 18, 5, C.gold));
     // eye
-    parts.push(mood === 'happy' ? `<path d="M190 78Q198 68 206 78" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`
+    parts.push(mood === 'happy' || mood === 'eat' ? `<path d="M190 78Q198 68 206 78" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`
       : mood === 'sleepy' ? `<path d="M190 76Q198 84 206 76" fill="none" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>`
+      : mood === 'sleep' ? `<path d="M189 75Q198 85 207 75" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M191 80l-3 4M197 82.5l-1 4.5M203 81l2 4" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>`
+      : mood === 'sad' ? `<ellipse cx="198" cy="79" rx="8" ry="9.5" fill="${INK}"/><circle cx="200" cy="81" r="3" fill="#fff"/><circle cx="195" cy="85.5" r="1.5" fill="#fff"/>
+        <path d="M186 78.5L211 72V58H186Z" fill="${body}"/><path d="M189 78Q199 76.5 207.5 72" fill="none" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/><path d="M193 66Q199 65 203 60" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>`
       : `<ellipse cx="198" cy="76" rx="8" ry="10" fill="${INK}"/><ellipse cx="200.5" cy="72" rx="3.3" ry="3.8" fill="#fff"/><circle cx="195.5" cy="80" r="1.6" fill="#fff"/><path d="M190 66l-5 -4M196 63l-2 -6" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>`);
-    parts.push(`<ellipse cx="206" cy="92" rx="8" ry="5" fill="${C.pink}" opacity=".6"/>`);
+    parts.push(`<ellipse cx="206" cy="92" rx="8" ry="5" fill="${C.pink}" opacity="${mood === 'sad' ? '.35' : '.6'}"/>`);
+    // the mouth, for the stable's moods (the others have none, as always)
+    if (mood === 'sad') parts.push(`<path d="M216 105Q221 101 226 105" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`);
+    if (mood === 'eat') parts.push(`<path d="M213 103Q221 101 228 104Q226 112 219 112.5Q213 111 213 103Z" fill="${INK}"/><path d="M215.5 109Q220 106.5 225 108.5Q222 112 218 111.5Z" fill="${C.coral}"/>`);
     // mane: puffs of colour down the neck
     const puffs = [[170, 44, 15], [160, 60, 15], [154, 78, 14], [150, 96, 13], [176, 34, 11]];
     parts.push(puffs.map(([x, y, r], i) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${cols[i % cols.length]}" ${OUT}/>`).join(''));
     parts.push(`<path d="M182 40C190 36 194 44 188 52C184 58 176 54 178 48" fill="${cols[1 % cols.length]}" ${OUT}/>`);
+    // a sad ear lies back flat over her mane
+    if (mood === 'sad') parts.push(`<path d="M190 51C180 46 168 50 161 62C171 64 181 61 190 57Z" fill="${body}" ${OUT}/><path d="M185 53.5C178 52 172 55 168 59.5C175 60.5 180 59 185 56.5Z" fill="${C.pink}"/>`);
     if (stage >= 4 || (ITEMS[wear.mane] && ITEMS[wear.mane].sparkle)) parts.push(twinkle(150, 50, 6) + twinkle(140, 100, 5) + twinkle(60, 170, 6));
+    // soap foam (opt.foam): little clouds of bubbles on her back and mane
+    if (foam) {
+      const k = 0.75 + 0.4 * foam, at = [[112, 94], [162, 56], [76, 104], [146, 98], [178, 36], [132, 118], [92, 126], [158, 82], [58, 122], [120, 104]];
+      const on = at.slice(0, Math.ceil(foam * at.length));
+      const puff = ([x, y], i) => [[x, y, 7.5], [x - 7, y + 3, 5.5], [x + 7, y + 2, 6], [x + (i % 2 ? 2 : -2), y - 6, 5]].map(([a, b, r]) => [a, b, r * k]);
+      parts.push(on.map((p, i) => { const c = puff(p, i);
+        return c.map(([x, y, r]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 1.6).toFixed(1)}" fill="${C.lav}"/>`).join('') + c.map(([x, y, r]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="#fff"/>`).join('')
+          + `<circle cx="${(p[0] + 9 * k).toFixed(1)}" cy="${(p[1] - 9 * k).toFixed(1)}" r="${(2.6 * k).toFixed(1)}" fill="#fff" stroke="${C.lilac}" stroke-width="1.2"/><circle cx="${(p[0] - 3).toFixed(1)}" cy="${(p[1] - 2).toFixed(1)}" r="${(1.8 * k).toFixed(1)}" fill="none" stroke="${C.lav}" stroke-width="1"/>`; }).join(''));
+    }
+    // shine: twinkles all round her
+    if (opt.shine) parts.push(twinkle(30, 34, 9, C.gold) + twinkle(122, 58, 7, C.pink) + twinkle(240, 130, 7, C.gold) + twinkle(14, 98, 6, C.sky) + twinkle(196, 150, 6, C.pink) + twinkle(236, 22, 6, C.gold) + twinkle(64, 76, 4.5, C.sky));
     const vb = '0 -6 250 210';
     return svg(vb, `<g class="unicorn" transform="translate(${(1 - s) * 125} ${(1 - s) * 200}) scale(${s})">${parts.join('')}</g>`, opt.label || '', opt.cls || '');
   }

@@ -12,21 +12,23 @@
 // minute); a session ends after 5 minutes with no taps.
 (() => {
   const E = window.SparkleEngine, C = window.SparkleContent, A = window.SparkleArt, W = window.SparkleWorld, V = window.SparkleVoice, L = window.SparkleLetters, Ch = window.SparkleChapters, RM = window.SparkleRooms;
+  const K = window.SparkleKitchen, Care = window.SparkleCare, ST = window.SparkleStableArt, BR = window.SparkleBedroom;
   const $ = id => document.getElementById(id), esc = A.esc;
   const KEY = 'sparkle.v1', DEV = 'sparkle.device', API = new URL('../sparkle/api/', location.href).href;
   // the lands (a place in the kingdom -> its skill: the Fairy Garden picks one of its three memory games)
-  const LAND = { tower: 'read', mine: 'math', meadow: 'wand', garden: 'garden', workshop: 'spell' };
-  const LAND_OF = { read: 'tower', math: 'mine', wand: 'meadow', spell: 'workshop', match: 'garden', missing: 'garden', recall: 'garden' };
-  const GARDEN = ['match', 'missing', 'recall'];
-  // a skill's land, for the Parent corner's switches and the play time by land
-  const landKey = skill => GARDEN.includes(skill) ? 'garden' : skill;
-  const HOST = { read: ['owl', 'Professor Hoot'], math: ['dragon', 'Pebble'], wand: ['narrator', 'your unicorn'], spell: ['gemma', 'Gemma'], match: ['bloom', 'Bloom'], missing: ['bloom', 'Bloom'], recall: ['bloom', 'Bloom'] };
+  // (Star Meadow takes turns between Wand Sparkle and Pattern Parade; the Unicorn Bakery is in the castle's kitchen)
+  const LAND = { tower: 'read', mine: 'math', meadow: 'meadow', garden: 'garden', workshop: 'spell' };
+  const LAND_OF = { read: 'tower', math: 'mine', wand: 'meadow', pattern: 'meadow', spell: 'workshop', match: 'garden', missing: 'garden', recall: 'garden' };
+  const GARDEN = ['match', 'missing', 'recall'], MEADOW = ['wand', 'pattern'];
+  // a skill's land, for the Parent corner's switches, the story's chapters and the play time by land
+  const landKey = skill => GARDEN.includes(skill) || skill === 'garden' ? 'garden' : MEADOW.includes(skill) || skill === 'meadow' ? 'wand' : skill === 'bake' ? 'castle' : skill;
+  const HOST = { read: ['owl', 'Professor Hoot'], math: ['dragon', 'Pebble'], wand: ['narrator', 'your unicorn'], pattern: ['narrator', 'your unicorn'], spell: ['gemma', 'Gemma'], match: ['bloom', 'Bloom'], missing: ['bloom', 'Bloom'], recall: ['bloom', 'Bloom'], bake: ['dragon', 'Pebble'] };
   // the rounds that take longer have fewer questions, and a shorter warm-up
-  const ROUND_LEN = { match: 2, missing: 5, recall: 5 }, WARM_LEN = { match: 3, missing: 4, recall: 4 };
+  const ROUND_LEN = { match: 2, missing: 5, recall: 5, bake: 5 }, WARM_LEN = { match: 3, missing: 4, recall: 4, bake: 4 };
   // the Grey Fog lifts from a land after this many rounds in all
   const UNFOG = { garden: 2, workshop: 4 };
   const LAND_NAME = { garden: 'the Fairy Garden', workshop: 'the Tiara Workshop' };
-  const SKILL_NAME = { read: 'Reading', spell: 'Spelling', math: 'Math', wand: 'Wand Sparkle', match: 'Flower Match', missing: "What's Missing", recall: 'Story Recall' };
+  const SKILL_NAME = { read: 'Reading', spell: 'Spelling', math: 'Math', wand: 'Wand Sparkle', match: 'Flower Match', missing: "What's Missing", recall: 'Story Recall', pattern: 'Pattern Parade', bake: 'Unicorn Bakery' };
   const DEFAULTS = { focus: 'more', off: [], rate: 0.9, sfx: true, badge: true, natural: true, start: {} };
   const NO = () => {};
 
@@ -81,14 +83,15 @@
   addEventListener('pointerdown', () => { lastTap = Date.now(); V.unlock(); }, { capture: true });
 
   // ---- screens ----
-  const SCREENS = ['picker', 'world', 'round', 'reward', 'castle', 'intro', 'chapter'];
+  const SCREENS = ['picker', 'world', 'round', 'reward', 'castle', 'intro', 'chapter', 'home', 'stable', 'bedroom'];
   let screen = 'picker';
   function show(id) {
     screen = id;
     for (const s of SCREENS) $(s).hidden = s !== id;
     document.documentElement.classList.toggle('locked', id !== 'picker');
     document.querySelector('.ambient').hidden = id !== 'picker';
-    session.land = id === 'round' ? round && landKey(round.skill) : id === 'castle' ? 'castle' : 'world';
+    session.land = id === 'round' ? round && landKey(round.skill) : ['castle', 'home', 'stable', 'bedroom'].includes(id) ? 'castle' : 'world';
+    if (id !== 'stable') stableStop();
   }
 
   // ---- players ----
@@ -99,7 +102,9 @@
   const wearing = p => Object.assign({}, A.STARTER, p.wearing || {});
   // her rank: every skill's highest level added up (7 to 55), and never lower than she's been
   const RANKS = ['Little Princess', 'Princess', 'Royal Princess', 'Princess of Sparkle Kingdom'], RANK_AT = [0, 20, 32, 45];
-  const levelSum = p => Object.keys(C.LADDERS).reduce((a, k) => { const s = (p.skills || {})[k]; return a + (s ? Math.max(s.best || 0, s.level) : 1); }, 0);
+  // (the seven skills she started with: the newer games don't move the ranks' bar)
+  const RANK_SKILLS = ['read', 'math', 'wand', 'spell', 'match', 'missing', 'recall'];
+  const levelSum = p => RANK_SKILLS.reduce((a, k) => { const s = (p.skills || {})[k]; return a + (s ? Math.max(s.best || 0, s.level) : 1); }, 0);
   const rankOf = p => Math.max(p.rank || 0, RANK_AT.filter(n => levelSum(p) >= n).length - 1);
   const rankChip = p => `<span class="rank">${A.icon('tiara', 26)}<span>${RANKS[rankOf(p)]}</span></span>`;
   const cap = t => t[0].toUpperCase() + t.slice(1);
@@ -139,7 +144,7 @@
     const d = today();
     if (!me.quest || me.quest.day !== d) {
       const off = set().off || [], open = me.world.open || {};
-      const pool = ['mine', 'meadow', 'tower', 'garden', 'workshop'].filter(x => !off.includes(LAND[x]) && (!W.NODES[x].fog || open[W.NODES[x].fog]));
+      const pool = ['mine', 'meadow', 'tower', 'garden', 'workshop'].filter(x => !off.includes(landKey(LAND[x])) && (!W.NODES[x].fog || open[W.NODES[x].fog]));
       const r = E.rng(E.dayNum(d) * 7 + me.created % 997);
       const others = pool.filter(x => x !== 'tower');
       const stops = set().focus === 'most' || !others.length ? ['tower', others.length ? r.pick(others) : 'tower', 'tower'] : ['tower', r.pick(others), r.pick(pool)];
@@ -158,7 +163,9 @@
     $('timer').hidden = !set().badge;
     $('timer').innerHTML = ICON.clock + `<span>${Math.floor(session.secs / 60)} min</span>`;
     $('meBtn').innerHTML = A.princess(me.look, wearing(me), { head: true });
-    $('castleBtn').innerHTML = ICON.home;
+    const want = Care.want(petNow());   // her unicorn needs her: the castle button says what
+    $('castleBtn').innerHTML = ICON.home + (want && ST ? `<span class="nb" aria-hidden="true">${ST.need(want, 26)}</span>` : '');
+    $('castleBtn').setAttribute('aria-label', want ? 'Your castle: your unicorn needs you' : 'Your castle');
     const q = quest(), nx = nextStop();
     $('quest').innerHTML = q.stops.map((s, i) => `<span class="qstop ${q.done[i] ? 'done' : ''} ${s === nx && !q.done[i] && q.done.indexOf(false) === i ? 'next' : ''}" aria-hidden="true">${A.icon(STOP_ICON[s], 30)}</span>`).join('')
       + `<span class="qt">${q.done.every(Boolean) ? 'Quest done! Play anywhere.' : "Today's quest"}</span>`;
@@ -167,7 +174,7 @@
     const nx = nextStop();
     $('mapIn').innerHTML = W.kingdom({ at: me.world.at, stars: me.world.stars, critters: me.world.critters, open: session.open, quest: nx, unfog: me.world.open || {},
         colour: Object.fromEntries(Ch.LANDS.map(l => [l, Ch.colour((me.chapters || {})[l])])) })
-      + `<div id="rider" aria-hidden="true"><div class="wrap"><span class="un">${A.unicorn(stageOf(me), wearing(me), { mood: 'happy' })}</span><span class="pr">${A.princess(me.look, wearing(me), { head: true })}</span></div></div>`;
+      + `<div id="rider" aria-hidden="true"><div class="wrap"><span class="un">${A.unicorn(stageOf(me), wearing(me), { mood: Care.mood(petNow()) === 'sad' ? 'sad' : 'happy', dirt: Care.dirt(me.pet) })}</span><span class="pr">${A.princess(me.look, wearing(me), { head: true })}</span></div></div>`;
     place(W.NODES[me.world.at] || W.NODES.castle);
   }
   function place(n) {
@@ -188,7 +195,8 @@
     if (greet === true) {
       const nx = nextStop();
       const GO = { tower: "Let's visit Story Tower.", mine: "Let's go to the Gem Mine.", meadow: "Let's go to Star Meadow.", garden: "Let's go to the Fairy Garden.", workshop: "Let's go to the Tiara Workshop." };
-      V.say([nx ? `Hi ${me.name}! ${GO[nx]} Tap where you want to go.` : `Hi ${me.name}! Where shall we go?`], { who: 'narrator' });
+      const w = Care.want(petNow());
+      V.say([nx ? `Hi ${me.name}! ${GO[nx]} Tap where you want to go.` : `Hi ${me.name}! Where shall we go?`, ...(w ? [WANT_SAY[w]] : [])], { who: 'narrator' });
     }
     sync();
   }
@@ -212,7 +220,7 @@
       to = { castle: 'castle', tower: 'tower', mine: 'mine', door: 'meadow', signpost: 'sign', garden: 'garden', flowergate: 'garden', workshop: 'workshop', gemdoor: 'workshop' }[k];
     }
     if (!to) { const [x, y] = toWorld(e); to = W.nearest(x, y, me.world.open || {}); }
-    if ((set().off || []).includes(LAND[to])) { V.say(["That land is resting today."]); return; }
+    if ((set().off || []).includes(landKey(LAND[to]))) { V.say(["That land is resting today."]); return; }
     await travel(to);
   });
   $('quest').addEventListener('click', () => { const nx = nextStop(); if (nx && !busy) travel(nx); });
@@ -221,6 +229,7 @@
 
   async function travel(to) {
     busy = true;
+    if (me.pet && me.pet.asleep) Care.wake(petNow());   // off on an adventure: her unicorn wakes up
     try {
       const path = W.route(me.world.at, to, me.world.open || {});
       if (!path) return;
@@ -338,7 +347,10 @@
   function startRound(skill) {
     V.stop();
     // the Fairy Garden: the memory game she's played least
-    if (skill === 'garden') { const n = k => (me.skills[k] || {}).answers || 0; skill = GARDEN.slice().sort((a, b) => n(a) - n(b) || Math.random() - 0.5)[0]; }
+    // the Fairy Garden and Star Meadow: the game she's played least there
+    const least = list => { const n = k => (me.skills[k] || {}).answers || 0; return list.slice().sort((a, b) => n(a) - n(b) || Math.random() - 0.5)[0]; };
+    if (skill === 'garden') skill = least(GARDEN);
+    if (skill === 'meadow') skill = least(MEADOW);
     const sk = me.skills[skill] = me.skills[skill] || E.newSkill(Math.max(1, Math.min(C.LADDERS[skill], (set().start || {})[skill] || 1)));
     const r = E.rng((Date.now() ^ (me.rounds * 2654435761)) >>> 0);
     let plan;
@@ -346,7 +358,7 @@
     else plan = E.plan(sk, C.LADDERS[skill], E.dueFor(me.review, today(), skill + '/'), r, ROUND_LEN[skill]);
     round = { skill, sk, r, plan, i: 0, got: 0, coins: 0, hints: 0, kept: 0, longest: 0, start: Date.now(), moved: [], level0: sk.level, wasPlaced: sk.placed };
     show('round');
-    $('roundBd').innerHTML = W.backdrop(landKey(skill));
+    $('roundBd').innerHTML = skill === 'bake' && K ? K.scene() : W.backdrop(landKey(skill));
     $('roundBack').innerHTML = ICON.back; $('howBtn').innerHTML = ICON.how;
     paintRoundCoins();
     const level = sk.placed ? sk.level : sk.warm.level;
@@ -390,7 +402,7 @@
     R.tries = 0;
     // the games she plays rather than picks: the wand, spelling with gems, Flower Match, What's Missing
     if (PLAY[q.kind]) { const go = () => PLAY[q.kind]($('show'), q, { who, choices: $('choices') }).then(score => { if (round === R && R.q === q) answered(score); });
-      if (q.kind === 'missing' || q.kind === 'match') { R.asked = V.say(q.say, { who }); go(); } else (R.asked = ask(q)).then(go); return; }
+      if (q.kind === 'missing' || q.kind === 'match' || q.kind === 'bake') { R.asked = q.kind === 'bake' ? ask(q) : V.say(q.say, { who }); go(); } else (R.asked = ask(q)).then(go); return; }
     R.asked = ask(q);
   }
   // the drum: a beat for every tap however fast, on the finger going down, each one bouncing it and lighting
@@ -430,10 +442,17 @@
     if (s.type === 'frame') parts.push(`<div class="frame10" id="frame">${Array.from({ length: 10 }, (_, k) => `<i>${k < s.n ? A.gem('#7FE0C7', 42) : ''}</i>`).join('')}</div>`);
     if (s.type === 'tens') parts.push(`<div class="tens">${Array.from({ length: s.t }, () => '<span class="bag">10</span>').join('')}</div>`);
     if (s.type === 'carts') parts.push('');
+    // Pattern Parade: the floats in a row, an empty sparkly one where the answer goes
+    if (s.type === 'parade') parts.push(`<div class="parade" aria-label="${esc(s.seq.map(x => x ? C.pieceName(x) : 'an empty float').join(', '))}">${s.seq.map(x => `<span class="fl ${x ? '' : 'gap'}">${floatSvg(x)}</span>`).join('')}</div>`);
+    if (s.type === 'grow') parts.push(`<div class="parade grow">${s.counts.concat([null]).map(n => `<span class="grp ${n ? '' : 'gap'}">${n ? Array.from({ length: n }, () => shapeSvg(s.piece)).join('') : floatSvg(null)}</span>`).join('')}</div>`);
     return parts.join('');
   }
+  // a Pattern Parade piece ('star.pink') and its float (kitchen.js draws them)
+  const shapeSvg = id => { const [sh, hu] = id.split('.'); return K ? K.shape(sh, hu) : A.svg('0 0 60 60', A.star(30, 30, 26, '#FFC94A')); };
+  const floatSvg = id => K ? (id ? K.float(...id.split('.')) : K.float()) : id ? shapeSvg(id) : '';
   function choiceHtml(c) {
-    const inner = c.kind === 'pic' ? picture(c.id)
+    const inner = c.kind === 'pic' ? picture(c.id) : c.kind === 'shape' ? shapeSvg(c.v)
+      : c.kind === 'many' ? `<span class="many">${Array.from({ length: c.n }, () => shapeSvg(c.v)).join('')}</span>`
       : c.kind === 'cart' ? `<span class="cart" style="max-width:none;min-height:120px;background:none;box-shadow:none">${Array.from({ length: c.v }, () => A.gem('#FFC94A', 30)).join('')}</span>`
       : ltr(c.v, c.kind === 'word' ? 60 : 70);
     return `<button type="button" class="choice ${c.kind}" data-c="${esc(c.id)}" aria-label="${esc(c.label)}">${inner}</button>`;
@@ -479,6 +498,7 @@
     if (q.key && C.reviewable(q.key)) E.remember(me.review, me.known, R.skill + '/' + q.key, score === 1, day, !p.review && !p.warm && q.level >= R.level0);
     me.levels = me.levels || {}; (me.levels[day] = me.levels[day] || {})[R.skill] = sk.level;
     if (q.kind === 'wand' && score === 1) R.longest = Math.max(R.longest, q.seq.length);
+    if (q.kind === 'bake' && score > 0) { R.baked = (R.baked || 0) + 1; R.treat = q.treat; }
     persist();
     R.i++;
     nextQuestion();
@@ -493,6 +513,8 @@
       build: 'Listen to the word, then tap the letter gems in order to spell it.',
       wand: q.back ? 'Watch the sparkles light up. Then tap them backwards, from the last one to the first!' : 'Watch the sparkles light up, then tap them in the same order.',
       match: 'Tap two flowers to peek under them. Remember what you saw, and find the two that match!',
+      bake: q.mode === 'share' ? 'Tap a plate to put a cookie on it. Share them so every plate has the same, then tap Done.'
+        : 'Tap the things the recipe needs to put them in the bowl. Tap one in the bowl to take it out. Then tap Bake!',
       missing: `Look carefully at everything on the tray. A cloud will hide it, and ${(q.answers || []).length > 1 ? 'two things' : 'one thing'} will go away. Tap what's missing!` }[q.kind] || 'Watch me first!';
   const HAND = '<svg viewBox="0 0 64 72" aria-hidden="true"><path d="M24 6c4 0 7 3 7 7v20l3-1c3-1 6 0 7 3l1 2c3-1 6 0 7 3l1 1c3-1 6 1 7 4l1 9c1 9-4 16-12 18H33c-6 0-10-3-13-8L10 47c-2-3-1-6 2-8c3-1 6 0 8 2l-3-28c0-4 3-7 7-7Z" fill="#fff" stroke="#4B2E6F" stroke-width="4" stroke-linejoin="round"/><path d="M35 40v10M45 42v8M54 45v6" stroke="#4B2E6F" stroke-width="3" stroke-linecap="round"/></svg>';
   function demoClear() { for (const id of ['demoVeil', 'hand']) { const el = $(id); if (el) el.remove(); } }
@@ -535,6 +557,16 @@
     } else if (q.kind === 'missing') {
       if (!await waitFor(() => !live() || ch.onclick)) return;
       for (const id of q.answers) await tap(sel(ch, `.choice[data-c="${CSS.escape(id)}"]`));
+    } else if (q.kind === 'bake') {
+      await R.asked; if (!await waitFor(() => !live() || ch.onclick)) return;
+      if (q.mode === 'share') { for (let k = 0; k < q.n; k++) await tap(sel(show, `.plate[data-plate="${k % q.plates}"]`)); }
+      else for (const [id, n] of Object.entries(q.need)) {
+        const have = (q.start || {})[id] || 0;
+        if (q.sack && n >= 10) { await tap(sel(ch, '[data-sack]')); }
+        for (let k = have + (q.sack && n >= 10 ? 10 : 0); k < n; k++) await tap(sel(ch, `[data-add="${id}"]`));
+        for (let k = n; k < have; k++) await tap(sel(show, `[data-out="${id}"]`));
+      }
+      await tap($('bakeBtn'));
     } else if (q.kind === 'wand') {
       if (!await waitFor(() => !live() || (show.onclick && show.style.pointerEvents === ''))) return;
       for (const k of q.back ? q.seq.slice().reverse() : q.seq) await tap(sel(show, `button[data-k="${k}"]`));
@@ -560,7 +592,8 @@
   }
 
   // ---- the games she plays rather than picks; each resolves with her score (1, 0.5 or 0) ----
-  const PLAY = { wand: (box, q, opt) => wandPlay(box, q, opt), build: (box, q, opt) => buildPlay(box, opt.choices, q, opt), match: (box, q, opt) => matchPlay(box, q, opt), missing: (box, q, opt) => missingPlay(box, opt.choices, q, opt) };
+  const PLAY = { wand: (box, q, opt) => wandPlay(box, q, opt), build: (box, q, opt) => buildPlay(box, opt.choices, q, opt), match: (box, q, opt) => matchPlay(box, q, opt), missing: (box, q, opt) => missingPlay(box, opt.choices, q, opt),
+    bake: (box, q, opt) => bakePlay(box, opt.choices, q, opt) };
   const scoreOf = misses => misses === 0 ? 1 : misses === 1 ? 0.5 : 0;
 
   // spelling with gems: tap the letters in order; a wrong gem shakes, the next sound is said, then the gem glows
@@ -585,6 +618,71 @@
         if (misses === 1) V.say(['Listen:', { snd: want }], { who: opt.who });
         else { const t = [...tilesBox.querySelectorAll('.tile:not(.used)')].find(x => q.tiles[+x.dataset.t] === want); if (t) t.classList.add('hint'); V.say([{ snd: want }], { who: opt.who }); }
       };
+    });
+  }
+
+  // the Unicorn Bakery: tap things into the bowl (and tap one in the bowl to take it out), then Bake. Each one
+  // put in is counted out loud. A first wrong bake counts what's there with her; a second says the recipe.
+  // Sharing: tap a plate to put a cookie on it, then Done. A right bake goes in the oven and is a treat for the stables.
+  function bakePlay(box, pantryBox, q, opt = {}) {
+    const ING = id => K ? K.ing(id) : esc(id), say = (t, o) => V.say(t, Object.assign({ who: opt.who }, o));
+    const bowl = Object.assign({}, q.start || {}), plates = Array.from({ length: q.plates || 0 }, () => 0);
+    let tray = q.n || 0, sacks = 0, misses = 0, lock = false;
+    const count = id => (bowl[id] || 0) + (q.sack && id === Object.keys(q.need)[0] ? sacks * 10 : 0);
+    const card = () => {
+      if (q.mode === 'share') return '';
+      if (q.groups) { const id = Object.keys(q.need)[0]; return `<div class="recipe">${q.groups.map(n => `<span class="grp">${Array.from({ length: n }, () => `<i>${ING(id)}</i>`).join('')}</span>`).join('<b>+</b>')}</div>`; }
+      if (q.level === 4 || q.level === 6) return '';
+      return `<div class="recipe">${Object.entries(q.need).map(([id, n]) => `<span class="need"><i>${ING(id)}</i>${ltr(String(n), 44)}</span>`).join('')}</div>`;
+    };
+    const paint = () => {
+      if (q.mode === 'share') {
+        box.innerHTML = `<div class="bake share"><div class="tray">${Array.from({ length: tray }, () => `<i>${K ? K.treat('cookie') : ''}</i>`).join('')}</div>
+          <div class="plates">${plates.map((n, i) => `<button type="button" class="plate" data-plate="${i}" aria-label="Plate ${i + 1}, ${n} cookies"><span class="on">${Array.from({ length: n }, () => `<i data-back="${i}">${K ? K.treat('cookie') : ''}</i>`).join('')}</span>${K ? K.plate({ color: ['pink', 'sky', 'mint'][i] }) : ''}</button>`).join('')}</div></div>`;
+        return;
+      }
+      const inside = Object.keys(bowl).flatMap(id => Array.from({ length: bowl[id] }, () => id));
+      box.innerHTML = `<div class="bake">${card()}<div class="bowlbox"><div class="inbowl ${q.frame ? 'frame' : ''}" id="inBowl" aria-label="In the bowl: ${esc(Object.keys(q.need).concat(Object.keys(bowl)).filter((x, i, a) => a.indexOf(x) === i).map(id => C.many(count(id), id)).join(', '))}">
+        ${Array.from({ length: sacks }, () => `<button type="button" class="it sack" data-out="sack" aria-label="A sack of ten">${K ? K.sack() : '10'}</button>`).join('')}
+        ${inside.map(id => `<button type="button" class="it" data-out="${id}" aria-label="${esc(C.ING_SAY[id][0])}">${ING(id)}</button>`).join('')}
+        ${q.frame ? Array.from({ length: Math.max(0, 10 - inside.length) }, () => '<span class="it empty"></span>').join('') : ''}</div><span class="bowl">${K ? K.bowl() : ''}</span></div></div>`;
+    };
+    pantryBox.className = 'pantry';
+    pantryBox.innerHTML = (q.mode === 'share' ? '' : q.pantry.map(id => `<button type="button" class="add" data-add="${id}" aria-label="Add a ${esc(C.ING_SAY[id][0])}">${ING(id)}</button>`).join('')
+      + (q.sack ? `<button type="button" class="add" data-sack aria-label="Add a sack of ten">${K ? K.sack() : '10'}</button>` : ''))
+      + `<button type="button" class="big pink bakebtn" id="bakeBtn">${K ? `<span class="ov">${K.oven()}</span>` : ''}<span>${q.mode === 'share' ? 'Done' : 'Bake'}</span></button>`;
+    paint();
+    const right = () => q.mode === 'share' ? !tray && plates.every(n => n === plates[0])
+      : Object.keys(q.need).every(id => count(id) === q.need[id]) && Object.keys(bowl).every(id => q.need[id] !== undefined || !bowl[id]);
+    return new Promise(done => {
+      const tapAt = async e => {
+        if (lock) return;
+        const add = e.target.closest('[data-add]'), sk = e.target.closest('[data-sack]'), out = e.target.closest('[data-out]'), pl = e.target.closest('[data-plate]'), back = e.target.closest('[data-back]');
+        if (back) { const i = +back.dataset.back; if (plates[i] > 0) { plates[i]--; tray++; V.sfx('pop'); paint(); } return; }
+        if (pl) { const i = +pl.dataset.plate; if (!tray) { V.sfx('again'); return; } tray--; plates[i]++; V.sfx('pop'); paint(); say([String(plates[i])]); return; }
+        if (add) { const id = add.dataset.add; if (count(id) >= 20) return; bowl[id] = (bowl[id] || 0) + 1; V.sfx('pop'); paint(); say([String(count(id))]); return; }
+        if (sk) { if (sacks >= 1) { V.sfx('again'); return; } sacks++; V.sfx('plank'); paint(); say([String(count(Object.keys(q.need)[0]))]); return; }
+        if (out) { const id = out.dataset.out; if (id === 'sack') sacks = Math.max(0, sacks - 1); else if (bowl[id]) bowl[id]--; V.sfx('whoosh'); paint();
+          const left = id === 'sack' ? Object.keys(q.need)[0] : id; say([String(count(left))]); return; }
+        if (!e.target.closest('#bakeBtn')) return;
+        lock = true;
+        if (right()) {
+          pantryBox.onclick = box.onclick = null; V.stop(); V.sfx('right');
+          const b = $('bakeBtn'); if (b) b.classList.add('baking');
+          if (K && q.mode !== 'share') { const ov = b && b.querySelector('.ov'); if (ov) ov.innerHTML = K.oven({ on: true, treat: q.treat }); }
+          await wait(900); burst(...centerOf(box), 14);
+          if (q.mode !== 'share') box.innerHTML = `<div class="bake done"><span class="treatpic">${K ? K.treat(q.treat) : ''}</span></div>`;
+          await say([q.mode === 'share' ? 'Fair shares for everyone!' : 'Yum! It smells wonderful!']);
+          done(scoreOf(misses)); return;
+        }
+        misses++; V.sfx('again'); lock = false;
+        if (misses === 1) {
+          if (q.mode === 'share') { await say([tray ? `There are still ${tray} cookies to share.` : `Let's count each plate: ${plates.join(', ')}. Are they the same?`]); return; }
+          const id = Object.keys(q.need).find(k => count(k) !== q.need[k]) || Object.keys(bowl).find(k => bowl[k] && q.need[k] === undefined);
+          const n = count(id); await say([`Let's count the ${C.ING_SAY[id][1]}. ${n ? Array.from({ length: n }, (_, k) => k + 1).join(', ') + '.' : 'There are none yet.'} Do you need more, or fewer?`]);
+        } else { await say(q.tell); const c = box.querySelector('.recipe'); if (!c && q.mode !== 'share') { box.insertAdjacentHTML('afterbegin', `<div class="recipe">${Object.entries(q.need).map(([id, n]) => `<span class="need"><i>${ING(id)}</i>${ltr(String(n), 44)}</span>`).join('')}</div>`); } }
+      };
+      box.onclick = tapAt; pantryBox.onclick = tapAt;
     });
   }
 
@@ -697,6 +795,8 @@
     if (R.skill === 'match') return 'What a great memory! You found every pair.';
     if (R.skill === 'missing') return 'Such sharp eyes!';
     if (R.skill === 'recall') return 'You listened so carefully!';
+    if (R.skill === 'pattern') return 'You found every pattern in the parade!';
+    if (R.skill === 'bake') return 'What a wonderful baker you are!';
     return 'You worked so hard!';
   }
   async function endRound() {
@@ -706,7 +806,10 @@
     E.earn(me, device, E.TUNE.coinRound); R.coins += E.TUNE.coinRound;
     me.rounds = (me.rounds || 0) + 1; session.recent.push(R.skill);
     const land = landKey(R.skill); E.finished(me, device, land);
-    const chapter = Ch.next(land, E.roundsIn(me, land), (me.chapters || {})[land] || 0);
+    const chapter = Ch.CHAPTERS[land] ? Ch.next(land, E.roundsIn(me, land), (me.chapters || {})[land] || 0) : null;
+    // her unicorn comes home from the land a little tired and muddy (the stables); the bakery's treats go to its pantry
+    const pet = petNow();
+    if (R.skill === 'bake') { if (R.baked) Care.bake(pet, R.treat || 'cupcake', R.baked); } else Care.adventure(pet, land);
     const rankWas = me.rank || 0; me.rank = rankOf(me); const promoted = me.rank > rankWas;
     // the Grey Fog lifts from a land after enough rounds in all
     me.world.open = me.world.open || {};
@@ -722,11 +825,12 @@
     persist(true);
     const grew = stageOf(me) > stageBefore;
     show('reward');
-    $('rewardBd').innerHTML = W.backdrop(landKey(R.skill));
+    $('rewardBd').innerHTML = R.skill === 'bake' && K ? K.scene() : W.backdrop(landKey(R.skill));
     const msg = praise(R);
     $('rewardIn').innerHTML = `<div class="cheer dash"><div class="dance">${A.unicorn(stageOf(me), wearing(me), { mood: 'happy' })}</div></div>
       <div class="praise">${esc(msg)}</div>
       <div class="earn">${A.coin(46)}<span>+${R.coins}</span></div>
+      ${R.skill === 'bake' && R.baked ? `<div class="praise note"><span class="treatpic">${K.treat(R.treat)}</span><span>${R.baked} ${R.baked === 1 ? 'treat' : 'treats'} for your unicorn! Find ${R.baked === 1 ? 'it' : 'them'} in the stables.</span></div>` : ''}
       ${R.moved.length ? `<div class="praise note">${A.icon('star', 26)}<span>New sticker! You're ready for harder ones.</span></div>` : ''}
       ${grew ? `<div class="praise note">${A.icon('unicorn', 26)}<span>Your unicorn grew!</span></div>` : ''}
       ${lifted.map(l => `<div class="praise note">${A.icon(l === 'garden' ? 'flower' : 'tiara', 26)}<span>The fog lifted! ${esc(LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1))} is open.</span></div>`).join('')}
@@ -735,9 +839,10 @@
       ${chapter ? `<button type="button" class="chbook" id="chapterBtn">${A.icon('book', 44)}<span>New chapter!</span></button>` : ''}
       <div style="display:flex;gap:12px"><button type="button" class="big mint" id="againBtn" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="mapBtn">${ICON.go}<span>Kingdom</span></button></div>`;
     V.sfx('fanfare');
-    V.say([msg, ...(R.moved.length ? ["You earned a sticker! You're ready for harder ones."] : []), ...(grew ? ['Look! Your unicorn grew!'] : []), ...(promoted ? [`Hooray! You are a ${RANKS[me.rank]} now!`] : []), ...(gifts ? ['And there is a surprise for you. Tap the present!'] : []), ...(chapter ? ['A new chapter of the story is ready. Tap the book!'] : []), ...(questDone ? ["You finished today's quest!"] : []), ...lifted.map(l => `Look! The Grey Fog is lifting. ${LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1)} is open! Find it on the map.`)], { who: 'narrator' });
+    V.say([msg, ...(R.skill === 'bake' && R.baked ? [`You baked ${R.baked} ${R.baked === 1 ? 'treat' : 'treats'} for your unicorn!`] : []), ...(R.moved.length ? ["You earned a sticker! You're ready for harder ones."] : []), ...(grew ? ['Look! Your unicorn grew!'] : []), ...(promoted ? [`Hooray! You are a ${RANKS[me.rank]} now!`] : []), ...(gifts ? ['And there is a surprise for you. Tap the present!'] : []), ...(chapter ? ['A new chapter of the story is ready. Tap the book!'] : []), ...(questDone ? ["You finished today's quest!"] : []), ...lifted.map(l => `Look! The Grey Fog is lifting. ${LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1)} is open! Find it on the map.`)], { who: 'narrator' });
     $('againBtn').onclick = () => startRound(R.skill);
     $('mapBtn').onclick = () => enterWorld();
+    if (R.skill === 'bake') { $('mapBtn').innerHTML = `${ICON.home}<span>Castle</span>`; $('mapBtn').onclick = () => openCastle(); }
     if ($('chapterBtn')) $('chapterBtn').onclick = () => { V.stop(); V.sfx('whoosh'); tell(chapter, R.skill); };
     if ($('giftBtn')) $('giftBtn').onclick = e => {
       const got = Array.from({ length: gifts }, () => surprise()), it = got.find(Boolean);
@@ -748,8 +853,8 @@
     sync();
   }
   // ---- a chapter of the story: a page a line, told by the land's friend; the end brings colour (and the 5th and 10th a present) ----
-  const giftName = id => (A.ITEMS[id] || RM.ITEMS[id] || { name: 'present' }).name.toLowerCase();
-  const giftArt = id => A.ITEMS[id] ? A.itemCard(id, me.look) : RM.ITEMS[id] ? RM.piece(id) : A.gift();
+  const giftName = id => (A.ITEMS[id] || bedDef(id) || RM.ITEMS[id] || { name: 'present' }).name.toLowerCase();
+  const giftArt = id => A.ITEMS[id] ? A.itemCard(id, me.look) : bedDef(id) ? BR.piece(id) : RM.ITEMS[id] ? RM.piece(id) : A.gift();
   // skill: the round it came after (to play again), or none when it's read again from the castle's Stories
   function tell(ch, skill) {
     const replay = !skill, lines = ch.lines.map(t => Ch.line(t, me.name)), where = cap(Ch.LAND[ch.land]);
@@ -785,7 +890,8 @@
   }
   // a surprise: something she doesn't have yet (the cheapest first), else 10 coins
   function surprise() {
-    const want = [...Object.entries(A.ITEMS), ...Object.entries(RM.ITEMS)].filter(([id, it]) => it.price > 0 && !it.gift && !owns(me, id)).sort((a, b) => a[1].price - b[1].price);
+    const pool = [...Object.entries(A.ITEMS), ...Object.entries(RM.ITEMS).filter(([id]) => !BR.ITEMS[id] && !BR.WALLS[id]), ...Object.entries(BR.ITEMS), ...Object.entries(BR.WALLS), ...Object.entries(BR.FLOORS)];
+    const want = pool.filter(([id, it]) => it.price > 0 && !it.gift && !owns(me, id) && !(me.owned || []).includes(id)).sort((a, b) => a[1].price - b[1].price);
     me.gifts = (me.gifts || 0) + 1;
     if (!want.length) { E.earn(me, device, 10); return null; }
     const pick = want[Math.floor(Math.random() * Math.min(4, want.length))][0];
@@ -795,12 +901,15 @@
   // ---- her castle: dress up, the Royal Boutique, the treasure book ----
   const TABS = [['gown', 'Gowns'], ['tiara', 'Tiaras'], ['sparkle', 'Sparkles'], ['unicorn', 'Unicorn'], ['rooms', 'Rooms'], ['stories', 'Stories'], ['treasures', 'Treasures']];
   const TAB_KINDS = { gown: ['gown'], tiara: ['tiara'], sparkle: ['wand', 'shoes', 'cape', 'necklace'], unicorn: ['mane', 'saddle', 'horn'] };
-  let tab = 'gown', asking = null, room = 'bedroom';
+  let tab = 'gown', asking = null, room = 'library';   // (the bedroom has its own screen now: openBedroom)
   const roomOf = (p, r) => Object.assign({}, RM.STARTER[r], ((p.rooms || {})[r]) || {});
-  function openCastle() {
-    show('castle'); $('castleBack').innerHTML = ICON.back;
+  // the dressing room (and the library's and ballroom's rooms, the stories, the treasures): t the tab to open
+  function openWardrobe(t, r) {
+    V.stop(); show('castle'); $('castleBack').innerHTML = ICON.back;
+    tab = t || 'gown'; asking = null; if (r) room = r;
     paintCastle();
-    V.say([`Welcome to your castle, ${me.name}! Try something on, or buy something new in the boutique.`], { who: 'narrator' });
+    V.say([tab === 'rooms' ? `Decorate your ${RM.ROOMS[room].name.toLowerCase()}! Tap something to put it in.` : tab === 'stories' ? 'Tap a chapter to hear it again.'
+      : `Try something on, ${me.name}, or buy something new in the boutique.`], { who: 'narrator' });
   }
   function paintCastle() {
     const w = wearing(me);
@@ -812,7 +921,7 @@
     $('shelfTabs').innerHTML = TABS.map(([id, name]) => `<button type="button" data-tab="${id}" aria-pressed="${id === tab}">${name}</button>`).join('');
     if (tab === 'rooms') {
       const on = roomOf(me, room);
-      $('items').innerHTML = `<div class="roompick" role="group" aria-label="Which room">${Object.entries(RM.ROOMS).map(([id, r]) => `<button type="button" data-room="${id}" aria-pressed="${id === room}">${esc(r.name)}</button>`).join('')}</div>`
+      $('items').innerHTML = `<div class="roompick" role="group" aria-label="Which room">${Object.entries(RM.ROOMS).filter(([id]) => id !== 'bedroom').map(([id, r]) => `<button type="button" data-room="${id}" aria-pressed="${id === room}">${esc(r.name)}</button>`).join('')}</div>`
         + Object.entries(RM.ROOMS[room].slots).map(([, ids]) => ids.map(id => { const it = RM.ITEMS[id], own = owns(me, id), placed = on[it.slot] === id;
           return `<button type="button" class="item r ${placed ? 'on' : ''} ${own ? '' : 'locked'} ${asking === id ? 'ask' : ''}" data-piece="${id}" aria-label="${esc(it.name)}${own ? (placed ? ', in your room' : '') : it.gift ? ', a present from the story' : ', ' + it.price + ' coins'}">
             <span class="pv">${RM.piece(id)}</span><span class="price">${own ? (placed ? '✓' : '') : it.gift ? A.icon('book', 24) : A.coin(24) + it.price}</span></button>`; }).join('')).join('');
@@ -874,7 +983,335 @@
     V.sfx('fanfare'); burst(...centerOf(b), 16); V.say([`You bought the ${it.name.toLowerCase()}! Your ${RM.ROOMS[it.room].name.toLowerCase()} looks wonderful.`]);
     persist(true); paintCastle();
   }
-  $('castleBack').addEventListener('click', () => { V.stop(); enterWorld(); });
+  $('castleBack').addEventListener('click', () => { V.stop(); openCastle(); });
+
+  // ---- her castle, cut away like a dollhouse: tap a room to go in ----
+  const ROOM_NAME = { bedroom: 'Your bedroom', stable: 'The stables', kitchen: 'The kitchen: the Unicorn Bakery', wardrobe: 'The dressing room', library: 'The library', ballroom: 'The ballroom' };
+  const WANT_SAY = { food: 'Your unicorn is hungry! Visit the stables.', clean: 'Your unicorn is all muddy! Visit the stables for a bath.', fun: 'Your unicorn wants to play! Visit the stables.', rest: 'Your unicorn is very sleepy. Visit the stables.' };
+  const petNow = () => { me.pet = me.pet || Care.fresh(); return Care.tick(me.pet); };
+  function openCastle() {
+    V.stop(); show('home'); $('homeBack').innerHTML = ICON.back;
+    $('homeCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`; $('homeRank').innerHTML = rankChip(me);
+    const w = Care.want(petNow()); persist();
+    $('cutaway').innerHTML = ST ? ST.castle({}) : '';
+    for (const g of $('cutaway').querySelectorAll('[data-go]')) {
+      g.setAttribute('role', 'button'); g.setAttribute('tabindex', '0'); g.setAttribute('aria-label', ROOM_NAME[g.dataset.go] || g.dataset.go);
+      g.classList.toggle('want', g.dataset.go === 'stable' && !!w);
+    }
+    V.say([`Welcome home, ${me.name}! Tap a room to go in.`, ...(w ? [WANT_SAY[w]] : [])], { who: 'narrator' });
+  }
+  function goRoom(id) {
+    V.sfx('pop');
+    if (id === 'bedroom') return openBedroom();
+    if (id === 'stable') return openStable();
+    if (id === 'kitchen') { if ((set().off || []).includes('castle')) { V.say(['The kitchen is resting today.'], { who: 'narrator' }); return; } return startRound('bake'); }
+    if (id === 'wardrobe') return openWardrobe('gown');
+    if (id === 'library' || id === 'ballroom') return openWardrobe('rooms', id);
+  }
+  $('cutaway').addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) goRoom(g.dataset.go); });
+  $('cutaway').addEventListener('keydown', e => { const g = e.target.closest('[data-go]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); goRoom(g.dataset.go); } });
+  $('homeBack').addEventListener('click', () => { V.stop(); enterWorld(); });
+
+  // ---- the stables: feed, wash, brush, play, bed (care.js keeps the needs) ----
+  const FOOD_NAME = { oats: 'Oats', apple: 'Apple', carrot: 'Carrot', clover: 'Clover', sugar: 'Sugar cubes', cupcake: 'Cupcake', cookie: 'Star cookie', pie: 'Berry pie', muffin: 'Muffin',
+    donut: 'Donut', cake: 'Little cake', carrotcake: 'Carrot cake', tart: 'Lemon tart', ball: 'Ball', bubbles: 'Bubble wand', ribbon: 'Ribbon wand', kite: 'Kite' };
+  const CARE_TABS = [['food', 'Food', 'food'], ['wash', 'Wash', 'clean'], ['play', 'Play', 'fun'], ['sleep', 'Sleep', 'rest'], ['shop', 'Shop', null]];
+  const WANT_TIP = { food: 'Your unicorn is hungry. Tap Food!', clean: 'Your unicorn is muddy. Tap Wash!', fun: 'Your unicorn wants to play. Tap Play!', rest: 'Your unicorn is sleepy. Tap Sleep!' };
+  let careTab = 'food', tool = null, fx = { foam: 0, shine: false, eat: false }, stableT = 0, careAsk = null, patAt = 0;
+  const thing = id => Care.FOODS[id] && Care.FOODS[id].treat && K ? K.treat(id) : ST ? ST.prop(id, {}) : esc(id);
+  function stableStop() { clearInterval(stableT); stableT = 0; tool = null; }
+  function openStable() {
+    V.stop(); show('stable'); $('stableBack').innerHTML = ICON.back; careTab = 'food'; careAsk = null; fx = { foam: 0, shine: false, eat: false };
+    const pet = petNow(); persist();
+    paintStable();
+    const m = Care.mood(pet), w = Care.want(pet);
+    V.say([m === 'sleep' ? 'Shh... your unicorn is fast asleep.' : m === 'sad' ? `Oh no, your unicorn is sad. ${WANT_TIP[w]}` : m === 'happy' ? 'Your unicorn is so happy to see you!' : WANT_TIP[w]], { who: 'narrator' });
+    // asleep while she watches: rest fills a little each second, and her unicorn wakes when it's full
+    stableT = setInterval(() => { const p = petNow(); if (screen !== 'stable') return stableStop();
+      if (p.asleep) { p.rest = Math.min(100, p.rest + 1); if (p.rest >= 100) { Care.wake(p); paintStable(); V.sfx('sparkle'); V.say(['Your unicorn is all rested! Good morning!'], { who: 'narrator' }); } else paintNeeds(); persist(); } }, 1000);
+  }
+  function uniSvg(pet) { return A.unicorn(stageOf(me), wearing(me), { mood: fx.eat ? 'eat' : Care.mood(pet) === 'calm' ? 'calm' : Care.mood(pet), dirt: Care.dirt(pet), foam: fx.foam, shine: fx.shine }); }
+  function paintStable() {
+    const pet = petNow(), w = Care.want(pet);
+    $('stableCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
+    $('stall').classList.toggle('night', !!pet.asleep);
+    $('stall').innerHTML = (ST ? ST.scene({ night: pet.asleep, lantern: pet.asleep }) : '')
+      + `<div class="uni" id="uni" role="button" aria-label="Your unicorn">${uniSvg(pet)}</div><div class="fx" id="stallFx">${pet.asleep ? '<span class="zz" style="left:60%;top:30%">z</span><span class="zz" style="left:66%;top:22%;animation-delay:.8s">z</span>' : ''}</div>`
+      + (w && !pet.asleep && ST ? `<span class="want" aria-hidden="true">${ST.need(w, 42)}</span>` : '');
+    paintNeeds();
+    $('careTabs').innerHTML = CARE_TABS.map(([id, name, need]) => `<button type="button" data-ct="${id}" aria-pressed="${id === careTab}">${need && ST ? ST.need(need, 22) : A.coin(22)} ${name}</button>`).join('');
+    paintTray();
+  }
+  function paintNeeds() {
+    const pet = me.pet;
+    $('needs').innerHTML = Care.NEEDS.map(k => { const v = Math.round(pet[k]);
+      return `<div class="need ${v < Care.TUNE.sad ? 'low' : v < Care.TUNE.calm ? 'mid' : ''}" aria-label="${{ food: 'Food', clean: 'Clean', fun: 'Fun', rest: 'Rest' }[k]}: ${v} of 100">${ST ? ST.need(k, 36) : ''}<span class="bar"><i style="width:${v}%"></i></span></div>`; }).join('');
+  }
+  function paintUni() { const u = $('uni'); if (u) u.innerHTML = uniSvg(me.pet); paintNeeds(); }
+  function paintTray() {
+    const pet = me.pet, btn = (id, extra = '', label = FOOD_NAME[id] || id, cls = '') => `<button type="button" class="ctool ${cls}" data-care="${id}" aria-label="${esc(label)}" ${extra}>${thing(id)}</button>`;
+    let html = '';
+    if (careTab === 'food') html = ['oats', 'apple'].map(id => btn(id)).join('') + Object.keys(Care.FOODS).filter(id => !Care.FOODS[id].free && pet.pantry[id] > 0)
+      .map(id => btn(id, '', `${FOOD_NAME[id]}, ${pet.pantry[id]} left`).replace('</button>', `<span class="n">${pet.pantry[id]}</span></button>`)).join('')
+      + (Object.keys(pet.pantry).length ? '' : `<span class="tt" style="grid-column:1/-1;font-weight:800">Bake treats in the kitchen, or buy some in the shop!</span>`);
+    if (careTab === 'wash') html = ['sponge', 'brush'].map(id => btn(id, `aria-pressed="${tool === id}"`, { sponge: 'Sponge: rub your unicorn', brush: 'Brush: brush the mane' }[id])).join('') + btn('bucket', '', 'Rinse with water') + btn('towel', '', 'Dry with the towel');
+    if (careTab === 'play') html = (pet.toys || ['ball']).map(id => btn(id)).join('');
+    if (careTab === 'sleep') html = `<button type="button" class="ctool" data-care="lantern" aria-label="${pet.asleep ? 'Wake up' : 'Go to sleep'}">${ST ? ST.prop('lantern', { on: !pet.asleep }) : ''}</button>`;
+    if (careTab === 'shop') html = Object.entries(Care.SHOP).map(([id, price]) => { const toy = !!Care.TOYS[id], have = toy && (pet.toys || []).includes(id);
+      return `<button type="button" class="ctool ${have ? 'empty' : ''} ${careAsk === id ? 'ask' : ''}" data-buy="${id}" aria-label="${esc(FOOD_NAME[id])}${have ? ', yours' : ', ' + price + ' coins'}">${thing(id)}<span class="price">${have ? '✓' : A.coin(20) + price}</span></button>`; }).join('');
+    $('careTray').innerHTML = html;
+  }
+  $('careTabs').addEventListener('click', e => { const b = e.target.closest('[data-ct]'); if (!b) return; careTab = b.dataset.ct; tool = null; careAsk = null; V.sfx('pop'); paintStable(); });
+  const uniBox = () => $('uni').getBoundingClientRect();
+  const spot = (fx_, html, x, y, ms) => { const f = document.createElement('span'); f.innerHTML = html; f.style.left = x + 'px'; f.style.top = y + 'px'; Object.assign(f, fx_); $('stallFx').appendChild(f); if (ms) setTimeout(() => f.remove(), ms); return f; };
+  const stallXY = (cx, cy) => { const r = $('stall').getBoundingClientRect(); return [cx - r.left, cy - r.top]; };
+  function hearts(n = 3) { const r = uniBox(); for (let i = 0; i < n; i++) { const [x, y] = stallXY(r.left + r.width * (0.3 + Math.random() * 0.5), r.top + r.height * 0.3); spot({ className: 'heart' }, A.svg('0 0 30 30', A.heart ? A.heart(15, 15, 11) : A.star(15, 15, 12)), x, y, 1300); } }
+  function tired(pet) { if (pet.rest < 12) { V.say(['Your unicorn is too sleepy to play. Time for bed!'], { who: 'narrator' }); return true; }
+    if (pet.food < 10) { V.say(['Your unicorn is too hungry to play. Feed your unicorn first!'], { who: 'narrator' }); return true; } return false; }
+  $('careTray').addEventListener('click', async e => {
+    const pet = petNow(), bb = e.target.closest('[data-buy]');
+    if (bb) {
+      const id = bb.dataset.buy, price = Care.SHOP[id];
+      if (Care.TOYS[id] && (pet.toys || []).includes(id)) { V.say([`You have the ${FOOD_NAME[id].toLowerCase()}. Find it under Play!`]); return; }
+      if (careAsk !== id) { careAsk = id; V.sfx('pop'); paintTray(); V.say([`The ${FOOD_NAME[id].toLowerCase()} costs ${price} ${price === 1 ? 'coin' : 'coins'}. Tap it again to buy it!`]); return; }
+      if (!E.spend(me, device, price)) { V.sfx('again'); V.say([`You need ${price - E.coins(me)} more coins. Play a round to earn them!`]); return; }
+      Care.buy(pet, id); careAsk = null; V.sfx('fanfare'); burst(...centerOf(bb), 12); persist(true); paintStable();
+      V.say([`You bought ${Care.TOYS[id] ? 'the ' + FOOD_NAME[id].toLowerCase() + '! Find it under Play.' : 'a treat! Find it under Food.'}`]); return;
+    }
+    const b = e.target.closest('[data-care]'); if (!b) return;
+    const id = b.dataset.care;
+    if (id === 'lantern') { if (pet.asleep) { Care.wake(pet); V.sfx('sparkle'); V.say(['Good morning, unicorn!'], { who: 'narrator' }); } else { Care.sleep(pet); V.sfx('whoosh'); V.say(['Goodnight, unicorn. Sweet dreams!'], { who: 'narrator' }); }
+      persist(); paintStable(); return; }
+    if (pet.asleep) { V.say(['Shh... your unicorn is sleeping. Wake your unicorn up under Sleep.'], { who: 'narrator' }); return; }
+    if (careTab === 'food') {
+      if (pet.food >= 96) { const u = $('uni'); u.classList.remove('shake'); void u.offsetWidth; u.classList.add('shake'); V.sfx('again'); V.say(["Your unicorn is full! Maybe later."], { who: 'narrator' }); return; }
+      if (!Care.feed(pet, id)) return;
+      // the food flies to her mouth, then munch munch
+      const [x0, y0] = stallXY(...centerOf(b)), r = uniBox(), [x1, y1] = stallXY(r.left + r.width * MOUTH[0], r.top + r.height * MOUTH[1]);
+      const f = spot({ className: 'fly' }, thing(id), x0 - 35, y0 - 35); requestAnimationFrame(() => { f.style.transform = `translate(${x1 - x0}px,${y1 - y0}px) scale(.5)`; f.style.opacity = '0'; });
+      setTimeout(() => f.remove(), 800);
+      await wait(550); fx.eat = true; paintUni(); const u = $('uni'); u.classList.add('chew'); V.sfx('pop'); setTimeout(() => V.sfx('pop'), 300); setTimeout(() => V.sfx('pop'), 600);
+      await wait(1300); fx.eat = false; u.classList.remove('chew'); hearts(Care.FOODS[id].treat ? 4 : 2); persist(); paintStable();
+      if (Care.FOODS[id].treat) V.say(['Yum! Your unicorn loves it!'], { who: 'narrator' });
+      return;
+    }
+    if (careTab === 'wash') {
+      if (id === 'sponge' || id === 'brush') { tool = tool === id ? null : id; V.sfx('pop'); paintTray(); if (tool) V.say([id === 'sponge' ? 'Rub your unicorn with the sponge!' : 'Brush the mane!'], { who: 'narrator' }); return; }
+      if (id === 'bucket') { if (fx.foam <= 0) { V.say(['Scrub with the sponge first!'], { who: 'narrator' }); return; }
+        fx.foam = 0; fx.shine = true; Care.wash(pet, 10); V.sfx('whoosh'); V.sfx('sparkle'); hearts(3); persist(); paintStable(); V.say(['Splash! Sparkly clean!'], { who: 'narrator' }); setTimeout(() => { fx.shine = false; if (screen === 'stable') paintUni(); }, 3000); return; }
+      if (id === 'towel') { if (fx.foam > 0) { V.say(['Rinse the bubbles off with the bucket first!'], { who: 'narrator' }); return; } fx.shine = true; V.sfx('sparkle'); paintUni(); setTimeout(() => { fx.shine = false; if (screen === 'stable') paintUni(); }, 2500); return; }
+    }
+    if (careTab === 'play') {
+      if (tired(pet)) return;
+      if (!Care.play(pet, id)) return;
+      const u = $('uni'), r = $('stall').getBoundingClientRect();
+      if (id === 'ball') { spot({ className: 'ball' }, thing('ball'), r.width * 0.2, r.height * 0.62, 1300); u.classList.remove('hop'); void u.offsetWidth; u.classList.add('hop'); V.sfx('pop'); V.say(['Wheee!'], { who: 'narrator' }); }
+      if (id === 'bubbles') { for (let k = 0; k < 7; k++) setTimeout(() => { if (screen !== 'stable') return; const bub = spot({ className: 'bub' }, ST ? ST.bubble(46) : '', r.width * (0.1 + Math.random() * 0.8), r.height * 0.85, 4100); bub.dataset.pop = '1'; }, k * 300); V.say(['Pop the bubbles!'], { who: 'narrator' }); }
+      if (id === 'ribbon') { u.classList.remove('dance'); void u.offsetWidth; u.classList.add('dance'); V.sfx('sparkle'); V.say(['Your unicorn is dancing!'], { who: 'narrator' }); }
+      if (id === 'kite') { spot({ className: 'kite' }, thing('kite'), 0, r.height * 0.15, 2600); u.classList.remove('hop'); void u.offsetWidth; u.classList.add('hop'); V.sfx('whoosh'); V.say(['Look at the kite fly!'], { who: 'narrator' }); }
+      setTimeout(() => u.classList.remove('hop', 'dance'), 1300);
+      hearts(2); persist(); paintNeeds();
+    }
+  });
+  // where her mouth is in the unicorn's picture (a share of its width and height), for food to fly to
+  const MOUTH = [0.88, 0.52];
+  // the sponge and the brush: rub across her (a tap scrubs a little too); a tap with nothing in hand is a pat
+  let rub = null;
+  $('stall').addEventListener('pointerdown', e => {
+    const bub = e.target.closest('[data-pop]');
+    if (bub) { bub.remove(); V.sfx('pop'); Care.pat(me.pet); paintNeeds(); persist(); return; }
+    if (!e.target.closest('#uni')) return;
+    const pet = petNow();
+    if (pet.asleep) { V.say(['Shh... your unicorn is sleeping.'], { who: 'narrator' }); return; }
+    if (!tool) { if (Date.now() - patAt > 900) { patAt = Date.now(); Care.pat(pet); hearts(2); V.sfx('sparkle'); paintNeeds(); persist(); } return; }
+    rub = { x: e.clientX, y: e.clientY, d: 0, at: 0 };
+    try { e.target.closest('#uni').setPointerCapture(e.pointerId); } catch {}
+    scrub(e, 14);
+  });
+  $('stall').addEventListener('pointermove', e => { if (!rub) return; const d = Math.hypot(e.clientX - rub.x, e.clientY - rub.y); rub.x = e.clientX; rub.y = e.clientY; rub.d += d; if (rub.d > 14) { scrub(e, rub.d); rub.d = 0; } });
+  for (const ev of ['pointerup', 'pointercancel']) $('stall').addEventListener(ev, () => { if (!rub) return; rub = null; const t = $('stallTool'); if (t) t.remove(); persist(); paintStable(); });
+  function scrub(e, d) {
+    const pet = me.pet, [x, y] = stallXY(e.clientX, e.clientY);
+    let t = $('stallTool'); if (!t) { t = spot({ className: 'tool', id: 'stallTool' }, thing(tool), x, y); }
+    t.style.left = x + 'px'; t.style.top = y + 'px';
+    const k = Math.min(3, d / 14);
+    if (tool === 'sponge') { const was = pet.clean; Care.wash(pet, 1.6 * k); fx.foam = Math.min(1, fx.foam + 0.035 * k); if (Math.random() < 0.15) V.sfx('pop');
+      if (was < 100 && pet.clean >= 100) V.say(['All clean! Now rinse the bubbles off with the bucket.'], { who: 'narrator' }); }
+    else { Care.brush(pet); if (Math.random() < 0.3) spot({ className: 'heart' }, A.svg('0 0 30 30', A.star(15, 15, 11, '#FFC94A')), x, y - 10, 1200); if (Math.random() < 0.15) V.sfx('sparkle'); }
+    const now = Date.now(); if (now - (rub ? rub.at : 0) > 140) { if (rub) rub.at = now; paintUni(); }
+  }
+  $('stableBack').addEventListener('click', () => { V.stop(); persist(true); openCastle(); });
+
+  // ---- her bedroom: tap things to play with them; Decorate to drag them anywhere, buy more, change the walls ----
+  const ICON2 = {
+    brush: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M27 6l7 7L19 28l-7-7z"/><path d="M12 21c-5 0-6 4-6 7s-1 5-2 6c5 0 13 0 14-7"/></svg>',
+    done: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21l7 7l15-16"/></svg>',
+    flip: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6v28"/><path d="M15 12L6 28h9zM25 12l9 16h-9z"/></svg>',
+    away: '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15h26v18H7z"/><path d="M5 9h30v6H5zM16 21h8"/></svg>',
+  };
+  const BED_TABS = [['mine', 'My things'], ['shop', 'Shop'], ['walls', 'Walls'], ['floors', 'Floors']];
+  const BED_MAX = 30;
+  let editing = false, bedTab = 'mine', bedAsk = null, sel = -1, bdrag = null;
+  const bfx = { night: false, on: {}, px: 80, py: 284, flip: false };
+  const bedDef = id => BR.ITEMS[id] || BR.WALLS[id] || BR.FLOORS[id];
+  const bedOwns = id => (me.owned || []).includes(id) || (!!bedDef(id) && !bedDef(id).gift && !bedDef(id).price);
+  // her bedroom, from the starter (or the pieces she had in the old fixed spots)
+  function bedState() {
+    if (me.bedroom && me.bedroom.items) return me.bedroom;
+    const b = JSON.parse(JSON.stringify(BR.STARTER)), old = (me.rooms || {}).bedroom || {};
+    if (old.wall && BR.WALLS[old.wall]) b.wall = old.wall;
+    const swap = (slot, test) => { const id = old[slot]; if (!id || !BR.ITEMS[id]) return; const it = b.items.find(x => test(x.id)); if (it) it.id = id; else b.items.push({ id, x: 300, y: 280 }); };
+    swap('big', id => id.startsWith('bedroom-bed')); swap('rug', id => id.startsWith('bedroom-rug')); swap('small', id => id === 'bedroom-lamp');
+    return (me.bedroom = b);
+  }
+  function openBedroom() {
+    V.stop(); show('bedroom'); editing = false; sel = -1; bedAsk = null; bfx.night = false; bfx.on = {};
+    $('bedBack').innerHTML = ICON.back; paintBedroom();
+    V.say([`Welcome to your bedroom, ${me.name}! Tap things to play with them. Tap the paintbrush to decorate.`], { who: 'narrator' });
+  }
+  const pct = (v, of) => (v / of * 100).toFixed(2) + '%';
+  function boxOf(it) {
+    const d = BR.ITEMS[it.id], top = d.place === 'wall' ? it.y - d.h / 2 : it.y - d.h;
+    return { left: pct(it.x - d.w / 2, 400), top: pct(top, 300), width: pct(d.w, 400), height: pct(d.h, 300), z: d.place === 'rug' ? 2 : d.place === 'wall' ? 3 : 10 + Math.round(it.y) };
+  }
+  const lit = (it, i) => !!(it.on || bfx.on[i]);
+  function itemHtml(it, i) {
+    const d = BR.ITEMS[it.id], b = boxOf(it), sleeping = bfx.night && d.act === 'sleep' && i === bfx.bed;
+    // (at night bedroom.js tints each thing but keeps what's lit shining)
+    const art = BR.item(it.id, { on: sleeping || lit(it, i), night: bfx.night, sleeper: sleeping ? A.princess(me.look, wearing(me), { head: true, mood: 'happy' }) : undefined });
+    const glow = d.act === 'light' && lit(it, i) ? `<span class="glow" style="left:${pct(it.x - d.w * 1.4, 400)};top:${pct((d.place === 'wall' ? it.y : it.y - d.h) - d.w * 1.2, 300)};width:${pct(d.w * 2.8, 400)};height:${pct(d.w * 2.8 * 4 / 3, 300)}"></span>` : '';
+    return `<div class="bi ${it.flip ? 'flip' : ''} ${i === sel ? 'sel' : ''}" data-i="${i}" role="button" aria-label="${esc(d.name)}" style="left:${b.left};top:${b.top};width:${b.width};height:${b.height};z-index:${b.z}">${art}</div>${glow}`;
+  }
+  function paintBedroom() {
+    const b = bedState(), box = $('broomIn');
+    $('bedroom').classList.toggle('edit', editing);
+    $('bedCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
+    $('bedEdit').innerHTML = editing ? ICON2.done : ICON2.brush; $('bedEdit').setAttribute('aria-pressed', String(editing)); $('bedEdit').setAttribute('aria-label', editing ? 'Done decorating' : 'Decorate');
+    const stars = b.items.some((it, i) => BR.ITEMS[it.id].act === 'stars' && lit(it, i));
+    box.classList.toggle('dark', bfx.night); box.classList.toggle('stars', stars);
+    const pr = bfx.night ? '' : `<div class="bpr ${bfx.flip ? 'flip' : ''}" id="bpr" role="button" aria-label="${esc(me.name)}" style="left:${pct(bfx.px, 400)};top:${pct(bfx.py - 112, 300)};height:37.3%;z-index:${10 + Math.round(bfx.py)}">${A.princess(me.look, wearing(me), { mood: 'happy' })}</div>`;
+    box.innerHTML = BR.room(b.wall, b.floor, { night: bfx.night }).replace('<svg', '<svg class="wallfloor"') + '<div class="starsky"></div>' + b.items.map(itemHtml).join('') + pr
+      + (bfx.night && bfx.bed >= 0 && b.items[bfx.bed] ? (() => { const it = b.items[bfx.bed], d = BR.ITEMS[it.id], pl = d.pillow || { x: d.w * 0.25, y: d.h * 0.4 };
+        return `<span class="zz" style="z-index:401;left:${pct(it.x - d.w / 2 + pl.x + 10, 400)};top:${pct(it.y - d.h + pl.y - 30, 300)}">z</span><span class="zz" style="z-index:401;animation-delay:.9s;left:${pct(it.x - d.w / 2 + pl.x + 26, 400)};top:${pct(it.y - d.h + pl.y - 44, 300)}">z</span>`; })() : '')
+      + (editing && sel >= 0 && b.items[sel] ? selBar(b.items[sel]) : '');
+    $('bedbar').innerHTML = editing ? '' : `<span class="tip">${bfx.night ? 'Tap anywhere to wake up!' : 'Tap things in your room!'}</span><button type="button" class="big mint" id="bedDeco">${ICON2.brush}<span>Decorate</span></button>`;
+    if ($('bedDeco')) $('bedDeco').onclick = () => setEditing(true);
+    $('bshelf').hidden = !editing;
+    if (editing) paintBedShelf();
+  }
+  function selBar(it) {
+    const d = BR.ITEMS[it.id], top = d.place === 'wall' ? it.y - d.h / 2 : it.y - d.h;
+    return `<div class="selbar" style="left:${pct(Math.max(50, Math.min(350, it.x)), 400)};top:${pct(Math.max(56, top), 300)}"><button type="button" data-sb="flip" aria-label="Turn it around">${ICON2.flip}</button><button type="button" data-sb="away" aria-label="Put it away">${ICON2.away}</button></div>`;
+  }
+  function paintBedShelf() {
+    const b = bedState(), placed = new Set(b.items.map(x => x.id));
+    $('bedTabs').innerHTML = BED_TABS.map(([id, name]) => `<button type="button" data-bt="${id}" aria-pressed="${id === bedTab}">${name}</button>`).join('');
+    const card = (id, what) => { const d = bedDef(id), own = bedOwns(id), on = what === 'wall' ? b.wall === id : what === 'floor' ? b.floor === id : placed.has(id);
+      return `<button type="button" class="item ${on ? 'on' : ''} ${own ? '' : 'locked'} ${bedAsk === id ? 'ask' : ''}" data-bed="${id}" data-what="${what}" aria-label="${esc(d.name)}${own ? (on ? ', in your room' : '') : d.gift ? ', a present from the story' : ', ' + d.price + ' coins'}">
+        <span class="pv">${BR.piece(id)}</span><span class="price">${own ? (on ? '✓' : '') : d.gift ? A.icon('book', 22) : A.coin(22) + d.price}</span></button>`; };
+    const byPrice = (a, z) => (bedDef(a).gift ? 999 : bedDef(a).price) - (bedDef(z).gift ? 999 : bedDef(z).price);
+    let ids;
+    if (bedTab === 'mine') { ids = Object.keys(BR.ITEMS).filter(id => bedOwns(id) && !placed.has(id));
+      $('bedItems').innerHTML = ids.map(id => card(id, 'item')).join('') || `<span class="tt" style="grid-column:1/-1;font-weight:800;padding:8px">Everything you have is in your room! Find more in the Shop.</span>`; return; }
+    if (bedTab === 'shop') ids = Object.keys(BR.ITEMS).filter(id => !bedOwns(id)).sort(byPrice);
+    if (bedTab === 'walls') ids = Object.keys(BR.WALLS).sort(byPrice);
+    if (bedTab === 'floors') ids = Object.keys(BR.FLOORS).sort(byPrice);
+    $('bedItems').innerHTML = ids.map(id => card(id, bedTab === 'walls' ? 'wall' : bedTab === 'floors' ? 'floor' : 'item')).join('');
+  }
+  function setEditing(on) { editing = on; sel = -1; bedAsk = null; bfx.night = false; V.sfx('pop'); paintBedroom();
+    V.say([on ? 'Drag things to move them. Tap My things or the Shop to add more!' : 'Your room looks wonderful!'], { who: 'narrator' }); persist(); }
+  $('bedEdit').addEventListener('click', () => setEditing(!editing));
+  $('bedBack').addEventListener('click', () => { V.stop(); persist(true); openCastle(); });
+  $('bedTabs').addEventListener('click', e => { const b = e.target.closest('[data-bt]'); if (!b) return; bedTab = b.dataset.bt; bedAsk = null; V.sfx('pop'); paintBedShelf(); });
+  // a new thing goes where it fits: on the wall, on the floor in front of the bed, or a rug in the middle
+  function placeNew(id) {
+    const d = BR.ITEMS[id], b = bedState();
+    if (b.items.length >= BED_MAX) { V.say(['Your room is full! Put something away first.'], { who: 'narrator' }); return false; }
+    // (big things stand back by the wall, small ones further forward)
+    const x = 200 + (Math.random() - 0.5) * 120, y = d.place === 'wall' ? Math.max(d.h / 2 + 4, BR.FLOOR_Y - d.h / 2 - 30) : d.place === 'rug' ? 278 : d.h >= 90 ? 250 : 288;
+    b.items.push(clampItem({ id, x, y })); sel = b.items.length - 1; return true;
+  }
+  function clampItem(it) {
+    const d = BR.ITEMS[it.id], F = BR.FLOOR_Y;
+    it.x = Math.max(d.w / 2, Math.min(400 - d.w / 2, it.x));
+    if (d.place === 'wall') it.y = Math.max(d.h / 2 + 2, Math.min(F - 14 - d.h / 2, it.y)); else it.y = Math.max(d.place === 'rug' ? F + 24 : F + 34, Math.min(299, it.y));
+    return it;
+  }
+  $('bedItems').addEventListener('click', e => {
+    const c = e.target.closest('[data-bed]'); if (!c) return;
+    const id = c.dataset.bed, what = c.dataset.what, d = bedDef(id), b = bedState();
+    const use = () => { if (what === 'wall') b.wall = id; else if (what === 'floor') b.floor = id; else if (!placeNew(id)) return false; return true; };
+    if (bedOwns(id)) { if (what === 'item' && b.items.some(x => x.id === id)) { sel = b.items.findIndex(x => x.id === id); paintBedroom(); return; } if (use()) { V.sfx('sparkle'); persist(); paintBedroom(); } return; }
+    if (d.gift) { const ch = giftChapter(id); V.sfx('pop'); V.say([`The ${d.name.toLowerCase()} is a present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}. Keep playing there to find it!`]); return; }
+    if (bedAsk !== id) { bedAsk = id; V.sfx('pop'); paintBedShelf(); V.say([`The ${d.name.toLowerCase()} costs ${d.price} coins. Tap it again to buy it!`]); return; }
+    if (!E.spend(me, device, d.price)) { V.sfx('again'); V.say([`You need ${d.price - E.coins(me)} more coins. Play a round to earn them!`]); return; }
+    me.owned.push(id); bedAsk = null; use();
+    V.sfx('fanfare'); burst(...centerOf(c), 16); V.say([`You bought the ${d.name.toLowerCase()}! ${what === 'item' ? 'Drag it where you like.' : 'Your room looks wonderful.'}`]);
+    persist(true); paintBedroom();
+  });
+  // decorating: drag a thing to move it; the bar above it turns it around or puts it away
+  $('broomIn').addEventListener('pointerdown', e => {
+    if (!editing) return;
+    const sb = e.target.closest('[data-sb]');
+    if (sb) { const b = bedState(), it = b.items[sel]; if (!it) return;
+      if (sb.dataset.sb === 'flip') it.flip = !it.flip; else { b.items.splice(sel, 1); sel = -1; V.say(['Put away! Find it in My things.'], { who: 'narrator' }); }
+      V.sfx('pop'); persist(); paintBedroom(); return; }
+    const el = e.target.closest('.bi');
+    if (!el) { if (sel >= 0) { sel = -1; paintBedroom(); } return; }
+    const i = +el.dataset.i, it = bedState().items[i], r = $('broomIn').getBoundingClientRect();
+    if (sel !== i) { sel = i; paintBedroom(); }
+    bdrag = { i, sx: e.clientX, sy: e.clientY, x0: it.x, y0: it.y, kx: 400 / r.width, ky: 300 / r.height };
+    try { $('broomIn').setPointerCapture(e.pointerId); } catch {}
+    e.preventDefault();
+  });
+  $('broomIn').addEventListener('pointermove', e => {
+    if (!bdrag) return;
+    const b = bedState(), it = b.items[bdrag.i];
+    it.x = bdrag.x0 + (e.clientX - bdrag.sx) * bdrag.kx; it.y = bdrag.y0 + (e.clientY - bdrag.sy) * bdrag.ky; clampItem(it);
+    const el = $('broomIn').querySelector(`.bi[data-i="${bdrag.i}"]`), bx = boxOf(it);
+    if (el) { el.style.left = bx.left; el.style.top = bx.top; el.style.zIndex = bx.z; }
+    const bar = $('broomIn').querySelector('.selbar'); if (bar) bar.remove();
+  });
+  for (const ev of ['pointerup', 'pointercancel']) $('broomIn').addEventListener(ev, () => { if (!bdrag) return; bdrag = null; persist(); paintBedroom(); });
+  // playing: tap a thing and it does what it does; tap the floor and she walks there
+  $('broomIn').addEventListener('click', e => {
+    if (editing) return;
+    if (bfx.night) return wakeUp();
+    const el = e.target.closest('.bi');
+    if (el) return bedAct(+el.dataset.i, el);
+    if (e.target.closest('#bpr')) { const p = $('bpr'); p.classList.remove('twirl'); void p.offsetWidth; p.classList.add('twirl'); V.sfx('sparkle'); burst(e.clientX, e.clientY, 8); return; }
+    const r = $('broomIn').getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 400, y = (e.clientY - r.top) / r.height * 300;
+    if (y < BR.FLOOR_Y) return;
+    bfx.flip = x < bfx.px; bfx.px = Math.max(30, Math.min(370, x)); bfx.py = Math.max(BR.FLOOR_Y + 30, Math.min(298, y));
+    const p = $('bpr'); if (p) { p.classList.toggle('flip', bfx.flip); p.style.left = pct(bfx.px, 400); p.style.top = pct(bfx.py - 112, 300); p.style.zIndex = 10 + Math.round(bfx.py); }
+  });
+  const TUNE_BOX = [0, 2, 4, 5, 4, 2, 0, 4, 7];
+  async function bedAct(i, el) {
+    const b = bedState(), it = b.items[i], d = BR.ITEMS[it.id];
+    const anim = cls => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), 1900); };
+    const toggle = () => { it.on = !it.on; persist(); paintBedroom(); };
+    const blink = ms => { bfx.on[i] = true; paintBedroom(); setTimeout(() => { delete bfx.on[i]; if (screen === 'bedroom') paintBedroom(); }, ms); };
+    const r = el.getBoundingClientRect();
+    if (d.act === 'sleep') return goToSleep(i);
+    if (d.act === 'light') { V.sfx('pop'); toggle(); return; }
+    if (d.act === 'curtain') { V.sfx('whoosh'); toggle(); return; }
+    if (d.act === 'grow') { V.sfx('sparkle'); burst(r.left + r.width / 2, r.top + r.height / 3, 8); toggle(); return; }
+    if (d.act === 'stars') { V.sfx('sparkle'); toggle(); if (it.on) V.say(['Twinkle, twinkle!'], { who: 'narrator' }); return; }
+    if (d.act === 'music') { blink(TUNE_BOX.length * 320 + 400); TUNE_BOX.forEach((n, k) => setTimeout(() => V.sfx('note', n), k * 320)); return; }
+    if (d.act === 'chest') { blink(2600); V.sfx('pop'); burst(r.left + r.width / 2, r.top, 14); return; }
+    if (d.act === 'swim') { blink(1500); V.sfx('pop'); return; }
+    if (d.act === 'dress') { V.sfx('whoosh'); return openWardrobe('gown'); }
+    if (d.act === 'books') { V.sfx('whoosh'); return openWardrobe('stories'); }
+    if (d.act === 'squeak') { anim('hop'); V.sfx('pop'); setTimeout(() => V.sfx('pop'), 250); return; }
+    if (d.act === 'rock') { anim('rock'); V.sfx('whoosh'); return; }
+    anim('spark'); V.sfx('sparkle'); burst(r.left + r.width / 2, r.top + r.height / 2, 8);
+  }
+  function goToSleep(i) {
+    bfx.night = true; bfx.bed = i; V.sfx('whoosh'); paintBedroom();
+    TUNE_BOX.slice(0, 7).forEach((n, k) => setTimeout(() => { if (bfx.night && screen === 'bedroom') V.sfx('note', n); }, 600 + k * 520));
+    V.say([`Goodnight, ${me.name}. Sweet dreams!`], { who: 'narrator' });
+  }
+  function wakeUp() { bfx.night = false; V.sfx('sparkle'); paintBedroom(); V.say([`Good morning, ${me.name}! What a lovely sleep.`], { who: 'narrator' }); }
 
   // ---- grown-ups: hold the button, then Face ID (or a grown-up question) ----
   let holdT = 0, holdStart = 0;
@@ -958,7 +1395,7 @@
         <div class="row"><span class="grow">Favor reading<small>How strongly the quest and the map lean to Story Tower</small></span></div>
         <div class="row"><div class="seg" id="sFocus">${[['normal', 'Normal'], ['more', 'More'], ['most', 'Most']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${st.focus === v}">${n}</button>`).join('')}</div></div>
         <div class="row"><span class="grow">Lands open<small>Story Tower is always open</small></span></div>
-        <div class="row"><div class="seg" id="sLands">${[['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['garden', 'Fairy Garden'], ['spell', 'Tiara Workshop']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${!(st.off || []).includes(v)}">${n}</button>`).join('')}</div></div></div>
+        <div class="row"><div class="seg" id="sLands">${[['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['garden', 'Fairy Garden'], ['spell', 'Tiara Workshop'], ['castle', 'Bakery']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${!(st.off || []).includes(v)}">${n}</button>`).join('')}</div></div></div>
       <p class="label">Voice and sound</p><div class="group">
         <div class="row"><span class="grow">Voice speed</span><div class="seg" id="sRate">${[[0.75, 'Slow'], [0.9, 'Normal'], [1.05, 'Quick']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${Math.abs(st.rate - v) < 0.01}">${n}</button>`).join('')}</div></div>
         <div class="row"><span class="grow">Sound effects</span><div class="seg" id="sSfx"><button type="button" data-v="1" aria-pressed="${!!st.sfx}">On</button><button type="button" data-v="0" aria-pressed="${!st.sfx}">Off</button></div></div>
@@ -1007,7 +1444,7 @@
 
   // a player's progress, for a grown-up
   function report(p) {
-    const d = today(), skills = ['read', 'spell', 'math', 'wand', 'match', 'missing', 'recall'];
+    const d = today(), skills = ['read', 'spell', 'math', 'wand', 'match', 'missing', 'recall', 'pattern', 'bake'];
     const levelOn = (sk, day) => { for (let i = 0; i < 60; i++) { const v = ((p.levels || {})[E.addDays(day, -i)] || {})[sk]; if (v) return v; } return null; };
     const rows = skills.filter(k => p.skills[k]).map(k => { const s = p.skills[k], max = C.LADDERS[k], was = levelOn(k, E.addDays(d, -7)), acc = E.accuracy(p, k, 7, d);
       return `<div class="row" style="display:block"><div class="bar"><span class="bn"><b>${SKILL_NAME[k]}</b></span><span class="bt"><i style="width:${s.level / max * 100}%"></i></span><span class="bv">${s.level} of ${max}</span></div>
@@ -1102,5 +1539,5 @@
   paintPicker();
   show('picker');
   sync().then(() => { if (screen === 'picker') paintPicker(); });
-  window.sparkle = { get save() { return save; }, get me() { return me; }, get round() { return round; }, get screen() { return screen; }, get gate() { return session.gateQ; }, choose, startRound, travel, enterWorld, openCastle, parent, report };   // for tests
+  window.sparkle = { get save() { return save; }, get me() { return me; }, get round() { return round; }, get screen() { return screen; }, get gate() { return session.gateQ; }, choose, startRound, travel, enterWorld, openCastle, openWardrobe, openStable, openBedroom, parent, report };   // for tests
 })();

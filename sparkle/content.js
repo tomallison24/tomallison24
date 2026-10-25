@@ -91,7 +91,7 @@
   const ANIMALS = ['cat', 'dog', 'pig', 'fox', 'bug', 'bat'];
   const ADJ = ['big', 'red', 'hot', 'wet', 'sad', 'fun'];
 
-  const LADDERS = { read: 12, math: 10, wand: 7, spell: 7, match: 7, missing: 7, recall: 5 };
+  const LADDERS = { read: 12, math: 10, wand: 7, spell: 7, match: 7, missing: 7, recall: 5, pattern: 8, bake: 10 };
   const LEVEL_NAMES = {
     read: ['Syllables', 'Rhymes', 'First sounds', 'Onset and rime', 'Letter sounds', 'Blending', 'Middle and last sounds', 'Reading short words', 'Sight words', 'Sentences', 'Little stories', 'Digraphs and blends'],
     math: ['Count to 10', 'Count to 20, count on', 'More and fewer', 'Add within 5', 'Take away within 5', 'Make 10', 'Within 10', 'Count by tens', 'Within 20', 'Missing numbers'],
@@ -100,6 +100,8 @@
     match: ['6 pairs', '8 pairs', 'Learning pairs', '10 pairs', '8 pairs, a fairy swap', '12 pairs', '15 pairs, a fairy swap'],
     missing: ['4 things', '5 things', '6 things', '7 things that move', '8 things that move', '9 things, two missing', '10 things, two missing'],
     recall: ['Who', 'What', 'Three sentences', 'Four sentences', 'What came first'],
+    pattern: ['AB patterns', 'AAB patterns', 'ABB patterns', 'ABC patterns', 'AABB patterns', 'Missing in the middle', 'Colour patterns', 'Growing patterns'],
+    bake: ['Count to 5', 'Count to 10', 'Two ingredients', 'One more, one fewer', 'Put together', 'Take away', 'Make 10', 'Tens and ones', 'Share fairly', 'Within 20'],
   };
 
   const word = w => SAY[w] || w;
@@ -310,12 +312,89 @@
     return { key: null, kind: 'pick', story, say: ['Listen to the story.', story, `What did ${the(a)} find ${ask}?`], choices: r.shuffle([t, u, v]).map(pic), answer: ask === 'first' ? t : v, hint: ['Listen again.', story], tell: [story] };
   }
 
+  // ---- Pattern Parade (Star Meadow): finish the parade's pattern ----
+  // A piece is 'shape.hue' (kitchen.js draws it). Each pattern's pieces differ in shape and colour both,
+  // except the colour level, where every piece is the same shape and only the colour repeats.
+  const SHAPES = ['star', 'heart', 'moon', 'flower', 'gem', 'cloud', 'circle', 'square', 'triangle', 'crown', 'drop', 'leaf'];
+  const HUES = ['pink', 'lilac', 'mint', 'gold', 'sky', 'coral'];
+  const HUE_SAY = { pink: 'pink', lilac: 'purple', mint: 'green', gold: 'yellow', sky: 'blue', coral: 'orange' };
+  const pieceName = id => { const [sh, hu] = id.split('.'); return `${HUE_SAY[hu]} ${sh}`; };
+  const PATTERNS = ['AB', 'AAB', 'ABB', 'ABC', 'AABB', 'mid', 'hue', 'grow'];
+  const shapeChoice = id => ({ id, kind: 'shape', v: id, label: pieceName(id) });
+  function pattern(r, level) {
+    const kind = PATTERNS[level - 1];
+    if (kind === 'grow') {
+      const sh = r.pick(SHAPES.slice(0, 6)) + '.' + r.pick(HUES), from = r.int(1, 2), step = level >= 8 && r() < 0.4 ? 2 : 1;
+      const counts = [0, 1, 2].map(i => from + i * step), ans = from + 3 * step;
+      const opts = r.shuffle([ans, ans - step, ans + 1].filter((x, i, a) => x >= 1 && a.indexOf(x) === i));
+      return { key: null, kind: 'pick', show: { type: 'grow', piece: sh, counts }, choices: opts.map(n => ({ id: String(n), kind: 'many', v: sh, n, label: `${n} ${pieceName(sh)}s` })), answer: String(ans),
+        say: ['The parade grows! How many come next?'], hint: [`Count each group: ${counts.join(', ')}...`], tell: [`Each group has ${step === 1 ? 'one' : 'two'} more. So next comes ${ans}.`] };
+    }
+    const unit = kind === 'mid' ? r.pick(['AB', 'AAB', 'ABB', 'ABC']) : kind === 'hue' ? r.pick(['AB', 'ABC', 'AAB']) : kind;
+    const keys = [...new Set(unit)], hues = r.shuffle(HUES), shapes = r.shuffle(SHAPES), one = shapes[0];
+    const piece = Object.fromEntries(keys.map((k, i) => [k, (kind === 'hue' ? one : shapes[i]) + '.' + hues[i]]));
+    const reps = unit.length <= 2 ? 3 : 2, seq = [];
+    for (let i = 0; i < reps * unit.length + unit.length; i++) seq.push(piece[unit[i % unit.length]]);
+    let at, shown;
+    if (kind === 'mid') { at = r.int(unit.length, reps * unit.length - 1); shown = seq.slice(0, reps * unit.length + 1); }
+    else { at = reps * unit.length + (unit.length > 2 ? r.int(0, 1) : 0); shown = seq.slice(0, at + 1); }
+    const answer = seq[at];
+    // the wrong ones: the pattern's other pieces, and one that's nearly right (the right shape in another colour, or the colour on another shape)
+    const near = kind === 'hue' ? one + '.' + hues[keys.length] : r() < 0.5 ? answer.split('.')[0] + '.' + hues[keys.length] : shapes[keys.length] + '.' + answer.split('.')[1];
+    const wrong = [...new Set([...keys.map(k => piece[k]).filter(x => x !== answer), near])].slice(0, 2);
+    const unitSaid = [...unit].map(k => kind === 'hue' ? HUE_SAY[piece[k].split('.')[1]] : pieceName(piece[k]).split(' ')[1]).join(', ');
+    return { key: null, kind: 'pick', show: { type: 'parade', seq: shown.map((x, i) => i === at ? null : x) },
+      choices: r.shuffle([answer, ...wrong]).map(shapeChoice), answer,
+      say: [kind === 'mid' ? "What's missing from the parade?" : 'What comes next in the parade?'],
+      hint: ['Say the pattern with me:', `${unitSaid}, ${unitSaid}...`], tell: [`The pattern goes ${unitSaid}. So it's the ${pieceName(answer)}.`] };
+  }
+
+  // ---- the Unicorn Bakery (the castle kitchen, with Pebble): the right number of things in the bowl ----
+  // A bake: { kind: 'bake', mode: 'put' | 'share', need: { ingredient: n }, start: { ingredient: n } already in
+  // the bowl, pantry: [ingredients she can add], sack: a sack of ten to add too, plates, treat: what it bakes }.
+  // She adds (and taps out) things, then taps Bake; the app checks the bowl against need.
+  const ING = ['strawberry', 'blueberry', 'cherry', 'egg', 'sugar', 'chocolate', 'banana', 'lemon', 'marshmallow', 'apple', 'carrot'];
+  const ING_SAY = { strawberry: ['strawberry', 'strawberries'], blueberry: ['blueberry', 'blueberries'], cherry: ['cherry', 'cherries'], egg: ['egg', 'eggs'], sugar: ['sugar cube', 'sugar cubes'],
+    chocolate: ['chocolate square', 'chocolate squares'], banana: ['banana slice', 'banana slices'], lemon: ['lemon slice', 'lemon slices'], marshmallow: ['marshmallow', 'marshmallows'], apple: ['apple', 'apples'], carrot: ['carrot', 'carrots'] };
+  const TREAT_OF = { strawberry: 'cake', blueberry: 'muffin', cherry: 'pie', egg: 'cupcake', sugar: 'cookie', chocolate: 'cookie', banana: 'muffin', lemon: 'tart', marshmallow: 'donut', apple: 'pie', carrot: 'carrotcake' };
+  const TREAT_SAY = { cake: 'a little cake', muffin: 'a muffin', pie: 'a pie', cupcake: 'a cupcake', cookie: 'star cookies', tart: 'a lemon tart', donut: 'a donut', carrotcake: 'a carrot cake' };
+  const many = (n, id) => `${n} ${ING_SAY[id][n === 1 ? 0 : 1]}`;
+  function bake(r, level) {
+    const [a, b] = others(r, ING, 2), treat = TREAT_OF[a];
+    const base = { key: null, kind: 'bake', mode: 'put', start: {}, pantry: [a], sack: false, treat };
+    const done = need => Object.entries(need).map(([k, n]) => many(n, k)).join(' and ');
+    const q = need => Object.assign(base, { need, tell: [`The recipe needs ${done(need)}.`] });
+    if (level === 1 || level === 2) { const n = level === 1 ? r.int(1, 5) : r.int(6, 10);
+      return Object.assign(q({ [a]: n }), { say: [`Let's bake ${TREAT_SAY[treat]}! Put ${many(n, a)} in the bowl, then tap Bake.`] }); }
+    if (level === 3) { const x = r.int(1, 5), y = r.int(1, 5);
+      return Object.assign(q({ [a]: x, [b]: y }), { pantry: [a, b], say: [`Put in ${many(x, a)} and ${many(y, b)}.`] }); }
+    if (level === 4) { const n = r.int(2, 6), up = r() < 0.6, m = up ? n + 1 : n - 1;
+      return Object.assign(q({ [a]: n, [b]: m }), { start: { [a]: n }, pantry: [b], show: 'start',
+        say: [`There are ${many(n, a)} in the bowl. Put in ${ING_SAY[b][1]}: ${up ? 'one more' : 'one fewer'} than the ${ING_SAY[a][1]}.`] }); }
+    if (level === 5) { const x = r.int(1, 5), y = r.int(1, Math.min(5, 10 - x));
+      return Object.assign(q({ [a]: x + y }), { groups: [x, y], say: [`The recipe says ${many(x, a)}, and ${y} more. Put them all in!`] }); }
+    if (level === 6) { const n = r.int(5, 10), k = r.int(1, Math.min(4, n - 1));
+      return Object.assign(q({ [a]: n - k }), { start: { [a]: n }, pantry: [], say: [`Oops! There are ${many(n, a)}. That's too many. Tap ${k} to take ${k === 1 ? 'it' : 'them'} out.`] }); }
+    if (level === 7) { const n = r.int(2, 8);
+      return Object.assign(q({ [a]: 10 }), { start: { [a]: n }, frame: true, say: [`Fill the bowl up to 10 ${ING_SAY[a][1]}.`] }); }
+    if (level === 8) { const k = r.int(1, 9), m = 'marshmallow';
+      return Object.assign(base, { need: { [m]: 10 + k }, pantry: [m], sack: true, treat: 'donut', tell: [`${10 + k} is a sack of ten and ${k} more.`],
+        say: [`We need ${10 + k} marshmallows. A sack holds ten!`] }); }
+    if (level === 9) { const plates = r() < 0.6 ? 2 : 3, each = r.int(2, plates === 2 ? 5 : 3), n = plates * each;
+      return { key: null, kind: 'bake', mode: 'share', n, plates, treat: 'cookie', need: { each },
+        say: [`Share ${n} cookies on ${plates} plates, the same on each. Tap a plate to put a cookie on it.`], tell: [`${n} cookies on ${plates} plates is ${each} on each plate.`] }; }
+    const x = r.int(5, 10), y = r.int(5, 10);
+    return Object.assign(q({ [a]: x, [b]: y }), { pantry: [a, b], say: [`A big bake! Put in ${many(x, a)} and ${many(y, b)}.`] });
+  }
+
   // One question for a skill at a level. lv: { tries } how many questions she's had at this level (it
   // widens the letter and sight word sets as she goes). A review key brings back that item when it can.
   function make(skill, level, r, lv = {}, review = null) {
     let q;
     level = Math.max(1, Math.min(LADDERS[skill] || 1, level));
     if (skill === 'wand') return wand(r, level);
+    if (skill === 'pattern') return Object.assign({ skill, level, text: null, hintShow: null }, pattern(r, level));
+    if (skill === 'bake') return Object.assign({ skill, level, text: null, show: null }, bake(r, level));
     if (skill === 'match') return Object.assign({ skill, level }, match(r, level));
     if (skill === 'missing') return Object.assign({ skill, level, text: null, show: null }, missing(r, level));
     if (skill === 'recall') return Object.assign({ skill, level, text: null, show: null }, recall(r, level));
@@ -363,5 +442,5 @@
   const reviewable = key => /^(w|s|h|p):/.test(key) || /^f:\d+[+-]\d+$/.test(key);
 
   root.SparkleContent = { MATCH, MISSING, TRAY, HEROES, FINDS, SPOTS, SPELL, PIC, SAY, CVC, RHYMES, SYLL, FIRST, LETTER_SETS, LETTERS, EXAMPLE, SWAPS, SIGHT, SIGHT_ALL, BLENDS, LADDERS, LEVEL_NAMES, READ, MATH, WAND,
-    word, make, fromKey, gate, reviewable };
+    SHAPES, HUES, HUE_SAY, PATTERNS, ING, ING_SAY, TREAT_OF, pieceName, many, word, make, fromKey, gate, reviewable };
 })(typeof window !== 'undefined' ? window : globalThis);
