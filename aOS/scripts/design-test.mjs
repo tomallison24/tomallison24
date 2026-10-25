@@ -44,7 +44,7 @@ async function phone(scheme, seed) {
 
 // 1. every app is wired to it
 // (an app made after the Vintage apps were folded in, BORN, has no old Vintage app to move data from)
-const BORN = ['sparkle'];
+const BORN = ['sparkle', 'money'];
 {
   const pr = [];
   for (const id of APPS) {

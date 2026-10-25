@@ -45,6 +45,9 @@
 //                    (functions/news/api)
 //   orders:ai:<id>:<day>, orders:ipsy:<id>:<day>   how many emails that person had Claude read
 //                    today, and how many questions they asked Ipsy (functions/orders/api)
+//   money:share, money:meta, money:tx:<YYYY-MM>   Money's transactions from Monarch's emails
+//                    (functions/money/api): read by one person's phone (money:share.by), seen only by
+//                    them and those they share it with; deleted with the reader (functions/aOS/api, forget)
 //   sparkle:<id>, sparkle:clips:<id>   that account's Sparkle Kingdom players (their progress, coins
 //                    and treasures) and the letter sounds its grown-up recorded (functions/sparkle/api)
 //   <app>:ipsy:<id>:<day>   how many questions that person asked Ipsy in that app today

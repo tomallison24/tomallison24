@@ -14,15 +14,15 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104', sparkle: '184,140,192' };   // each icon's Sea glass tint
-  const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42', sparkle: '194,87,127' };   // each mid-century icon's colour
-  const NEON_HUE = { notes: '86,73,110', podcasts: '145,63,113', places: '29,142,174', meals: '146,42,94', news: '135,109,217', fitness: '51,35,76', travel: '51,35,76', drinks: '135,109,217', weather: '135,109,217', calendar: '101,98,159', mail: '34,113,137', house: '251,162,74', orders: '223,56,142', sparkle: '205,72,136' };   // the same, in Night Drive (aOS/scripts/looks.mjs)
-  const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33' };   // and in Grid
-  const FOLK_HUE = { notes: '63,76,106', podcasts: '155,61,73', places: '48,87,207', meals: '142,43,34', news: '97,140,71', fitness: '32,46,83', travel: '32,46,83', drinks: '97,140,71', weather: '97,140,71', calendar: '70,95,157', mail: '42,69,144', house: '219,156,34', orders: '221,62,49', sparkle: '202,74,61' };   // and in Folk
+  const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104', sparkle: '184,140,192', money: '82,138,116' };   // each icon's Sea glass tint
+  const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42', sparkle: '194,87,127', money: '47,93,98' };   // each mid-century icon's colour
+  const NEON_HUE = { notes: '86,73,110', podcasts: '145,63,113', places: '29,142,174', meals: '146,42,94', news: '135,109,217', fitness: '51,35,76', travel: '51,35,76', drinks: '135,109,217', weather: '135,109,217', calendar: '101,98,159', mail: '34,113,137', house: '251,162,74', orders: '223,56,142', sparkle: '205,72,136', money: '52,97,113' };   // the same, in Night Drive (aOS/scripts/looks.mjs)
+  const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33', money: '120,58,54' };   // and in Grid
+  const FOLK_HUE = { notes: '63,76,106', podcasts: '155,61,73', places: '48,87,207', meals: '142,43,34', news: '97,140,71', fitness: '32,46,83', travel: '32,46,83', drinks: '97,140,71', weather: '97,140,71', calendar: '70,95,157', mail: '42,69,144', house: '219,156,34', orders: '221,62,49', sparkle: '202,74,61', money: '41,60,109' };   // and in Folk
   // the glow behind an app: its icon's tint, for aOS's look
   const HUE = new Proxy(GLASS_HUE, { get: (o, id) => ({ glass: o, neon: NEON_HUE, folk: FOLK_HUE, grid: GRID_HUE }[lookNow()] || VINTAGE_HUE)[id] || o[id] });
-  const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games' };
-  const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals'];
+  const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games', money: 'Finance' };
+  const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals', 'money'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
@@ -39,6 +39,7 @@
     fitness: [['once', 'Your own Google Sheet, as a backup (optional)']],
     drinks: [['ok', 'Your family account (Face ID)']],
     meals: [['ok', 'Your family account (Face ID)']],
+    money: [['once', 'Your Google account, on the phone that gets Monarch\'s emails'], ['ok', 'Your family account (Face ID), to see it once it\'s shared with you']],
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
     sparkle: [['ok', 'Nothing for the children'], ['once', 'A grown-up signs in with Face ID, to keep progress on every phone (optional)']],
   };
