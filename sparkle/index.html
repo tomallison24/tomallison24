@@ -535,6 +535,28 @@ svg{display:block}
 .stall > svg{position:absolute;inset:0;width:100%;height:100%}
 .stall .uni{position:absolute;left:26.25%;width:47.5%;bottom:9%;touch-action:none;transform-origin:50% 100%}
 .stall.night .uni{filter:brightness(.9)}
+/* her unicorn about the stable: walking (each leg swinging, a little trot), the tail always swishing, a nod, a
+   nibble of straw, breathing slowly asleep; --x is where she's got to, --f which way she faces */
+.stall .uni{--f:1;translate:var(--x,0px) 0;transition:translate var(--t,0s) linear}
+.stall .uni.left{--f:-1}
+.stall .uni > svg{transform:scaleX(var(--f))}
+.stall .uni .tl{transform-box:fill-box;transform-origin:95% 8%;animation:swish 2.8s ease-in-out infinite}
+.stall .uni .hd{transform-box:fill-box;transform-origin:20% 80%}
+.stall .uni .lf,.stall .uni .lb{transform-box:fill-box;transform-origin:50% 4%}
+.stall .uni.walk > svg{animation:trot .28s ease-in-out infinite alternate}
+.stall .uni.walk .l92,.stall .uni.walk .l150{animation:stride .56s ease-in-out infinite alternate}
+.stall .uni.walk .l166,.stall .uni.walk .l76{animation:stride .56s ease-in-out infinite alternate-reverse}
+.stall .uni.walk .hd{animation:headbob .28s ease-in-out infinite alternate}
+.stall .uni.nod .hd{animation:nod 1.4s ease-in-out}
+.stall .uni.graze .hd{animation:graze 2.6s ease-in-out}
+.stall .uni.breathe > svg{animation:breathe 3.2s ease-in-out infinite}
+@keyframes swish{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(7deg)}}
+@keyframes stride{from{transform:rotate(-16deg)}to{transform:rotate(16deg)}}
+@keyframes trot{from{transform:scaleX(var(--f)) translateY(0)}to{transform:scaleX(var(--f)) translateY(-2.5%)}}
+@keyframes headbob{to{transform:rotate(3deg)}}
+@keyframes nod{30%,60%{transform:rotate(10deg)}}
+@keyframes graze{20%,80%{transform:rotate(24deg) translateY(8%)}}
+@keyframes breathe{50%{transform:scaleX(var(--f)) scaleY(1.025)}}
 .stall .uni svg{width:100%;height:auto;display:block}
 .stall .uni.hop{animation:hop .5s ease-out 2}
 .stall .uni.dance{animation:twirl 1.2s ease-in-out}
@@ -632,7 +654,7 @@ svg{display:block}
   .card.swap,.slots i.on,.tile.wrong,.cover{animation:none!important}
 }
 @media (prefers-reduced-motion:reduce){
-  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.hand,.drum.hit,.parade .fl.gap,.cutaway .croom.want,.stall .uni,.stall .want,.broomIn .bi,.broomIn .bpr,.inbowl .it,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
+  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.hand,.drum.hit,.parade .fl.gap,.cutaway .croom.want,.stall .uni,.stall .uni *,.stall .uni > svg,.stall .want,.broomIn .bi,.broomIn .bpr,.inbowl .it,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
   .fly{opacity:0}
 }
 </style>

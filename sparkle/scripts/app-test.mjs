@@ -737,5 +737,33 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   report('her bedroom: the lamp, sleeping and waking; decorating: drag, buy, wallpaper, put away; kept after a reload', pr);
 }
 
+// 17. her unicorn about the stables, with motion on: she walks (legs swinging, facing the way she goes), nods
+// and grazes on her own, and stands still to be fed; asleep, she only breathes
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.pet = { food: 70, clean: 90, fun: 70, rest: 90, at: Date.now(), asleep: false, pantry: {}, toys: ['ball'] };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava), motion: 'no-preference' }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  await sp(p, () => window.sparkle.openStable());
+  const walked = await p.waitForFunction(() => { const u = document.getElementById('uni'); return u && u.classList.contains('walk') && u.style.getPropertyValue('--x') !== '0px'; }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+  if (!walked) pr.push('her unicorn never walked about the stable');
+  else {
+    const legs = await sp(p, () => document.querySelector('#uni .l92').getAnimations().length > 0 && document.querySelector('#uni .tl').getAnimations().length > 0);
+    if (!legs) pr.push('walking, her legs and tail do not move');
+    const way = await sp(p, () => { const u = document.getElementById('uni'); return { left: u.classList.contains('left'), f: getComputedStyle(u).getPropertyValue('--f').trim() }; });
+    if ((way.left ? '-1' : '1') !== way.f) pr.push('she does not face the way she walks: ' + JSON.stringify(way));
+    await p.waitForTimeout(500); await shot(p, '33-stable-walk');
+  }
+  // fed: she stops where she is, and the food goes to her mouth
+  await p.click('[data-care="apple"]'); await p.waitForTimeout(100);
+  if (await sp(p, () => document.getElementById('uni').classList.contains('walk'))) pr.push('she kept walking while being fed');
+  await p.waitForTimeout(2200);
+  await p.click('[data-ct="sleep"]'); await p.click('[data-care="lantern"]'); await p.waitForTimeout(400);
+  if (!(await sp(p, () => document.getElementById('uni').classList.contains('breathe')))) pr.push('asleep, she does not breathe slowly');
+  await p.waitForTimeout(6000);
+  if (await sp(p, () => document.getElementById('uni').classList.contains('walk'))) pr.push('she walked in her sleep');
+  pr.push(...errs); await ctx.close();
+  report('her unicorn about the stables: walking with swinging legs, facing her way, still to be fed, breathing asleep', pr);
+}
+
 await b.close(); server.close();
 process.exit(failed ? 1 : 0);
