@@ -3,10 +3,12 @@
 // phone to send becoming the reader, nobody else seeing anything until the reader shares it, the
 // months (each sent month replacing what was there, an emptied month deleted), settings (newer
 // wins), who may push, share and forget, bad input, and removing the reader or a person it was
-// shared with from the family (functions/aOS/api).
+// shared with from the family (functions/aOS/api); and Ipsy's daily check (POST check), against a
+// stand-in for Anthropic's API: the reader only, the key, the daily limit, what is sent, and that a
+// correction is kept only with words that really are in the email.
 //   node money/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, cleanTx, cleanSettings } from '../../functions/money/api/[[route]].js';
+import { onRequest, cleanTx, cleanSettings, keepResults, CHECK_MODEL, CHECK_DAILY } from '../../functions/money/api/[[route]].js';
 import { onRequest as accounts } from '../../functions/aOS/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
@@ -103,6 +105,50 @@ await test('settings: anyone who sees it may change them; an older change doesn�
   assert.equal((await call('settings', { token: sam, body: { settings: { at: 2000 } } })).status, 403);
   assert.equal((await call('state', { token: pat })).body.meta.settings.dismissed[0], 'al1');
 });
+await test('Ipsy’s check: the reader only, Sonnet 5.5, and a correction kept only with words from the email', async () => {
+  const email = 'We noticed an expense of $1,052.10 from Corner Hardware, which was spent from Rocket Credit Card **9876 (...9876) and has been categorized as 🔨 Home Improvement.';
+  const item = { id: 'm1', subject: '💲 New expense from Corner Hardware in Monarch', text: 'Hi Pat,\n' + email + ' https://email.example/x pat@example.com',
+    parsed: { amt: 1052.1, dir: 'out', merchant: 'Corner Hardwar', account: 'Rocket Credit Card', last4: '9876', cat: 'Home Improvement' } };
+  const item2 = Object.assign({}, item, { id: 'm2', parsed: Object.assign({}, item.parsed, { merchant: 'Corner Hardware' }) });
+  const sent = [], realFetch = globalThis.fetch;
+  let answer = { results: [
+    { id: 'm1', ok: false, note: '', issues: [{ field: 'merchant', value: 'Corner Hardware', quote: 'from Corner Hardware,' }, { field: 'amount', value: '9999.00', quote: 'an expense of $9,999.00' }] },
+    { id: 'm2', ok: true, note: '', issues: [] }, { id: 'zz', ok: true, note: '', issues: [] }] };
+  globalThis.fetch = async (url, opts) => { sent.push({ url, opts, body: JSON.parse(opts.body) }); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(answer) }] }), { status: 200 }); };
+  try {
+    const AI = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test-key' };
+    assert.equal((await call('check', { token: pat, body: { items: [item] } })).body.error, 'no-ai', 'no key: says so, asks nobody');
+    assert.equal((await call('check', { token: alex, body: { items: [item] }, e: AI })).status, 403, 'only the reader');
+    assert.equal((await call('check', { token: pat, body: { items: [] }, e: AI })).status, 400);
+    assert.equal(sent.length, 0);
+    const r = await call('check', { token: pat, body: { items: [item, item2] }, e: AI });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body.results, { m1: { s: 'fix', issues: [{ field: 'merchant', value: 'Corner Hardware', quote: 'from Corner Hardware,' }] }, m2: { s: 'ok' } },
+      'the made-up amount (its words aren’t in the email) and the item nobody sent are thrown away');
+    const b = sent[0].body;
+    assert.equal(b.model, CHECK_MODEL); assert.equal(CHECK_MODEL, 'claude-sonnet-5-5');
+    assert.equal(b.output_config.effort, 'low'); assert.equal(b.output_config.format.type, 'json_schema'); assert.equal(b.fallbacks, 'default');
+    assert.equal(sent[0].opts.headers['anthropic-beta'], 'server-side-fallback-2026-07-01'); assert.equal(sent[0].opts.headers['x-api-key'], 'test-key');
+    const words = b.messages[0].content;
+    assert.ok(words.includes('Corner Hardwar') && words.includes('$1,052.10'));
+    assert.ok(!/pat@example|https?:|Hi Pat/.test(words), 'no address, link or greeting goes to Anthropic');
+    // a refusal checks nothing (the phone sends them again tomorrow)
+    answer = null;
+    globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'refusal', content: [] }), { status: 200 });
+    assert.deepEqual((await call('check', { token: pat, body: { items: [item] }, e: AI })).body, { results: {}, refused: true });
+    // the daily limit, counted before the call
+    for (let i = 3; i <= CHECK_DAILY; i++) await call('check', { token: pat, body: { items: [item] }, e: AI });
+    assert.equal((await call('check', { token: pat, body: { items: [item] }, e: AI })).status, 429);
+  } finally { globalThis.fetch = realFetch; }
+  // unsure, and a "fix" that only says what the app already has
+  const out = keepResults({ results: [{ id: 'a', ok: false, note: 'Two amounts in the email', issues: [] }, { id: 'b', ok: false, note: '', issues: [{ field: 'amount', value: '$1,052.10', quote: 'an expense of $1,052.10' }] }] },
+    [{ id: 'a', subject: '', text: 'x'.repeat(30), parsed: { amt: 1 } }, { id: 'b', subject: '', text: email, parsed: { amt: 1052.1, dir: 'out' } }]);
+  assert.deepEqual(out, { a: { s: 'unsure', note: 'Two amounts in the email' }, b: { s: 'unsure', note: '' } });
+  // a transaction keeps what the check said, and only that
+  assert.deepEqual(cleanTx(Object.assign(tx('c', '2026-10-06', 1), { check: { s: 'fixed', at: 2, issues: [{ field: 'amount', was: 5, now: '6' }, { field: 'nope' }], extra: 1 } })).check,
+    { s: 'fixed', at: 2, issues: [{ field: 'amount', was: '5', now: '6' }] });
+  assert.equal(cleanTx(Object.assign(tx('d', '2026-10-06', 1), { check: { s: 'whatever' } })).check, undefined);
+});
 await test('bad input', async () => {
   assert.equal((await call('months?from=2026-10&to=2026-09', { token: pat })).status, 400);
   assert.equal((await call('months?from=2020-01&to=2026-10', { token: pat })).status, 400, 'too many months');
@@ -124,7 +170,7 @@ await test('removing someone it was shared with takes them off the list; removin
   // the reader leaves (here the owner removes a member who became the reader: make Sam the reader first)
   await putJSON(db, 'money:share', { by: 'KID1', with: [], at: 1 });
   await removeAs(pat, 'KID1');
-  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:')), []);
+  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:')), []);
 });
 await test('forget: the reader deletes everything; nobody else can', async () => {
   const pat2 = await issue(db, 'OWNER1');
@@ -134,6 +180,6 @@ await test('forget: the reader deletes everything; nobody else can', async () =>
   const jo = await issue(db, 'SPOUSE2');
   assert.equal((await call('forget', { token: jo, body: {} })).status, 403);
   assert.equal((await call('forget', { token: pat2, body: {} })).body.ok, true);
-  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:')), []);
+  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:')), []);
 });
 console.log(n + ' api tests passed');

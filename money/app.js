@@ -13,6 +13,10 @@
 //   Recurring (what repeats, and what it costs a year). A bank Monarch can't
 //   sync shows as a card at the top of This month until it syncs again or you
 //   tap Fixed it.
+// - Once a day the reader's phone has Ipsy check this month's new transactions against
+//   their Monarch emails (functions/money/api, POST check: Claude Sonnet 5.5): what passed is
+//   marked and never sent again; a misreading is corrected from the email's own words (Undo
+//   puts the app's reading back); one Ipsy couldn't confirm is marked Check.
 // - One phone reads Monarch's emails from its own Gmail, read-only (with Mail's
 //   Google client, as Orders and Travel do): Money's reader. Signed in to the
 //   family account, it sends what it read to aOS (functions/money/api), and the
@@ -52,7 +56,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
-  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view' };
+  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off' };
   const FIRST_SCAN = 'newer_than:2y';
   const API = '../money/api/';
 
@@ -98,7 +102,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // copy of that month was last taken }, dirty: [months read here, not sent yet], setDirty, seen: [Gmail
   // ids read], lastScan, readAt }
   // ---------------------------------------------------------------------
-  const D = { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, reader: '' };
+  const D = { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, reader: '', checkDay: '', lastCheck: null };
   function load() {
     const d = ls.json(KEY, null) || {};
     D.tx = Array.isArray(d.tx) ? d.tx.filter(C.okTx) : [];
@@ -110,6 +114,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     D.setDirty = !!d.setDirty;
     D.seen = Array.isArray(d.seen) ? d.seen : [];
     D.lastScan = +d.lastScan || 0; D.readAt = +d.readAt || 0; D.reader = d.reader || '';
+    D.checkDay = d.checkDay || ''; D.lastCheck = d.lastCheck && typeof d.lastCheck === 'object' ? d.lastCheck : null;
   }
   let warned = false;
   function persist() {
@@ -209,7 +214,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + (a ? ' · <span>usual</span> ' + esc(usdR(a)) : '') + '</small><span class="bar" aria-hidden="true"><i style="width:' + (c.total / top * 100).toFixed(1) + '%"></i></span></span><span class="rv">' + esc(usdR(c.total)) + '</span></button>';
     }).join('') + '</div>' : '<div class="empty"><strong>Nothing this month yet</strong>Monarch hasn’t emailed anything for ' + esc(monthName(ym)) + '.</div>';
     const cover = min >= 20 ? '<p class="note">Monarch emailed only charges over ' + esc(usdR(min)) + ' in ' + esc(monthName(ym)) + ', so smaller ones aren’t here.</p>' : '';
-    return alertsHtml() + navRow() + sum + tipsHtml + cats + cover;
+    const fixedN = D.tx.filter(x => C.ymOf(x.date) === ym && x.check && x.check.s === 'fixed').length, flagN = D.tx.filter(x => C.ymOf(x.date) === ym && x.check && x.check.s === 'flag').length;
+    const checked = fixedN || flagN ? '<button class="tip row rgroup" type="button" data-act="checked"><span class="em" aria-hidden="true">' + I.tick + '</span><span class="tt"><b>Ipsy’s check</b> '
+      + (fixedN ? '<span>' + esc(plural(fixedN, 'correction')) + '</span>' : '') + (fixedN && flagN ? ', ' : '') + (flagN ? '<span>' + esc(flagN + ' to look at') + '</span>' : '') + '</span><span class="tv">' + I.chevR + '</span></button>' : '';
+    return alertsHtml() + navRow() + sum + checked + tipsHtml + cats + cover;
   }
   function tipHtml(t) {
     if (t.kind === 'spike') return '<div class="tip"><span class="em" aria-hidden="true">' + esc(t.emoji || '•') + '</span><span class="tt"><b>' + no(t.cat) + '</b> <span>is well over its usual:</span> ' + esc(usdR(t.now)) + ' <span>against</span> ' + esc(usdR(t.avg)) + '<span>.</span></span><span class="tv">+' + esc(usdR(t.diff)) + '</span></div>';
@@ -220,7 +228,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function txRow(x, colour) {
     const acct = st.acct(x), r = st.rw.get(x.id);
-    const bits = [acct.name ? no(acct.name) + (acct.guess ? '<span>?</span>' : '') : '', x.cat ? no(x.cat) : ''].filter(Boolean).join(' · ');
+    const bits = [acct.name ? no(acct.name) + (acct.guess ? '<span>?</span>' : '') : '', x.cat ? no(x.cat) : ''].filter(Boolean).join(' · ')
+      + (x.check && x.check.s === 'fixed' ? ' <span class="badge">Corrected</span>' : x.check && x.check.s === 'flag' ? ' <span class="badge warn">Check</span>' : '');
     return '<button class="row" type="button" data-tx="' + esc(x.id) + '"><span class="em" aria-hidden="true"' + (acct.name ? ' data-k="' + colour(acct.name) + '"' : '') + '>' + esc(x.emoji || '•') + '</span>'
       + '<span class="rt"><b>' + no(x.merchant) + '</b><small>' + bits + '</small></span><span class="rv' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? '+' : '') + esc(usd2(x.amt))
       + (r && r.rate ? '<small>+' + esc(usd2(r.earned)) + ' <span>back</span></small>' : '') + '</span></button>';
@@ -318,6 +327,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (act === 'prev' || act === 'next') { st.ym = C.ymAdd(st.ym, act === 'prev' ? -1 : 1); if (st.ym > curYm()) st.ym = curYm(); render(); animateIn(main); return; }
       if (act === 'connect') { signIn(); return; }
       if (act === 'read') { scan({ loud: true }); return; }
+      if (act === 'checked') { openList('Ipsy’s check', D.tx.filter(x => C.ymOf(x.date) === st.ym && x.check && (x.check.s === 'fixed' || x.check.s === 'flag'))); return; }
     }
     const fx = e.target.closest('[data-fixed]');
     if (fx) { const id = fx.dataset.fixed; changeSettings(s => { if (!s.dismissed.includes(id)) s.dismissed.push(id); }); toast('Marked fixed.', () => changeSettings(s => { s.dismissed = s.dismissed.filter(x => x !== id); })); return; }
@@ -342,11 +352,74 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<dl class="rgroup kv"><dt>' + (x.dir === 'in' ? 'Into' : 'Card') + '</dt><dd>' + (a.name ? no(a.name) + (x.last4 ? ' ···' + esc(x.last4) : '') + (a.guess ? ' <span>(probably: Monarch’s summary didn’t say)</span>' : '') : 'Not known') + '</dd>'
       + '<dt>Category</dt><dd>' + esc(x.emoji) + ' ' + no(x.cat || '—') + '</dd>'
       + (x.dir === 'out' ? '<dt>Cash back</dt><dd>' + (r && r.rate != null ? esc(usd2(r.earned)) + ' (' + r.rate + '%' + (r.capped ? ', <span>over the bonus limit</span>' : '') + ')' : 'Not set for this card') + '</dd>' : '')
-      + '<dt>From</dt><dd>' + (x.src === 'summary' ? 'Monarch’s summary email' : 'Monarch’s alert email') + '</dd></dl>'
+      + '<dt>From</dt><dd>' + (x.src === 'summary' ? 'Monarch’s summary email' : 'Monarch’s alert email') + '</dd>'
+      + '<dt>Checked</dt><dd>' + checkHtml(x) + '</dd></dl>'
+      + (x.check && x.check.s === 'fixed' && mayRead() && hasGmail() ? '<button class="chip quiet" type="button" data-undocheck="' + esc(x.id) + '" style="align-self:center">' + I.chevL + 'Undo Ipsy’s correction</button>' : '')
       + '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">'
       + '<a class="chip" href="' + esc(x.mid ? 'https://app.monarch.com/links/transactions/' + x.mid : 'https://app.monarch.com/transactions') + '" target="_blank" rel="noopener">' + I.ext + 'Open in Monarch</a>'
       + (hasGmail() && mayRead() ? '<a class="chip quiet" href="https://mail.google.com/mail/u/0/#all/' + esc(gid) + '" target="_blank" rel="noopener">' + I.mail + 'The email</a>' : '') + '</div>';
     if ($('txSheet').hidden) openSheet('txSheet');
+  }
+  const FIELD_NAME = { amount: 'Amount', direction: 'In or out', merchant: 'Merchant', account: 'Card', category: 'Category' };
+  const fieldVal = (f, v) => f === 'amount' ? usd2(parseFloat(v) || 0) : f === 'direction' ? (v === 'in' ? 'Money in' : 'Money out') : v;
+  function checkHtml(x) {
+    const c = x.check;
+    if (!c) return 'Not yet';
+    if (c.s === 'ok') return '✓ <span>Ipsy checked it against the email</span>';
+    if (c.s === 'kept') return 'You kept the app’s reading';
+    if (c.s === 'flag') return '<span>Ipsy couldn’t confirm it against the email</span>' + (c.note ? ': <span translate="no">' + esc(c.note) + '</span>' : '');
+    return '<span>Ipsy corrected it from the email:</span> ' + (c.issues || []).map(i => '<span>' + esc(FIELD_NAME[i.field] || i.field) + '</span> ' + no(fieldVal(i.field, i.was)) + ' → ' + no(fieldVal(i.field, i.now))).join('; ');
+  }
+  const PARSE = { account: P.account, category: P.category };
+  function undoCheck(id) {
+    const i = D.tx.findIndex(t => t.id === id); if (i < 0) return;
+    const x = D.tx[i]; D.tx[i] = C.undoCheck(x, PARSE);
+    D.dirty = [...new Set([...D.dirty, C.ymOf(x.date)])]; persist(); render(); openTx(id, !!st.list); scheduleSync();
+    toast('The app’s reading is back.');
+  }
+  // An email's words for the check: the HTML as text (the plain text drops the merchant and card), up to its footer.
+  const emailText = b => { const t = b.html ? P.htmlText(b.html) : P.decode(b.text || ''); const k = t.search(/If you have any questions|This email was sent to|You can update your\s+notification/i); return (k > 0 ? t.slice(0, k) : t).slice(0, 1500); };
+  // Once a day, on the reader's phone: this month's transactions not checked yet, 20 to a call (POST check).
+  const checkOn = () => ls.get(K.checkOff, '') !== '1';
+  async function dailyCheck({ loud } = {}) {
+    if (st.checking || !signedIn() || !st.server || !st.server.reader || !getToken()) { if (loud) toast(!getToken() ? 'Connect Gmail first, so Ipsy can read the emails.' : 'Only the phone that reads Monarch’s emails can check them.'); return; }
+    if (!loud && (!checkOn() || D.checkDay === today())) return;
+    const todo = C.toCheck(D.tx, today());
+    if (!todo.length) { D.checkDay = today(); persist(); if (loud) toast('Nothing new to check this month.'); return; }
+    st.checking = true; busyPill('Ipsy is checking');
+    let n = 0, fixed = 0, flagged = 0, stop = '';
+    const cache = new Map();
+    try {
+      for (let k = 0; k < todo.length && !stop; k += 20) {
+        const batch = todo.slice(k, k + 20), items = [];
+        await pool(batch, 4, async x => {
+          const gid = x.id.split(':')[0];
+          if (!cache.has(gid)) cache.set(gid, gmail('/messages/' + gid, { format: 'full' }).then(m => ({ subject: header(m, 'subject'), text: emailText(bodies(m.payload)) })).catch(() => null));
+          const e = await cache.get(gid);
+          if (e && e.text.length >= 20) items.push({ id: x.id, subject: e.subject, text: e.text, parsed: { amt: x.amt, dir: x.dir, merchant: x.merchant, account: x.account, last4: x.last4, cat: x.cat } });
+        });
+        if (!items.length) continue;
+        let r;
+        try { r = await api('check', { items }); }
+        catch (err) { stop = err.message || 'error'; break; }
+        const at = Date.now();
+        for (const [id, res] of Object.entries(r.results || {})) {
+          const i = D.tx.findIndex(t => t.id === id); if (i < 0) continue;
+          D.tx[i] = C.applyCheck(D.tx[i], res, at, PARSE);
+          n++; if (D.tx[i].check.s === 'fixed') fixed++; else if (D.tx[i].check.s === 'flag') flagged++;
+          D.dirty = [...new Set([...D.dirty, C.ymOf(D.tx[i].date)])];
+        }
+      }
+      if (!stop || stop === 'limit') D.checkDay = today();
+      D.lastCheck = { at: Date.now(), n, fixed, flagged };
+      persist();
+      pillDone(n ? 'Checked ' + plural(n, 'transaction') : 'Nothing checked');
+      if (stop && stop !== 'limit' && loud) toast(stop === 'no-ai' ? 'Ipsy isn’t set up in aOS yet (its key).' : 'Ipsy couldn’t check just now. Try again later.', null, 5000);
+      else if (fixed || flagged) toast((fixed ? 'Ipsy corrected ' + plural(fixed, 'transaction') : '') + (fixed && flagged ? '. ' : '') + (flagged ? flagged + ' to look at' : '') + '.', null, 5000);
+    } finally {
+      st.checking = false; busyPill(null); render(); if (!$('setSheet').hidden) renderSettings();
+      if (n) sync();
+    }
   }
   function openList(title, list) {
     prep();
@@ -358,6 +431,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if ($('txSheet').hidden) openSheet('txSheet');
   }
   $('txBody').addEventListener('click', e => {
+    const u = e.target.closest('[data-undocheck]'); if (u) { undoCheck(u.dataset.undocheck); return; }
     if (e.target.closest('[data-back]') && st.list) { openList(st.list.title, st.list.list); return; }
     const t = e.target.closest('[data-tx]'); if (t) openTx(t.dataset.tx, !!st.list);
   });
@@ -515,7 +589,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } finally {
       st.reading = false; render(); if (!$('setSheet').hidden) renderSettings();
     }
-    if (signedIn()) sync();
+    if (signedIn()) sync().then(() => dailyCheck());
   }
 
   // ---------------------------------------------------------------------
@@ -549,7 +623,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
             for (const ym of want) {
               const theirs = (r.months[ym] || []).filter(C.okTx), mine = D.tx.filter(x => C.ymOf(x.date) === ym);
               // the reader's own unsent reading stays; everyone else takes the month as it is there
-              const keep = s.reader && D.dirty.includes(ym) ? C.merge(theirs, mine).list : theirs;
+              const keep = s.reader && D.dirty.includes(ym) ? C.merge(mine, theirs).list : theirs;   // this phone's own reading (and checks) win for a month it hasn't sent yet
               D.tx = D.tx.filter(x => C.ymOf(x.date) !== ym).concat(keep);
               D.mAt[ym] = s.meta.months[ym];
             }
@@ -637,6 +711,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           + '<p class="note">What counts as online shopping for the card rates, separated by commas.</p>';
       }
     }
+    if (reader) {
+      const lc = D.lastCheck;
+      html += '<p class="label">Ipsy’s daily check</p><div class="rgroup">'
+        + '<button class="rowbtn" type="button" role="switch" id="checkOn" aria-checked="' + checkOn() + '"><span class="check" aria-hidden="true">' + I.tick + '</span><span>Check each day<span class="sub">Ipsy reads each new transaction’s Monarch email this month, and checks the amount, merchant, card and category</span></span></button>'
+        + '<div class="acct"><p>' + (lc ? '<span>Last checked</span> ' + esc(ago(lc.at)) + ': <span>' + esc(plural(lc.n, 'transaction')) + '</span>' + (lc.fixed ? ', <span>' + esc(plural(lc.fixed, 'correction')) + '</span>' : '') + (lc.flagged ? ', <span>' + esc(lc.flagged + ' to look at') + '</span>' : '') + '.' : 'Not checked yet.') + '</p></div>'
+        + '<button class="rowbtn" type="button" id="checkNow"><span class="ic">' + I.tick + '</span><span>Check now</span></button></div>'
+        + '<p class="note">What passed is never checked again. It uses Claude Sonnet 5.5: a few cents a month.</p>';
+    }
     html += '<p class="label">Your data</p><div class="rgroup">'
       + (D.tx.length ? '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + I.export + '</span><span>Export<span class="sub">As a CSV spreadsheet</span></span></button>' : '')
       + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + I.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">' + (reader ? 'From this phone, and aOS for everyone it’s shared with' : 'From this phone') + '</span></span></button></div>';
@@ -657,6 +739,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (t.closest('#gmailOut')) { signOutGmail(); return; }
     if (t.closest('#readNow')) { closeSheet('setSheet'); scan({ loud: true }); return; }
     if (t.closest('#readAgain')) { closeSheet('setSheet'); scan({ loud: true, again: true }); return; }
+    if (t.closest('#checkOn')) { ls.set(K.checkOff, checkOn() ? '1' : ''); renderSettings(); return; }
+    if (t.closest('#checkNow')) { closeSheet('setSheet'); dailyCheck({ loud: true }); return; }
     const p = t.closest('[data-person]');
     if (p) {
       const id = p.dataset.person, now = new Set(st.server.with || []);
@@ -673,7 +757,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (!w.dataset.armed) { w.dataset.armed = '1'; $('wipeTxt').firstChild.textContent = 'Tap again to delete everything'; setTimeout(() => { if (document.contains(w)) { delete w.dataset.armed; $('wipeTxt').firstChild.textContent = 'Delete all data'; } }, 3500); return; }
       if (st.server && st.server.reader) { try { await api('forget', {}, true); } catch { toast('Couldn’t reach aOS, so nothing was deleted. Try again when you’re online.', null, 6000); return; } }
       const n = D.tx.length;
-      Object.assign(D, { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0 });
+      Object.assign(D, { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, checkDay: '', lastCheck: null });
       persist(); if (signedIn()) await sync(); render(); renderSettings();
       toast('Deleted ' + plural(n, 'transaction') + '.');
     }
@@ -796,6 +880,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // sign-in, else when it's been over an hour.
   (signedIn() ? sync() : Promise.resolve()).then(() => {
     if (getToken() && (back && back.ok || Date.now() - D.lastScan > H)) scan({ loud: !!(back && back.ok) });
+    else if (getToken()) dailyCheck();
     else if (!getToken() && mayRenew() && mayRead() && Date.now() - D.lastScan > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   });
   window.addEventListener('storage', e => { if (e.key === KEY) { load(); render(); } });
@@ -804,12 +889,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (document.visibilityState !== 'visible') return;
     if (curYm() !== shown) { if (st.ym === shown) st.ym = curYm(); shown = curYm(); }
     render();
-    sync().then(() => { if (getToken() && Date.now() - D.lastScan > H) scan(); });
+    sync().then(() => { if (getToken() && Date.now() - D.lastScan > H) scan(); else if (getToken()) dailyCheck(); });
   });
   window.addEventListener('online', () => sync());
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (money/scripts/app-test.mjs) only.
-  window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings };
+  window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings, dailyCheck };
 })();

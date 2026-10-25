@@ -77,6 +77,33 @@ Etsy, eBay, Wayfair, Chewy, Temu, Shein and Zappos to start). **Groceries and wh
 Monarch's Groceries category, or Costco, Sam's Club or BJ's. A card known by its name keeps its
 rewards when it's replaced (Robinhood's **1111, then **9876, are one card).
 
+## Ipsy's daily check
+
+Once a day, the first time Money opens on the reader's phone (after it has read Gmail), Ipsy checks
+**this calendar month's new transactions** (and the last 3 days, so the last of a month is checked on
+the 1st) against the Monarch email each was read from: the amount, money in or out, the merchant, the
+card and the category.
+
+- The phone fetches each email from Gmail again and sends its words (up to its footer, at most 1,500
+  characters) with what the app read to `functions/money/api` (POST `check`), 20 at a time, which asks
+  **Claude Sonnet 5.5** (`MONEY_AI_MODEL`, a Pages secret, names another) with the `ANTHROPIC_API_KEY`
+  secret Travel and Orders already use. Links, email addresses and the greeting (your name) are taken
+  out first; nothing is kept on the server.
+- **Passed**: marked, and never sent again. **A misreading**: corrected from the email, but only with
+  words Claude quotes that really are in that email (a value it can't quote is thrown away, as in
+  Travel's extract), and marked **Corrected**; the transaction's sheet says what changed, with **Undo
+  Ipsy's correction** (the app's reading comes back and stays). **Couldn't confirm**: marked **Check**,
+  with Ipsy's note. Nothing corrected or flagged is sent again either.
+- This month shows a card when Ipsy corrected something or wants you to look ("Ipsy's check"), and
+  the check travels with the transaction to whoever sees Money.
+- Settings > Ipsy's daily check (the reader only): **Check each day** (on; kept on this phone), when it
+  last checked and what it found, and **Check now**.
+- Cost: a call holds only the new emails (about 7 a day, a few thousand tokens), at Sonnet 5.5's
+  $2 / $10 per million tokens in / out: well under $1 a month. At most 8 calls a day for the reader
+  (`money:check:<id>:<day>`).
+- It checks the app's reading of Monarch's email, not Monarch itself: it can't find a transaction
+  Monarch never emailed, or a wrong amount on Monarch's side.
+
 ## Who sees it
 
 - **One phone reads the emails**: Money's reader. It reads its own Gmail, read-only (below), the
@@ -127,8 +154,8 @@ Google can't answer quietly.
 ```
 node money/scripts/parse-test.mjs    # Monarch's emails (made-up ones in its templates)
 node money/scripts/calc-test.mjs     # the sums
-node money/scripts/api-test.mjs      # the server: who may send, see, share and delete
-node money/scripts/app-test.mjs      # the page at iPhone size: every view, a transaction, Settings, both designs
+node money/scripts/api-test.mjs      # the server: who may send, see, share and delete; Ipsy's check
+node money/scripts/app-test.mjs      # the page at iPhone size: every view, a transaction, Settings, Ipsy's check, the designs
 ```
 
 All made-up data: no one's real transactions are in this repository.

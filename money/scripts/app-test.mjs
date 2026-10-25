@@ -9,6 +9,9 @@
 // - Cards and rewards: spending and cash back per card, the rewards chart and its table, the better
 //   card; changing a card's rate in Settings changes what it earned;
 // - Recurring: what repeats and a year of it;
+// - Ipsy's daily check (POST check, against a stand-in for Anthropic's API): a misread merchant
+//   corrected from the email's words (with Undo), one it couldn't confirm marked Check, one that
+//   passed marked and never sent again, all shared through aOS;
 // - the spouse's phone: nothing until the reader shares it (Settings > Who sees Money), then the
 //   same months, and no Gmail;
 // - signed out with no data: the empty page asks to connect Gmail;
@@ -60,6 +63,7 @@ const on = (n, d) => { const x = new Date(NOW.getFullYear(), NOW.getMonth() + n,
 let k = 0;
 const ROCKET = 'Rocket Credit Card', CUSTOM = 'Customized Cash Rewards Visa Signature';
 const T = (d, amt, merchant, extra = {}) => Object.assign({ id: 'seed' + (++k), at: d.getTime(), date: ymd(d), amt, dir: 'out', merchant, account: ROCKET, last4: '9876', cat: 'Shopping', emoji: '🛍', mid: '', src: 'alert', min: 1 }, extra);
+const RECENT_SEED = Date.now() - 3 * 3600e3;
 const SEED = [];
 for (const n of [-3, -2, -1, 0]) {
   for (const d of [2, 9, 16, 23]) if (n < 0 || d < NOW.getDate()) SEED.push(T(on(n, d), 391.5, 'Little Learners', { cat: 'Child Care', emoji: '👶' }));
@@ -68,6 +72,7 @@ for (const n of [-3, -2, -1, 0]) {
   SEED.push(T(on(n, 6), 120, 'Costco', { account: CUSTOM, last4: '1111' }));
   SEED.push(T(on(n, 7), 24.5, 'Corner Diner', { account: CUSTOM, last4: '1111', cat: 'Restaurants', emoji: '🍽' }));
 }
+SEED.push(Object.assign(T(new Date(RECENT_SEED), 88.2, 'Joes Garag', { cat: 'Auto Maintenance', emoji: '🚗' }), { id: 'm5' }));
 SEED.sort((a, b) => b.at - a.at);
 
 // ---- the stand-in Gmail: made-up emails in Monarch's templates ----
@@ -79,6 +84,8 @@ const MAIL = {
   m2: { subject: '✨ You have 2 new updates in Monarch', at: RECENT + 60e3, html: '<html><body><p class="activity-body"><a>A new expense of $42.00 from Book Nook has been categorized as 📚 Books.</a></p><p class="activity-body"><a>A new expense of $15.75 from Corner Diner has been categorized as 🍽 Restaurants.</a></p></body></html>' },
   m3: { subject: '🛠️ Access Expired', at: RECENT, text: 'Hi Pat,\n\nRocket Bank only grants Monarch access for a limited time. To continue syncing, reauthorize the connection.' },
   m4: { subject: 'What’s new at Monarch', at: RECENT, html: '<p>Our new reports are here!</p>' },
+  // read long ago (it's in seen), and read wrong: its merchant is in the phone as "Joes Garag"
+  m5: { subject: '💲 New expense from Joe’s Garage in Monarch', html: alertHtml('We noticed an expense of $88.20 from Joe&#39;s Garage, which was spent from Rocket Credit Card **9876 (...9876) and has been categorized as 🚗 Auto Maintenance.'), at: RECENT - 3600e3 },
 };
 const gmailCalls = [];
 async function gmail(route) {
@@ -93,6 +100,18 @@ async function gmail(route) {
   return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ id, internalDate: String(m.at), payload: { mimeType: 'multipart/alternative', headers: [{ name: 'Subject', value: m.subject }], parts } }) });
 }
 
+// ---- Anthropic's API, as the route sees it (Node's fetch): what Ipsy's check answers ----
+const aiCalls = [];
+globalThis.fetch = async (url, opts) => {
+  if (!String(url).startsWith('https://api.anthropic.com/')) throw new Error('unexpected fetch ' + url);
+  const body = JSON.parse(opts.body), words = body.messages[0].content;
+  aiCalls.push(words);
+  const results = [...words.matchAll(/<item id="([^"]+)">/g)].map(m => m[1]).map(id => id === 'm5' ? { id, ok: false, note: '', issues: [{ field: 'merchant', value: 'Joe\'s Garage', quote: 'from Joe\'s Garage,' }] }
+    : id === 'm1' ? { id, ok: false, note: 'The email names two shops', issues: [{ field: 'merchant', value: 'Book Nook Cafe', quote: 'from Book Nook Cafe' }] }
+    : { id, ok: true, note: '', issues: [] });
+  return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ results }) }] }), { status: 200 });
+};
+
 // ---- the family account server: the real route, on Workers KV in memory ----
 const kv = new Map();
 const KV = { get: async x => kv.has(x) ? kv.get(x) : null, put: async (x, v) => { kv.set(x, String(v)); }, delete: async x => { kv.delete(x); },
@@ -105,7 +124,7 @@ const PAT = await session('OWNER1', 'Pat Example', 'owner'), ALEX = await sessio
 async function api(route) {
   const req = route.request(), u = new URL(req.url());
   const request = new Request('https://site.example' + u.pathname + u.search, { method: req.method(), headers: req.headers(), body: req.method() === 'POST' ? req.postData() : undefined });
-  const res = await onRequest({ request, params: { route: u.pathname.replace(/^\/money\/api\//, '').split('/') }, env: { ACCOUNTS: KV } });
+  const res = await onRequest({ request, params: { route: u.pathname.replace(/^\/money\/api\//, '').split('/') }, env: { ACCOUNTS: KV, ANTHROPIC_API_KEY: 'test-key' } });
   return route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
 }
 
@@ -145,7 +164,7 @@ const mainText = p => p.locator('#main').innerText();
 
 // The reader's phone: signed in, Gmail connected, three months already read, and the made-up Rocket card's
 // 3% set in Settings (the rates Money starts with are Robinhood's and Customized Cash's).
-const A = await phone({ sess: PAT, token: true, data: JSON.stringify({ tx: SEED, alerts: [], hints: [{ name: 'Stream Box', freq: 'Monthly' }], settings: { cards: { 'rocket credit card': { base: 3, online: 0, grocery: 0, cap: 0 } }, dismissed: [], at: 1 }, setDirty: true, mAt: {}, dirty: [ym(-3), ym(-2), ym(-1), ym(0)], seen: [], lastScan: Date.now() - 2 * 3600e3, readAt: 0 }) });
+const A = await phone({ sess: PAT, token: true, data: JSON.stringify({ tx: SEED, alerts: [], hints: [{ name: 'Stream Box', freq: 'Monthly' }], settings: { cards: { 'rocket credit card': { base: 3, online: 0, grocery: 0, cap: 0 } }, dismissed: [], at: 1 }, setDirty: true, mAt: {}, dirty: [ym(-3), ym(-2), ym(-1), ym(0)], seen: ['m5'], lastScan: Date.now() - 2 * 3600e3, readAt: 0 }) });
 const { p } = A;
 
 await test('reads Monarch’s emails: the alert, the summary’s new one (not its repeat), the can’t-sync email; the newsletter is nothing', async () => {
@@ -156,7 +175,7 @@ await test('reads Monarch’s emails: the alert, the summary’s new one (not it
   assert.equal(book[0].account, ROCKET); assert.equal(book[0].mid, '998877665544332211'); assert.equal(book[0].cat, 'Books');
   assert.ok(D.tx.some(x => x.merchant === 'Corner Diner' && x.amt === 15.75 && x.src === 'summary'));
   assert.deepEqual(D.alerts.map(a => [a.inst, a.what]), [['Rocket Bank', 'Access Expired']]);
-  assert.deepEqual(D.seen.sort(), ['m1', 'm2', 'm3', 'm4']);
+  assert.deepEqual(D.seen.sort(), ['m1', 'm2', 'm3', 'm4', 'm5']);
   assert.ok(gmailCalls.some(c => /q=after%3A\d+\+%7Bfrom%3Amonarch\.com/.test(c)), 'asks for what came since the last read, from Monarch: ' + gmailCalls[0]);
 });
 await test('sends what it read to aOS, a month at a time, and becomes the reader', async () => {
@@ -166,6 +185,35 @@ await test('sends what it read to aOS, a month at a time, and becomes the reader
   assert.ok(month.items.some(x => x.merchant === 'Book Nook'));
   assert.ok(kv.has('money:tx:' + ym(-3)));
   assert.equal(JSON.parse(kv.get('money:meta')).alerts[0].inst, 'Rocket Bank');
+});
+await test('Ipsy’s daily check: a misreading corrected from the email, one it couldn’t confirm, one that passed; shared, and never sent twice', async () => {
+  await p.waitForFunction(() => window.__money.D.lastCheck && !window.__money.st.checking, null, { timeout: 15000 });
+  const D = await p.evaluate(() => window.__money.D);
+  const by = id => D.tx.find(x => x.id === id);
+  assert.equal(by('m5').merchant, 'Joe\'s Garage'); assert.equal(by('m5').check.s, 'fixed');
+  assert.deepEqual(by('m5').check.issues, [{ field: 'merchant', was: 'Joes Garag', now: 'Joe\'s Garage' }]);
+  assert.equal(by('m1').merchant, 'Book Nook', 'a value whose words aren’t in the email is never used'); assert.equal(by('m1').check.s, 'flag');
+  assert.equal(by('m2:1').check.s, 'ok');
+  assert.equal(aiCalls.length, 1, 'one call for the day');
+  assert.ok(aiCalls[0].includes('Joe\'s Garage') && !aiCalls[0].includes('pat@example.com'));
+  assert.equal(D.checkDay, D.checkDay && new Date().toLocaleDateString('en-CA'));
+  await p.waitForFunction(() => window.__money.D.dirty.length === 0, null, { timeout: 10000 });
+  assert.equal(JSON.parse(kv.get('money:tx:' + ymd(new Date(RECENT_SEED)).slice(0, 7))).items.find(x => x.id === 'm5').check.s, 'fixed', 'shared through aOS');
+  // again today: nothing is sent; Check now sends only what hasn't been checked (none here with an email)
+  await p.evaluate(() => window.__money.dailyCheck());
+  assert.equal(aiCalls.length, 1);
+  // This month says so; its list; a correction undone
+  await p.waitForSelector('#main [data-act="checked"]');
+  assert.match(await p.locator('#main [data-act="checked"]').innerText(), /1 correction, 1 to look at/);
+  await p.click('#main [data-act="checked"]');
+  assert.equal(await p.locator('#txBody [data-tx]').count(), 2);
+  await p.click('#txBody [data-tx="m5"]');
+  assert.match(await p.locator('#txBody').innerText(), /Ipsy corrected it from the email:\s*Merchant Joes Garag → Joe's Garage/);
+  await p.click('#txBody [data-undocheck]');
+  const after = await p.evaluate(() => window.__money.D.tx.find(x => x.id === 'm5'));
+  assert.equal(after.merchant, 'Joes Garag'); assert.equal(after.check.s, 'kept');
+  assert.match(await p.locator('#txBody').innerText(), /You kept the app’s reading/);
+  await p.click('#txSheet .okbtn');
 });
 await test('This month: the number, the usual, where to save, the categories', async () => {
   await p.waitForSelector('#main .sum');

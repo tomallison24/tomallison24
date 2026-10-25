@@ -407,6 +407,9 @@ button.row:active{background:var(--fill)}
 .search input::placeholder{color:var(--faint)}
 .search svg{color:var(--faint)}
 .note{font-size:13px;color:var(--faint);margin:0 8px;line-height:1.4}
+/* what Ipsy's daily check said, on a transaction's row */
+.badge{display:inline-block;margin-left:4px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;line-height:18px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-text)}
+.badge.warn{background:color-mix(in srgb,var(--flag) 18%,transparent);color:var(--flag)}
 .empty .btn{margin-top:14px}
 /* each card its own colour, on the rewards chart, its legend and its dot */
 .cdot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--k,var(--faint))}
@@ -614,6 +617,8 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 [aria-checked="true"] > .check{background:var(--mc-teal);color:var(--on-accent)}
 .frow input.num{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
 .bigamt{font-weight:600}
+.badge{background:color-mix(in srgb,var(--mc-teal) 18%,transparent);letter-spacing:.02em}
+.badge.warn{background:color-mix(in srgb,var(--mc-orange) 22%,transparent)}
 </style>
 <style id="neon" media="not all">
 /* Night Drive: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */

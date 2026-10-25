@@ -162,4 +162,24 @@ test('open alerts: recent, not marked fixed, the newest per bank, and gone once 
   assert.deepEqual(C.openAlerts(alerts, [], [], '2026-10-24').map(a => a.id), ['a5', 'a3', 'a2']);
 });
 
+test('Ipsy’s check: what to send (this month and the last 3 days, never twice), a correction applied and undone', () => {
+  const P = { account: s => { const m = /^(.*?)\s*\(\.\.\.(\d+)\)$/.exec(s); return m ? { account: m[1], last4: m[2] } : { account: s, last4: '' }; },
+    category: s => { const m = /^([^\p{L}]*)(.*)$/u.exec(s); return { emoji: m[1].trim(), cat: m[2].trim() }; } };
+  const list = [T('2026-11-02', 10, 'A'), T('2026-10-30', 20, 'B'), T('2026-10-20', 30, 'C'), T('2026-11-03', 40, 'D', { check: { s: 'ok', at: 1 } })];
+  assert.deepEqual(C.toCheck(list, '2026-11-02').map(x => x.merchant), ['B', 'A'], 'oldest first; Oct 30 is within 3 days; checked ones never again');
+  const x = T('2026-11-02', 52.1, 'Big Box', ROCKET);
+  const ok = C.applyCheck(x, { s: 'ok' }, 5, P);
+  assert.deepEqual(ok.check, { s: 'ok', at: 5 }); assert.equal(x.check, undefined, 'the old one is left as it was');
+  const flag = C.applyCheck(x, { s: 'unsure', note: 'Two amounts' }, 5, P);
+  assert.deepEqual(flag.check, { s: 'flag', at: 5, note: 'Two amounts' });
+  const fix = C.applyCheck(x, { s: 'fix', issues: [{ field: 'amount', value: '$1,052.10' }, { field: 'account', value: 'Everyday Visa (...1234)' }, { field: 'category', value: '🔨 Home Improvement' }, { field: 'direction', value: 'sideways' }] }, 6, P);
+  assert.equal(fix.amt, 1052.1); assert.equal(fix.account, 'Everyday Visa'); assert.equal(fix.last4, '1234'); assert.equal(fix.cat, 'Home Improvement'); assert.equal(fix.emoji, '🔨'); assert.equal(fix.dir, 'out');
+  assert.deepEqual(fix.check, { s: 'fixed', at: 6, issues: [{ field: 'amount', was: '52.1', now: '1052.1' }, { field: 'account', was: 'Rocket Credit Card (...9876)', now: 'Everyday Visa (...1234)' }, { field: 'category', was: 'Shopping', now: 'Home Improvement' }] });
+  const back = C.undoCheck(fix, P);
+  assert.equal(back.amt, 52.1); assert.equal(back.account, 'Rocket Credit Card'); assert.equal(back.last4, '9876'); assert.equal(back.cat, 'Shopping');
+  assert.deepEqual(back.check, { s: 'kept', at: 6 }, 'kept as the app read it, and never checked again');
+  assert.equal(C.toCheck([back], '2026-11-02').length, 0);
+  assert.deepEqual(C.applyCheck(x, { s: 'fix', issues: [{ field: 'direction', value: 'sideways' }] }, 7, P).check, { s: 'flag', at: 7 }, 'nothing usable: flagged, not fixed');
+});
+
 console.log(n + ' calc tests passed');
