@@ -59,6 +59,7 @@
   const PACE = 1.25;                       // the aOS intro runs a touch slower than the app intros
   const slow = ms => wait(ms * PACE);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const addCss = (id, css) => { if (!document.getElementById(id)) { const st = document.createElement('style'); st.id = id; st.textContent = css; document.head.appendChild(st); } };   // a block of styles, once
 
   // ===========================================================================
   // THE RELEASE LOG: aOS's versions, newest first. One number for everything.
@@ -100,7 +101,9 @@
         'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Tron, a lit visor',
         'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
         'Your language now follows you to your other devices, as your look does',
-        'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name'],
+        'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name',
+        'Fixes from a review of every app: Places no longer re-syncs a place that came back unchanged (it sent it again every second while open); Calendar\'s Year view steps from Feb 29 to Feb 28; Travel says "tomorrow" by your own day, not UTC, and drops a Gmail sign-in Google refused instead of failing for an hour; Podcasts\' mini player shows the right show for an episode with a repeated title; Weather\'s My Location no longer waits out another place\'s forecast; Mail\'s Add tag keeps its name after a failed add',
+        'Tighter everywhere: Calendar and Fitness talk only to the sites they use; Home escapes what Home Assistant reports and plays a camera stream only from its own address; a look or a setting named like one of a program\'s own words (__proto__) is refused rather than kept; Orders links only web addresses for tracking; Places keeps only pins that are on the globe'],
       apps: {
         aos: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'Each helper crosses the Ipsy bar on Home in its own way', 'Run through setup in Account: language, look and your helper'],
           tour: [{ sel: '#askIpsy', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. Now and then it crosses this bar, in its own way.', g: 'tap' }] },
@@ -1121,6 +1124,9 @@
     applyTheme(t);
     dispatchEvent(new CustomEvent('aos:theme', { detail: t }));   // for any page showing its own switch
   }
+  // the System / Light / Dark segment on a card (the tour's, the live tour's), and its taps
+  const themeSeg = () => `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>`;
+  const bindSeg = root => { for (const b of root.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); root.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }; };
   applyTheme(readTheme());   // every app, every time
   // changed on another page (aOS's Appearance, Ipsy in another app): this one follows at once
   addEventListener('storage', e => { if (e.key === 'home.settings') { applyTheme(readTheme()); dispatchEvent(new CustomEvent('aos:theme', { detail: readTheme() })); } });
@@ -1319,7 +1325,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   };
   const SD_STEPS = ['Tap <b>•••</b>, then <b>Share</b>', 'Scroll down, tap <b>Add to Home Screen</b>', 'Keep <b>Open as Web App</b> on, tap <b>Add</b>', 'It\'s on your Home Screen'];
   function safariDemo(host, name, iconUrl, opts = {}) {   // opts.onDone: once, after the first play-through
-    if (!document.getElementById('aos-sd-css')) { const st = document.createElement('style'); st.id = 'aos-sd-css'; st.textContent = SD_CSS; document.head.appendChild(st); }
+    addCss('aos-sd-css', SD_CSS);
     const row = (t, k, cls = '') => `<div class="sd-row ${cls}"><span>${t}</span>${SD_ICON[k]}</div>`;
     const dom = location.host || 'tomallison24-news.pages.dev';
     host.innerHTML = `<div class="aos-sd"><div class="sd-phone"><div class="sd-screen"><i class="sd-island"></i>
@@ -1737,9 +1743,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // ---- the overlay ----
   let open = null;
   function mount(label, inner, resolve, onClose) {
-    if (!document.getElementById('aos-welcome-css')) {
-      const st = document.createElement('style'); st.id = 'aos-welcome-css'; st.textContent = CSS; document.head.appendChild(st);
-    }
+    addCss('aos-welcome-css', CSS);
     const el = document.createElement('div');
     el.id = 'aos-welcome'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label);
     if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage' || /^(neon|folk|grid)$/.test(document.documentElement.dataset.look || '')) el.classList.add('mc');   // aOS2's screens: mid-century (in Night Drive, Folk and Tron, theirs)
@@ -1878,12 +1882,12 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     const draw = () => {
       const c = cards[i];
       el.classList.toggle('tall', c.x === 'install' || !!c.tall);
-      const extra = c.x === 'theme' ? `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>`
+      const extra = c.x === 'theme' ? themeSeg()
         : c.x === 'look' ? `<div class="c-looks" role="listbox" aria-label="Look">${LOOKS.map(([v, n, d]) => `<button type="button" role="option" class="c-look" data-look="${v}" aria-selected="${v === window.aosLook.get()}"><i class="c-sw ${v}" aria-hidden="true"></i><span><b>${v === 'grid' ? 'Tron <span class="se">Special Edition</span>' : n}</b><small>${d}</small></span></button>`).join('')}</div>`
         : c.x === 'store' ? `<a class="c-link" href="${url('../aOS/')}">Open aOS</a>`
         : c.x === 'notes' ? `<ul class="c-notes" data-ipsy="as-is">${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>${c.more ? `<a class="c-link" href="${url('../aOS/#whats-new')}">${c.more}</a>` : ''}` : '';
       body.innerHTML = `${c.noart ? '' : `<div class="c-art">${lineSvg(c.i)}</div>`}<h2>${c.h || esc(c.t)}</h2>${c.x === 'install' ? steps(c.name) : c.dh ? `<p>${c.dh}</p>` : c.d ? `<p>${esc(c.d)}</p>` : ''}${extra}`;
-      for (const b of body.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); body.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+      bindSeg(body);
       for (const b of body.querySelectorAll('.c-look')) b.onclick = () => {   // aOS's look, before it is added: its icon follows
         window.aosLook.set(b.dataset.look); if (c.onLook) c.onLook(b.dataset.look);
         body.querySelectorAll('.c-look').forEach(x => x.setAttribute('aria-selected', String(x === b)));
@@ -2183,8 +2187,8 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     const fill = s => {
       card.querySelector('h3').textContent = s.t;
       card.querySelector('p').textContent = s.d;
-      card.querySelector('.s-x').innerHTML = s.theme ? `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>` : '';
-      for (const b of card.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); card.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+      card.querySelector('.s-x').innerHTML = s.theme ? themeSeg() : '';
+      bindSeg(card);
       card.querySelector('.w-dots').innerHTML = list.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('');
       q('.s-back').hidden = i === 0;
       q('.s-next').textContent = i === list.length - 1 ? (opts.last || 'Get started') : 'Next';
@@ -2491,7 +2495,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
       return;
     }
     if (was) return;
-    if (!document.getElementById('aos-off-css')) { const st = document.createElement('style'); st.id = 'aos-off-css'; st.textContent = OFF_CSS; document.head.appendChild(st); }
+    addCss('aos-off-css', OFF_CSS);
     const day = new Date(p.ends).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
     const el = document.createElement('div');
     el.id = 'aos-off'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', `${NAMES[APP]} is off`);
@@ -2593,7 +2597,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     let how = null; try { how = sessionStorage.getItem(ERASED); sessionStorage.removeItem(ERASED); } catch {}
     if (!how) return false;
     try { localStorage.clear(); } catch {}
-    if (!document.getElementById('aos-off-css')) { const st = document.createElement('style'); st.id = 'aos-off-css'; st.textContent = OFF_CSS; document.head.appendChild(st); }
+    addCss('aos-off-css', OFF_CSS);
     const el = document.createElement('div');
     el.id = 'aos-off'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Erased');
     el.innerHTML = `<div class="o-card"><h1>Signed out and erased</h1>
@@ -2688,7 +2692,7 @@ html[data-look]:not([data-look="glass"]) .aos-fback{color:var(--text,#2B2522);ba
       const way = dlg && !dlg.closest(SHARED) && !dlg.closest('[data-nofloat]') && !typing() ? wayOut(dlg) : null;
       if (!way) { if (fb) fb.hidden = true; src = null; return; }
       if (!fb) {
-        if (!document.getElementById('aos-fb-css')) { const st = document.createElement('style'); st.id = 'aos-fb-css'; st.textContent = FB_CSS; document.head.appendChild(st); }
+        addCss('aos-fb-css', FB_CSS);
         fb = document.createElement('button');
         fb.type = 'button'; fb.className = 'aos-fback';
         fb.addEventListener('click', () => { if (src && document.contains(src)) src.click(); soon(); });

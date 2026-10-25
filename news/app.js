@@ -1394,7 +1394,7 @@
     if (!m.lineups.length) return `<p class="gnone">${m.kind === 'rugby' ? 'Line-ups come with the team news.' : 'Line-ups come about an hour before kick-off.'}</p>`;
     const football = m.kind === 'football', started = m.state !== 'pre';
     const cards = p => `${p.yc ? '<i class="cd y" aria-label="Yellow card"></i>' : ''}${p.rc ? '<i class="cd r" aria-label="Red card"></i>' : ''}`;
-    const num = (n, hot) => `<span class="n${n ? ' on' : ''}">${n || '·'}</span>`;
+    const num = n => `<span class="n${n ? ' on' : ''}">${n || '·'}</span>`;
     const row = (p, played) => {
       const cols = football && started && played && p.stats
         ? (p.pos === 'G' ? `<span class="gk">${p.sv} saves · ${p.ga} conceded</span>` : `${num(p.g)}${num(p.a)}${num(p.sh)}${num(p.sot)}`) : '';

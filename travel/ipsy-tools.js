@@ -164,7 +164,7 @@ window.TravelIpsy = function (app) {
 
     async add_booking(q) {
       const kind = q.kind;
-      if (!app.EDIT_FIELDS[kind]) fail('kind is flight, hotel, car or other.');
+      if (!Object.prototype.hasOwnProperty.call(app.EDIT_FIELDS, kind)) fail('kind is flight, hotel, car or other.');   // not constructor or toString
       const pairs = Object.entries(q.fields && typeof q.fields === 'object' ? q.fields : {}).map(([field, value]) => ({ field, value: value == null ? '' : String(value) }));
       const o = app.checkEdit({ op: 'add', kind, pairs });
       if (!o) {

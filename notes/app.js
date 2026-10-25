@@ -69,7 +69,6 @@
 
   // ---------- dates ----------
   const iso = t => new Date(t).toISOString();
-  const at = (days, hour) => { const d = new Date(now + days*D); d.setHours(hour,0,0,0); return iso(d); };
   const pad = n => String(n).padStart(2,'0');
   const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   const dayOff = n => { const d = new Date(); d.setDate(d.getDate()+n); return ymd(d); };

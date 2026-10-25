@@ -86,7 +86,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     car: '<svg viewBox="0 0 24 24"><path d="M4 15.8v-3.2l1.8-4.5a2.4 2.4 0 0 1 2.2-1.5h8a2.4 2.4 0 0 1 2.2 1.5l1.8 4.5v3.2a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 15.8z"/><path d="M4 12.6h16"/><path d="M6.6 17.2v1.6M17.4 17.2v1.6"/><circle cx="7.6" cy="14.8" r=".6" class="fs"/><circle cx="16.4" cy="14.8" r=".6" class="fs"/></svg>',
     other: '<svg viewBox="0 0 24 24"><rect x="3.8" y="4.6" width="16.4" height="16" rx="3.2"/><path d="M3.8 9.6h16.4M8.4 2.8v3.6M15.6 2.8v3.6"/></svg>',
     plane: '<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>',
-    check: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
     map: '<svg viewBox="0 0 24 24"><path d="M12 21s-6.6-5.6-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.4-6.6 11-6.6 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
     cal: '<svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/></svg>',
@@ -216,7 +215,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (m < 0) return '';
     if (m < 60) return 'in ' + m + ' min';
     if (m < 36 * 60) { const h = Math.floor(m / 60), r = m % 60; return 'in ' + h + ' h' + (r && h < 10 ? ' ' + r + ' min' : ''); }
-    const days = Math.round((dOf(new Date(t).toISOString().slice(0, 10)) - dOf(todayStr())) / D);
+    const days = Math.round((dOf(ymd(new Date(t))) - dOf(todayStr())) / D);   // both on this phone's calendar (toISOString is UTC: a late flight read as the day after)
     return days <= 1 ? 'tomorrow' : 'in ' + days + ' days';
   }
   const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
@@ -1020,7 +1019,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { res = await fetch(url, { headers: { Authorization: 'Bearer ' + tok.t }, signal: ctl.signal }); text = await res.text(); }
     catch { clearTimeout(timer); if (tries < 2) { await sleep(600 * 2 ** tries); return gmail(path, params, tries + 1); } throw new Error('No connection to Gmail'); }
     clearTimeout(timer);
-    if (res.status === 401) { if (tok === ownToken()) ls.del(K.token); throw new AuthError('expired'); }
+    if (res.status === 401) { const own = ownToken(); if (own && own.t === tok.t) ls.del(K.token); throw new AuthError('expired'); }   // ownToken() parses afresh each call, so compare the token, not the object
     if (res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text))) { if (tries < 2) { await sleep(2500 + Math.random() * 1500); return gmail(path, params, tries + 1); } throw new Error('Gmail asked to slow down. Try again in a minute.'); }
     if (res.status >= 500 && tries < 2) { await sleep(800 * 2 ** tries); return gmail(path, params, tries + 1); }
     if (!res.ok) { let m = text.slice(0, 160); try { m = JSON.parse(text).error.message; } catch {} throw new Error(m || 'Gmail returned ' + res.status); }
@@ -1785,8 +1784,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     company: 'company', pickupPlace: 'pick-up place', pickup: 'pick-up', dropoff: 'drop-off', dropPlace: 'drop-off place', carClass: 'car', title: 'title', place: 'place', start: 'starts', end: 'ends' };
   const clipS = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, n);
   // One field and value of a kind, normalised, or null when it is not allowed.
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);   // a kind or field named like Object's own (constructor, __proto__) is not one of ours
   function checkField(kind, field, value) {
-    const re = EDIT_FIELDS[kind] && EDIT_FIELDS[kind][field];
+    const re = own(EDIT_FIELDS, kind) && own(EDIT_FIELDS[kind], field) && EDIT_FIELDS[kind][field];
     if (!re) return null;
     let v = clipS(value, 300);
     if (/^(airlineCode|from|to|conf)$/.test(field)) v = v.toUpperCase();
@@ -1800,7 +1800,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (o.op === 'set') { const f = b && checkField(b.type, clipS(o.field, 20), o.value); return f ? { op: 'set', id, field: f.field, value: f.value } : null; }
     if (o.op === 'add') {
       const kind = clipS(o.kind, 10);
-      if (!EDIT_FIELDS[kind] || !Array.isArray(o.pairs)) return null;
+      if (!own(EDIT_FIELDS, kind) || !Array.isArray(o.pairs)) return null;
       const fields = {};
       for (const p of o.pairs.slice(0, 20)) { const f = p && checkField(kind, clipS(p.field, 20), p.value); if (!f) return null; if (f.value) fields[f.field] = f.value; }
       return EDIT_NEEDED[kind].every(k => fields[k]) ? { op: 'add', kind, pairs: Object.entries(fields).map(([field, value]) => ({ field, value })) } : null;

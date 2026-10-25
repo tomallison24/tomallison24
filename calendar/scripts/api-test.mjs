@@ -234,7 +234,7 @@ await test('a calendar that vanished is looked up afresh next time', async () =>
 await test('replies carry the safety headers', async () => {
   const r = await call('GET', 'ping');
   assert.equal(r.headers.get('X-Content-Type-Options'), 'nosniff');
-  assert.equal(r.headers.get('Content-Security-Policy'), "sandbox; default-src 'none'");
+  assert.equal(r.headers.get('Content-Security-Policy'), "default-src 'none'; sandbox");
   assert.equal(r.headers.get('Cache-Control'), 'no-store');
 });
 await test('never talks to a host that is not iCloud, even on a redirect', async () => {

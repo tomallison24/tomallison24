@@ -222,8 +222,10 @@ family({
       } else if (types.includes('hls')) {
         const r = await HA.send({ type: 'camera/stream', entity_id: DOORBELL.cam });
         if (this.live !== L) return;
+        const src = haPic(r && r.url);   // only a path on the Home Assistant address (or https), as every picture
+        if (!src) return fail('Home Assistant has no live stream for this camera.');
         const v = video(); if (!v) return;
-        v.src = saved().url + r.url;
+        v.src = src;
         v.addEventListener('playing', () => { if (this.live === L) { L.status = 'playing'; render(); } }, { once: true });
         v.addEventListener('error', () => fail('This browser could not play the camera\'s stream.'), { once: true });
         v.play().catch(() => {});

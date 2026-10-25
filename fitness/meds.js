@@ -18,7 +18,7 @@
 // never reads as a miss. A streak is the run of days with everything taken,
 // up to yesterday (or today, once today is done); days it isn't taken on
 // don't break it. With the Google Sheet connected the phone keeps only the
-// last 30 days of doses (app.js), so 'floor' is the first day still here:
+// last 90 days of doses (app.js), so 'floor' is the first day still here:
 // nothing before it is counted as missed, and a streak that reaches it says so.
 (function (root) {
   const D = 864e5;

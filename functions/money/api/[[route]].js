@@ -43,7 +43,7 @@
 // _middleware.js locks it to signed-in family.
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
-import { T, DAY, persona, modelOf, requestHead, ipsyStep } from '../../../server/ipsy.js';
+import { T, DAY, persona, modelOf, requestHead, ipsyStep, today } from '../../../server/ipsy.js';
 
 // ---- Ipsy, the helper you chat with: its tools in Money (money/ipsy-tools.js runs them, read only) ----
 const MONTH = { type: 'string', description: 'YYYY-MM' };
@@ -409,8 +409,7 @@ async function check(request, env, db, me) {
     items.push({ id: x.id, subject: scrub(x.subject).slice(0, 200), text,
       parsed: { amt: num(p.amt), dir: p.dir === 'in' ? 'in' : 'out', merchant: str(p.merchant, 120), account: str(p.account, 120) + (/^\d{3,5}$/.test(p.last4 || '') ? ' (...' + p.last4 + ')' : ''), cat: str(p.cat, 60) } });
   }
-  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const ck = 'money:check:' + me.id + ':' + day, n = (+(await db.get(ck)) || 0) + 1;
+  const ck = 'money:check:' + me.id + ':' + today(), n = (+(await db.get(ck)) || 0) + 1;
   if (n > CHECK_DAILY) return reply({ error: 'limit' }, 429);
   await db.put(ck, String(n), { expirationTtl: 2 * 86400 });
   const prompt = items.map(it => [

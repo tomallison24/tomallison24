@@ -93,14 +93,18 @@ window.NewsIpsy = function (app) {
       const t = topicOf(q.topic), src = low(clip(q.source, 80));
       const days = Number.isInteger(q.days) && q.days > 0 ? Math.min(q.days, 60) : 0;
       const limit = Math.max(1, Math.min(60, Number.isInteger(q.limit) ? q.limit : 20));
-      const from = new Date(); from.setHours(0, 0, 0, 0); from.setDate(from.getDate() - (days - 1));
+      // By calendar date, as the app's Today / 7 days filter counts: a journal's day-only date (midnight UTC)
+      // counts as that date, not as the evening before in the phone's time zone.
+      const pad = n => String(n).padStart(2, '0'), ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      const from = new Date(); from.setDate(from.getDate() - (days - 1));
+      const fromDay = ymd(from), dayOf = iso => /T00:00:00(\.000)?Z$/.test(iso) ? iso.slice(0, 10) : ymd(new Date(iso));
       const pool = t === app.LATEST.id ? app.storiesFor(t) : all;           // Latest: as the app lists it
       const seen = new Set();
       const list = pool.filter(s => {
         if (seen.has(s.id)) return false; seen.add(s.id);
         if (t && t !== app.LATEST.id && s.topic !== t) return false;
         if (src && !low(s.source).includes(src)) return false;
-        if (days && !(s.published && new Date(s.published) >= from)) return false;
+        if (days && !(s.published && !isNaN(new Date(s.published)) && dayOf(s.published) >= fromDay)) return false;
         if (words.length) { const hay = low([s.title, s.summary, s.source, ...(s.tags || [])].join(' ')); if (!words.every(w => hay.includes(w))) return false; }
         return true;
       }).sort((a, b) => String(b.published || '').localeCompare(String(a.published || '')));

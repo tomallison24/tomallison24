@@ -57,7 +57,7 @@ const heaters = family({
       preset, modes, hasTimer: !!T, hrs, left };
   },
   // "Eco · 1500 W": the mode and the wattage it is set to.
-  setting(r) { return [r.preset ? htCap(r.preset) : '', r.high ? '1500 W' : '750 W'].filter(Boolean).join(' · '); },
+  setting(r) { return [r.preset ? esc(htCap(r.preset)) : '', r.high ? '1500 W' : '750 W'].filter(Boolean).join(' · '); },
   title(h, r) {
     if (r.offline) return offWord(h.ent);
     return r.mood === 'off' ? 'Off' : r.mood === 'heating' ? `Heating · ${Math.round(r.w)} W` : 'Holding at target';
@@ -114,7 +114,7 @@ const heaters = family({
         ['tgt', this.step(h, r)],
         ['power', grp(swRow('power', 'Power', 'power', r.on, a === h.acc.off ? PAL.on : a, { dis: r.offline, wait: tWaiting(r.d, 'mode') }), true)],
         ['level', lbl('WATTAGE') + segHTML('level', HT_WATTS, r.high ? '2' : '1', { dis: r.offline || gone(h.level), wait: tWaiting(r.d, 'level') })],
-        ['preset', lbl('MODE') + segHTML('preset', r.modes.map(m => [m, htCap(m)]), r.preset, { dis: r.offline, wait: tWaiting(r.d, 'preset') })],
+        ['preset', lbl('MODE') + segHTML('preset', r.modes.map(m => [m, esc(htCap(m))]), r.preset, { dis: r.offline, wait: tWaiting(r.d, 'preset') })],
         r.hasTimer ? ['timer', lbl('COUNTDOWN' + (r.on && r.left ? ' · OFF IN ' + htLeft(r.left).toUpperCase() : '')) + chipsHTML('timer', HT_HOURS, r.on ? r.hrs : null, { dis: !r.on })] : null,
         ['feat', lbl('FEATURES') + grp(swRow('lock', 'Child lock', r.lock ? 'lock' : 'lockOpen', r.lock, a, { dis: gone(h.lock), wait: tWaiting(r.d, 'lock') })
           + swRow('light', 'Backlight', 'lightbulb', r.back, a, { dis: gone(h.light), wait: tWaiting(r.d, 'light') }))],

@@ -247,7 +247,7 @@ family({
     const C = st(HATCH.clock), ck = C && C.state === 'on' ? Math.round((C.attributes.brightness || 0) / 2.55) : 0;
     return { d, A, LA, offline, lit, playing, bri, rgb, vol, mood, ck, sound: A.sound_mode };
   },
-  title(r) { return r.offline ? (gone(HATCH.ent) ? offWord(HATCH.ent) : 'Offline') : r.playing ? niceSound(r.sound) : r.lit ? 'Night light' : 'Resting'; },
+  title(r) { return r.offline ? (gone(HATCH.ent) ? offWord(HATCH.ent) : 'Offline') : r.playing ? esc(niceSound(r.sound)) : r.lit ? 'Night light' : 'Resting'; },
   sub(r) { return r.offline ? 'The Hatch is not reachable' : (r.lit ? `Light ${r.bri}%` : 'Light off') + ' · ' + (r.playing ? `Volume ${r.vol}%` : 'Sound off'); },
   // The lamp behind frosted glass, sound rings round it, a clock capsule.
   lamp(r, size) {

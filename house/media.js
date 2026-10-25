@@ -153,7 +153,7 @@ function mediaFamily(cfg) {
         A.source && p.kind !== 'tv' ? readRow('input', 'Source', asIs(A.source)) : '',
         p.mic && st(p.mic) ? readRow('mic', 'Microphone', isOn(p.mic) ? 'On' : 'Off') : '',
         p.battery && st(p.battery) ? readRow('battery', 'Battery', gone(p.battery) ? '—' : Math.round(num(p.battery)) + '%' + (isOn(p.charging) ? ' · Charging' : '')) : '',
-        A.queue_size != null ? readRow('music', 'In the queue', A.queue_size) : '',
+        A.queue_size != null ? readRow('music', 'In the queue', esc(A.queue_size)) : '',
       ].join('');
       return {
         title: p.name, accent: a, fx: this.fx(p, r, 150), pill: pillHTML2(pill),

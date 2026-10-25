@@ -931,18 +931,20 @@
   addEventListener('focus', recheck);
   addEventListener('pageshow', e => { if (e.persisted) recheck(); });
 
+  // the apps' update screens link to #whats-new, the plan card to #subscription: Account, at that section
+  const openHash = () => { const at = { '#whats-new': 'updates', '#subscription': 'plan' }[location.hash]; if (!at) return false; history.replaceState(null, '', location.pathname); acctPage(at); return true; };
   getState().then(st => {
     lastCheck = Date.now();
     paintSigninCard(); paintAvatars();
     if (st.user) syncPush();
-    if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); }
-    else if (location.hash === '#lost-phone') { history.replaceState(null, '', location.pathname); lostPage(); }
+    if (openHash()) return;
+    if (location.hash === '#lost-phone') { history.replaceState(null, '', location.pathname); lostPage(); }
     else if (invite || (st.storage && !st.setup && !st.error)) acctPage();
   });
   // a tap on a notification while aOS is already open (aOS/sw.js)
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
     if (e.data && e.data.aosGo === '#whats-new') { const w = $('whats-new'); if (w) { unfold(w, true); w.scrollIntoView({ block: 'start' }); } else acctPage('updates'); }
   });
-  addEventListener('hashchange', () => { if (location.hash === '#whats-new' || location.hash === '#subscription') { const at = location.hash === '#whats-new' ? 'updates' : 'plan'; history.replaceState(null, '', location.pathname); acctPage(at); } });
+  addEventListener('hashchange', openHash);
 })();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -24,7 +24,7 @@
     folk: { ground: ['#F4F7FD', '#0F0B07'], icon: ['icon-folk-180.png?v=1', 'icon-folk-512.png?v=1'], bar: 'default' },
     grid: { ground: ['#F3F5F7', '#050608'], icon: ['icon-grid-180.png?v=1', 'icon-grid-512.png?v=1'], bar: 'default' },
   };
-  const ok = v => v in SET ? v : null;
+  const ok = v => typeof v === 'string' && Object.prototype.hasOwnProperty.call(SET, v) ? v : null;   // own keys only: 'constructor' or '__proto__' on the address is not a look
   const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const fromCookie = () => ok((/(?:^|; )aos_look=(\w+)/.exec(document.cookie) || [])[1]);
   const fromUrl = () => ok(new URLSearchParams(location.search).get('look'));

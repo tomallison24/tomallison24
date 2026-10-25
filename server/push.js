@@ -128,8 +128,8 @@ export async function audienceIds(db) {
   do {
     const page = await db.list({ prefix: 'push:', cursor });
     for (const k of page.keys) {
-      const id = k.name.slice(5), u = await getJSON(db, 'user:' + id);
-      if (u && !u.removed && (await devices(db, id)).length) out.push({ id, name: u.name, devices: (await devices(db, id)).length });
+      const id = k.name.slice(5), u = await getJSON(db, 'user:' + id), n = u && !u.removed ? (await devices(db, id)).length : 0;
+      if (n) out.push({ id, name: u.name, devices: n });
     }
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);

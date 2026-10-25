@@ -7,6 +7,7 @@
 // Calendar says to sign in. Calendar is checked at its old Calendar Vintage address too (served from
 // calendar/, as the deploy does), which reads the same layers.
 //   node calendar/scripts/layers-test.mjs [repo root]
+process.env.TZ = 'America/Denver';   // this test's own dates (TODAY, TOMORROW) read in the zone the browsers get below
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
