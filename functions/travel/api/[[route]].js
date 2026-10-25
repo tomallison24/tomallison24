@@ -83,7 +83,7 @@ async function countFor(env, request, what, daily) {
   await db.put(key, String(n), { expirationTtl: 2 * 86400 });
   return true;
 }
-const MAX_BODY = 24 * 1024;
+const MAX_BODY = 64 * 1024;   // bytes: the app's excerpt (up to 8,000 characters, 4 bytes each at worst), what it knows and the subject
 const MAX_TEXT = 9000;
 
 export async function onRequestGet({ request, params, env, waitUntil }) {
