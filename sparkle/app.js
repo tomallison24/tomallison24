@@ -1027,7 +1027,8 @@
     const m = Care.mood(pet), w = Care.want(pet);
     V.say([m === 'sleep' ? 'Shh... your unicorn is fast asleep.' : m === 'sad' ? `Oh no, your unicorn is sad. ${WANT_TIP[w]}` : m === 'happy' ? 'Your unicorn is so happy to see you!' : WANT_TIP[w]], { who: 'narrator' });
     // asleep while she watches: rest fills a little each second, and her unicorn wakes when it's full
-    stableT = setInterval(() => { const p = petNow(); if (screen !== 'stable') return stableStop();
+    uniU = 0; uniLeft = false; wanderAt = Date.now() + 1500;
+    stableT = setInterval(() => { const p = petNow(); if (screen !== 'stable') return stableStop(); wander();
       if (p.asleep) { p.rest = Math.min(100, p.rest + 1); if (p.rest >= 100) { Care.wake(p); paintStable(); V.sfx('sparkle'); V.say(['Your unicorn is all rested! Good morning!'], { who: 'narrator' }); } else paintNeeds(); persist(); } }, 1000);
   }
   function uniSvg(pet) { return A.unicorn(stageOf(me), wearing(me), { mood: fx.eat ? 'eat' : Care.mood(pet) === 'calm' ? 'calm' : Care.mood(pet), dirt: Care.dirt(pet), foam: fx.foam, shine: fx.shine }); }
@@ -1036,7 +1037,7 @@
     $('stableCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
     $('stall').classList.toggle('night', !!pet.asleep);
     $('stall').innerHTML = (ST ? ST.scene({ night: pet.asleep, lantern: pet.asleep }) : '')
-      + `<div class="uni" id="uni" role="button" aria-label="Your unicorn">${uniSvg(pet)}</div><div class="fx" id="stallFx">${pet.asleep ? '<span class="zz" style="left:60%;top:30%">z</span><span class="zz" style="left:66%;top:22%;animation-delay:.8s">z</span>' : ''}</div>`
+      + `<div class="uni ${uniLeft ? 'left' : ''} ${pet.asleep && !reduce() ? 'breathe' : ''}" id="uni" role="button" aria-label="Your unicorn" style="--x:${uniPx()}px">${uniSvg(pet)}</div><div class="fx" id="stallFx">${pet.asleep ? '<span class="zz" style="left:60%;top:30%">z</span><span class="zz" style="left:66%;top:22%;animation-delay:.8s">z</span>' : ''}</div>`
       + (w && !pet.asleep && ST ? `<span class="want" aria-hidden="true">${ST.need(w, 42)}</span>` : '');
     paintNeeds();
     $('careTabs').innerHTML = CARE_TABS.map(([id, name, need]) => `<button type="button" data-ct="${id}" aria-pressed="${id === careTab}">${need && ST ? ST.need(need, 22) : A.coin(22)} ${name}</button>`).join('');
@@ -1083,11 +1084,12 @@
     if (id === 'lantern') { if (pet.asleep) { Care.wake(pet); V.sfx('sparkle'); V.say(['Good morning, unicorn!'], { who: 'narrator' }); } else { Care.sleep(pet); V.sfx('whoosh'); V.say(['Goodnight, unicorn. Sweet dreams!'], { who: 'narrator' }); }
       persist(); paintStable(); return; }
     if (pet.asleep) { V.say(['Shh... your unicorn is sleeping. Wake your unicorn up under Sleep.'], { who: 'narrator' }); return; }
+    halt();
     if (careTab === 'food') {
       if (pet.food >= 96) { const u = $('uni'); u.classList.remove('shake'); void u.offsetWidth; u.classList.add('shake'); V.sfx('again'); V.say(["Your unicorn is full! Maybe later."], { who: 'narrator' }); return; }
       if (!Care.feed(pet, id)) return;
       // the food flies to her mouth, then munch munch
-      const [x0, y0] = stallXY(...centerOf(b)), r = uniBox(), [x1, y1] = stallXY(r.left + r.width * MOUTH[0], r.top + r.height * MOUTH[1]);
+      const [x0, y0] = stallXY(...centerOf(b)), r = uniBox(), [x1, y1] = stallXY(r.left + r.width * (uniLeft ? 1 - MOUTH[0] : MOUTH[0]), r.top + r.height * MOUTH[1]);
       const f = spot({ className: 'fly' }, thing(id), x0 - 35, y0 - 35); requestAnimationFrame(() => { f.style.transform = `translate(${x1 - x0}px,${y1 - y0}px) scale(.5)`; f.style.opacity = '0'; });
       setTimeout(() => f.remove(), 800);
       await wait(550); fx.eat = true; paintUni(); const u = $('uni'); u.classList.add('chew'); V.sfx('pop'); setTimeout(() => V.sfx('pop'), 300); setTimeout(() => V.sfx('pop'), 600);
@@ -1113,8 +1115,32 @@
       hearts(2); persist(); paintNeeds();
     }
   });
-  // where her mouth is in the unicorn's picture (a share of its width and height), for food to fly to
-  const MOUTH = [0.88, 0.52];
+  // where her mouth is in the unicorn's picture (a share of its width and height, facing right), for food to fly to
+  const MOUTH = [0.876, 0.565];
+  // her unicorn wanders the stable when left be: a few steps one way or the other (slowly when sad or
+  // tired), a nod, a nibble of the straw; never asleep, eating, while being washed or brushed, or with Reduce Motion.
+  // uniU: how far from the middle she is, in the stable picture's units (it's 400 wide)
+  let uniU = 0, uniLeft = false, wanderAt = 0;
+  const uniUnit = () => $('stall').getBoundingClientRect().width / 400, uniPx = () => uniU * uniUnit();
+  function wander() {
+    const u = $('uni'), pet = me.pet; if (!u || reduce() || pet.asleep || fx.eat || tool || rub || Date.now() < wanderAt) return;
+    const roll = Math.random(), slow = Care.mood(pet) === 'sad' || pet.rest < 20;
+    if (roll < 0.55) {
+      const to = Math.round((Math.random() * 2 - 1) * 72), d = Math.abs(to - uniU); if (d < 18) return;
+      const secs = d / (slow ? 30 : 55);
+      uniLeft = to < uniU; u.classList.toggle('left', uniLeft); u.style.setProperty('--t', secs.toFixed(2) + 's');
+      uniU = to; u.style.setProperty('--x', uniPx() + 'px'); u.classList.add('walk');
+      clearTimeout(u.stopT); u.stopT = setTimeout(() => u.classList.remove('walk'), secs * 1000);
+      wanderAt = Date.now() + secs * 1000 + 1500 + Math.random() * 3500;
+    } else { u.classList.remove('nod', 'graze'); void u.offsetWidth; u.classList.add(roll < 0.8 ? 'nod' : 'graze'); wanderAt = Date.now() + 3000 + Math.random() * 3000; }
+  }
+  // stand still where she is (mid-step too): to be fed, washed, brushed or played with
+  function halt() {
+    const u = $('uni'); if (!u) return;
+    const at = parseFloat((getComputedStyle(u).translate || '0').split(' ')[0]) || 0;
+    uniU = at / uniUnit(); u.style.setProperty('--t', '0s'); u.style.setProperty('--x', at + 'px'); u.classList.remove('walk', 'nod', 'graze'); clearTimeout(u.stopT);
+    wanderAt = Date.now() + 4000;
+  }
   // the sponge and the brush: rub across her (a tap scrubs a little too); a tap with nothing in hand is a pat
   let rub = null;
   $('stall').addEventListener('pointerdown', e => {
@@ -1124,7 +1150,7 @@
     const pet = petNow();
     if (pet.asleep) { V.say(['Shh... your unicorn is sleeping.'], { who: 'narrator' }); return; }
     if (!tool) { if (Date.now() - patAt > 900) { patAt = Date.now(); Care.pat(pet); hearts(2); V.sfx('sparkle'); paintNeeds(); persist(); } return; }
-    rub = { x: e.clientX, y: e.clientY, d: 0, at: 0 };
+    halt(); rub = { x: e.clientX, y: e.clientY, d: 0, at: 0 };
     try { e.target.closest('#uni').setPointerCapture(e.pointerId); } catch {}
     scrub(e, 14);
   });

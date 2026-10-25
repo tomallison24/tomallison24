@@ -79,6 +79,9 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   brushes the mane, plays with the ball (and the bubble wand, ribbon and kite from the shop), pats it,
   and puts it to bed with the lantern: asleep, rest fills (faster while she watches) and it wakes when
   rested, or when she rides off. Too tired or hungry, it won't play. Coins only buy extras.
+  Left be, it wanders the stable (each leg swinging, a little trot, facing the way it goes; slower
+  when sad or tired), nods and nibbles the straw, its tail always swishing; it stands still to be fed,
+  washed or played with, and only breathes slowly asleep (none of it with Reduce Motion).
 - **Her bedroom** (`bedroom.js`): tap things to play with them: the bed puts her to sleep (night,
   a lullaby, her head on the pillow; a tap wakes her), lamps and fairy lights, curtains, the music
   box, the toy chest, the star nightlight, the plant blooms, plush toys hop, the wardrobe and vanity
