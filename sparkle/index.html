@@ -159,6 +159,9 @@ svg{display:block}
 .rbtn{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.92);box-shadow:0 3px 0 rgba(75,46,111,.3),inset 0 0 0 3px var(--k-ink);color:var(--k-ink)}
 .rbtn svg{width:34px;height:34px}
 .rbtn.me{overflow:hidden;padding:0}
+.rbtn{position:relative}
+.rbtn .nb{position:absolute;right:-6px;top:-6px;width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2.5px var(--k-ink);display:grid;place-items:center;animation:bobble 1s ease-in-out infinite alternate}
+.rbtn .nb svg{width:24px;height:24px}
 .rbtn.me svg{width:64px;height:84px;margin-top:10px}
 .timer{height:40px;font-size:16px;padding:0 12px;gap:4px}
 .timer svg{width:22px;height:22px}
@@ -475,12 +478,159 @@ svg{display:block}
   .items{grid-template-columns:repeat(3,1fr)}
   .charts,.intro-art{height:40vh}
 }
+/* Pattern Parade: the floats in a row */
+.parade{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px;max-width:100%;padding:0 6px}
+.parade .fl{width:min(13vw,74px);display:block}
+.parade .fl svg{width:100%;height:auto;display:block}
+.parade .fl.gap{animation:bobble 1s ease-in-out infinite alternate}
+@keyframes bobble{to{transform:translateY(-6px)}}
+.parade.grow{gap:14px}
+.parade .grp{display:flex;flex-wrap:wrap;max-width:96px;gap:2px;align-items:flex-end;padding:6px;border-radius:16px;background:rgba(255,255,255,.7);box-shadow:inset 0 0 0 2.5px var(--k-ink)}
+.parade .grp svg{width:28px;height:28px}
+.parade .grp.gap{background:none;box-shadow:none;width:64px}
+.parade .grp.gap svg{width:64px;height:auto}
+.choice.shape svg{width:84px;height:84px}
+.choice.many .many{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:120px}
+.choice.many svg{width:32px;height:32px}
+/* the Unicorn Bakery */
+.bake{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
+.bake .recipe{display:flex;align-items:center;gap:10px;padding:6px 14px;border-radius:18px;background:#FFFDF5;box-shadow:inset 0 0 0 3px var(--k-ink),0 3px 0 rgba(75,46,111,.2)}
+.bake .recipe .need{display:flex;align-items:center;gap:2px}
+.bake .recipe i svg{width:40px;height:40px;display:block}
+.bake .recipe .grp{display:flex;flex-wrap:wrap;max-width:120px}
+.bake .recipe .grp svg{width:30px;height:30px}
+.bake .recipe b{font-size:30px}
+.bowlbox{position:relative;width:min(92vw,340px)}
+.bowlbox .bowl svg{width:100%;height:auto;display:block}
+.inbowl{position:absolute;left:8%;right:8%;bottom:58%;display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:2px;min-height:40px}
+.inbowl.frame{display:grid;grid-template-columns:repeat(5,1fr)}
+.inbowl .it{width:min(10vw,44px);height:min(10vw,44px);display:grid;place-items:center;border-radius:50%;animation:yay .3s}
+.inbowl .it svg{width:100%;height:100%}
+.inbowl .it.sack{width:min(14vw,60px);height:min(16vw,68px)}
+.inbowl .it.empty{border:2.5px dashed rgba(75,46,111,.35);animation:none}
+.pantry{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;padding:6px}
+.pantry .add{width:78px;height:78px;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 4px 0 rgba(75,46,111,.25);display:grid;place-items:center}
+.pantry .add svg{width:58px;height:58px}
+.pantry .bakebtn .ov svg{width:44px;height:46px;display:block}
+.pantry .bakebtn.baking{animation:yay .6s}
+.bake.share .tray{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;min-height:56px}
+.bake.share .tray svg,.plate .on svg{width:48px;height:48px}
+.bake .plates{display:flex;gap:10px;justify-content:center}
+.plate{position:relative;width:min(30vw,130px);padding-top:10px}
+.plate > svg{width:100%;height:auto;display:block}
+.plate .on{position:absolute;left:0;right:0;bottom:30%;display:flex;flex-wrap:wrap-reverse;justify-content:center}
+.bake.done .treatpic svg,.treatpic svg{width:150px;height:150px}
+.praise .treatpic svg{width:44px;height:44px}
+/* her castle, cut away: tap a room */
+#home{background:linear-gradient(#BFE3FF,#E6DBFF 70%,#FFD9EE)}
+.cutaway{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 72px);bottom:calc(env(safe-area-inset-bottom) + 8px);display:flex;justify-content:center}
+.cutaway svg{height:100%;width:auto;max-width:100%}
+.cutaway .croom{cursor:pointer}
+.cutaway .croom.want{animation:wantglow 1.2s ease-in-out infinite alternate}
+@keyframes wantglow{to{filter:drop-shadow(0 0 10px #FFC94A) brightness(1.08)}}
+.cutaway .croom:active{filter:brightness(1.1)}
+/* the stables */
+#stable{background:#F3E2C8}
+.stall{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 72px);aspect-ratio:4/3;max-height:46vh;margin:0 auto;max-width:100%}
+.stall > svg{position:absolute;inset:0;width:100%;height:100%}
+.stall .uni{position:absolute;left:26%;width:48%;bottom:9%;touch-action:none;transform-origin:50% 100%}
+.stall .uni svg{width:100%;height:auto;display:block}
+.stall .uni.hop{animation:hop .5s ease-out 2}
+.stall .uni.dance{animation:twirl 1.2s ease-in-out}
+.stall .uni.shake{animation:shake .5s}
+.stall .uni.chew{animation:chew .25s ease-in-out 5 alternate}
+@keyframes hop{50%{transform:translateY(-14%)}}
+@keyframes twirl{25%{transform:rotate(-8deg) translateY(-6%)}50%{transform:scaleX(-1) translateY(-10%)}75%{transform:rotate(8deg) translateY(-6%)}}
+@keyframes shake{25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
+@keyframes chew{to{transform:scaleY(.97)}}
+.stall .fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.stall .fx > *{position:absolute}
+.stall .fx .heart{width:34px;animation:rise 1.2s ease-out forwards}
+.stall .fx .zz{font-weight:900;font-size:28px;color:#fff;text-shadow:0 2px 0 var(--k-ink);animation:rise 2.4s ease-out infinite}
+.stall .fx .fly{width:70px;transition:transform .6s ease-in,opacity .2s .5s}
+.stall .fx .bub{width:46px;pointer-events:auto;animation:floatup 4s linear forwards}
+.stall .fx .ball{width:60px;animation:roll 1.2s ease-in-out}
+.stall .fx .kite{width:90px;animation:kite 2.5s ease-in-out}
+.stall .want{position:absolute;right:12%;top:8%;width:62px;height:62px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 3px 0 rgba(75,46,111,.25);display:grid;place-items:center;animation:bobble 1s ease-in-out infinite alternate}
+.stall .want svg{width:42px;height:42px}
+.stall .tool{position:absolute;width:70px;pointer-events:none;transform:translate(-50%,-50%);z-index:5}
+@keyframes rise{from{transform:translateY(0);opacity:1}to{transform:translateY(-120px);opacity:0}}
+@keyframes floatup{from{transform:translateY(0)}to{transform:translateY(-260px)}}
+@keyframes roll{0%{transform:translateX(-120px) rotate(0)}50%{transform:translateX(60px) translateY(-60px) rotate(300deg)}100%{transform:translateX(260px) rotate(720deg)}}
+@keyframes kite{0%{transform:translate(-100px,40px)}50%{transform:translate(120px,-30px) rotate(10deg)}100%{transform:translate(420px,10px)}}
+.needs{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 72px + min(75vw,46vh));display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 12px}
+.need{display:flex;flex-direction:column;align-items:center;gap:3px}
+.need svg{width:36px;height:36px}
+.need .bar{width:100%;height:12px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 2.5px var(--k-ink);overflow:hidden}
+.need .bar i{display:block;height:100%;background:var(--k-mint);transition:width .5s}
+.need.low .bar i{background:#FF8A7A}
+.need.mid .bar i{background:var(--k-gold)}
+.care{position:absolute;left:0;right:0;bottom:0;top:calc(env(safe-area-inset-top) + 150px + min(75vw,46vh));background:#FFF6FB;border-radius:30px 30px 0 0;box-shadow:inset 0 3px 0 var(--k-ink);display:flex;flex-direction:column}
+.care .tray{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 12px calc(env(safe-area-inset-bottom) + 14px);align-content:start}
+.ctool{position:relative;height:96px;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 4px 0 rgba(75,46,111,.25);display:grid;place-items:center;padding:4px}
+.ctool svg{width:64px;height:64px}
+.ctool .n{position:absolute;right:6px;top:4px;min-width:26px;height:26px;border-radius:999px;background:var(--k-gold);box-shadow:inset 0 0 0 2px var(--k-ink);font-weight:900;font-size:15px;display:grid;place-items:center}
+.ctool .price{position:absolute;left:0;right:0;bottom:2px;display:flex;justify-content:center;align-items:center;gap:3px;font-weight:900;font-size:15px}
+.ctool .price svg{width:20px;height:20px}
+.ctool[aria-pressed="true"],.ctool.ask{box-shadow:inset 0 0 0 4px var(--k-gold),0 0 0 4px var(--k-gold)}
+.ctool.locked svg{opacity:.5}
+.ctool.empty{opacity:.4}
+/* her bedroom: drag things anywhere when decorating, tap them to play */
+#bedroom{background:#EFE3FF}
+.broom{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 72px);display:flex;justify-content:center}
+.broomIn{position:relative;width:min(100vw,calc((100vh - 300px) * 4 / 3));aspect-ratio:4/3;overflow:hidden;border-radius:0 0 18px 18px;box-shadow:0 0 0 3px var(--k-ink)}
+#bedroom.edit .broomIn{width:min(100vw,calc((100vh - 360px) * 4 / 3))}
+.broomIn > svg.wallfloor{position:absolute;inset:0;width:100%;height:100%}
+.broomIn .bi{position:absolute;touch-action:none;transform-origin:50% 100%}
+.broomIn .bi > svg{width:100%;height:100%;display:block}
+.broomIn .bi.flip > svg{transform:scaleX(-1)}
+#bedroom.edit .broomIn .bi{outline:2px dashed rgba(75,46,111,.45);outline-offset:-2px;border-radius:8px}
+#bedroom.edit .broomIn .bi.sel{outline:3px solid var(--k-gold)}
+.broomIn .bi.hop{animation:hop .5s ease-out 2}
+.broomIn .bi.rock{animation:shake .6s ease-in-out 3}
+.broomIn .bi.spark{animation:yay .5s}
+.broomIn .bpr{position:absolute;width:24%;transition:left .9s ease-in-out,top .9s ease-in-out;transform-origin:50% 100%}
+.broomIn .bpr svg{width:100%;height:auto;display:block}
+.broomIn .bpr.flip svg{transform:scaleX(-1)}
+.broomIn .bpr.twirl{animation:twirl 1s ease-in-out}
+.broomIn .night{position:absolute;inset:0;background:rgba(40,30,90,.55);pointer-events:none;opacity:0;transition:opacity 1s}
+.broomIn.dark .night{opacity:1}
+.broomIn .glow{position:absolute;border-radius:50%;background:radial-gradient(rgba(255,226,140,.65),rgba(255,226,140,0) 70%);pointer-events:none;opacity:0;transition:opacity .6s}
+.broomIn.dark .glow{opacity:1}
+.broomIn .starsky{position:absolute;left:0;right:0;top:0;height:67%;pointer-events:none;opacity:0;transition:opacity .8s;background-image:radial-gradient(#fff 1.5px,transparent 2px),radial-gradient(#FFE58A 1.5px,transparent 2px);background-size:46px 40px,60px 52px;background-position:0 0,22px 18px}
+.broomIn.stars .starsky{opacity:.9}
+.broomIn .zz{position:absolute;font-weight:900;font-size:26px;color:#fff;text-shadow:0 2px 0 var(--k-ink);pointer-events:none;animation:rise 2.4s ease-out infinite}
+.broomIn .notes{position:absolute;font-size:26px;pointer-events:none;animation:rise 1.6s ease-out forwards}
+.bedbar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 14px);display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:0 12px}
+.bedbar .tip{width:100%;text-align:center;font-weight:800;font-size:17px}
+.selbar{position:absolute;z-index:500;display:flex;gap:6px;transform:translate(-50%,-100%)}
+.selbar button{width:46px;height:46px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 3px 0 rgba(75,46,111,.3);display:grid;place-items:center}
+.selbar svg{width:28px;height:28px}
+.bshelf{position:absolute;left:0;right:0;bottom:0;height:calc(100vh - env(safe-area-inset-top) - 80px - min(75vw,calc(100vh - 360px)));min-height:200px;background:#FFF6FB;border-radius:30px 30px 0 0;box-shadow:inset 0 3px 0 var(--k-ink);display:flex;flex-direction:column}
+.bshelf .items{grid-template-columns:repeat(4,1fr)}
+.bshelf .item{height:112px;padding-bottom:26px}
+.bshelf .item .pv svg{height:100%;margin-top:0}
+@media (min-width:700px) and (min-height:600px){
+  .stall{max-height:52vh}
+  .care .tray{grid-template-columns:repeat(6,1fr)}
+  .bshelf .items{grid-template-columns:repeat(6,1fr)}
+}
+@media (min-width:900px) and (orientation:landscape){
+  .stall{left:0;right:auto;width:58%;max-height:none;top:calc(env(safe-area-inset-top) + 76px)}
+  .needs{left:58%;top:calc(env(safe-area-inset-top) + 76px);grid-template-columns:repeat(2,1fr)}
+  .care{left:58%;top:calc(env(safe-area-inset-top) + 220px);border-radius:30px 0 0 0}
+  .care .tray{grid-template-columns:repeat(4,1fr)}
+  .broomIn,#bedroom.edit .broomIn{width:min(100vw,calc((100vh - 110px) * 4 / 3))}
+  #bedroom.edit .broom{right:42%}
+  #bedroom.edit .broomIn{width:min(58vw,calc((100vh - 110px) * 4 / 3))}
+  .bshelf{left:58%;top:calc(env(safe-area-inset-top) + 76px);height:auto;border-radius:30px 0 0 0}
+}
 @media (prefers-reduced-motion:reduce){
   .card .back,.card .face{transition:none}
   .card.swap,.slots i.on,.tile.wrong,.cover{animation:none!important}
 }
 @media (prefers-reduced-motion:reduce){
-  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.hand,.drum.hit,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
+  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.hand,.drum.hit,.parade .fl.gap,.cutaway .croom.want,.stall .uni,.stall .want,.broomIn .bi,.broomIn .bpr,.inbowl .it,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
   .fly{opacity:0}
 }
 </style>
@@ -664,6 +814,28 @@ svg{display:block}
     <div class="shelf"><div class="tabs" id="shelfTabs" role="toolbar" aria-label="What to show"></div><div class="items" id="items"></div></div>
   </section>
 
+  <!-- her castle, cut away like a dollhouse: tap a room to go in -->
+  <section id="home" class="game" translate="no" hidden aria-label="Your castle">
+    <div class="hud"><button type="button" class="rbtn" id="homeBack" aria-label="Back to the kingdom"></button><span class="sp" id="homeRank"></span><div class="pill" id="homeCoins"></div></div>
+    <div class="cutaway" id="cutaway"></div>
+  </section>
+
+  <!-- the stables: her unicorn to feed, wash, play with and put to bed -->
+  <section id="stable" class="game" translate="no" hidden aria-label="The stables">
+    <div class="hud"><button type="button" class="rbtn" id="stableBack" aria-label="Back to the castle"></button><span class="sp"></span><div class="pill" id="stableCoins"></div></div>
+    <div class="stall" id="stall"></div>
+    <div class="needs" id="needs"></div>
+    <div class="care"><div class="tabs" id="careTabs" role="toolbar" aria-label="What to do"></div><div class="tray" id="careTray"></div></div>
+  </section>
+
+  <!-- her bedroom: tap things to play; Decorate to move them, buy more, change the walls and floor -->
+  <section id="bedroom" class="game" translate="no" hidden aria-label="Your bedroom">
+    <div class="hud"><button type="button" class="rbtn" id="bedBack" aria-label="Back to the castle"></button><span class="sp"></span><div class="pill" id="bedCoins"></div><button type="button" class="rbtn" id="bedEdit" aria-label="Decorate" aria-pressed="false"></button></div>
+    <div class="broom"><div class="broomIn" id="broomIn"></div></div>
+    <div class="bedbar" id="bedbar"></div>
+    <div class="bshelf" id="bshelf" hidden><div class="tabs" id="bedTabs" role="toolbar" aria-label="What to show"></div><div class="items" id="bedItems"></div></div>
+  </section>
+
   <!-- the story, the first time -->
   <section id="intro" class="game" translate="no" hidden aria-label="The story"><div class="center" id="introIn"></div></section>
 
@@ -674,6 +846,10 @@ svg{display:block}
   <script src="pictures.js"></script>
   <script src="chapters.js"></script>
   <script src="rooms.js"></script>
+  <script src="bedroom.js"></script>
+  <script src="kitchen.js"></script>
+  <script src="stable-art.js"></script>
+  <script src="care.js"></script>
   <script src="world.js"></script>
   <script src="voice.js"></script>
   <script src="../home/account.js"></script>

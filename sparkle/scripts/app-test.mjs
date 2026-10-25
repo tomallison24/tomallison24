@@ -228,7 +228,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
 {
   const { ctx, p, errs } = await phone({ seed: seedOf(AVA) }); const pr = [];
   await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
-  await sp(p, () => { window.sparkle.openCastle(); }); await p.waitForTimeout(200);
+  await sp(p, () => { window.sparkle.openWardrobe(); }); await p.waitForTimeout(200);
   await p.click('[data-item="gown-lilac"]');
   if (await coins(p) !== 40) pr.push('one tap on something not hers spent coins');
   if (!(await p.locator('[data-item="gown-lilac"].ask').count())) pr.push('one tap does not ask about the price');
@@ -384,7 +384,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await sp(p, () => { window.sparkle.startRound('read'); }); await playRound(p);
   if ((await p.locator('#chapterBtn').count())) pr.push('a chapter came again before its rounds');
   // the castle: her rank, the Stories shelf, a story present that can't be bought
-  await sp(p, () => window.sparkle.openCastle()); await p.waitForTimeout(200);
+  await sp(p, () => window.sparkle.openWardrobe()); await p.waitForTimeout(200);
   if (!(await p.locator('#castleRank').innerText()).includes('Princess')) pr.push('the castle does not show her rank');
   await p.click('[data-tab="stories"]');
   if (await p.locator('[data-chapter^="read:"]').count() !== 5) pr.push('the Stories shelf should have 5 Story Tower chapters to hear');
@@ -395,17 +395,19 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.click('#chBack'); await p.waitForTimeout(150);
   if ((await sp(p, () => window.sparkle.screen)) !== 'castle') pr.push('hearing a chapter again does not come back to the castle');
   if ((await sp(p, () => window.sparkle.save.players.p1.chapters.read)) !== 5) pr.push('hearing chapter 2 again changed what she has heard');
-  // the Rooms: a piece to buy (ask, then buy), the owl lamp from the story goes in the library, a story piece can't be bought
+  // the Rooms (the library and the ballroom; the bedroom has its own screen): a piece to buy (ask, then buy),
+  // the owl lamp from the story goes in the library, a story piece can't be bought
   await p.click('[data-tab="rooms"]'); await p.waitForTimeout(100);
   if (!(await p.locator('#dress .roomview svg').count())) pr.push('the Rooms tab does not show the room');
+  if (await p.locator('[data-room="bedroom"]').count()) pr.push('the bedroom is still a Rooms tab room');
   const r0 = await coins(p);
-  await p.click('[data-piece="bedroom-wall-hearts"]');
+  await p.click('[data-piece="library-wall-moons"]');
   if ((await coins(p)) !== r0) pr.push('one tap bought a room piece');
-  await p.click('[data-piece="bedroom-wall-hearts"]');
-  const bed = await sp(p, () => { const me = window.sparkle.save.players.p1; return { own: me.owned.includes('bedroom-wall-hearts'), on: (me.rooms || {}).bedroom && me.rooms.bedroom.wall }; });
-  if (!bed.own || bed.on !== 'bedroom-wall-hearts' || (await coins(p)) !== r0 - 20) pr.push('buying the hearts wallpaper: ' + JSON.stringify(bed));
-  await p.click('[data-piece="bedroom-bed-stars"]');
-  if (await sp(p, () => window.sparkle.save.players.p1.owned.includes('bedroom-bed-stars'))) pr.push('a story bed was given by tapping it');
+  await p.click('[data-piece="library-wall-moons"]');
+  const lib = await sp(p, () => { const me = window.sparkle.save.players.p1; return { own: me.owned.includes('library-wall-moons'), on: (me.rooms || {}).library && me.rooms.library.wall }; });
+  if (!lib.own || lib.on !== 'library-wall-moons' || (await coins(p)) !== r0 - 25) pr.push('buying the moon wallpaper: ' + JSON.stringify(lib));
+  await p.click('[data-piece="library-shelf-golden"]');
+  if (await sp(p, () => window.sparkle.save.players.p1.owned.includes('library-shelf-golden'))) pr.push('a story bookshelf was given by tapping it');
   await p.click('[data-room="library"]'); await p.click('[data-piece="library-owl-lamp"]');
   if ((await sp(p, () => (window.sparkle.save.players.p1.rooms.library || {}).small)) !== 'library-owl-lamp') pr.push('the owl lamp from the story did not go in the library');
   await shot(p, '18-rooms');
@@ -476,7 +478,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (!cards) pr.push('Flower Match runs off the screen');
   await shot(p, '22-ipad-match');
   if (await wide()) pr.push('the round is wider than the screen');
-  await sp(p, () => window.sparkle.openCastle()); await p.click('[data-tab="rooms"]'); await p.waitForTimeout(200);
+  await sp(p, () => window.sparkle.openWardrobe('rooms')); await p.waitForTimeout(200);
   const castle = await sp(p, () => { const d = document.getElementById('dress').getBoundingClientRect(), sh = document.querySelector('.shelf').getBoundingClientRect(); return sh.left >= d.right - 1; });
   if (!castle) pr.push('the castle\'s shelf is not beside the room');
   await shot(p, '23-ipad-castle');
