@@ -35,13 +35,12 @@
     unfollow:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M8.4 12h7.2"/></svg>',
     sort:'<svg viewBox="0 0 24 24"><path d="M7.4 4.4v15.2M3.8 16l3.6 3.6L11 16M16.6 19.6V4.4M13 8l3.6-3.6L20.2 8"/></svg>',
     search:'<svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>',
-    trash:'<svg viewBox="0 0 24 24"><path d="M3.4 6.2h17.2"/><path d="M8.8 6.2V5.1a2 2 0 0 1 2-2h2.4a2 2 0 0 1 2 2v1.1"/><path d="M5.5 6.2l.8 12.2a2.8 2.8 0 0 0 2.8 2.6h5.8a2.8 2.8 0 0 0 2.8-2.6l.8-12.2"/></svg>'
   };
   // Skip buttons: a circular arrow with the seconds inside, as on the iPhone.
   const skipIcon = (n, fwd) => '<svg viewBox="0 0 24 24">' + (fwd
     ? '<path d="M12 3.8a8.6 8.6 0 1 0 7.4 4.2"/><path d="M9.8 1.4l2.4 2.4-2.4 2.4"/>'
     : '<path d="M12 3.8a8.6 8.6 0 1 1-7.4 4.2"/><path d="M14.2 1.4l-2.4 2.4 2.4 2.4"/>')
-    + '<text x="12" y="15.7" text-anchor="middle" font-size="7.2" font-weight="700" fill="currentColor" stroke="none" font-family="-apple-system,BlinkMacSystemFont,system-ui,sans-serif">' + n + '</text></svg>';
+    + '<text x="12" y="15.7" text-anchor="middle" font-size="7.2" font-weight="700" fill="currentColor" stroke="none" font-family="-apple-system,BlinkMacSystemFont,system-ui,sans-serif">' + esc(n) + '</text></svg>';
 
   // =====================================================================
   // STATE: localStorage (small things) + IndexedDB (each show's episodes)
@@ -1251,7 +1250,8 @@
     $('mini').hidden = !on;
     $('app').classList.toggle('hasmini', on);
     if (!on) return;
-    if ($('miniTitle').textContent !== cur.t) {
+    if ($('mini').dataset.k !== cur.k) {   // by episode, not title: two shows' "Episode 12" are two episodes
+      $('mini').dataset.k = cur.k;
       $('miniTitle').textContent = cur.t;
       $('miniShow').textContent = cur.st;
       $('miniArt').innerHTML = (cur.sa || cur.img) ? '<img src="' + esc(cur.sa || cur.img) + '" alt="">' : '';
@@ -1559,7 +1559,7 @@
       for (const kind of ['hist', 'prog']) {
         const K = SYNC[kind], have = new Set(K.items().map(x => x[0]));
         for (const r of (Array.isArray(res[kind]) ? res[kind] : [])) {
-          if (!r || typeof r.id !== 'string' || !r.id || !K.ok(r) || have.has(r.id) || S.graves[kind + ':' + r.id]) continue;
+          if (!r || typeof r.id !== 'string' || !r.id || r.id === '__proto__' || !K.ok(r) || have.has(r.id) || S.graves[kind + ':' + r.id]) continue;   // S.prog is a plain object
           const o = K.in(r);
           if (!o.updated) o.updated = 1;
           if (kind === 'hist') { S.hist.push(o); n++; } else S.prog[r.id] = o;

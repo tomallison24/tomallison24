@@ -365,5 +365,5 @@ async function fetchBase(lat, lon) {
 }
 
 
-return { SEV, getJSON, dirDeg, mphOf, cToF, feelsF, ymd, kmBetween, tempAt, wmo, nwsCondition, inUS, fromNWS, fromOpenMeteo, fromNowcast, fetchBase };
+return { SEV, getJSON, dirDeg, mphOf, cToF, feelsF, ymd, kmBetween, tempAt, wmo, nwsCondition, inUS, fromNWS, fromOpenMeteo, fromNowcast, fetchBase, store };
 })();
