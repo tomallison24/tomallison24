@@ -178,6 +178,8 @@
   const HELPER_KEY = 'aos.helper';
   const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && HELPERS[h.who] ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
   const helperName = () => { const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
+  // the chat's title: its name, or with none, what it is (Mia is Mia; in Russian, Ipsy)
+  const title = () => { const h = helper(); return !h || h.name.trim() ? helperName() : (ru => h.who === 'mia' ? (ru ? 'Мия' : 'Mia') : ru ? 'Ipsy' : HELPERS[h.who].label)(window.aosLang && aosLang.get() === 'ru'); };
   function setHelper(who, name) {
     if (!HELPERS[who]) return;
     ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
@@ -188,6 +190,7 @@
     const h = helper();
     cells.forEach(c => { if (!c.fixed) { c.peeking = false; drawChar(c, h ? h.who : c.peek); } });
     onHelper.forEach(fn => { try { fn(h); } catch {} });
+    if (window.aosLang && aosLang.helper) aosLang.helper();   // the words on the page that say Ipsy say the new name (home/lang.js)
   }
   addEventListener('storage', e => { if (e.key === HELPER_KEY) helperChanged(); });   // changed in another app or frame
 
@@ -815,8 +818,8 @@
     const say = s => { status.textContent = s || sub; };
     // what the status line says while your helper does each job ("Mia is reading…")
     const DOING = { think: 'is thinking…', read: 'is reading…', scan: 'is searching…', write: 'is writing…', show: 'is showing you', done: 'is done' };
-    const doing = job => helperName() + ' ' + (DOING[job] || DOING.think);
-    const named = () => { $('ipsyNm').textContent = helperName(); btn.setAttribute('aria-label', 'Ask ' + helperName()); input.placeholder = (o.placeholder || 'Ask Ipsy').replace(/\bIpsy\b/g, helperName()); };
+    const doing = job => 'Ipsy ' + (DOING[job] || DOING.think);   // home/lang.js says your helper's name in place of Ipsy, here and below
+    const named = () => { $('ipsyNm').textContent = title(); btn.setAttribute('aria-label', 'Ask Ipsy'); input.placeholder = o.placeholder || 'Ask Ipsy'; };
     named();
     onHelper.add(() => { named(); if (!wrap.hidden && !busy) draw(); });
     $('ipsyWho').addEventListener('click', () => { if (busy || asks.size) return; showing = showing === 'pick' ? false : 'pick'; draw(); });
@@ -950,7 +953,7 @@
           input.disabled = true; sendBtn.disabled = true; log.scrollTop = 0;
           return;
         }
-        h = '<div class="ipsy-empty">' + (o.intro === '' ? '' : '<p>' + esc((o.intro || 'Hi! Ask me anything.').replace(/\bIpsy\b/g, helperName())) + '</p>')
+        h = '<div class="ipsy-empty">' + (o.intro === '' ? '' : '<p>' + esc(o.intro || 'Hi! Ask me anything.') + '</p>')
           + (ok ? '<div class="ipsy-chips">' + (o.suggestions || []).map(s => '<button class="ipsy-chip" type="button" data-ask="' + esc(s) + '">' + esc(s) + '</button>').join('') + '</div>'
             : '<div class="ipsy-consent"><p>' + esc(o.consent || '') + '</p><button class="ipsy-chip" type="button" id="ipsyOk">OK, let’s go</button></div>') + '</div>';
       }

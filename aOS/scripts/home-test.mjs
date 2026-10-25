@@ -99,7 +99,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
   await ctx.addInitScript(([apps, look]) => { if (window.top !== window) return;
     const s = { aos: '999' }; for (const a of apps) s[a] = '999';
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.look', look); }, [APPS, look]);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.look', look); }, [APPS, look]);
   const pg = await ctx.newPage(), errs = [];
   pg.on('pageerror', e => errs.push(e.message));
   const tag = `(${look}, ${scheme})`;

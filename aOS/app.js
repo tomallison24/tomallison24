@@ -110,7 +110,7 @@
   const brought = added.map((_, i) => added[(i + day) % added.length]);
   const HEAD = { travel: 'Every trip, the whole family\'s' };
   const meet = (id, k) => ({ id, k, h: HEAD[id] || `${D.NAMES[id]}: ${T(id).tag}`, art: (T(id).cards[0] || {}).i, body: () => T(id).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') });
-  const NEWS = { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol>${hi(r).map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } };
+  const NEWS = { k: 'What\'s new', h: `The Power of ${mk(v)}`, plain: true, body: () => { const r = live[0]; return `<p>${esc(r.title || '')}</p><ol data-ipsy="as-is">${hi(r).map(n => `<li>${esc(n)}</li>`).join('')}</ol>`; } };
   const SETUP = { house: { id: 'house', k: 'Get started', h: 'Set up Home in two minutes', art: 'house', body: () => `
       <h3>1. Sign in</h3><p>The address fills itself in.</p>
       <h3>2. Make your own token</h3><p>In the Home Assistant app: <b>☰</b> → <b>your name</b> → <b>Security</b> → <b>Long-lived access tokens</b> → <b>Create token</b>, then <b>Copy</b>.</p>
@@ -237,7 +237,7 @@
         <div>${line('sparkle')}<i>Allison Corporation</i></div>
       </div>
       <div class="sec"><h2>What's New</h2></div>
-      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul>${hi(r.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
+      <div class="wn"><small>${mk(r ? r.v : v)} · ${esc((r || live[live.length - 1]).date || '')}</small>${e ? `<ul data-ipsy="as-is">${hi(r.apps[id]).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : `<p>Part of ${mk(v)}: ${esc(live[live.length - 1].title)}.</p>`}</div>
       <div class="sec"><h2>Preview</h2></div>
       <div class="shots">${T(id).cards.map(c => `<div class="shot">${line(c.i)}<b>${esc(c.t)}</b><p>${esc(c.d)}</p></div>`).join('')}</div>
       <div class="sec"><h2>What it needs</h2></div>
@@ -370,7 +370,7 @@
   const langNow = () => (window.aosLang ? aosLang.get() : 'en');
   const looksLine = () => `${THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
-  const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return (h.name.trim() || 'Ipsy') + ' · ' + (k ? k.label : ''); };
+  const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
   function acctPage(at) {
     const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>
@@ -384,7 +384,7 @@
         ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
-          <ul>${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
+          <ul data-ipsy="as-is">${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
           <button type="button" class="soft" data-replay>Replay the welcome</button>`, '', 'whats-new')}
       </div>`, { up: true });
     el.addEventListener('click', ev => {

@@ -114,7 +114,7 @@ const texts = (page, sel) => page.$$eval(sel, els => els.map(e => e.textContent.
 for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   const app = 'orders', tag = 'orders (' + design + ')';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
-  await ctx.addInitScript(a => { localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ [a]: '999' })); }, app);
+  await ctx.addInitScript(a => { localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ [a]: '999' })); }, app);
   await ctx.addInitScript(d => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', d); localStorage.setItem('allison-orders-v1-ipsy-auto', '0'); }, design);
   const page = await ctx.newPage();
   const problems = [];
@@ -290,7 +290,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: 'block' });
   await ctx.addInitScript(() => {
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', 'glass');
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', 'glass');
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));

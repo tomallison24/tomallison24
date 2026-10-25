@@ -327,7 +327,7 @@ const SESSION = { token: 'tok-test', user: { id: 'u1', name: 'Tom', role: 'owner
 async function phone({ width = 390, design = 'glass', scheme = 'light', session = SESSION, ipsy = false, synced = false, extra = {} } = {}) {
   const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block', timezoneId: TZ, locale: 'en-US' });
   await ctx.addInitScript(([d, seed, session, ipsy, synced, extra]) => {
-    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ fitness: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.fitness', d);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ fitness: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.fitness', d);
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('allison-fitness-v1', JSON.stringify(seed));
