@@ -43,6 +43,8 @@
     const s = (v, n) => String(v == null ? '' : v).slice(0, n);
     const date = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null;
     const n = v => { const x = Number(v); return Number.isFinite(x) ? x : null; };
+    // A pin needs both numbers, on the globe (a bad pair from the Sheet or a backup would sit off the map).
+    const lat = n(p.lat), lon = n(p.lon), onMap = lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
     return {
       id: s(p.id, 40) || newId(), name: s(p.name, 200), status: p.status === 'been' ? 'been' : 'want',
       rating: Math.max(0, Math.min(5, Math.round(n(p.rating) || 0))), price: Math.max(0, Math.min(4, Math.round(n(p.price) || 0))),
@@ -50,7 +52,7 @@
       visits: [...new Set((Array.isArray(p.visits) ? p.visits : []).concat(p.visited || []).map(date).filter(Boolean))].sort().reverse().slice(0, 200),
       cal: p.cal && typeof p.cal.uid === 'string' ? { uid: s(p.cal.uid, 300), at: n(p.cal.at) || 0 } : null,
       tags: Array.isArray(p.tags) ? p.tags.map(t => s(t, 40)).filter(Boolean).slice(0, 30) : [],
-      lat: n(p.lat), lon: n(p.lon), address: s(p.address, 300), city: s(p.city, 100), category: s(p.category, 60), emoji: s(p.emoji, 8) || '📍',
+      lat: onMap ? lat : null, lon: onMap ? lon : null, address: s(p.address, 300), city: s(p.city, 100), category: s(p.category, 60), emoji: s(p.emoji, 8) || '📍',
       osm: p.osm && /^(node|way|relation)$/.test(p.osm.type) && n(p.osm.id) ? { type: p.osm.type, id: n(p.osm.id) } : null,
       info: p.info && typeof p.info === 'object' ? { hours: s(p.info.hours, 400), phone: s(p.info.phone, 60), website: webOnly(s(p.info.website, 300)), cuisine: s(p.info.cuisine, 120), at: n(p.info.at) || 0 } : null,
       created: n(p.created) || Date.now(), updated: n(p.updated) || 0,
@@ -664,7 +666,7 @@
       if (!r || typeof r.id !== 'string') continue;
       const l = byId.get(r.id);
       if (!l || (+r.updated || 0) > (+l.updated || 0)) byId.set(r.id, tidy(r));
-      else mine = true;
+      else if ((+l.updated || 0) > (+r.updated || 0)) mine = true;   // the same copy (the Sheet's says whose it is) isn't a change to send again
     }
     const theirs = new Set(res.places.map(r => r && r.id));
     for (const l of places) {

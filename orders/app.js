@@ -26,6 +26,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const P = window.OrdersParse;
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // A tracking link is only ever a web address (one from a backup file could say anything).
+  const webUrl = u => /^https?:\/\//i.test(String(u || ''));
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const ls = {
     get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
@@ -629,9 +631,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (r.tracking) rows.push('<div><dt>Return tracking</dt><dd>' + raw(r.tracking) + ' <button class="copy" type="button" data-copy="' + esc(r.tracking) + '">Copy</button></dd></div>');
     if (r.refundTo) rows.push('<div><dt>Refund to</dt><dd translate="no">' + esc(r.refundTo.replace(/^your /i, 'Your ')) + '</dd></div>');
     if (amt) rows.push('<div class="total"><dt>' + (r.status === 'refunded' ? 'Refunded' : 'Refund (estimated)') + '</dt><dd>' + esc(amt) + '</dd></div>');
-    if (rows.length || (r.trackUrl && r.carrier)) {
+    if (rows.length || (webUrl(r.trackUrl) && r.carrier)) {
       h += '<div class="obox">' + (rows.length ? '<dl class="okv">' + rows.join('') + '</dl>' : '');
-      if (r.trackUrl && r.carrier && r.status !== 'refunded') h += '<a class="ctabtn" href="' + esc(r.trackUrl) + '" target="_blank" rel="noopener noreferrer">Track the return on ' + esc(r.carrier) + I.ext + '</a>';
+      if (webUrl(r.trackUrl) && r.carrier && r.status !== 'refunded') h += '<a class="ctabtn" href="' + esc(r.trackUrl) + '" target="_blank" rel="noopener noreferrer">Track the return on ' + esc(r.carrier) + I.ext + '</a>';
       h += '</div>';
     }
     return h;
@@ -657,9 +659,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (o.orderDate) rows.push('<div><dt>Ordered</dt><dd>' + esc(fmtDay(o.orderDate)) + '</dd></div>');
     if (o.eta && isOpen(o)) rows.push('<div><dt>' + (o.kind === 'pickup' ? 'Pickup' : 'Expected') + '</dt><dd>' + esc(o.etaEnd ? fmtRange(o.eta, o.etaEnd) : fmtDay(o.eta)) + '</dd></div>');
     if (o.pickupBy && o.status === 'pickup') rows.push('<div><dt>Pick up by</dt><dd>' + esc(fmtDay(o.pickupBy)) + '</dd></div>');
-    if (rows.length || o.trackUrl) {
+    if (rows.length || webUrl(o.trackUrl)) {
       h += '<div class="obox">' + (rows.length ? '<dl class="okv">' + rows.join('') + '</dl>' : '');
-      if (o.trackUrl && o.carrier) h += '<a class="ctabtn" href="' + esc(o.trackUrl) + '" target="_blank" rel="noopener noreferrer">Track on ' + esc(o.carrier) + I.ext + '</a>';
+      if (webUrl(o.trackUrl) && o.carrier) h += '<a class="ctabtn" href="' + esc(o.trackUrl) + '" target="_blank" rel="noopener noreferrer">Track on ' + esc(o.carrier) + I.ext + '</a>';
       h += '</div>';
     }
     if ((o.items || []).length || o.total != null) {

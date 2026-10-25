@@ -170,7 +170,7 @@ window.NotesIpsy = function (app) {
       // body replaces the whole text: asked first, in the chat (append and the rest just show with Undo)
       if ('body' in ch && n.body && text(ch.body, 100000).replace(/\s+$/, '') !== n.body.replace(/\s+$/, '')) {
         const ok = await confirm('Rewrite the whole text of ' + noteName(n) + '? Undo will bring the old text back.', { yes: 'Rewrite it', no: 'Keep it' });
-        if (!ok) return { content: { note: noteBrief(n), changed: false, declined: true, note: 'The person said no, so nothing was changed.' } };
+        if (!ok) return { content: { note: noteBrief(n), changed: false, declined: true, message: 'The person said no, so nothing was changed.' } };
       }
       app.release('note', n.id);
       const snap = snapshot([['notes', n.id]]);
