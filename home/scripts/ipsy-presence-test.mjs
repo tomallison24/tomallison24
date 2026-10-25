@@ -33,6 +33,7 @@ try {
         document.documentElement.dataset.look = design;
         const style = document.getElementById('vintage'); if (style) style.media = design === 'vintage' ? 'all' : 'not all';
         localStorage.setItem('ipsy.' + app + '.ok','yes');
+        localStorage.setItem('aos.helper','{"who":"fox","name":""}');
       },{app,design});
       await page.addScriptTag({url:base + '/home/ipsy.js'});
       await page.evaluate(app => {
@@ -54,17 +55,19 @@ try {
         const slot = await page.locator(app === 'travel' ? '#ipsySlot' : '.dock > .ipsyslot').boundingBox();
         assert.ok(slot.width >= rect.width && slot.height >= rect.height,label + ': slot fits');
       }
-      const idle = await page.locator('.ipsy-btn .i-body-g').evaluate(e=>getComputedStyle(e).animationName);
-      assert.ok(idle.includes('ipsyBreathe'),label + ': breathes at rest');
-      assert.ok((await page.locator('.ipsy-btn .i-look').evaluate(e=>getComputedStyle(e).animationName)).includes('ipsyGlance'),label + ': idle glance');
-      await page.locator('.ipsy-btn .ipsy-host').evaluate(e=>e.dataset.mood='talk');
-      assert.ok((await page.locator('.ipsy-btn .i-body-g').evaluate(e=>getComputedStyle(e).animationName)).includes('ipsySquash'),label + ': talking preserved');
+      assert.ok((await page.locator('.ipsy-btn .h-bob').evaluate(e=>getComputedStyle(e).animationName)).includes('ipsyBob'),label + ': bobs at rest');
+      assert.ok((await page.locator('.ipsy-btn .h-lids').evaluate(e=>getComputedStyle(e).animationName)).includes('ipsyBlink'),label + ': blinks');
+      for (const [mood,sel,anim] of [['talk','.h-mouth','ipsyJaw'],['read','.h-eyes','ipsyRead'],['scan','.h-eyes','ipsyDart'],['write','.h-rigR','ipsyScribble'],['done','.h-hop','ipsyHop'],['think','.h-bubble','ipsyBubble']]) {
+        await page.locator('.ipsy-btn .ipsy-host').evaluate((e,m)=>e.dataset.mood=m,mood);
+        assert.ok((await page.locator('.ipsy-btn ' + sel).first().evaluate(e=>getComputedStyle(e).animationName)).includes(anim),label + ': ' + mood);
+      }
+      assert.equal(await page.locator('.ipsy-btn .h-specs').evaluate(e=>getComputedStyle(e).opacity),'0',label + ': glasses off but for scanning');
       await page.locator('.ipsy-btn .ipsy-host').evaluate(e=>e.dataset.mood='idle');
       await page.emulateMedia({reducedMotion:'reduce'});
-      for (const selector of ['.i-body-g','.i-look','.i-bob','.i-eyes']) assert.equal(await page.locator('.ipsy-btn ' + selector).evaluate(e=>getComputedStyle(e).animationName),'none',label + ': reduced motion ' + selector);
+      for (const selector of ['.h-bob','.h-lids','.h-shadow']) assert.equal(await page.locator('.ipsy-btn ' + selector).evaluate(e=>getComputedStyle(e).animationName),'none',label + ': reduced motion ' + selector);
       await page.emulateMedia({reducedMotion:'no-preference'});
       await page.evaluate(() => { Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'}); document.dispatchEvent(new Event('visibilitychange')); });
-      assert.equal(await page.locator('.ipsy-btn .i-body-g').evaluate(e=>getComputedStyle(e).animationPlayState),'paused',label + ': background pause');
+      assert.equal(await page.locator('.ipsy-btn .h-bob').evaluate(e=>getComputedStyle(e).animationPlayState),'paused',label + ': background pause');
       await page.evaluate(() => { Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'visible'}); document.dispatchEvent(new Event('visibilitychange')); });
       await page.click('.ipsy-btn');
       await page.waitForFunction(() => Math.abs(document.querySelector('.ipsy-speaker').getBoundingClientRect().width - document.querySelector('.ipsy-btn').getBoundingClientRect().width) < 1);

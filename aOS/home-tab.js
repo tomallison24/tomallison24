@@ -476,25 +476,25 @@
   $('hfound').addEventListener('keydown', e => { const o = e.target.closest('[data-open]'); if (o && e.target === o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); o.click(); } });
   function askIpsy(t) { if (!ipsy || !t) return; clearFind(); ipsy.prompt(t); }
 
-  // Ipsy rolls across the bar now and then: to the far end and back, turning as a ball would (its
-  // body is about 15px from the middle at this size). Only on Home with the bar empty and untouched,
-  // the chat shut and no finger down; never with Reduce Motion. The first soon after aOS opens, then
-  // a minute or two apart. Any tap (Ipsy itself, the bar) sends it straight home.
+  // Now and then your helper crosses the bar, in its own way (home/ipsy.js cross: Mia's zoomies, the fox's
+  // pounce, the owl's loop, the robot's moonwalk, the octopus's spurts, the hedgehog's roll, the otter's belly
+  // slide), out to the far end and back. Only on Home with the bar empty and untouched, the chat shut and no
+  // finger down; never with Reduce Motion. The first soon after aOS opens, then a minute or two apart. Any
+  // tap (the helper itself, the bar) sends it straight home.
   const slot = $('ipsySlot'), rollBar = $('askIpsy');
   let rolling = null, rollT = null;
   const rollIn = ms => { clearTimeout(rollT); rollT = setTimeout(roll, ms); };
   function roll() {
-    const cell = slot.querySelector('.i-bob');
-    if (rolling || !cell || !onHome() || down || editing() || q.value || document.activeElement === q || document.querySelector('.ipsy-wrap:not([hidden])')
+    const I = AllisonOS.ipsy;
+    if (rolling || !I || !I.cross || !slot.querySelector('.ipsy-char') || !onHome() || down || editing() || q.value || document.activeElement === q || document.querySelector('.ipsy-wrap:not([hidden])')
       || matchMedia('(prefers-reduced-motion: reduce)').matches) { rollIn(20e3); return false; }
     rollIn(60e3 + Math.random() * 90e3);
     const d = rollBar.clientWidth - slot.offsetWidth - 2 * slot.offsetLeft;
     if (d < 80) return false;
-    const turn = d / 15.4 * 180 / Math.PI, ease = 'cubic-bezier(.45,0,.3,1)', duration = 2 * (900 + d * 2) / 0.84;
-    const there = (from, to) => [{ transform: from, easing: ease }, { transform: to, offset: 0.42 }, { transform: to, offset: 0.58, easing: ease }, { transform: from }];
-    cell.style.transformBox = 'view-box'; cell.style.transformOrigin = '100px 108px';
+    const anims = I.cross(slot, d);
+    if (!anims) return false;
     rollBar.classList.add('rolling');
-    rolling = [slot.animate(there('translateX(0)', `translateX(${d}px)`), { duration }), cell.animate(there('rotate(0deg)', `rotate(${turn}deg)`), { duration })];
+    rolling = anims;
     rolling[0].finished.catch(() => {}).then(() => { rolling = null; rollBar.classList.remove('rolling'); });
     return true;
   }

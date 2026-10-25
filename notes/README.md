@@ -79,7 +79,7 @@ to the family account, it syncs with **the family's Google Sheet**, through aOS
 
 ## Ipsy
 
-**Ipsy** is the little stem cell just above the Notes / Reminders bar, on the
+**Ipsy** is your helper (the one you picked and named) just above the Notes / Reminders bar, on the
 left: a helper you chat with about your notes, reminders and lists, in the
 design picked in Settings (it changes with the design at once). The bar fills
 the dock's row, so Ipsy sits above it, and the pages have room at the end to

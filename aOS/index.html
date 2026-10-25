@@ -120,9 +120,9 @@
   .story.plain .chip { background: var(--dot); }
   .story.plain .mk { position: absolute; left: 0; right: 0; top: 112px; text-align: center; font-size: 92px; font-weight: 800; letter-spacing: -3px; }
   .story.plain.half .mk { top: 62px; font-size: 50px; letter-spacing: -1.5px; }
-  /* Meet Ipsy: the stem cell itself on the card, telling what it can do in a speech bubble (aOS/app.js, home/ipsy.js) */
+  /* Meet Ipsy: your helper itself on the card, telling what it can do in a speech bubble (aOS/app.js, home/ipsy.js) */
   .story .art .ipsy-stage { position: absolute; right: 6px; top: 118px; width: 196px; height: 196px; }
-  .story .art .ipsy-host .ipsy-cell, .hero .art .ipsy-host .ipsy-cell, .ipsy-forms .ipsy-cell { position: static; inset: auto; width: 100%; height: 100%; color: inherit; }
+  .story .art .ipsy-host .ipsy-char, .hero .art .ipsy-host .ipsy-char, .ipsy-forms .ipsy-char { position: static; inset: auto; width: 100%; height: 100%; color: inherit; }
   .ipsy-say { position: absolute; left: 22px; top: 158px; max-width: 48%; margin: 0; padding: 11px 14px; border-radius: 20px 20px 6px 20px; background: rgba(255,255,255,.92); color: #10181A;
     font-size: 15px; font-weight: 650; line-height: 1.3; box-shadow: 0 10px 24px rgba(0,0,0,.18); }
   .ipsy-say span { display: block; animation: sayIn .45s cubic-bezier(.2,.9,.3,1.3) both; }
@@ -132,9 +132,9 @@
   .story.ipsy.half .ipsy-say, .story.ipsy.wide .ipsy-say { display: none; }
   .hero.ipsy .art .ipsy-hero { position: absolute; right: 4px; top: calc(env(safe-area-inset-top) + 74px); width: 200px; height: 200px; }
   .hero.ipsy .ipsy-say { left: 22px; top: calc(env(safe-area-inset-top) + 120px); }
-  .ipsy-forms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
+  .ipsy-forms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
   .ipsy-forms figure { margin: 0; padding: 8px 6px 10px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); text-align: center; }
-  .ipsy-forms .ipsy-mini { width: 78px; height: 78px; margin: 0 auto; }
+  .ipsy-forms .ipsy-mini { width: 64px; height: 64px; margin: 0 auto; }
   .ipsy-forms b { display: block; font-size: 13px; } .ipsy-forms i { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); line-height: 1.3; }
   @media (prefers-reduced-motion: reduce) { .ipsy-say span { animation: none; } }
 
@@ -296,6 +296,16 @@
   .acct .soft { background: var(--dot); color: var(--text); }
   .acct .me .soft { width: auto; height: 36px; margin: 0; padding: 0 14px; font-size: 14px; }
   .acct .row2 { display: flex; gap: 10px; } .acct .row2 > * { flex: 1; } .acct .row2 > .soft { flex: 1.5; }
+  /* Run through setup (aOS/app.js setupPage): a step at a time */
+  .acct .runsetup { margin-top: 0; }
+  .setup { display: grid; gap: 12px; padding: 16px; }
+  .setup .row2 { margin-top: 6px; } .setup .row2 > .soft { flex: 1; }
+  .setup .sdots { display: flex; gap: 6px; } .setup .sdots i { flex: 1; height: 5px; border-radius: 3px; background: var(--dot); }
+  .setup .sdots i.on, .setup .sdots i.did { background: var(--accent); } .setup .sdots i.did { opacity: .5; }
+  .setup .sstep { margin: 0; font-size: 13px; font-weight: 650; color: var(--muted); }
+  .setup .sq { margin: 0; font-size: 24px; letter-spacing: -.3px; text-wrap: balance; }
+  .setup .note { margin: 0; }
+  .setup .sdone { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
   .acct .err { min-height: 18px; margin-top: 8px; font-size: 14px; color: #D9534F; }
   .acct .link { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--dot); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; user-select: all; -webkit-user-select: all; }
   .acct .fam div { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }

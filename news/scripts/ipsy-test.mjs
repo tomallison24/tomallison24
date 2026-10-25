@@ -165,7 +165,7 @@ async function open(design, scheme, store = {}) {
   await ctx.addInitScript(([design, store]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('aos.seen', JSON.stringify({ news: '999' }));
+    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ news: '999' }));
     localStorage.setItem('aos.sky', 'day');
     localStorage.setItem('design.news', design);
     for (const [k, v] of Object.entries(store)) localStorage.setItem(k, JSON.stringify(v));
@@ -246,7 +246,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(await page.locator('.ipsy-it').last().locator('b').textContent(), 'BBC News');
     assert.deepEqual(await page.$$eval('.ipsy-src a', e => e.map(a => [a.textContent, a.href])), [['Library news', 'https://council.example/library']]);
     assert.equal(await page.$$eval('.ipsy-change', e => e.length), 0, 'reading changes nothing');
-    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. News has 19 headlines, updated .*\. On screen: the Latest tab\.\]$/);
+    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. News has 19 headlines, updated .*\. On screen: the Latest tab\.(?: You are this person’s helper[^\]]*)?\]$/);
     for (let i = 1; i < sent.length; i++) assert.deepEqual(sent[i].slice(0, sent[i - 1].length), sent[i - 1], 'step ' + i + ' changed an earlier message');
     assert.deepEqual(sent[1][1].content[0], think, 'thinking goes back unchanged');
   });

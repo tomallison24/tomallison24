@@ -106,7 +106,7 @@ const step = async (name, fn) => { try { await fn(); console.log('ok -', name); 
 
 async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await ctx.addInitScript(id => (localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' }))), ID);   // the sky held at day
+  await ctx.addInitScript(id => (localStorage.setItem('aos.helper', '{"who":"mia","name":""}'), localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' }))), ID);   // the sky held at day
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404/.test(m.text())) problems.push(m.text()); });

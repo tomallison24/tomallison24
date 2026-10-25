@@ -127,7 +127,7 @@ affected). Follow-ups remember what was asked before.
 
 ## Ipsy
 
-**Ipsy** is the little stem cell in the bottom left corner: a helper you chat
+**Ipsy** is your helper (the one you picked and named) in the bottom left corner: a helper you chat
 with about the news and sport, in the design picked in Settings (mustard, teal
 and cream in Vintage, pastel glass in Standard; it changes with the design at
 once). It sits clear of the topic picker, Refresh, Settings and the Undo toast,

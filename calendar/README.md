@@ -146,7 +146,7 @@ Drinks, which carry both designs too.
 
 ## Ipsy
 
-**Ipsy** is the little stem cell in the dock, beside the + button: a helper you
+**Ipsy** is your helper (the one you picked and named) in the dock, beside the + button: a helper you
 chat with about the calendar, in the design picked in Settings (it changes with
 the design at once). Ask in your own words, e.g. *What's on this week?*, *Find
 us a free evening next week*, *When is our next dentist appointment?*, *Add

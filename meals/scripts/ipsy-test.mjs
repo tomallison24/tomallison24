@@ -163,7 +163,7 @@ async function phone(design, scheme) {
   await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
   await ctx.addInitScript(([t, design]) => {
     if (sessionStorage.getItem('seeded')) return;
-    localStorage.setItem('aos.seen', JSON.stringify({ meals: '999' }));
+    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ meals: '999' }));
     localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.meals', design);
     localStorage.setItem('aos.session', JSON.stringify({ token: t, user: { id: 'O1', name: 'Tom', role: 'owner' }, at: Date.now() }));
     sessionStorage.setItem('seeded', '1');
@@ -245,7 +245,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(ch.length, 1, 'only the dinner that was saved'); assert.match(ch[0], /^\w{3}, \w{3} \d+ dinner: Chicken tikka masala → Sheet-pan Greek lemon chicken ?Undo$/);
     // what Claude saw: the family's Meals, the allergy list first among them
     const q = sent[n0];
-    assert.match(q[0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Meals: the family’s plan is 4 meals \(Chicken · dinner · for 4\), .* Rules: at least 2 vegetables and good protein in every meal, cooking for 4\. Never in a plan: tree nuts, coconut\. On screen: the Plan tab\.\]$/, q[0].content[0].text);
+    assert.match(q[0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Meals: the family’s plan is 4 meals \(Chicken · dinner · for 4\), .* Rules: at least 2 vegetables and good protein in every meal, cooking for 4\. Never in a plan: tree nuts, coconut\. On screen: the Plan tab\.(?: You are this person’s helper[^\]]*)?\]$/, q[0].content[0].text);
     const meals = JSON.parse(results.slice(r0).find(r => /"avoid"/.test(r.content)).content);
     assert.deepEqual(meals.avoid, ['tree nuts', 'coconut']); assert.equal(meals.plan.schedule.length, 4); assert.equal(meals.rules.vegetablesInEveryMeal, 2); assert.equal(meals.stores, undefined);
     const acts = await texts(page, '.ipsy-act');

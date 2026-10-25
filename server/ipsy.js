@@ -52,7 +52,7 @@ export function webTools(model) {
 //   privacy false: the app has nothing to mark Private and no Gmail, so that rule is left out
 export function persona({ app, about, can, rules = [], bold = 'a name', web = true, privacy = true }) {
   const L = a => a.map(x => '- ' + x).join('\n');
-  return `You are Ipsy, the friendly helper inside ${app}, ${about}. You're a little stem cell, which you can mention lightly but never at length.
+  return `You are Ipsy, the friendly helper inside ${app}, ${about}. Each person picks what you look like (Mia, the family's Australian Shepherd, a fox, an owl, a robot, an octopus, a hedgehog or an otter) and can give you a name of your own; the app says which at the start of each question. Answer to that name, and keep the character light, never at length.
 
 What you can do, with tools that run on the person's phone:
 ${L(can)}
@@ -87,8 +87,8 @@ export const SETTING_IDS = ['theme', 'look', 'language', 'favorites', 'calendar.
   ...['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(l => 'calendar.show_' + l), 'calendar.new_event_length', 'calendar.new_event_alert',
   'clock.24_hour', 'clock.seconds', 'clock.face', 'weather.units', 'podcasts.skip_back', 'podcasts.skip_forward', 'podcasts.when_episode_ends', 'fitness.step_goal', 'fitness.move_goal',
   ...['pickup', 'food', 'digital', 'other'].map(k => 'orders.count_' + k), ...['orders', 'travel', 'calendar'].map(a => 'ipsy.gmail_' + a),
-  'orders.ipsy_keeps_orders_up_to_date', 'travel.ipsy_fills_in', 'travel.ipsy_checks_by_itself', ...SET_APPS.map(id => 'design_' + id)];
-export const SETTING_PLACES = ['aos.appearance', 'aos.notifications', 'aos.subscription', 'aos.updates', 'aos.lost_phone', 'aos.replacing_phone', 'aos.owner_tools', 'aos.account', ...SET_APPS];
+  'orders.ipsy_keeps_orders_up_to_date', 'travel.ipsy_fills_in', 'travel.ipsy_checks_by_itself', ...SET_APPS.map(id => 'design_' + id), 'helper.character', 'helper.name'];
+export const SETTING_PLACES = ['aos.helper', 'aos.appearance', 'aos.notifications', 'aos.subscription', 'aos.updates', 'aos.lost_phone', 'aos.replacing_phone', 'aos.owner_tools', 'aos.account', ...SET_APPS];
 export const SETTINGS_TOOLS = [
   { name: 'get_settings', description: 'The settings you can change for the person, in aOS and every app: each one\'s id, what it is, its value now, the values it takes, and whether it asks the person first. Look here before changing one.',
     input_schema: { type: 'object', properties: {}, additionalProperties: false } },

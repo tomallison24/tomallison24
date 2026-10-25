@@ -1,6 +1,6 @@
-// Ipsy: the AllisonOS helper you chat with. A little stem cell that changes into other cells
-// as it works, in the look of the app it's in: the design picked in its Settings (../home/design.js,
-// data-look on <html>: Vintage or Sea glass), following a change at once (aos:design, aos:look).
+// Ipsy: the AllisonOS helper you chat with. Each person's own: a character they pick and name, that
+// acts out what it's doing, in the look of the app it's in: the design picked in its Settings
+// (../home/design.js, data-look on <html>), following a change at once (aos:design, aos:look).
 //
 //   <script src="../home/ipsy.js"></script>     (before the app's script)
 //   AllisonOS.ipsy.mount({
@@ -31,9 +31,12 @@
 // The conversation is kept exactly as Claude returned it (thinking and web results included) and
 // only ever added to: the API checks that earlier turns weren't changed.
 //
-// Moods: idle (a stem cell), listening (the box has focus), thinking (waiting for Claude: a nerve
-// cell, sparks at its tips), working (running a tool: a white blood cell, on the hunt), talking
-// (the answer appearing). Reduce Motion holds it still; each mood is still a pose.
+// Ipsy is the person's own helper: one of seven characters (Mia, the family's Australian Shepherd, a
+// fox, an owl, a robot, an octopus, a hedgehog, an otter), picked and named the first time the chat
+// opens (aos.helper; also in aOS, Account). It acts out each job: listening (the box has focus),
+// thinking (waiting for Claude), reading, searching with its glasses on, writing, showing (by the
+// tool's name: jobOf), talking (the answer appearing) and a hop when a change is saved. Reduce
+// Motion holds it still; each job is still a pose.
 (() => {
   'use strict';
   const AOS = window.AllisonOS = window.AllisonOS || {};
@@ -68,99 +71,245 @@
   const MAX_CHAT = 950 * 1024;          // a conversation bigger than this is full (the route takes 1 MB)
   const MAX_RESULT = 40000;             // characters of one tool result
 
+  const DEG = Math.PI / 180;
   // ---------------------------------------------------------------------------
-  // The cell: one outline, a radius for each angle, so any cell type morphs into any other
+  // The helpers: everyone picks their own (Mia, the family's Australian Shepherd, or a fox, an owl, a
+  // robot, an octopus, a hedgehog or an otter) and names it. All of them share one rig: rubber-hose
+  // arms, a face, and the props for each job, so each acts out what Ipsy is doing:
+  //   idle (bobs, blinks, waves now and then), listen (hand to its ear), think (hand on its chin, thought
+  //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
+  //   write (a notepad: create_*, set_*, update_*…), show (points: show_*), talk (the answer appearing),
+  //   done (a hop: a change saved).
+  // Night Drive puts mirror shades on every helper, Folk a red neckerchief with white dots.
   // ---------------------------------------------------------------------------
-  const N = 56, DEG = Math.PI / 180, TAU = 2 * Math.PI;
-  const G = (th, c, w) => { const d = Math.atan2(Math.sin(th - c), Math.cos(th - c)); return Math.exp(-((d / w) ** 2)); };
-  const ell = (th, a, b, n = 2) => a * b / Math.pow(Math.pow(Math.abs(b * Math.cos(th)), n) + Math.pow(Math.abs(a * Math.sin(th)), n), 1 / n);
-  const DEND = [-160, -115, -65, 150, 30], AMP = [34, 40, 36, 30, 62];
-  const FORMS = {
-    stem: () => 55,
-    neuron: th => 42 + DEND.reduce((s, a, i) => s + AMP[i] * G(th, a * DEG, i === 4 ? 0.14 : 0.17), 0),
-    wbc: th => 54 + 4.5 * Math.sin(8 * th) + 2.5 * Math.sin(13 * th + 1),
-    rbc: th => ell(th, 70, 42),                                             // the rest, for showing off (aOS's Meet Ipsy)
-    muscle: th => ell(th, 88, 32, 1.5),
-    heart: th => ell(th, 70, 46, 4) + 14 * G(th, 160 * DEG, 0.2) + 12 * G(th, -20 * DEG, 0.2),
+  const EGG = 'M100 56C134 56 152 80 152 114C152 150 130 168 100 168C70 168 48 150 48 114C48 80 66 56 100 56Z';
+  const SPIKES = (() => {
+    const pts = [];
+    for (let a = 160, i = 0; a <= 380; a += 11, i++) { const r = i % 2 ? 70 : 54, t = a * DEG; pts.push(f1(100 + r * Math.cos(t)) + ' ' + f1(116 + r * Math.sin(t))); }
+    return 'M' + pts.join('L') + 'L100 140Z';
+  })();
+  const STROKE = (c, w, d) => '<path fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" d="' + d + '"/>';
+  // kind: what it is, for screen readers and for Claude (the picker shows them unnamed)
+  const HELPERS = {
+    mia: { label: 'Australian Shepherd', kind: 'Mia, the family’s Australian Shepherd', sh: 52, pupil: true, cheeks: false,
+      vars: '--limb:#24211E;--limbw:10;--paw:#FFFDF7;--pawedge:#24211E;--foot:#FFFDF7;--eye:#7A4523;--brow:#C27A3E;--broww:6.5;--specl:#E3A72F',
+      back: '<path d="M64 62C42 64 32 92 36 120C38 136 50 140 58 128C62 108 66 86 76 68Z" fill="#24211E"/><path d="M136 62C158 64 168 92 164 120C162 136 150 140 142 128C138 108 134 86 124 68Z" fill="#24211E"/>'
+        + STROKE('#24211E', 2, 'M37 96c-6 2-10 0-12-4M36 112c-6 4-11 3-14 0M38 132c-4 4-10 6-14 4M163 96c6 2 10 0 12-4M164 112c6 4 11 3 14 0M162 132c4 4 10 6 14 4'),
+      body: '<path d="' + EGG + '" fill="#24211E"/>'
+        + '<path d="M70 118C66 128 70 140 80 144L88 132Z" fill="#C27A3E"/><path d="M130 118C134 128 130 140 120 144L112 132Z" fill="#C27A3E"/>'
+        + '<path d="M97 56C98 70 97 84 94 98C88 106 78 112 76 122C76 136 88 144 100 144C112 144 124 136 124 122C122 112 112 106 106 98C103 84 102 70 103 56Z" fill="#FFFDF7"/>'
+        + '<circle cx="88" cy="120" r="1.6" fill="#8E949B"/><circle cx="113" cy="124" r="1.4" fill="#8E949B"/><circle cx="108" cy="113" r="1.2" fill="#8E949B"/>'
+        + '<path d="M70 146l6 10 6-8 6 11 6-10 6 11 6-10 6 11 6-8 6 10c4 14-14 22-30 22s-34-8-30-22z" fill="#FFFDF7"/>',
+      front: '<ellipse class="h-ink" cx="100" cy="116" rx="8" ry="5.5"/><ellipse cx="97" cy="114" rx="2.4" ry="1.4" fill="#fff" opacity=".35"/>' },
+    fox: { label: 'Fox', kind: 'a fox', sh: 52, vars: '--limb:#C9622A;--limbw:9;--paw:#3B2A22;--pawedge:#3B2A22;--foot:#3B2A22',
+      back: '<g class="h-wag" style="transform-origin:132px 150px"><path d="M130 150c34 8 56-20 44-52c-2 26-22 38-44 36z" fill="#E07B39"/><path d="M174 98c-8 4-12 12-10 22c8-4 12-12 10-22z" fill="#FFF7EC"/></g>'
+        + '<path d="M60 84L66 40L94 64Z" fill="#E07B39"/><path d="M67 70L70 50L84 63Z" fill="#3B2A22"/><path d="M140 84L134 40L106 64Z" fill="#E07B39"/><path d="M133 70L130 50L116 63Z" fill="#3B2A22"/>',
+      body: '<path d="' + EGG + '" fill="#E07B39"/><path d="M60 108C66 132 84 142 100 142C116 142 134 132 140 108C128 120 114 124 100 116C86 124 72 120 60 108Z" fill="#FFF7EC"/><ellipse cx="100" cy="154" rx="22" ry="12" fill="#FFF7EC"/>',
+      front: '<ellipse class="h-ink" cx="100" cy="115" rx="5.5" ry="4"/>' },
+    owl: { label: 'Owl', kind: 'an owl', sh: 54, smile: false, vars: '--limb:#1F6F6B;--limbw:11;--paw:#17524F;--pawedge:#17524F;--foot:#E3A72F',
+      back: '<path d="M58 72L62 46L82 62Z" fill="#17524F"/><path d="M142 72L138 46L118 62Z" fill="#17524F"/>',
+      body: '<path d="' + EGG + '" fill="#1F6F6B"/><ellipse cx="100" cy="146" rx="30" ry="20" fill="#F4E3BE"/>' + STROKE('#B98A4A', 2.4, 'M86 140l5 4 5-4M100 140l5 4 5-4M93 150l5 4 5-4M107 150l5 4')
+        + '<circle cx="86" cy="104" r="15" fill="#F4E3BE"/><circle cx="114" cy="104" r="15" fill="#F4E3BE"/>',
+      front: '<path d="M94 115l6 9 6-9z" fill="#E3A72F"/>' },
+    robot: { label: 'Robot', kind: 'a retro robot', sh: 54, vars: '--limb:#2B2522;--limbw:6;--foot:#2B2522',
+      back: STROKE('#2B2522', 3, 'M100 58V40') + '<circle class="h-bulb" cx="100" cy="36" r="7"/><circle cx="50" cy="104" r="6" fill="#E3A72F"/><circle cx="150" cy="104" r="6" fill="#E3A72F"/>',
+      body: '<rect x="52" y="58" width="96" height="106" rx="22" fill="#4FB3AB"/><rect x="64" y="80" width="72" height="56" rx="14" fill="#FBF5E9"/><circle cx="84" cy="150" r="4.5" fill="#D8572A"/><circle cx="100" cy="150" r="4.5" fill="#E3A72F"/><circle cx="116" cy="150" r="4.5" fill="#7E8C34"/>',
+      front: '' },
+    octopus: { label: 'Octopus', kind: 'an octopus', sh: 50, feet: false, vars: '--limb:#E8806A;--limbw:11;--paw:#E8806A;--pawedge:#D2654F',
+      back: STROKE('#E8806A', 11, 'M70 140c-10 14-8 28 6 28M88 146c-4 12 0 22 10 22M112 146c4 12 0 22-10 22M130 140c10 14 8 28-6 28'),
+      body: '<path d="M100 50C136 50 154 76 154 108C154 134 138 148 100 148C62 148 46 134 46 108C46 76 64 50 100 50Z" fill="#E8806A"/><circle cx="126" cy="70" r="6" fill="#F4A894"/><circle cx="138" cy="86" r="4" fill="#F4A894"/><circle cx="70" cy="74" r="4.5" fill="#F4A894"/>',
+      front: '' },
+    hedgehog: { label: 'Hedgehog', kind: 'a hedgehog', sh: 56, vars: '--limb:#E8C58F;--limbw:9;--paw:#7A4E2D;--pawedge:#7A4E2D;--foot:#7A4E2D',
+      back: '<path d="' + SPIKES + '" fill="#7A4E2D"/><circle cx="136" cy="54" r="10" fill="#D8572A"/>' + STROKE('#7E8C34', 3, 'M136 44q4-6 9-5'),
+      body: '<circle cx="100" cy="118" r="48" fill="#E8C58F"/><circle cx="72" cy="80" r="8" fill="#E8C58F"/><circle cx="128" cy="80" r="8" fill="#E8C58F"/>',
+      front: '<circle class="h-ink" cx="100" cy="116" r="5"/>' },
+    otter: { label: 'Otter', kind: 'an otter', sh: 52, vars: '--limb:#8B5A3C;--limbw:10;--paw:#3B2A22;--pawedge:#3B2A22;--foot:#3B2A22',
+      back: '<g class="h-wag" style="transform-origin:130px 156px"><path d="M128 154c20 2 36 8 44 18c-16 2-32-2-46-10z" fill="#6E4630"/></g><circle cx="64" cy="72" r="10" fill="#8B5A3C"/><circle cx="136" cy="72" r="10" fill="#8B5A3C"/><circle cx="64" cy="72" r="5" fill="#3B2A22"/><circle cx="136" cy="72" r="5" fill="#3B2A22"/>',
+      body: '<path d="' + EGG + '" fill="#8B5A3C"/><ellipse cx="100" cy="112" rx="40" ry="30" fill="#E2C29E"/><ellipse cx="100" cy="152" rx="24" ry="13" fill="#E2C29E"/>',
+      front: '<path d="M94 112h12l-6 6z" fill="#2B2522" stroke="#2B2522" stroke-width="3" stroke-linejoin="round"/>' + STROKE('#2B2522', 1.6, 'M80 118l-14-2M80 122l-13 3M120 118l14-2M120 122l13 3').replace('/>', ' opacity=".6"/>') },
   };
-  const MOOD_FORM = { idle: 'stem', listen: 'stem', think: 'neuron', work: 'wbc', talk: 'stem' };
-  const TARGET = {};
-  for (const k in FORMS) TARGET[k] = Array.from({ length: N }, (_, i) => FORMS[k](i * TAU / N));
-  const TIP = DEND.map(a => Math.round((((a * DEG) % TAU) + TAU) % TAU / (TAU / N)) % N);
+  const WHO = Object.keys(HELPERS);
+  const MOODS = ['idle', 'listen', 'think', 'read', 'scan', 'write', 'show', 'talk', 'done'];
 
-  function cellSvg() {
-    return '<svg class="ipsy-cell" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-form="stem">'
-      + '<ellipse class="i-shadow" cx="100" cy="188" rx="46" ry="6"/>'
-      + '<g class="i-bob"><g class="i-rings"><circle class="i-ring" cx="100" cy="108" r="70"/><circle class="i-ring i-r2" cx="100" cy="108" r="70"/></g>'
-      + '<g class="i-body-g"><path class="i-body" d="' + smooth(TARGET.stem.map((r, i) => pt(r, i, 1))) + '"/>'
-      + '<circle class="i-nucleus" cx="128" cy="82" r="13"/>'
-      + '<ellipse class="i-gloss" cx="72" cy="82" rx="11" ry="6" transform="rotate(-34 72 82)"/>'
-      + '<g class="i-sparks">' + '<circle class="i-spark" cx="100" cy="108" r="5"/>'.repeat(5) + '</g>'
-      + '<g class="i-look"><g class="i-eyes"><ellipse class="i-eye" cx="86" cy="104" rx="6" ry="8.5"/><ellipse class="i-eye" cx="114" cy="104" rx="6" ry="8.5"/></g>'
-      // Night Drive: mirror shades (they follow the eyes); Folk: a matryoshka's headscarf, with a flower (ipsy-neon, ipsy-folk)
-      + '<g class="i-shades"><rect class="i-lens" x="73" y="96" width="25" height="15" rx="6"/><rect class="i-lens" x="102" y="96" width="25" height="15" rx="6"/><path class="i-bridge" d="M98 101h4"/><path class="i-glint" d="M78 107l7-8M107 107l7-8"/></g></g>'
-      + '<g class="i-scarf"><path class="i-hood" d="M44 116C38 62 68 42 100 42s62 20 56 74c-8-26-28-40-56-40s-48 14-56 40z"/>'
-      + '<g class="i-dots"><circle cx="66" cy="74" r="3.2"/><circle cx="134" cy="74" r="3.2"/><circle cx="56" cy="96" r="2.6"/><circle cx="144" cy="96" r="2.6"/></g>'
-      + '<g class="i-flower">' + [0, 72, 144, 216, 288].map(a => '<ellipse cx="100" cy="47" rx="4.6" ry="7.5" transform="rotate(' + a + ' 100 55)"/>').join('') + '<circle class="i-fheart" cx="100" cy="55" r="4"/></g></g>'
-      + '<ellipse class="i-cheek" cx="72" cy="120" rx="7" ry="4"/><ellipse class="i-cheek" cx="128" cy="120" rx="7" ry="4"/>'
-      + '<path class="i-smile" d="M93 120Q100 127 107 120"/><ellipse class="i-mouth" cx="100" cy="123" rx="6" ry="5"/>'
-      + '</g></g></svg>';
+  function charSvg(who) {
+    const c = HELPERS[who] || HELPERS.mia, lx = c.sh, sy = 120, rx = 200 - lx, hb = lx + 17.5;
+    // where the hands end up for each job (the arm's rest, turned: see the CSS)
+    const mg = [f1(rx + 24.4), f1(sy + 13.5)], pn = [f1(rx - 22.5), f1(sy + 16.4)], pt = [f1(rx + 21), f1(sy - 18.3)];
+    const pg = x => 'M' + x + ' 130Q' + f1((x + 100) / 2) + ' 126 100 132V158Q' + f1((x + 100) / 2) + ' 152 ' + x + ' 156Z';
+    const eye = x => '<ellipse class="h-eye" cx="' + x + '" cy="104" rx="6" ry="8.5"/>' + (c.pupil ? '<circle class="h-pupil" cx="' + x + '" cy="105" r="3.6"/>' : '') + '<circle class="h-glint" cx="' + (x + 2) + '" cy="101" r="2"/>';
+    const arm = (side, sx) => {
+      const d = side === 'L' ? -1 : 1, hx = sx + d * 10, hy = sy + 26, o = 'transform-origin:' + sx + 'px ' + sy + 'px';
+      return '<g class="h-rig h-rig' + side + '" style="' + o + '"><g class="h-arm h-arm' + side + '" style="' + o + '"><path class="h-lim" d="M' + sx + ' ' + sy + 'Q' + (sx + d * 13) + ' ' + (sy + 11) + ' ' + hx + ' ' + hy + '"/><circle class="h-hand" cx="' + hx + '" cy="' + hy + '" r="7"/></g>';
+    };
+    const star = (x, y, s) => '<path class="h-star" style="transform-origin:' + x + 'px ' + y + 'px" d="M' + x + ' ' + (y - 10 * s) + 'l' + 2.5 * s + ' ' + 7.5 * s + ' ' + 7.5 * s + ' ' + 2.5 * s + '-' + 7.5 * s + ' ' + 2.5 * s + '-' + 2.5 * s + ' ' + 7.5 * s + '-' + 2.5 * s + '-' + 7.5 * s + '-' + 7.5 * s + '-' + 2.5 * s + ' ' + 7.5 * s + '-' + 2.5 * s + 'z"/>';
+    return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="' + who + '" style="' + c.vars + '">'
+      + '<ellipse class="h-shadow" cx="100" cy="182" rx="44" ry="6"/>'
+      + '<g class="h-pose"><g class="h-hop"><g class="h-bob"><g class="h-lean">'
+      + c.back + (c.feet === false ? '' : '<ellipse class="h-foot" cx="84" cy="168" rx="11" ry="6"/><ellipse class="h-foot" cx="116" cy="168" rx="11" ry="6"/>')
+      + c.body
+      + '<g class="h-eyes"><g class="h-lids">' + eye(86) + eye(114) + '</g></g>'
+      + '<path class="h-brow h-browL" d="M78 89Q85 85 92 88" style="transform-origin:85px 88px"/><path class="h-brow h-browR" d="M108 88Q115 85 122 89" style="transform-origin:115px 88px"/>'
+      + c.front
+      + '<g class="h-specs"><circle class="h-spec" cx="86" cy="104" r="12"/><circle class="h-spec" cx="114" cy="104" r="12"/><path class="h-bridge" d="M98 103q2-3 4 0M74 102l-8-3M126 102l8-3"/></g>'
+      + '<g class="h-shades"><rect class="h-lens2" x="73" y="96" width="25" height="15" rx="6"/><rect class="h-lens2" x="102" y="96" width="25" height="15" rx="6"/><path class="h-sbridge" d="M98 101h4"/><path class="h-sglint" d="M78 107l7-8M107 107l7-8"/></g>'
+      + (c.smile === false ? '' : (c.cheeks === false ? '' : '<ellipse class="h-cheek" cx="72" cy="122" rx="7" ry="4"/><ellipse class="h-cheek" cx="128" cy="122" rx="7" ry="4"/>') + '<path class="h-smile" d="M93 123Q100 130 107 123"/>')
+      + '<ellipse class="h-mouth" cx="100" cy="127" rx="6" ry="5"/>'
+      + '<g class="h-scarf"><path class="h-kerchief" d="M68 136Q100 150 132 136L114 158Q100 166 86 158Z"/><g class="h-kdots"><circle cx="86" cy="146" r="2.4"/><circle cx="114" cy="146" r="2.4"/><circle cx="100" cy="156" r="2.4"/></g><circle class="h-knot" cx="100" cy="146" r="5"/></g>'
+      + '<g class="h-prop h-book"><path class="h-cover" d="M' + (hb - 6) + ' 128h' + f1(2 * (100 - hb) + 12) + 'v32h-' + f1(2 * (100 - hb) + 12) + 'z"/>'
+      + '<path class="h-page" d="' + pg(hb - 2) + '"/><path class="h-page" d="' + pg(f1(202 - hb)) + '"/>'
+      + '<path class="h-pl" d="M' + (hb + 4) + ' 138h' + f1(92 - hb) + 'M' + (hb + 4) + ' 144h' + f1(88 - hb) + 'M' + (hb + 4) + ' 150h' + f1(92 - hb) + 'M106 138h' + f1(92 - hb) + 'M106 144h' + f1(86 - hb) + 'M106 150h' + f1(92 - hb) + '"/>'
+      + '<path class="h-page h-flip" style="transform-origin:100px 145px" d="' + pg(f1(202 - hb)) + '"/></g>'
+      + '<g class="h-prop h-notepad" transform="rotate(-8 92 146)"><rect class="h-pad" x="66" y="128" width="50" height="36" rx="4"/><rect class="h-padtop" x="66" y="128" width="50" height="7" rx="3"/>'
+      + '<path class="h-wl" d="M72 143h34"/><path class="h-wl" d="M72 150h34"/><path class="h-wl" d="M72 157h24"/></g>'
+      + '<g class="h-prop h-think"><circle class="h-bubble" cx="' + (rx + 4) + '" cy="72" r="5"/><circle class="h-bubble" cx="' + (rx + 14) + '" cy="56" r="7.5"/><circle class="h-bubble" cx="' + (rx + 28) + '" cy="36" r="11"/></g>'
+      + '<g class="h-prop h-waves"><path class="h-wave" d="M' + (lx - 16) + ' 86q-6 8 0 16"/><path class="h-wave" d="M' + (lx - 24) + ' 80q-9 14 0 28"/></g>'
+      + '<g class="h-prop h-shine">' + star(f1(+pt[0] + 12), f1(pt[1] - 12), 1.2) + '</g>'
+      + '<g class="h-prop h-yay">' + star(36, 60, 1) + star(166, 52, 1) + '</g>'
+      + arm('L', lx) + '</g>' + arm('R', rx)
+      + '<g class="h-prop h-mag"><path class="h-handle" d="M' + mg[0] + ' ' + mg[1] + 'L' + f1(+mg[0] + 6) + ' ' + f1(mg[1] - 14) + '"/><circle class="h-lens" cx="' + f1(+mg[0] + 10) + '" cy="' + f1(mg[1] - 26) + '" r="13"/></g>'
+      + '<g class="h-prop h-pen"><path class="h-pencil" d="M' + f1(+pn[0] + 9) + ' ' + f1(pn[1] - 12) + 'l6 4-12 18-6-4z"/><path class="h-tip" d="M' + f1(pn[0] - 3) + ' ' + f1(+pn[1] + 6) + 'l6 4-7 3z"/></g>'
+      + '</g></g></g></g></g></svg>';
   }
-  const pt = (r, i, s) => { const th = i * TAU / N; return [100 + r * s * Math.cos(th), 108 + r * s * Math.sin(th)]; };
-  function smooth(p) {
-    const n = p.length; let d = 'M' + f1(p[0][0]) + ' ' + f1(p[0][1]);
-    for (let i = 0; i < n; i++) {
-      const a = p[(i - 1 + n) % n], b = p[i], c = p[(i + 1) % n], e = p[(i + 2) % n];
-      d += 'C' + f1(b[0] + (c[0] - a[0]) / 6) + ' ' + f1(b[1] + (c[1] - a[1]) / 6) + ' ' + f1(c[0] - (e[0] - b[0]) / 6) + ' ' + f1(c[1] - (e[1] - b[1]) / 6) + ' ' + f1(c[0]) + ' ' + f1(c[1]);
-    }
-    return d + 'Z';
+
+  // Your helper and its name: aos.helper { who, name } on this device (every app inside aOS shares aOS's storage,
+  // and it follows you to your other devices with your settings: aOS/prefs-sync.js). None yet: the helpers take
+  // turns peeking out of the corner, and the chat starts by asking you to pick one.
+  const HELPER_KEY = 'aos.helper';
+  const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && HELPERS[h.who] ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
+  const helperName = () => { const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
+  function setHelper(who, name) {
+    if (!HELPERS[who]) return;
+    ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
+    helperChanged();
   }
-  // Each drawn cell keeps its own outline; it eases toward its mood's form. The loop runs only
-  // while something is moving (a morph, or the chat open), so a cell at rest costs nothing.
+  const onHelper = new Set();   // what redraws when it changes (each mounted Ipsy, a picker)
+  function helperChanged() {
+    const h = helper();
+    cells.forEach(c => { if (!c.fixed) { c.peeking = false; drawChar(c, h ? h.who : c.peek); } });
+    onHelper.forEach(fn => { try { fn(h); } catch {} });
+  }
+  addEventListener('storage', e => { if (e.key === HELPER_KEY) helperChanged(); });   // changed in another app or frame
+
+  // Each drawn helper: its host carries the mood (data-mood) and the CSS does the rest. A helper not picked yet
+  // takes turns with the others (peek), one every few seconds.
   const cells = new Set();
-  let raf = 0, lastT = 0;
-  function addCell(host) {
-    host.innerHTML = cellSvg();
-    const c = { host, svg: host.firstChild, cur: TARGET.stem.slice(), mood: 'idle', form: '', live: false };
-    c.path = c.svg.querySelector('.i-body'); c.sparks = [...c.svg.querySelectorAll('.i-spark')];
-    cells.add(c); place(c, 0, 0);
+  let peekAt = Math.floor(Math.random() * WHO.length), peekT = 0;
+  function drawChar(c, who) {
+    if (c.who === who) return;
+    c.who = who; c.host.innerHTML = charSvg(who); c.svg = c.host.firstChild;
+    if (c.peeking) c.svg.classList.add('h-peek');
+  }
+  function addCell(host, o = {}) {   // a helper drawn in host (o.who: always that one)
+    const h = helper();
+    const c = { host, mood: 'idle', fixed: !!o.who, peek: WHO[peekIndex()], who: '' };
+    drawChar(c, o.who || (h ? h.who : c.peek));
+    cells.add(c); setMood(c, 'idle'); peekLoop();
     return c;
   }
-  const formOf = c => c.form || MOOD_FORM[c.mood];
+  function peekIndex() { return peekAt % WHO.length; }
+  function peekLoop() {
+    if (peekT || helper()) return;
+    peekT = setInterval(() => {
+      if (helper()) { clearInterval(peekT); peekT = 0; return; }
+      if (document.visibilityState !== 'visible' || still()) return;
+      peekAt++;
+      cells.forEach(c => { if (!c.host.isConnected) { cells.delete(c); return; } if (c.fixed || c.mood !== 'idle' || c.host.closest('.ipsy-wrap:not([hidden])')) return; c.peek = WHO[peekIndex()]; c.peeking = true; drawChar(c, c.peek); });
+    }, 4200);
+  }
+  // a tool's job, by its name: what the helper acts out while it runs
+  function jobOf(name) {
+    const n = String(name || '');
+    if (/^(find|search)(_|$)/.test(n)) return 'scan';
+    if (/^(show|open)(_|$)/.test(n)) return 'show';
+    if (/^(create|edit|set|update|add|delete|remove|move|merge|rename|make|accept|discard|tick|tidy|sort|change)_/.test(n)) return 'write';
+    return 'read';
+  }
   function setMood(c, mood) {
-    c.mood = mood; c.host.dataset.mood = mood; c.svg.dataset.form = formOf(c);
-    kick();
-  }
-  function place(c, dt, t) {
-    const form = formOf(c), tgt = TARGET[form], k = still() || !dt ? 1 : Math.min(1, dt * 6);
-    const wob = still() || !c.live ? 0 : c.mood === 'listen' ? 2.6 : 1.6;
-    let moving = false;
-    const p = t % 1, beating = form === 'heart' && !still();                    // a heart cell beats: lub, dub
-    const beat = beating ? 1 + 0.06 * (Math.exp(-(((p - 0.05) / 0.05) ** 2)) + 0.6 * Math.exp(-(((p - 0.3) / 0.05) ** 2))) : 1;
-    const pts = c.cur.map((r, i) => {
-      const nr = r + (tgt[i] - r) * k;
-      if (Math.abs(tgt[i] - nr) > 0.05) moving = true;
-      c.cur[i] = nr;
-      const th = i * TAU / N;
-      return pt(nr + wob * Math.sin(3 * th + t * 2.2) + wob * 0.6 * Math.sin(5 * th - t * 1.7), i, beat);
-    });
-    c.path.setAttribute('d', smooth(pts));
-    c.sparks.forEach((s, i) => { s.setAttribute('cx', f1(pts[TIP[i]][0])); s.setAttribute('cy', f1(pts[TIP[i]][1])); });
-    return moving || beating || (c.live && !still());
-  }
-  function kick() { if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } }
-  function frame(now) {
-    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0.016; lastT = now;
-    let more = false;
-    cells.forEach(c => { if (!c.host.isConnected) cells.delete(c); else if (place(c, dt, now / 1000)) more = true; });
-    raf = more && document.visibilityState === 'visible' ? requestAnimationFrame(frame) : 0;
+    mood = mood === 'work' ? 'read' : MOODS.includes(mood) ? mood : 'idle';
+    c.mood = mood; c.host.dataset.mood = mood;
   }
   function syncIpsyVisibility() {
     document.documentElement.classList.toggle('ipsy-paused', document.visibilityState !== 'visible');
-    if (document.visibilityState === 'visible') kick();
   }
   document.addEventListener('visibilitychange', syncIpsyVisibility);
   syncIpsyVisibility();
+
+  // ---------------------------------------------------------------------------
+  // Across a bar (aOS Home's Ipsy bar): each helper in its own way, out to the far end and back.
+  // Keyframes: [offset, how far along (0..1), the pose]. cross(slot, d) runs it; the animations come back,
+  // so a tap can finish them (it's home at once).
+  // ---------------------------------------------------------------------------
+  const spurts = (dir, from, to, n) => {   // the octopus: squash, shoot forward, settle, n times
+    const out = [];
+    for (let k = 0; k < n; k++) {
+      const a = from + (to - from) * k / n, s = (to - from) / n, x0 = dir > 0 ? k / n : 1 - k / n, x1 = dir > 0 ? (k + 1) / n : 1 - (k + 1) / n;
+      out.push([a + s * 0.25, x0, 'scale(1.14,.84)'], [a + s * 0.6, x1, 'translateY(-10px) rotate(' + 14 * dir + 'deg) scale(.86,1.16)'], [a + s, x1, 'none']);
+    }
+    return out;
+  };
+  const MOVES = {
+    // zoomies: races out bouncing, spins on the spot, races back
+    mia: { speed: 1, frames: [[0, 0, 'none'], ...[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((x, i) => [0.06 + i * 0.06, x, i % 2 ? 'rotate(6deg)' : 'translateY(-14px) rotate(6deg)']), [0.42, 1, 'none'],
+      [0.47, 1, 'translateY(-22px) rotate(180deg)'], [0.52, 1, 'translateY(-22px) rotate(360deg)'], [0.56, 1, 'rotate(360deg) scale(1.08,.9)'],
+      ...[0.85, 0.7, 0.55, 0.4, 0.25, 0.1].map((x, i) => [0.62 + i * 0.05, x, i % 2 ? 'rotate(354deg)' : 'translateY(-14px) rotate(354deg)']), [1, 0, 'rotate(360deg)']] },
+    // creeps out on tiptoe, freezes, then pounces home
+    fox: { speed: 1.25, frames: [[0, 0, 'none'], ...Array.from({ length: 9 }, (_, i) => [0.05 * (i + 1), 0.11 * (i + 1) - 0.07, 'scale(1.04,.86)' + (i % 2 ? ' translateY(-3px) rotate(3deg)' : ' rotate(-4deg)')]),
+      [0.5, 1, 'none'], [0.6, 1, 'none'], [0.64, 1, 'scale(1.1,.8)'], [0.72, 0.55, 'translateY(-46px) rotate(-24deg)'], [0.8, 0.1, 'rotate(-30deg) scale(1.1,.85)'], [0.86, 0.1, 'scale(1.1,.85)'],
+      [0.93, 0, 'translateY(-16px) rotate(-10deg)'], [1, 0, 'none']] },
+    // flies out flapping, loops the loop, flies back
+    owl: { speed: 1.05, frames: [[0, 0, 'none'], [0.1, 0.1, 'translateY(-26px) rotate(10deg)'], [0.2, 0.3, 'translateY(-10px) rotate(12deg)'], [0.3, 0.55, 'translateY(-30px) rotate(12deg)'],
+      [0.4, 0.8, 'translateY(-12px) rotate(10deg)'], [0.48, 1, 'translateY(-34px) rotate(0deg)'], [0.55, 1, 'translateY(-38px) rotate(-180deg)'], [0.62, 0.9, 'translateY(-30px) rotate(-360deg)'],
+      [0.72, 0.6, 'translateY(-12px) rotate(-372deg)'], [0.82, 0.35, 'translateY(-28px) rotate(-370deg)'], [0.92, 0.1, 'translateY(-10px) rotate(-366deg)'], [1, 0, 'rotate(-360deg)']] },
+    // moonwalks out in shades, strikes a pose, walks back
+    robot: { speed: 1.2, frames: [[0, 0, 'none'], [0.05, 0, 'rotate(-7deg)'], [0.42, 1, 'rotate(-7deg)'], [0.46, 1, 'translateY(-4px)'], [0.56, 1, 'translateY(-4px)'], [0.6, 1, 'rotate(5deg)'], [0.96, 0, 'rotate(5deg)'], [1, 0, 'none']] },
+    // jets out in squishy spurts, and back
+    octopus: { speed: 1.1, frames: [[0, 0, 'none'], ...spurts(1, 0, 0.5, 4), ...spurts(-1, 0.5, 1, 4)] },
+    // curls up and rolls out, pops up with a ta-da, rolls back (turns: from how far it goes)
+    hedgehog: { speed: 1, frames: d => { const t = Math.max(1, Math.round(d / (0.3 * 56) / (2 * Math.PI))) * 360; return [[0, 0, 'scale(.8) rotate(0deg)'], [0.4, 1, 'scale(.8) rotate(' + t + 'deg)'],
+      [0.45, 1, 'translateY(-22px) rotate(' + t + 'deg)'], [0.5, 1, 'rotate(' + t + 'deg)'], [0.6, 1, 'rotate(' + t + 'deg)'], [0.63, 1, 'scale(.8) rotate(' + t + 'deg)'], [0.97, 0, 'scale(.8) rotate(0deg)'], [1, 0, 'none']]; } },
+    // a run-up, then a belly slide out; stands, and slides back
+    otter: { speed: 1.1, frames: [[0, 0, 'none'], [0.05, 0.06, 'translateY(-8px) rotate(8deg)'], [0.1, 0.12, 'rotate(6deg)'], [0.15, 0.2, 'translateY(-14px) rotate(50deg)'], [0.2, 0.3, 'translateY(12px) rotate(90deg)', 'cubic-bezier(.1,.6,.3,1)'],
+      [0.42, 1, 'translateY(12px) rotate(90deg)'], [0.47, 1, 'translateY(-12px) rotate(0deg)'], [0.52, 1, 'none'], [0.57, 0.94, 'translateY(-14px) rotate(-50deg)'], [0.62, 0.84, 'translateY(12px) rotate(-90deg)', 'cubic-bezier(.1,.6,.3,1)'],
+      [0.9, 0, 'translateY(12px) rotate(-90deg)'], [0.95, 0, 'translateY(-10px) rotate(0deg)'], [1, 0, 'none']] },
+  };
+  function cross(slot, d) {
+    const host = slot.querySelector('.ipsy-host'), svg = slot.querySelector('.ipsy-char'), pose = svg && svg.querySelector('.h-pose');
+    if (!host || !pose || still()) return null;
+    const who = svg.dataset.who, m = MOVES[who] || MOVES.mia, frames = typeof m.frames === 'function' ? m.frames(d) : m.frames;
+    const duration = Math.round(2 * (900 + d * 2) / 0.84 * m.speed);
+    const ease = f => f[3] || 'ease-in-out';
+    host.dataset.mood = 'cross'; host.style.setProperty('--cross', duration + 'ms');
+    const anims = [slot.animate(frames.map(f => ({ offset: f[0], transform: 'translateX(' + f1(f[1] * d) + 'px)', easing: ease(f) })), { duration }),
+      pose.animate(frames.map(f => ({ offset: f[0], transform: f[2], easing: ease(f) })), { duration })];
+    anims[0].finished.catch(() => {}).then(() => { if (host.dataset.mood === 'cross') host.dataset.mood = 'idle'; });
+    return anims;
+  }
+
+  // The picker: every helper, unnamed (their kind for screen readers), then a name. pick(who, name) when done.
+  function pickerHtml(id, h) {
+    return '<div class="ipsy-who" role="radiogroup" aria-label="Your helper">' + WHO.map(w => '<button type="button" class="ipsy-whobtn" role="radio" data-who="' + w + '" aria-checked="' + !!(h && h.who === w) + '" aria-label="' + esc(HELPERS[w].kind.replace(/^an? /, '')) + '"><span class="ipsy-host" data-mood="idle">' + charSvg(w) + '</span></button>').join('') + '</div>'
+      + '<label class="ipsy-namel" for="' + id + '">Name</label><input class="ipsy-name" id="' + id + '" maxlength="16" autocomplete="off" spellcheck="false" placeholder="' + (h ? 'Give them a name' : 'Pick a helper first') + '"' + (h ? ' value="' + esc(h.name) + '"' : ' disabled') + '>';
+  }
+  function bindPicker(root, done) {
+    let who = (helper() || {}).who || '';
+    root.addEventListener('click', e => {
+      const b = e.target.closest('.ipsy-whobtn'); if (!b) return;
+      who = b.dataset.who;
+      root.querySelectorAll('.ipsy-whobtn').forEach(x => x.setAttribute('aria-checked', String(x === b)));
+      const n = root.querySelector('.ipsy-name'); n.disabled = false; n.placeholder = 'Give them a name'; n.focus();
+      if (done) done(who, n.value, false);
+    });
+    root.addEventListener('input', e => { if (e.target.classList.contains('ipsy-name') && who && done) done(who, e.target.value, false); });
+    return { who: () => who, name: () => (root.querySelector('.ipsy-name') || {}).value || '' };
+  }
+  // In aOS Account, Your helper: picks and names it as you go (saved at once); changed(helper) after each change
+  function picker(host, changed) {
+    addStyle();
+    const h = helper();
+    host.innerHTML = '<div class="ipsy-picker">' + pickerHtml('ipsyAcctName', h) + '</div>';
+    follow(host.firstChild);
+    bindPicker(host.firstChild, (who, name) => { setHelper(who, name); if (changed) changed(helper()); });
+  }
 
   // ---------------------------------------------------------------------------
   // The look: the app's own tokens, so it's Sea glass or Vintage, light or dark, as the app is
@@ -176,84 +325,174 @@
 .ipsy-btn .ipsy-host{width:100%;height:100%}
 .ipsy-btn:active .ipsy-host{transform:scale(.92)}
 :where(.ipsy-host){position:relative;display:block}
-.ipsy-cell{width:100%;height:100%;display:block;overflow:visible;stroke:none}
-.ipsy-cell *{stroke:none}
-.ipsy-glass .ipsy-cell{filter:drop-shadow(0 6px 12px rgba(129,147,188,.35))}
-.ipsy-cell .i-shadow{fill:rgba(16,24,26,.13)}
-.ipsy-glass .i-body{fill:url(#ipsyGlass);stroke:rgba(255,255,255,.85);stroke-width:1.5}
-.ipsy-vintage .i-body{fill:var(--mc-mustard,#E3A72F);transition:fill .5s}
-.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-body{fill:var(--mc-teal,#1F6F6B)}
-.ipsy-vintage .ipsy-cell[data-form="wbc"] .i-body{fill:var(--mc-card,#FBF5E9);stroke:var(--mc-on-mustard,#2B2522);stroke-width:2.5}
-.ipsy-vintage .ipsy-cell[data-form="rbc"] .i-body,.ipsy-vintage .ipsy-cell[data-form="heart"] .i-body{fill:var(--mc-orange,#D8572A)}
-.ipsy-vintage .ipsy-cell[data-form="muscle"] .i-body{fill:var(--mc-olive,#7E8C34)}
-.ipsy-vintage .ipsy-cell[data-form="rbc"] .i-cheek,.ipsy-vintage .ipsy-cell[data-form="heart"] .i-cheek{fill:var(--mc-mustard,#E3A72F)}
-.ipsy-cell[data-form="muscle"] .i-gloss{opacity:0}
-.i-nucleus{fill:#fff;opacity:.35;stroke:rgba(255,255,255,.85);stroke-width:1.5;transition:opacity .5s}
-.ipsy-vintage .i-nucleus{fill:var(--mc-on-mustard,#2B2522);opacity:.12;stroke:none}
-.ipsy-cell:not([data-form="stem"]) .i-nucleus{opacity:0}
-.i-gloss{fill:#fff;opacity:.6;transition:opacity .4s}
-.ipsy-vintage .i-gloss,.ipsy-cell[data-form="neuron"] .i-gloss{opacity:0}
-.i-spark{fill:#E9D6B4;stroke:rgba(255,255,255,.85);stroke-width:1;opacity:0;transition:opacity .4s}
-.ipsy-vintage .i-spark{fill:var(--mc-mustard,#E3A72F);stroke:none}
-.ipsy-cell[data-form="neuron"] .i-spark{opacity:1;animation:ipsyFlash .5s steps(2) infinite}
-.i-spark:nth-child(2){animation-delay:.1s}.i-spark:nth-child(3){animation-delay:.2s}.i-spark:nth-child(4){animation-delay:.3s}.i-spark:nth-child(5){animation-delay:.4s}
-.i-eye{fill:#1E2A2C}
-.ipsy-vintage .i-eye,.ipsy-vintage .i-mouth{fill:var(--mc-on-mustard,#2B2522)}
-.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-eye,.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-mouth{fill:#FBF5E9}
-.i-cheek{fill:rgba(214,140,134,.55)}
-.ipsy-vintage .i-cheek{fill:var(--mc-orange,#D8572A)}
-.i-shades,.i-scarf{display:none}
-.ipsy-neon .i-shades{display:inline}
-.ipsy-neon .i-eye{opacity:0}
-.i-lens{fill:#120B1F;stroke:#FF3D9A;stroke-width:2.6}
-.i-bridge{fill:none;stroke:#FF3D9A;stroke-width:2.6;stroke-linecap:round}
-.i-glint{fill:none;stroke:#22D3EE;stroke-width:2.2;stroke-linecap:round;opacity:.9}
-.ipsy-neon .i-cheek{fill:#FF3D9A;opacity:.55}
-.ipsy-folk .i-scarf{display:inline}
-.ipsy-folk .i-nucleus,.ipsy-folk .i-gloss{opacity:0}
-.i-hood{fill:var(--fk-scarf,#C7261C)}
-.i-dots circle{fill:var(--fk-dot,#F6E7C6)}
-.i-flower ellipse{fill:var(--fk-petal,#D9A630)}
-.i-fheart{fill:var(--fk-scarf,#C7261C)}
-.ipsy-folk .i-cheek{fill:#E0412F;opacity:.85}
-.ipsy-folk .ipsy-cell:not([data-form="stem"]) .i-scarf{opacity:0;transition:opacity .2s}
-.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-cheek{fill:var(--mc-mustard,#E3A72F)}
-.i-smile{fill:none;stroke:#1E2A2C;stroke-width:3.2;stroke-linecap:round}
-.ipsy-vintage .i-smile{stroke:var(--mc-on-mustard,#2B2522)}
-.ipsy-vintage .ipsy-cell[data-form="neuron"] .i-smile{stroke:#FBF5E9}
-.i-mouth{fill:#1E2A2C;opacity:0;transform-box:fill-box;transform-origin:center}
-.i-ring{fill:none;stroke:rgba(129,147,188,.6);stroke-width:2;opacity:0;transform-box:fill-box;transform-origin:center}
-.ipsy-vintage .i-ring{stroke:var(--mc-teal,#1F6F6B);stroke-width:3}
-.i-bob{animation:ipsyBob 5.6s ease-in-out infinite}
-.i-shadow{transform-box:fill-box;transform-origin:center;animation:ipsyShade 5.6s ease-in-out infinite}
-.i-eyes{transform-box:fill-box;transform-origin:center;animation:ipsyBlink 9s infinite}
-.i-look,.i-body-g{transform-box:fill-box;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
-.i-body-g{transform-origin:50% 100%}
-.i-look{transform-origin:center}
-[data-mood="listen"] .i-body-g{transform:rotate(-6deg)}
-[data-mood="listen"] .i-look{transform:scale(1.15)}
-[data-mood="listen"] .i-ring{animation:ipsyRing 1.8s ease-out infinite}
-[data-mood="listen"] .i-r2{animation-delay:.9s}
-[data-mood="think"] .i-look,[data-mood="work"] .i-look{transform:translate(5px,-6px)}
-[data-mood="think"] .i-bob{animation-duration:4.4s}
-[data-mood="work"] .i-bob{animation-duration:1.6s}
-[data-mood="talk"] .i-body-g{animation:ipsySquash .34s ease-in-out infinite alternate}
-[data-mood="talk"] .i-smile{opacity:0}
-[data-mood="talk"] .i-mouth{opacity:1;animation:ipsyJaw .22s ease-in-out infinite alternate}
-@keyframes ipsyBob{50%{transform:translateY(-5px)}}
-@keyframes ipsyShade{50%{transform:scaleX(.9);opacity:.82}}
-@keyframes ipsyBlink{0%,28%,30%,69%,71%,76%,78%,100%{transform:scaleY(1)}29%,70%,77%{transform:scaleY(.12)}}
-@keyframes ipsyRing{0%{transform:scale(.82);opacity:.7}100%{transform:scale(1.22);opacity:0}}
-@keyframes ipsySquash{to{transform:scale(1.035,.965)}}
-@keyframes ipsyJaw{from{transform:scaleY(.3)}to{transform:scaleY(1)}}
-@keyframes ipsyFlash{50%{opacity:.25}}
-
-.ipsy-host:not([data-mood]) .i-body-g,.ipsy-host[data-mood="idle"] .i-body-g{animation:ipsyBreathe 5.6s ease-in-out infinite}
-.ipsy-host:not([data-mood]) .i-look,.ipsy-host[data-mood="idle"] .i-look{animation:ipsyGlance 13s ease-in-out infinite}
-@keyframes ipsyBreathe{0%,100%{transform:scale(1) rotate(0deg)}50%{transform:scale(1.025,1.015) rotate(.7deg)}}
-@keyframes ipsyGlance{0%,72%,88%,100%{transform:translate(0,0)}77%,81%{transform:translate(4px,-1px)}92%,95%{transform:translate(-3px,0)}}
+.ipsy-char{width:100%;height:100%;display:block;overflow:visible;--line:#2B2522;--limb:var(--line);--limbw:6;--paw:#FFFDF7;--pawedge:var(--line);--foot:var(--line)}
+.ipsy-char g,.ipsy-char path,.ipsy-char ellipse,.ipsy-char circle,.ipsy-char rect{transform-box:view-box}
+.ipsy-glass .ipsy-char{filter:drop-shadow(0 6px 12px rgba(129,147,188,.35))}
+.ipsy-char .h-shadow{fill:#2B2522;opacity:.12;transform-origin:100px 182px;animation:ipsyShade 4.8s ease-in-out infinite}
+.h-pose{transform-origin:100px 120px}
+.h-lim{fill:none;stroke:var(--limb);stroke-width:var(--limbw);stroke-linecap:round}
+.h-hand{fill:var(--paw);stroke:var(--pawedge);stroke-width:2.5}
+.h-foot{fill:var(--foot)}
+.h-eye{fill:var(--eye,var(--line))} .h-glint{fill:#fff} .h-pupil{fill:#1A1410} .h-ink{fill:var(--line)} .h-bulb{fill:#D8572A}
+.h-brow{fill:none;stroke:var(--brow,var(--line));stroke-width:var(--broww,3.4);stroke-linecap:round;transition:transform .35s ease}
+.h-cheek{fill:#D8572A;opacity:.55}
+.h-smile{fill:none;stroke:var(--line);stroke-width:3.4;stroke-linecap:round}
+.h-mouth{fill:var(--line);opacity:0;transform-origin:100px 127px}
+.h-arm,.h-rig{transition:transform .55s cubic-bezier(.3,1.35,.5,1)}
+.h-prop{opacity:0;transition:opacity .3s}
+.h-eyes{transition:transform .35s ease}
+.h-lean{transform-origin:100px 170px;transition:transform .5s cubic-bezier(.3,1.35,.5,1)}
+.h-cover{fill:#1F6F6B} .h-page{fill:#FFFDF7;stroke:var(--line);stroke-width:1.6} .h-pl{stroke:var(--line);stroke-width:1.6;opacity:.45;stroke-linecap:round}
+.h-pad{fill:#FFFDF7;stroke:var(--line);stroke-width:2} .h-padtop{fill:#D8572A}
+.h-wl{stroke:#1F6F6B;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:34;stroke-dashoffset:34}
+.h-pencil{fill:#E3A72F;stroke:var(--line);stroke-width:1.8} .h-tip{fill:var(--line)}
+.h-spec{fill:rgba(255,255,255,.35);stroke:var(--specl,var(--line));stroke-width:3.2}
+.h-bridge{fill:none;stroke:var(--specl,var(--line));stroke-width:3.2;stroke-linecap:round}
+.h-specs{opacity:0;transform:translateY(-40px);transition:transform .55s cubic-bezier(.3,1.5,.5,1),opacity .2s}
+.h-lens{fill:#DCEBE9;stroke:#1F6F6B;stroke-width:4} .h-handle{stroke:var(--line);stroke-width:5;stroke-linecap:round}
+.h-bubble{fill:#FFFDF7;stroke:var(--line);stroke-width:2} .h-star{fill:#D8572A} .h-wave{fill:none;stroke:#1F6F6B;stroke-width:3;stroke-linecap:round}
+/* Night Drive: mirror shades (off while the glasses are on); Folk: a red neckerchief with white dots */
+.h-shades,.h-scarf{display:none}
+.ipsy-neon .h-shades{display:inline}
+.h-lens2{fill:#120B1F;stroke:#FF3D9A;stroke-width:2.6} .h-sbridge{fill:none;stroke:#FF3D9A;stroke-width:2.6;stroke-linecap:round} .h-sglint{fill:none;stroke:#22D3EE;stroke-width:2.2;stroke-linecap:round;opacity:.9}
+.ipsy-neon .h-cheek{fill:#FF3D9A}
+.ipsy-folk .h-scarf{display:inline}
+.h-kerchief,.h-knot{fill:var(--fk-scarf,#C7261C)} .h-kdots circle{fill:var(--fk-dot,#F6E7C6)} .h-knot{stroke:var(--fk-dot,#F6E7C6);stroke-width:1.5}
+.h-peek{animation:ipsyPeek .5s cubic-bezier(.2,1.3,.35,1) both}
+/* idle: bobs, blinks, waves now and then; a tail wags */
+.h-bob{animation:ipsyBob 4.8s ease-in-out infinite}
+.h-lids{transform-origin:100px 104px;animation:ipsyBlink 6s infinite}
+.h-wag{animation:ipsyWag 2.4s ease-in-out infinite}
+.ipsy-host:not([data-mood]) .h-armR,[data-mood="idle"] .h-armR{animation:ipsyWave 9s ease-in-out infinite}
+/* listening: leans in, hand to its ear */
+[data-mood="listen"] .h-lean{transform:rotate(-6deg)}
+[data-mood="listen"] .h-armL{transform:rotate(145deg)}
+[data-mood="listen"] .h-brow{transform:translateY(-4px)}
+[data-mood="listen"] .h-waves{opacity:1}
+[data-mood="listen"] .h-wave{animation:ipsyPulse 1.4s ease-out infinite}
+[data-mood="listen"] .h-wave+.h-wave{animation-delay:.35s}
+/* thinking: hand on its chin, looks up, thought bubbles (the robot's bulb flashes) */
+[data-mood="think"] .h-armR{transform:rotate(91deg)}
+[data-mood="think"] .h-eyes{transform:translate(4px,-5px)}
+[data-mood="think"] .h-browL{transform:translateY(-3px) rotate(-8deg)}
+[data-mood="think"] .h-browR{transform:translateY(2px) rotate(6deg)}
+[data-mood="think"] .h-think{opacity:1}
+[data-mood="think"] .h-bubble{animation:ipsyBubble 1.8s ease-in-out infinite}
+[data-mood="think"] .h-bubble:nth-child(2){animation-delay:.3s}
+[data-mood="think"] .h-bubble:nth-child(3){animation-delay:.6s}
+[data-mood="think"] .h-bulb{animation:ipsyGlow .5s steps(2) infinite}
+/* reading: a book, eyes along the lines, a page turning */
+[data-mood="read"] .h-armL{transform:rotate(-60deg)}
+[data-mood="read"] .h-armR{transform:rotate(60deg)}
+[data-mood="read"] .h-book{opacity:1}
+[data-mood="read"] .h-eyes{animation:ipsyRead 2.4s ease-in-out infinite}
+[data-mood="read"] .h-flip{animation:ipsyFlip 4.8s ease-in-out infinite}
+/* scanning: glasses on, a magnifying glass sweeping, eyes darting */
+[data-mood="scan"] .h-armR{transform:rotate(-40deg)}
+[data-mood="scan"] .h-rigR{animation:ipsySweep 1.6s ease-in-out infinite}
+[data-mood="scan"] .h-mag{opacity:1}
+[data-mood="scan"] .h-specs{opacity:1;transform:translateY(0)}
+[data-mood="scan"] .h-shades{display:none}
+[data-mood="scan"] .h-eyes{animation:ipsyDart 1.6s ease-in-out infinite}
+[data-mood="scan"] .h-browL{transform:translateY(-6px)}
+/* writing: a notepad, the pencil scribbling, lines appearing */
+[data-mood="write"] .h-armL{transform:rotate(-60deg)}
+[data-mood="write"] .h-armR{transform:rotate(75deg)}
+[data-mood="write"] .h-notepad,[data-mood="write"] .h-pen{opacity:1}
+[data-mood="write"] .h-rigR{animation:ipsyScribble .5s linear infinite}
+[data-mood="write"] .h-wl{animation:ipsyLine 3s linear infinite}
+[data-mood="write"] .h-wl:nth-of-type(2){animation-delay:1s}
+[data-mood="write"] .h-wl:nth-of-type(3){animation-delay:2s}
+[data-mood="write"] .h-eyes{transform:translate(-3px,5px)}
+[data-mood="write"] .h-brow{transform:translateY(2px)}
+/* showing: points at it, a sparkle */
+[data-mood="show"] .h-armR{transform:rotate(-110deg)}
+[data-mood="show"] .h-eyes{transform:translate(5px,-2px)}
+[data-mood="show"] .h-shine{opacity:1}
+[data-mood="show"] .h-star{animation:ipsyTwinkle 1.2s ease-in-out infinite}
+/* talking: mouth and hands */
+[data-mood="talk"] .h-smile{opacity:0}
+[data-mood="talk"] .h-mouth{opacity:1;animation:ipsyJaw .26s ease-in-out infinite alternate}
+[data-mood="talk"] .h-rigL{animation:ipsyGestL 1.1s ease-in-out infinite}
+[data-mood="talk"] .h-rigR{animation:ipsyGestR 1.1s ease-in-out infinite .3s}
+/* done: a hop, arms up, sparkles */
+[data-mood="done"] .h-hop{animation:ipsyHop .9s cubic-bezier(.3,0,.4,1) infinite}
+[data-mood="done"] .h-armL{transform:rotate(126deg)}
+[data-mood="done"] .h-armR{transform:rotate(-126deg)}
+[data-mood="done"] .h-smile{opacity:0}
+[data-mood="done"] .h-mouth{opacity:1}
+[data-mood="done"] .h-brow{transform:translateY(-4px)}
+[data-mood="done"] .h-yay{opacity:1}
+[data-mood="done"] .h-yay .h-star{animation:ipsyTwinkle .9s ease-in-out infinite}
+[data-mood="done"] .h-wag{animation-duration:.6s}
+/* crossing aOS Home's bar (cross()): no bob; the owl flaps, the robot moonwalks and poses, the hedgehog's ta-da */
+[data-mood="cross"] .h-bob,[data-mood="cross"] .h-shadow{animation:none}
+[data-mood="cross"] [data-who="owl"] .h-armL{animation:ipsyFlapL .22s ease-in-out infinite alternate}
+[data-mood="cross"] [data-who="owl"] .h-armR{animation:ipsyFlapR .22s ease-in-out infinite alternate}
+[data-mood="cross"] [data-who="mia"] .h-armL,[data-mood="cross"] [data-who="otter"] .h-armL{transform:rotate(-40deg)}
+[data-mood="cross"] [data-who="mia"] .h-armR,[data-mood="cross"] [data-who="otter"] .h-armR{transform:rotate(40deg)}
+[data-mood="cross"] [data-who="robot"] .h-specs{opacity:1;transform:none}
+[data-mood="cross"] [data-who="robot"] .h-spec{fill:#2B2522}
+[data-mood="cross"] [data-who="robot"] .h-shades{display:none}
+[data-mood="cross"] [data-who="robot"] .h-foot{animation:ipsyMoon .7s ease-in-out infinite}
+[data-mood="cross"] [data-who="robot"] .h-foot+.h-foot{animation-delay:.35s}
+[data-mood="cross"] [data-who="robot"] .h-armL{animation:ipsyBotL var(--cross,4s) ease-in-out}
+[data-mood="cross"] [data-who="robot"] .h-armR{animation:ipsyBotR var(--cross,4s) ease-in-out}
+[data-mood="cross"] [data-who="hedgehog"] .h-armL{animation:ipsyHogL var(--cross,4s)}
+[data-mood="cross"] [data-who="hedgehog"] .h-armR{animation:ipsyHogR var(--cross,4s)}
+[data-mood="cross"] [data-who="octopus"] .h-armL{transform:rotate(60deg)}
+[data-mood="cross"] [data-who="octopus"] .h-armR{transform:rotate(-60deg)}
+[data-mood="cross"] [data-who="fox"] .h-armL{transform:rotate(-70deg)}
+[data-mood="cross"] [data-who="fox"] .h-armR{transform:rotate(-30deg)}
+@keyframes ipsyBob{50%{transform:translateY(-4px)}}
+@keyframes ipsyShade{50%{transform:scaleX(.9);opacity:.08}}
+@keyframes ipsyBlink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.1)}}
+@keyframes ipsyWag{0%,100%{transform:rotate(0)}50%{transform:rotate(8deg)}}
+@keyframes ipsyGlow{50%{fill:#E3A72F}}
+@keyframes ipsyWave{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(-125deg)}78%{transform:rotate(-100deg)}81%{transform:rotate(-125deg)}84%{transform:rotate(-100deg)}90%{transform:rotate(0)}}
+@keyframes ipsyPulse{0%{opacity:0;transform:translateX(0)}30%{opacity:1}100%{opacity:0;transform:translateX(-8px)}}
+@keyframes ipsyBubble{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(-4px);opacity:1}}
+@keyframes ipsyRead{0%{transform:translate(-5px,5px)}40%{transform:translate(5px,5px)}50%{transform:translate(-5px,7px)}90%{transform:translate(5px,7px)}100%{transform:translate(-5px,5px)}}
+@keyframes ipsyFlip{0%,55%{transform:scaleX(1)}75%,100%{transform:scaleX(-1)}}
+@keyframes ipsySweep{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(7deg)}}
+@keyframes ipsyDart{0%,100%{transform:translate(3px,-1px)}30%{transform:translate(5px,1px)}60%{transform:translate(1px,-2px)}}
+@keyframes ipsyScribble{0%,100%{transform:translate(0,0)}25%{transform:translate(3px,1px)}50%{transform:translate(-1px,2px)}75%{transform:translate(4px,-1px)}}
+@keyframes ipsyLine{0%{stroke-dashoffset:34}30%,100%{stroke-dashoffset:0}}
+@keyframes ipsyTwinkle{0%,100%{transform:scale(.6) rotate(0);opacity:.5}50%{transform:scale(1.1) rotate(20deg);opacity:1}}
+@keyframes ipsyJaw{from{transform:scaleY(.35)}to{transform:scaleY(1)}}
+@keyframes ipsyGestL{0%,100%{transform:rotate(0)}50%{transform:rotate(-22deg)}}
+@keyframes ipsyGestR{0%,100%{transform:rotate(0)}50%{transform:rotate(22deg)}}
+@keyframes ipsyHop{0%,100%{transform:translateY(0)}35%{transform:translateY(-14px)}60%{transform:translateY(0)}70%{transform:translateY(-3px)}}
+@keyframes ipsyPeek{from{opacity:0;transform:translateY(30%) scale(.8)}}
+@keyframes ipsyFlapL{from{transform:rotate(90deg)}to{transform:rotate(160deg)}}
+@keyframes ipsyFlapR{from{transform:rotate(-90deg)}to{transform:rotate(-160deg)}}
+@keyframes ipsyMoon{0%{transform:translate(4px,0)}40%{transform:translate(-8px,0)}60%{transform:translate(-8px,-6px)}100%{transform:translate(4px,0)}}
+@keyframes ipsyBotL{0%,42%,58%,100%{transform:rotate(-20deg)}46%,54%{transform:rotate(126deg)}}
+@keyframes ipsyBotR{0%,42%,58%,100%{transform:rotate(20deg)}46%,54%{transform:rotate(-70deg)}}
+@keyframes ipsyHogL{0%,42%{transform:rotate(-60deg)}46%,58%{transform:rotate(126deg)}64%,97%{transform:rotate(-60deg)}100%{transform:rotate(0)}}
+@keyframes ipsyHogR{0%,42%{transform:rotate(60deg)}46%,58%{transform:rotate(-126deg)}64%,97%{transform:rotate(60deg)}100%{transform:rotate(0)}}
+/* the picker: every helper, unnamed, then a name */
+.ipsy-pick{display:grid;gap:10px;padding:12px;border-radius:18px;background:var(--glass,rgba(255,255,255,.6));border:1px solid var(--hair,rgba(16,24,26,.08))}
+.ipsy-vintage .ipsy-pick{background:var(--mc-card-2,#F0E5D0);border:0}
+.ipsy-pick>p{margin:0;font-size:14.5px;line-height:1.4}
+.ipsy-who{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ipsy-whobtn{border:0;border-radius:16px;padding:2px;background:var(--glass-2,rgba(255,255,255,.7));cursor:pointer;aspect-ratio:1;min-width:0;-webkit-tap-highlight-color:transparent}
+.ipsy-vintage .ipsy-whobtn{background:var(--mc-card,#FBF5E9)}
+.ipsy-whobtn[aria-checked="true"]{box-shadow:inset 0 0 0 2.5px var(--accent,#3B7366)}
+.ipsy-vintage .ipsy-whobtn[aria-checked="true"]{box-shadow:inset 0 0 0 2.5px var(--mc-mustard,#E3A72F);background:color-mix(in srgb,var(--mc-mustard,#E3A72F) 26%,var(--mc-card,#FBF5E9))}
+.ipsy-whobtn:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px}
+.ipsy-whobtn .ipsy-host{width:100%;height:100%}
+.ipsy-whobtn .h-armR{animation:none!important}
+.ipsy-namel{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,rgba(16,24,26,.64))}
+.ipsy-name{font:inherit;font-size:16px;color:var(--text,#10181A);padding:10px 14px;border-radius:14px;background:var(--glass-2,rgba(255,255,255,.86));border:1px solid var(--hair,rgba(16,24,26,.1));min-width:0}
+.ipsy-vintage .ipsy-name{background:var(--mc-card,#FBF5E9);border:2px solid var(--mc-edge,rgba(43,37,34,.14))}
+.ipsy-name:disabled{opacity:.55}
+.ipsy-name:focus{outline:2px solid var(--accent,#3B7366);outline-offset:1px}
+.ipsy-picker{display:grid;gap:10px}
+.ipsy-head h2 button{all:unset;cursor:pointer;display:block}
+.ipsy-head h2 button:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px;border-radius:6px}
 .ipsy-paused .ipsy-host *{animation-play-state:paused!important}
-@media (prefers-reduced-motion:reduce){.ipsy-host *,.ipsy-wrap *{animation:none!important;transition:none!important}[data-mood="listen"] .i-ring{opacity:.5}}
+@media (prefers-reduced-motion:reduce){.ipsy-host *,.ipsy-wrap *{animation:none!important;transition:none!important}}
 
 .ipsy-wrap{position:fixed;inset:0;z-index:60}
 .ipsy-wrap[hidden]{display:none}
@@ -443,11 +682,15 @@
     'orders.ipsy_keeps_orders_up_to_date': { app: 'orders', ask: true, about: 'Orders: Ipsy rereads and fixes orders by itself (can only be turned off here)', ...choice({ off: '0' }, raw(ORD + '-ipsy-auto', '')), from: s => (s === '1' ? 'on' : 'off') },
     'travel.ipsy_fills_in': { app: 'travel', ask: true, about: 'Travel: Ipsy fills in what\'s missing from bookings (can only be turned off here)', ...choice({ off: '0' }, raw('allison-travel-v1-ai-on', '1')), from: s => (s === '0' ? 'off' : 'on') },
     'travel.ipsy_checks_by_itself': { app: 'travel', ask: true, about: 'Travel: Ipsy checks new bookings by itself (can only be turned off here)', ...choice({ off: '0' }, raw('allison-travel-v1-ipsy-auto', '')), from: s => (s === '1' ? 'on' : 'off') },
+    'helper.character': { app: '*', live: true, about: 'Your helper\'s look (' + WHO.map(w => w + ': ' + HELPERS[w].kind).join(', ') + ')', ...choice(Object.fromEntries(WHO.map(w => [w, w])), {
+      get: () => (helper() || {}).who || '', put: v => setHelper(v, (helper() || {}).name || '') }) },
+    'helper.name': { app: '*', live: true, keepCase: true, about: 'Your helper\'s name (Ipsy until it has one, up to 16 letters)', values: ['a name, up to 16 letters'], ok: v => v.length >= 1 && v.length <= 16, to: v => v, from: v => v,
+      get: () => (helper() || {}).name || '', put: v => setHelper((helper() || {}).who || 'mia', v) },
     ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
   };
   // where a setting is: each app's Settings (the button that opens it), and aOS's Account sections
   const OPENER = { calendar: '#setBtn', clock: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', house: '#gear', mail: '#gear', meals: '#setBtn', news: '#setBtn', notes: '#setBtn', orders: '#setBtn', places: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', weather: '[data-action="location"]' };
-  const ACCOUNT = { 'aos.appearance': 'appearance', 'aos.notifications': 'notifications', 'aos.subscription': 'plan', 'aos.updates': 'updates', 'aos.lost_phone': 'lost', 'aos.replacing_phone': 'move', 'aos.owner_tools': 'owner', 'aos.account': '' };
+  const ACCOUNT = { 'aos.helper': 'helper', 'aos.appearance': 'appearance', 'aos.notifications': 'notifications', 'aos.subscription': 'plan', 'aos.updates': 'updates', 'aos.lost_phone': 'lost', 'aos.replacing_phone': 'move', 'aos.owner_tools': 'owner', 'aos.account': '' };
   const aosTop = () => { try { return window.top !== window && window.top.aosHomeTab ? window.top : (window.aosHomeTab ? window : null); } catch { return window.aosHomeTab ? window : null; } };
   const shown = (id, s) => { const v = s.get(); return s.from ? (s.from(v) ?? v) : v; };
   function settingsTools(o, closeChat) {
@@ -458,7 +701,7 @@
       change_setting: async ({ setting, value } = {}, { confirm }) => {
         const s = SETTINGS[setting];
         if (!s) return { error: true, content: 'That isn\'t a setting Ipsy can change. Use open_setting to show the person where it is.' };
-        value = String(value == null ? '' : value).trim().toLowerCase();
+        value = String(value == null ? '' : value).trim().replace(/\s+/g, ' '); if (!s.keepCase) value = value.toLowerCase();
         if (s.ok ? !s.ok(value) : !s.values.includes(value)) return { error: true, content: `${setting} takes: ${s.values.join(', ')}.` };
         const was = s.get(), to = s.to(value);
         if (JSON.stringify(was) === JSON.stringify(to)) return { content: `${setting} is already ${value}.` };
@@ -523,7 +766,7 @@
 
     // The button
     const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'ipsy-btn'; follow(btn); btn.setAttribute('aria-label', 'Ask Ipsy'); btn.setAttribute('aria-haspopup', 'dialog');
+    btn.type = 'button'; btn.className = 'ipsy-btn'; follow(btn); btn.setAttribute('aria-haspopup', 'dialog');
     btn.innerHTML = '<span class="ipsy-host"></span>';
     if (o.slot) { o.slot.textContent = ''; o.slot.appendChild(btn); }
     else { btn.style.cssText = 'position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5'; document.body.appendChild(btn); }
@@ -536,7 +779,7 @@
     wrap.innerHTML = '<div class="ipsy-scrim" data-close></div>'
       + '<button class="ipsy-speaker ipsy-host" type="button" aria-label="Put Ipsy away" data-close></button>'
       + '<section class="ipsy-bubble" role="dialog" aria-modal="true" aria-labelledby="ipsyTitle">'
-      + '<div class="ipsy-head"><h2 id="ipsyTitle">Ipsy<small id="ipsyStatus">' + esc(sub) + '</small></h2>'
+      + '<div class="ipsy-head"><h2 id="ipsyTitle"><button type="button" id="ipsyWho" aria-label="Your helper: change it or its name"><span id="ipsyNm" translate="no"></span></button><small id="ipsyStatus">' + esc(sub) + '</small></h2>'
       + '<button class="ipsy-hist" type="button" id="ipsyHist" aria-label="Recent chats" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></svg></button>'
       + '<button class="ipsy-new" type="button" id="ipsyNew">New chat</button><button class="ipsy-x" type="button" aria-label="Close" data-close>×</button></div>'
       + '<div class="ipsy-log" id="ipsyLog" aria-live="polite"></div>'
@@ -549,6 +792,13 @@
     const speaker = wrap.querySelector('.ipsy-speaker'), peek = addCell(speaker);
     const mood = m => { setMood(peek, m); setMood(btnCell, m === 'listen' ? 'idle' : m); };
     const say = s => { status.textContent = s || sub; };
+    // what the status line says while your helper does each job ("Mia is reading…")
+    const DOING = { think: 'is thinking…', read: 'is reading…', scan: 'is searching…', write: 'is writing…', show: 'is showing you', done: 'is done' };
+    const doing = job => helperName() + ' ' + (DOING[job] || DOING.think);
+    const named = () => { $('ipsyNm').textContent = helperName(); btn.setAttribute('aria-label', 'Ask ' + helperName()); input.placeholder = (o.placeholder || 'Ask Ipsy').replace(/\bIpsy\b/g, helperName()); };
+    named();
+    onHelper.add(() => { named(); if (!wrap.hidden && !busy) draw(); });
+    $('ipsyWho').addEventListener('click', () => { if (busy || asks.size) return; showing = showing === 'pick' ? false : 'pick'; draw(); });
 
     // Where the bubble goes: Ipsy stands in for its button (the same cell, in the same place, over the
     // dark), and the bubble rises from just above its head, its tail pointing down at it.
@@ -579,7 +829,7 @@
       place(); btn.style.visibility = 'hidden';
       wrap.hidden = false; document.documentElement.classList.add('locked');
       freshIfDone(); ls.del(K.closed);
-      peek.live = true; mood(busy ? peek.mood : 'idle'); showing = false; draw();
+      mood(busy ? peek.mood : 'idle'); showing = false; draw();
       setTimeout(() => { if (ls.get(K.ok, '')) input.focus(); }, 350);
     }
     function close() {
@@ -588,7 +838,6 @@
       const done = () => {
         wrap.hidden = true; wrap.classList.remove('ipsy-closing'); btn.style.visibility = '';
         if (!busy && !asks.size && view.length) ls.set(K.closed, String(Date.now()));   // done: put away in a minute (freshIfDone)
-        peek.live = false; kick();
         if (![...document.querySelectorAll('.sheetwrap, .sheet-wrap')].some(w => !w.hidden)) document.documentElement.classList.remove('locked');   // an app's own sheet still open keeps the page dimmed
         if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus();
       };
@@ -603,7 +852,7 @@
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
     $('ipsyForm').addEventListener('submit', e => { e.preventDefault(); submit(); });
     $('ipsyNew').addEventListener('click', () => { if (busy || asks.size) return; putAway(); showing = false; draw(); input.focus(); });
-    $('ipsyHist').addEventListener('click', () => { if (busy || asks.size) return; showing = !showing; draw(); });
+    $('ipsyHist').addEventListener('click', () => { if (busy || asks.size) return; showing = showing === true ? false : true; draw(); });
 
     // ---- Recent chats: the last five put away, newest first, on this phone ----
     // A chat's Undo buttons last while the page is open (the undos are kept by id), as in the chat itself.
@@ -648,9 +897,25 @@
     window.addEventListener('resize', refit);
 
     // What's in the chat, drawn from `view` (what the person saw), not from the raw messages.
+    function pickCard(first) {
+      const h = helper();
+      return '<div class="ipsy-pick" id="ipsyPick"><p><b>' + (first ? 'Who’s your helper?' : 'Your helper') + '</b> ' + (first ? 'Pick one and give it a name. Change either any time: tap its name up here, or in aOS, Account.' : 'Pick another, or change its name.') + '</p>'
+        + pickerHtml('ipsyPickName', h) + '<button class="ipsy-chip" type="button" id="ipsyPickDone"' + (h ? '' : ' disabled') + '>Done</button></div>';
+    }
+    function bindPick() {
+      const el = $('ipsyPick'); if (!el) return;
+      const p = bindPicker(el, () => { $('ipsyPickDone').disabled = false; });
+      $('ipsyPickDone').addEventListener('click', () => { if (!p.who()) return; setHelper(p.who(), p.name()); showing = false; draw(); setTimeout(() => input.focus(), 50); });
+      el.querySelector('.ipsy-name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('ipsyPickDone').click(); } });
+    }
     function draw() {
       const ok = !!ls.get(K.ok, ''), past = recent(), hb = $('ipsyHist');
-      hb.hidden = !past.length && !showing; hb.setAttribute('aria-expanded', String(showing));
+      hb.hidden = !past.length && showing !== true; hb.setAttribute('aria-expanded', String(showing === true));
+      if (showing === 'pick') {
+        log.innerHTML = pickCard(false); bindPick();
+        input.disabled = true; sendBtn.disabled = true; log.scrollTop = 0;
+        return;
+      }
       if (showing) {
         log.innerHTML = '<div class="ipsy-hlist"><p>Recent chats</p>' + (past.length ? past.map((c, i) => '<button class="ipsy-hrow" type="button" data-hist="' + i + '"><b translate="no">' + esc(c.title) + '</b><small>' + esc(whenSaid(c.at)) + '</small></button>').join('')
           : '<p>No earlier chats yet.</p>') + '</div>';
@@ -659,12 +924,17 @@
       }
       let h = '';
       if (!view.length) {
-        h = '<div class="ipsy-empty">' + (o.intro === '' ? '' : '<p>' + esc(o.intro || 'Hi! Ask me anything.') + '</p>')
+        if (!helper()) {   // no helper yet: pick one first; the chat starts once it's picked
+          log.innerHTML = '<div class="ipsy-empty">' + pickCard(true) + '</div>'; bindPick();
+          input.disabled = true; sendBtn.disabled = true; log.scrollTop = 0;
+          return;
+        }
+        h = '<div class="ipsy-empty">' + (o.intro === '' ? '' : '<p>' + esc((o.intro || 'Hi! Ask me anything.').replace(/\bIpsy\b/g, helperName())) + '</p>')
           + (ok ? '<div class="ipsy-chips">' + (o.suggestions || []).map(s => '<button class="ipsy-chip" type="button" data-ask="' + esc(s) + '">' + esc(s) + '</button>').join('') + '</div>'
             : '<div class="ipsy-consent"><p>' + esc(o.consent || '') + '</p><button class="ipsy-chip" type="button" id="ipsyOk">OK, let’s go</button></div>') + '</div>';
       }
       h += view.map(item).join('');
-      log.innerHTML = h;
+      log.innerHTML = h; bindPick();
       input.disabled = !ok; sendBtn.disabled = !ok || busy;
       log.scrollTop = log.scrollHeight;
     }
@@ -732,7 +1002,7 @@
         if (wrap.hidden) open();
         add({ t: 'ask', id, text: String(text), yes: opt.yes || 'Yes, do it', no: opt.no || 'No' });
         mood('listen'); say('Waiting for your answer…');
-      }).then(ok => { mood('work'); say('Working…'); return ok; });
+      }).then(ok => { mood('write'); say(doing('write')); return ok; });
     }
     async function runTool(u) {
       const fn = BUILT_IN[u.name] || (o.tools && o.tools[u.name]);
@@ -798,13 +1068,14 @@
       const mark = messages.length;          // where this question starts, to go back to if it fails
       let ctx = ''; try { ctx = o.context ? o.context() : ''; } catch {}
       const ru = window.aosLang && aosLang.get() === 'ru' ? ' The person has aOS in Russian: answer in Russian.' : '';   // ../home/lang.js
-      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ru + ']' }, { type: 'text', text }] });
+      const me = helper(), who = me ? ' You are this person’s helper, ' + (me.name.trim() ? 'named ' + me.name.trim() + ', ' : '') + 'drawn as ' + HELPERS[me.who].kind + '.' : '';
+      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ru + who + ']' }, { type: 'text', text }] });
       add({ t: 'me', text });
       let failed = null;
       try {
         for (let n = 0; ; n++) {
           if (n >= MAX_STEPS) throw Object.assign(new Error('steps'), { code: 'steps' });
-          mood('think'); say('Thinking…');
+          if (!n) { mood('think'); say(doing('think')); }
           const res = await step();
           if (res.stop_reason === 'refusal') throw Object.assign(new Error('refused'), { code: 'refused' });
           const content = Array.isArray(res.content) ? res.content : [];
@@ -816,11 +1087,10 @@
           if (w.text) await reveal({ t: 'it', text: w.text, src: w.src });
           if (res.stop_reason === 'pause_turn') continue;                    // Anthropic paused a long search: carry on
           if (res.stop_reason === 'tool_use' && uses.length) {
-            mood('work');
             uses.forEach(u => { const l = BUILT_LABEL[u.name] || (o.label ? o.label(u.name, u.input || {}) : ''); if (l) add({ t: 'act', text: l }); });
-            say('Working…');
-            const results = [];
-            for (const u of uses) results.push(await runTool(u));          // one at a time: they share the app's data
+            const results = [], changes = view.filter(v => v.t === 'change').length;
+            for (const u of uses) { const job = jobOf(u.name); mood(job); say(doing(job)); results.push(await runTool(u)); }   // one at a time: they share the app's data
+            if (view.filter(v => v.t === 'change').length > changes) { mood('done'); say(doing('done')); }   // a change saved: a hop while Claude carries on
             messages.push({ role: 'user', content: results });
             persist();
             continue;
@@ -881,23 +1151,21 @@
     };
   }
 
-  // A character on its own, for a page that only shows Ipsy (aOS's Meet Ipsy card and page):
-  //   const c = AllisonOS.ipsy.character(host, { look: 'vintage', mood: 'idle', form: 'heart', live: true })
-  //   c.mood('think'); c.form('rbc'); c.look('glass')
-  // form: stem, neuron, wbc, rbc, muscle or heart ('' follows the mood); live: a gentle wobble.
+  // A helper on its own, for a page that only shows Ipsy (aOS's Meet Ipsy card and page):
+  //   const c = AllisonOS.ipsy.character(host, { look: 'vintage', mood: 'idle', who: 'fox' })
+  //   c.mood('read'); c.who('owl'); c.look('glass')
+  // who: one of the helpers; none: the person's own (the helpers taking turns until they pick one).
   function character(host, o = {}) {
     addStyle();
     host.classList.add('ipsy-host');
     const setLook = l => dress(host, l);
     if (o.look) setLook(o.look); else follow(host);
-    const c = addCell(host);
-    c.live = !!o.live; c.form = FORMS[o.form] ? o.form : '';
+    const c = addCell(host, { who: HELPERS[o.who] ? o.who : '' });
     setMood(c, o.mood || 'idle');
     return {
       mood: m => setMood(c, m),
-      form: f => { c.form = FORMS[f] ? f : ''; setMood(c, c.mood); },
+      who: w => { if (HELPERS[w]) { c.fixed = true; drawChar(c, w); } },
       look: setLook,
-      live: on => { c.live = !!on; kick(); },
     };
   }
 
@@ -949,5 +1217,7 @@
     },
   };
 
-  AOS.ipsy = { mount, character, privacy, wear, forms: Object.keys(FORMS), look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'folk'
+  // helper(): { who, name } or null; helpers: [{ id, kind }]; picker(host): pick and name it (aOS Account); cross(slot, d): across aOS Home's bar
+  AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label })), name: helperName,
+    look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'folk'
 })();

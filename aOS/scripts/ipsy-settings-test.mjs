@@ -30,7 +30,7 @@ async function phone(seed = {}) {
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps: {} };
   const seen = Object.fromEntries(['aos', ...APPS].map(id => [id, '999']));
   await ctx.addInitScript(([s, seen]) => { try { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.seen', JSON.stringify(seen)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' }));
+    localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify(seen)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' }));
     for (const k in s) localStorage.setItem(k, s[k]); } catch {} }, [seed, seen]);
   const claude = { next: null, results: [] };
   await ctx.route('**/*', r => {

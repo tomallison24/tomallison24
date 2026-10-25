@@ -116,22 +116,24 @@
   const FAM = { id: 'calendar', k: 'Your family', h: 'One Face ID, every app', art: 'people', body: () => `
       <p>Every AllisonOS app signs in with one Face ID tap.</p>
       <h3>Invite someone</h3><p>Under your account, top right.</p>` };
-  // Meet Ipsy: the helper you chat with (home/ipsy.js), a little stem cell that changes shape as it works.
+  // Meet Ipsy: the helper you chat with (home/ipsy.js), the character you pick and name, acting out its jobs.
   // While a release that introduces it is fresh (its intro: 'ipsy'), it leads Today, big, telling what it can
-  // do in a speech bubble as it turns from one cell into the next; after that it joins the mix.
+  // do in a speech bubble as it acts each one out; after that it joins the mix.
   const IPSY_APPS = ['orders', 'travel', 'meals', 'calendar', 'notes', 'news'];   // the apps Ipsy is in
   const IPSY_SAYS = [
-    ['stem', 'Hi! I’m Ipsy, a little stem cell.'], ['wbc', 'I track down orders and trips.'],
-    ['neuron', 'I check flights, Gmail and the web.'], ['rbc', 'I plan dinners and tidy your lists.'],
-    ['heart', 'Every change I make has an Undo.'], ['muscle', 'Find me on aOS Home, and in six apps!'],
+    ['idle', 'Hi! Pick me, and give me a name.'], ['read', 'I read your orders, trips and emails.'],
+    ['scan', 'I search Gmail and the web for you.'], ['write', 'I plan dinners and tidy your lists.'],
+    ['done', 'Every change I make has an Undo.'], ['show', 'Find me on aOS Home, and in six apps!'],
   ];
-  const IPSY_FORMS = [['stem', 'Stem cell', 'Resting, ready to help'], ['neuron', 'Nerve cell', 'Thinking'], ['wbc', 'White blood cell', 'On the hunt through your things'],
-    ['rbc', 'Red blood cell', 'Just showing off'], ['muscle', 'Muscle cell', 'Also showing off'], ['heart', 'Heart cell', 'Showing a lot of heart']];
+  // the helpers to pick from (home/ipsy.js), each with how it crosses the Ipsy bar on Home
+  const IPSY_WHO = [['mia', 'Mia', 'The family’s own. Zoomies!'], ['fox', 'Fox', 'Creeps, then pounces'], ['owl', 'Owl', 'Loops the loop'], ['robot', 'Robot', 'Moonwalks'],
+    ['octopus', 'Octopus', 'Jets in spurts'], ['hedgehog', 'Hedgehog', 'Rolls up in a ball'], ['otter', 'Otter', 'Belly-slides']];
   const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
-      <p>A little stem cell you can chat with, in ${IPSY_APPS.map(id => esc(D.NAMES[id] || id)).join(', ').replace(/, ([^,]*)$/, ' and $1')}.</p>
+      <p>A helper you can chat with, in ${IPSY_APPS.map(id => esc(D.NAMES[id] || id)).join(', ').replace(/, ([^,]*)$/, ' and $1')}. You pick what it looks like and give it a name.</p>
       <h3>Ask in your own words</h3><p>“Is anything late?” (Orders) “When should we leave for the airport?” (Travel) “Swap Tuesday for something quick.” (Meals) “Find us a free evening next week.” (Calendar) “Sort my grocery list by aisle.” (Notes) “What happened in the game last night?” (News)</p>
       <h3>It does the work</h3><p>Ipsy finds, fixes, adds and tidies in the app you’re in. Every change has Undo.</p>
-      <h3>A cell of many shapes</h3><div class="ipsy-forms">${IPSY_FORMS.map(([f, n, d]) => `<figure><div class="ipsy-mini" data-ipsy-form="${f}"></div><figcaption><b>${esc(n)}</b><i>${esc(d)}</i></figcaption></figure>`).join('')}</div>
+      <h3>Pick your helper</h3><p>The first time you tap Ipsy, or in Account, Your helper. It reads while it looks at your things, puts its glasses on to search, and writes when it changes something.</p>
+      <div class="ipsy-forms">${IPSY_WHO.map(([w, n, d]) => `<figure><div class="ipsy-mini" data-ipsy-who="${w}"></div><figcaption><b>${esc(n)}</b><i>${esc(d)}</i></figcaption></figure>`).join('')}</div>
       <h3>Where to find it</h3><p>At the top of aOS Home, where I work across your apps, and in the bottom left corner of each app.</p>` };
   const ipsyStage = (cls, line) => `<div class="${cls}" data-ipsy-stage></div><p class="ipsy-say" aria-hidden="true"><span>${esc(line)}</span></p>`;
   // Brings every Ipsy on the page to life: the card's and the page's tell what it can do, one shape at a time.
@@ -143,23 +145,23 @@
       host.dataset.on = '1';
       ipsys.push({ host, say: host.parentNode.querySelector('.ipsy-say'), c: I.character(host, { look: aosLook.get(), live: true }), i: 0 });
     }
-    for (const host of root.querySelectorAll('[data-ipsy-form]:not([data-on])')) {
+    for (const host of root.querySelectorAll('[data-ipsy-who]:not([data-on])')) {
       host.dataset.on = '1';
-      I.character(host, { look: aosLook.get(), form: host.dataset.ipsyForm, mood: host.dataset.ipsyForm === 'neuron' ? 'think' : 'idle' });
+      I.character(host, { look: aosLook.get(), who: host.dataset.ipsyWho });
     }
     if (!ipsyTimer && !matchMedia('(prefers-reduced-motion: reduce)').matches) ipsyTimer = setInterval(() => {
       for (let k = ipsys.length - 1; k >= 0; k--) {
         const o = ipsys[k];
         if (!o.host.isConnected) { ipsys.splice(k, 1); continue; }
         o.i = (o.i + 1) % IPSY_SAYS.length;
-        const [form, line] = IPSY_SAYS[o.i];
-        o.c.form(form); o.c.mood('talk'); setTimeout(() => o.c.mood('idle'), 1100);
+        const [job, line] = IPSY_SAYS[o.i];
+        o.c.mood('talk'); setTimeout(() => o.c.mood(job), 1100);
         if (o.say) o.say.innerHTML = `<span>${esc(line)}</span>`;
       }
     }, 2900);
   }
   addEventListener('aos:look', () => {
-    for (const host of document.querySelectorAll('[data-ipsy-stage], [data-ipsy-form]')) AllisonOS.ipsy && AllisonOS.ipsy.wear ? AllisonOS.ipsy.wear(host, aosLook.get()) : (host.classList.toggle('ipsy-vintage', aosLook.flat()), host.classList.toggle('ipsy-glass', !aosLook.flat()));
+    for (const host of document.querySelectorAll('[data-ipsy-stage], [data-ipsy-who]')) AllisonOS.ipsy && AllisonOS.ipsy.wear ? AllisonOS.ipsy.wear(host, aosLook.get()) : (host.classList.toggle('ipsy-vintage', aosLook.flat()), host.classList.toggle('ipsy-glass', !aosLook.flat()));
   });
   const SHAPE = ['', 'half', 'half', 'wide', '', 'half', 'half'];   // the bento: one tall, two halves, one wide, again
   const intro = fresh && now.intro === 'ipsy';
@@ -198,7 +200,7 @@
   const show = t => { const names = [...document.querySelectorAll('[data-tab]')].map(b => b.dataset.tab); for (const s of ['today', 'apps', 'search', 'home']) if ($(s)) $(s).hidden = s !== t; document.querySelector('.tabs').style.setProperty('--i', names.indexOf(t)); tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); $('scroller').scrollTop = 0; if (t === 'search') setTimeout(() => $('q').focus(), 50); };
   tabs.forEach(b => b.onclick = () => show(b.dataset.tab));
   window.aosTabs = { show };
-  window.aosAccount = { open: at => acctPage(at) };   // Ipsy's open_setting: 'appearance', 'notifications', 'plan', 'updates', 'lost', 'move', 'owner'
+  window.aosAccount = { open: at => acctPage(at), setup: at => setupPage(at || 0) };   // Ipsy's open_setting: 'helper', 'appearance', 'notifications', 'plan', 'updates', 'lost', 'move', 'owner'
   window.aosAppHue = id => HUE[id];
 
   // ---- pages that slide over ----
@@ -365,15 +367,19 @@
   const LANGS = window.aosLang ? aosLang.list : [['en', 'English']];
   const langNow = () => (window.aosLang ? aosLang.get() : 'en');
   const looksLine = () => `${THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
+  // Your helper (home/ipsy.js): the one you picked and its name, or none yet
+  const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return (h.name.trim() || 'Ipsy') + ' · ' + (k ? k.label : ''); };
   function acctPage(at) {
     const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
+      <div class="group acct"><button type="button" class="soft runsetup" data-setup>Run through setup</button></div>
       <div class="group acct">
         ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div>
           <p class="lnote">Language</p>
           <div class="seg" id="lang" translate="no">${LANGS.map(([l, n]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${n}</button>`).join('')}</div>
           <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>`, 'lookSub')}
+        ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
           <ul>${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
@@ -388,16 +394,56 @@
       if (t) $('lookSub').textContent = looksLine();
       const lg = ev.target.closest('[data-lang]'); if (lg && window.aosLang) aosLang.set(lg.dataset.lang);   // aOS and every open app are drawn again in it
       if (ev.target.closest('[data-replay]')) W.play();
+      if (ev.target.closest('[data-setup]')) setupPage(0);
       onPlanTap(ev);
     });
     paintPlans();
     paintAccount(el.querySelector('#acct'));
+    if (AllisonOS.ipsy && AllisonOS.ipsy.picker) AllisonOS.ipsy.picker(el.querySelector('#helperPick'), () => { $('helperSub').textContent = helperLine(); });
     if (at === 'updates' || at === 'plan') { unfold(el.querySelector(at === 'plan' ? '#subscription' : '#whats-new'), true); setTimeout(() => el.querySelector(at === 'plan' ? '#subscription' : '#whats-new').scrollIntoView({ block: 'start' }), 450); }
     // a section the account's own card draws (Ipsy's open_setting): once it's there, unfolded and in sight
-    const SECTION = { appearance: '[aria-controls="fLook"]', notifications: '[aria-controls="fNotify"]', lost: '[aria-controls="fLost"]', move: '[aria-controls="fMove"]', owner: '#tToggle' };
+    const SECTION = { helper: '#helper', appearance: '[aria-controls="fLook"]', notifications: '[aria-controls="fNotify"]', lost: '[aria-controls="fLost"]', move: '[aria-controls="fMove"]', owner: '#tToggle' };
     if (SECTION[at]) { let n = 0; const find = () => { const b = el.querySelector(SECTION[at]); if (b) { unfold(b, true); setTimeout(() => b.scrollIntoView({ block: 'start' }), 300); } else if (n++ < 30) setTimeout(find, 200); }; find(); }
     return el;
   }
+
+  // Run through setup: your own settings, one at a time: language, look, light or dark, your helper and its name.
+  // Each is saved as you pick it (and follows you to your other devices, aOS/prefs-sync.js). Picking a language
+  // draws aOS again in it, so the walk-through carries on from the next step after (sessionStorage aos.setup).
+  const STEPS = ['lang', 'look', 'theme', 'helper', 'done'];
+  function setupPage(at) {
+    at = Math.max(0, Math.min(STEPS.length - 1, at | 0));
+    const el = page('<h1 class="ptitle">Set up aOS</h1><div class="group acct setup" id="setupBox"></div>', { up: true });
+    const box = el.querySelector('#setupBox');
+    const I = AllisonOS.ipsy;
+    function draw() {
+      const k = STEPS[at], n = STEPS.length - 1;
+      const dots = `<div class="sdots" aria-hidden="true">${STEPS.slice(0, n).map((_, i) => `<i class="${i < at ? 'did' : i === at ? 'on' : ''}"></i>`).join('')}</div>`;
+      const head = (q, sub) => `${k === 'done' ? '' : dots}<p class="sstep">${k === 'done' ? 'All set' : `Step ${at + 1} of ${n}`}</p><h2 class="sq">${q}</h2>${sub ? `<p class="note">${sub}</p>` : ''}`;
+      let body = '';
+      if (k === 'lang') body = head('Which language?', 'For aOS and every app. What the family wrote stays as it is.')
+        + `<div class="seg" id="sLang" translate="no">${LANGS.map(([l, nm]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${nm}</button>`).join('')}</div>`;
+      if (k === 'look') body = head('Pick a look', 'Every app wears it. An app\'s own Settings can still have its own.') + `<div class="dlist" role="listbox" aria-label="Look">${lookOpts()}</div>`;
+      if (k === 'theme') body = head('Light or dark?', 'Automatic follows your phone.') + `<div class="seg" id="sTheme">${W.theme.list.map(([t, nm]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${nm}</button>`).join('')}</div>`;
+      if (k === 'helper') body = head('Who’s your helper?', 'Ipsy, the helper you chat with in aOS and the apps. Pick one and give it a name.') + '<div id="sHelper"></div>';
+      if (k === 'done') body = head('You’re all set', 'Change any of these again in Account.') + `<ul class="sdone"><li>${esc(looksLine())}</li><li>${esc(helperLine())}</li></ul>`;
+      box.innerHTML = body + `<div class="row2">${at && k !== 'done' ? '<button type="button" class="soft" data-sback>Back</button>' : ''}<button type="button" class="go" data-snext>${k === 'done' ? 'Done' : k === 'helper' ? 'Finish' : 'Next'}</button></div>`;
+      if (k === 'helper' && I && I.picker) I.picker(box.querySelector('#sHelper'));
+      const b = box.querySelector('[aria-pressed="true"], [aria-selected="true"], .ipsy-whobtn'); if (b && b.focus) b.focus({ preventScroll: true });
+    }
+    box.addEventListener('click', ev => {
+      const lg = ev.target.closest('[data-lang]');
+      if (lg && window.aosLang && lg.dataset.lang !== langNow()) { try { sessionStorage.setItem('aos.setup', String(at + 1)); } catch {} aosLang.set(lg.dataset.lang); return; }   // aOS is drawn again in it: on from the next step
+      const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); box.querySelectorAll('[data-t]').forEach(x => x.setAttribute('aria-pressed', String(x === t))); }
+      const lk = ev.target.closest('[data-look]');
+      if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS })).then(() => { const l = box.querySelector('.dlist'); if (l) l.innerHTML = lookOpts(); });
+      if (ev.target.closest('[data-sback]')) { at--; draw(); }
+      if (ev.target.closest('[data-snext]')) { if (STEPS[at] === 'done') { el.querySelector('.close').click(); return; } at++; draw(); }
+    });
+    draw();
+    return el;
+  }
+  try { const s = sessionStorage.getItem('aos.setup'); if (s != null) { sessionStorage.removeItem('aos.setup'); setTimeout(() => setupPage(+s), 700); } } catch {}   // after a language was picked
 
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);

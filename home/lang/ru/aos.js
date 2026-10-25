@@ -61,6 +61,23 @@
     'On aOS Home, and in each app': 'На главной aOS и в каждом приложении',
     'Hi! I’m Ipsy, a little stem cell.': 'Привет! Я Ипси, маленькая стволовая клетка.',
     'I track down orders and trips.': 'Я отслеживаю заказы и поездки.',
+    'Hi! Pick me, and give me a name.': 'Привет! Выберите меня и дайте мне имя.',
+    'I read your orders, trips and emails.': 'Я читаю ваши заказы, поездки и письма.',
+    'I search Gmail and the web for you.': 'Я ищу для вас в Gmail и в интернете.',
+    'Pick your helper': 'Выберите помощника',
+    // Run through setup (aOS/app.js setupPage)
+    'Run through setup': 'Пройти настройку', 'Set up aOS': 'Настройка aOS',
+    'Which language?': 'Какой язык?', 'For aOS and every app. What the family wrote stays as it is.': 'Для aOS и всех приложений. То, что написала семья, останется как есть.',
+    'Pick a look': 'Выберите стиль', 'Every app wears it. An app\'s own Settings can still have its own.': 'Его получат все приложения. В настройках приложения можно выбрать свой.',
+    'Light or dark?': 'Светлая или тёмная?', 'Automatic follows your phone.': '«Авто» — как на телефоне.',
+    'Ipsy, the helper you chat with in aOS and the apps. Pick one and give it a name.': 'Ипси — помощник, с которым вы общаетесь в aOS и приложениях. Выберите его и дайте ему имя.',
+    'You’re all set': 'Всё готово', 'Change any of these again in Account.': 'Изменить всё это можно снова в Аккаунте.',
+    'All set': 'Готово', 'Finish': 'Готово',
+    'The first time you tap Ipsy, or in Account, Your helper. It reads while it looks at your things, puts its glasses on to search, and writes when it changes something.':
+      'При первом нажатии на Ипси или в Аккаунте, «Ваш помощник». Он читает, когда смотрит ваши данные, надевает очки, чтобы искать, и пишет, когда что-то меняет.',
+    'Mia': 'Мия', 'Fox': 'Лиса', 'Owl': 'Сова', 'Robot': 'Робот', 'Octopus': 'Осьминог', 'Hedgehog': 'Ёжик', 'Otter': 'Выдра',
+    'The family’s own. Zoomies!': 'Наша собственная. Носится кругами!', 'Creeps, then pounces': 'Крадётся, потом прыгает', 'Loops the loop': 'Делает мёртвую петлю',
+    'Moonwalks': 'Лунная походка', 'Jets in spurts': 'Плывёт рывками', 'Rolls up in a ball': 'Сворачивается клубком', 'Belly-slides': 'Скользит на животе',
     'I check flights, Gmail and the web.': 'Я проверяю рейсы, Gmail и интернет.',
     'I plan dinners and tidy your lists.': 'Я планирую ужины и навожу порядок в списках.',
     'Every change I make has an Undo.': 'Любое моё изменение можно отменить.',
@@ -359,6 +376,8 @@
     [/^Calendar: next, (.+?), ((?:Now, until |Tomorrow )?[^,]+)$/, m => t('Calendar') + ': далее ' + m[1] + ', ' + when(m[2])],
     [new RegExp('^' + APP + ': (.+)$'), m => t(m[1]) + ': ' + t(m[2])],   // a postcard: the app's name and its tagline
     [/^Ipsy is in (\d+) apps?$/, m => 'Ипси есть в ' + pl(m[1], 'приложении', 'приложениях', 'приложениях')],
+    [/^Step (\d+) of (\d+)$/, m => 'Шаг ' + m[1] + ' из ' + m[2]],
+    [/^A helper you can chat with, in (.+)\. You pick what it looks like and give it a name\.$/, m => 'Помощник, с которым можно поговорить, в приложениях ' + m[1].split(/, | and /).map(t).join(', ').replace(/, ([^,]*)$/, ' и $1') + '. Вы выбираете, как он выглядит, и даёте ему имя.'],
     [/^A little stem cell you can chat with, in (.+)\.$/, m => 'Маленькая стволовая клетка, с которой можно поболтать, в приложениях ' + m[1].split(/, | and /).map(t).join(', ').replace(/, ([^,]*)$/, ' и $1') + '.'],
     [/^: (.+)\.$/, m => ': ' + t(m[1]) + '.'],   // Part of aOS<sup>2</sup>: <the release's title>.
     [/^· (.+)$/, m => '· ' + t(m[1])],           // Updates: aOS<sup>2</sup> · <the release's title>

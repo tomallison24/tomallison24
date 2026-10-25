@@ -327,7 +327,7 @@ const SESSION = { token: 'tok-test', user: { id: 'u1', name: 'Tom', role: 'owner
 async function phone({ width = 390, design = 'glass', scheme = 'light', session = SESSION, ipsy = false, synced = false, extra = {} } = {}) {
   const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block', timezoneId: TZ, locale: 'en-US' });
   await ctx.addInitScript(([d, seed, session, ipsy, synced, extra]) => {
-    localStorage.setItem('aos.seen', JSON.stringify({ fitness: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.fitness', d);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ fitness: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.fitness', d);
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('allison-fitness-v1', JSON.stringify(seed));
@@ -468,7 +468,7 @@ for (const width of [320, 375, 390, 430]) for (const design of ['glass', 'vintag
   await step('a question runs the tools on the app’s own log, with the right numbers, and the screen in the app’s note; the log is left as it was', async () => {
     await ask('How did I sleep after leg days?', 'A pattern, not a cause');
     const sent = state.sent;
-    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. On screen: Week, the week of \d{4}-\d\d-\d\d\.\]$/);
+    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. On screen: Week, the week of \d{4}-\d\d-\d\d\.(?: You are this person’s helper[^\]]*)?\]$/);
     for (let i = 1; i < sent.length; i++) assert.deepEqual(sent[i].slice(0, sent[i - 1].length), sent[i - 1], 'step ' + i + ' changed an earlier message');
     const R = results(sent.at(-1));
     assert.equal(R.context.today, TODAY); assert.match(R.context.phone_keeps, /the days from /);
