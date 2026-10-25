@@ -305,6 +305,54 @@ await test('Calendar shows the workouts as a layer, and links back to the day', 
   assert.equal(await page.$eval('.drow', e => e.dataset.day), ymd(lw), 'opens on that day’s week');
 });
 
+await test('a ?date= or ?day= that isn’t a real day opens as no date would: this week, no day open; Health on today', async () => {
+  const state = () => page.evaluate(() => [window.__fitness.st.view, window.__fitness.st.week, window.__fitness.st.day, window.__fitness.st.healthDay, document.getElementById('daySheet').hidden]);
+  await page.goto(BASE + '/fitness/');
+  await page.waitForFunction(() => window.__fitness);
+  const plain = await state();
+  assert.deepEqual(plain.slice(1), [await page.evaluate(d => window.__fitness.weekStartOf(d), TODAY), null, TODAY, true]);
+  for (const bad of ['2026-02-30', '2026-13-45', '2026-1-5']) {
+    await page.goto(BASE + '/fitness/?date=' + bad);
+    await page.waitForFunction(() => window.__fitness);
+    assert.deepEqual(await state(), plain, bad);
+  }
+  await page.goto(BASE + '/fitness/?view=health&day=2026-02-30');
+  await page.waitForFunction(() => window.__fitness);
+  assert.deepEqual(await state(), ['health', ...plain.slice(1)], 'Health opens on today');
+  await page.goto(BASE + '/fitness/');
+  await page.waitForFunction(() => window.__fitness);
+  await page.evaluate(() => window.__fitness.setView('week'));
+});
+
+await test('the Calendar layer is handed over when the log changes, not for a steps save; the same layer as before', async () => {
+  const { ctx: c, page: p } = await newPage('light');   // its own phone: nothing of this is left for the tests after
+  await p.goto(BASE + '/fitness/');
+  await p.waitForFunction(() => window.__fitness);
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { const o = AllisonOS.layer.share; window.__shared = []; AllisonOS.layer.share = (app, d) => { window.__shared.push([app, d]); return o(app, d); }; });
+  await p.evaluate(() => window.__fitness.takeSteps([[Date.now(), 4321]]));   // steps from Home Assistant: a save with no change to the log
+  assert.equal(await p.evaluate(() => (JSON.parse(localStorage.getItem('allison-fitness-v1')).steps || []).some(s => s.n === 4321)), true, 'the steps were saved');
+  assert.equal(await p.evaluate(() => window.__shared.length), 0, 'nothing handed over: the log is as it was');
+  await p.click('.drow.today');
+  await p.waitForSelector('#daySheet:not([hidden])');
+  await p.click('.opt[data-group="lowerback"]');
+  await p.selectOption('#fxEx', 'Deadlift');
+  await p.selectOption('#fxW', '100');
+  await p.click('#fxAdd');
+  let shared = await p.evaluate(() => window.__shared);
+  assert.equal(shared.length, 1, 'one hand-over for the new exercise');
+  assert.equal(shared[0][0], 'fitness');
+  assert.deepEqual(Object.keys(shared[0][1]), ['logs']);
+  const row = shared[0][1].logs.find(x => x.date === TODAY && x.exercise === 'Deadlift');
+  assert.deepEqual(Object.keys(row), ['date', 'exercise', 'group', 'cardio', 'sets', 'reps', 'timed', 'weight', 'mins', 'dist', 'unit'], 'just what Calendar shows');
+  assert.equal(shared[0][1].logs.length, (await stored(p)).logs.length, 'every log of the last 400 days');
+  await p.click('[aria-label="Delete Deadlift"]');
+  shared = await p.evaluate(() => window.__shared);
+  assert.equal(shared.length, 2, 'handed over again for the deletion');
+  assert.ok(!shared[1][1].logs.some(x => x.exercise === 'Deadlift'));
+  await c.close();
+});
+
 await test('the week starts on Monday when Monday was picked in Calendar (an old default Monday doesn\'t count)', async () => {
   const old = await newPage('light', SEED, { 'allison-calendar-v1-settings': JSON.stringify({ weekStart: 1 }) });
   await old.page.goto(BASE + '/fitness/');

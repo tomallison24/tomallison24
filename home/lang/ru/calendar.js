@@ -371,6 +371,7 @@
     [re('At ([^A-Za-z]+(?: [AP]M)?)'), m => m[1]],
     [re('On the day at (' + T + ')'), m => 'В день события в ' + m[1]],
     [re('(\\d+) (days?|week) before at (' + T + ')'), m => 'За ' + u(m[1], m[2]) + ' в ' + m[3]],
+    [re('(\\d+) (days?|week) after at (' + T + ')'), m => 'Через ' + u(m[1], m[2]) + ' в ' + m[3]],
     [/^(\d+) (days?|week) before \(9 AM\)$/, m => 'За ' + u(m[1], m[2]) + ' (9:00)'],
     [/^(\d+) (minutes?|hours?|days?|weeks?) (before|after)( the end)?$/, m => m[3] === 'before' ? 'За ' + u(m[1], m[2]) + (m[4] ? ' до конца' : '') : 'Через ' + u(m[1], m[2]) + ' после ' + (m[4] ? 'конца' : 'начала')],
     // the editor's lists

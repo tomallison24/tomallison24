@@ -115,6 +115,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const monthStart = s => s.slice(0, 8) + '01';
   const addMonths = (s, n) => { const p = partsOf(s); const t = p.y * 12 + p.m - 1 + n; return Math.floor(t / 12) + '-' + pad((t % 12 + 12) % 12 + 1) + '-01'; };
   const daysIn = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  // A real calendar day, 'YYYY-MM-DD' (2026-02-30 is not), as calendar/ipsy-tools.js's isDay: for a ?date= link.
+  const isDay = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); if (!m) return false; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3]; };
   const fmt = (d, o) => d.toLocaleDateString('en-US', o);
   const fmtTime = ms => new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: is12h(), timeZone: TZ }).replace(/\s?(AM|PM)/i, m => m.trim().toLowerCase() === 'am' ? ' AM' : ' PM');
   const fmtHour = h => is12h() ? (h % 12 || 12) + (h < 12 ? ' AM' : ' PM') : pad(h) + ':00';
@@ -145,7 +147,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   };
   if (!['day', 'week', 'month', 'year', 'list'].includes(st.view)) st.view = 'month';
   const q = new URLSearchParams(location.search);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '')) { st.sel = q.get('date'); st.view = ['day', 'week', 'month', 'year', 'list'].includes(q.get('view')) ? q.get('view') : 'day'; }
+  if (isDay(q.get('date'))) { st.sel = q.get('date'); st.view = ['day', 'week', 'month', 'year', 'list'].includes(q.get('view')) ? q.get('view') : 'day'; }
   const LAYER = {
     family: { name: 'Family', color: 'var(--cal)' },
     holiday: { name: 'US Holidays', color: 'var(--hol)', sub: 'Federal holidays and the usual observances' },
@@ -1023,7 +1025,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const alarmWords = (a, allDay) => {
     if (a.at != null) return 'At ' + medDate(ymd(a.at)) + ', ' + fmtTime(a.at);
     const m = a.minutes;
-    if (allDay) { if (m >= 0 && m < 1440) return 'On the day at ' + fmtTime(dayMs('2000-01-01') + m * MIN); const before = -m; const days = Math.ceil(before / 1440); const at = (days * 1440 - before) % 1440; return (days === 7 ? '1 week' : plural(days, 'day')) + ' before at ' + fmtTime(dayMs('2000-01-01') + at * MIN); }
+    if (allDay) { if (m >= 0 && m < 1440) return 'On the day at ' + fmtTime(dayMs('2000-01-01') + m * MIN); if (m >= 1440) { const days = Math.floor(m / 1440); return (days === 7 ? '1 week' : plural(days, 'day')) + ' after at ' + fmtTime(dayMs('2000-01-01') + (m % 1440) * MIN); } const before = -m; const days = Math.ceil(before / 1440); const at = (days * 1440 - before) % 1440; return (days === 7 ? '1 week' : plural(days, 'day')) + ' before at ' + fmtTime(dayMs('2000-01-01') + at * MIN); }
     if (m === 0) return 'At time of event';
     const b = Math.abs(m), rel = a.related === 'end' ? ' the end' : '';
     const w = b % 10080 === 0 ? plural(b / 10080, 'week') : b % 1440 === 0 ? plural(b / 1440, 'day') : b % 60 === 0 ? plural(b / 60, 'hour') : plural(b, 'minute');
@@ -1503,5 +1505,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (calendar/scripts/app-test.mjs) only.
-  window.__calendar = { st, settings, render, refresh, rebuild, goTo, setView, openEvent, openEditor, eventsOn, usHolidays, saveEvent, deleteEvent, formFrom };
+  window.__calendar = { st, settings, render, refresh, rebuild, goTo, setView, openEvent, openEditor, eventsOn, usHolidays, saveEvent, deleteEvent, formFrom, alarmWords };
 })();

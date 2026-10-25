@@ -370,6 +370,21 @@ await test('Calendar’s link: ?date= opens that day, from the Sheet when it’s
   assert.ok((await page.evaluate(() => window.__drinks.older())).includes('2025-02-26'), 'fetched for the looking');
 });
 
+await test('Calendar’s link: a ?date= that isn’t a real day opens as no date would (this week, no day open)', async () => {
+  const state = () => page.evaluate(() => [window.__drinks.st.week, window.__drinks.st.day, document.getElementById('daySheet').hidden]);
+  await page.goto(BASE + '/drinks/');
+  await page.waitForFunction(() => window.__drinks);
+  const plain = await state();
+  assert.deepEqual(plain, [weekStart(), null, true]);
+  for (const bad of ['2026-02-30', '2026-13-45', '2026-1-5']) {
+    await page.goto(BASE + '/drinks/?date=' + bad);
+    await page.waitForFunction(() => window.__drinks);
+    assert.deepEqual(await state(), plain, bad);
+  }
+  await page.goto(BASE + '/drinks/?date=2025-02-26');   // back on that day, as the tests after expect
+  await page.waitForSelector('#daySheet:not([hidden])');
+});
+
 await test('Calendar’s Drinks layer: off at first; turned on, your own days from the family’s Sheet (functions/drinks/api), and no copy to the Family calendar', async () => {
   const p = await newPage('light', { 'aos.session': SESSION });
   await p.ctx.route('**/calendar/api/**', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"no-config"}' }));

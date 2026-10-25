@@ -497,6 +497,28 @@ await test('a phone with both: Calendar’s own data is kept, the old app’s is
   await c.close();
 });
 
+await test('a ?date= that isn’t a real day opens on today, as no date would; an all-day alert after the day has its words, in Russian too', async () => {
+  const { ctx: c, page: p } = await newPage('light');
+  for (const bad of ['2026-02-30', '2026-13-45', '2026-1-5']) {
+    await p.goto(BASE + '/calendar/?date=' + bad + '&view=day');
+    await p.waitForFunction(() => window.__calendar);
+    assert.deepEqual(await p.evaluate(() => [window.__calendar.st.sel, window.__calendar.st.view]), [TODAY, 'month'], bad);
+  }
+  await p.goto(BASE + '/calendar/?date=2026-02-28&view=day');
+  await p.waitForFunction(() => window.__calendar);
+  assert.deepEqual(await p.evaluate(() => [window.__calendar.st.sel, window.__calendar.st.view]), ['2026-02-28', 'day']);
+  // alarmWords: an all-day event's alert set after the day (another calendar app can), before it, on it, and a timed event's
+  const words = [[{ minutes: 1980 }, true], [{ minutes: 7 * 1440 + 540 }, true], [{ minutes: 2 * 1440 }, true], [{ minutes: -900 }, true], [{ minutes: 540 }, true], [{ minutes: 60, related: 'start' }, false]];
+  assert.deepEqual(await p.evaluate(w => w.map(([a, allDay]) => window.__calendar.alarmWords(a, allDay)), words),
+    ['1 day after at 9:00 AM', '1 week after at 9:00 AM', '2 days after at 12:00 AM', '1 day before at 9:00 AM', 'On the day at 9:00 AM', '1 hour after']);
+  await p.evaluate(() => aosLang.set('ru'));   // drawn again in Russian (a reload)
+  await p.waitForFunction(() => window.__calendar && aosLang.get() === 'ru');
+  assert.deepEqual(await p.evaluate(() => ['1 day after at 9:00 AM', '1 week after at 9:00 AM', '2 days after at 12:00 AM', '1 day before at 9:00 AM'].map(aosLang.t)),
+    ['Через 1 день в 9:00 AM', 'Через 1 неделю в 9:00 AM', 'Через 2 дня в 12:00 AM', 'За 1 день в 9:00 AM']);
+  violations.push(...(await p.evaluate(() => window.__csp || [])));
+  await c.close();
+});
+
 await test('nothing tripped the Content Security Policy and no script errors', async () => {
   violations.push(...(await page.evaluate(() => window.__csp || [])));
   assert.deepEqual(violations, []);
