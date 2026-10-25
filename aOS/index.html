@@ -447,7 +447,10 @@
   /* an app inside aOS: it slides in over Home and fills the screen, "‹ aOS" floating over its corner */
   #appshade { position: fixed; inset: 0; z-index: 39; background: rgba(0,0,0,.2); opacity: 0; pointer-events: none; transition: opacity .38s; }
   body.in-app #appshade { opacity: 1; }
-  #barcap { position: fixed; top: 0; left: 0; right: 0; height: 6px; z-index: 41; display: none; pointer-events: none; background: var(--barcap, var(--bg)); }
+  /* 12px: iOS takes the colour of a strip over 10px tall as it is; a thinner one it samples from the screen once
+     and keeps (WebKit, LocalFrameView::fixedContainerEdges). Solid for the top 6px, then fading into the page */
+  #barcap { position: fixed; top: 0; left: 0; right: 0; height: 12px; z-index: 41; display: none; pointer-events: none; background: var(--barcap, var(--bg));
+    -webkit-mask-image: linear-gradient(#000 6px, transparent); mask-image: linear-gradient(#000 6px, transparent); }
   html[data-bar="solid"] #barcap { display: block; }
   #appwin { position: fixed; inset: 0; z-index: 40; background: var(--tint, var(--bg)); transform: translateX(105%); transition: transform .38s cubic-bezier(.2,.8,.2,1), box-shadow .38s; }
   body.in-app #appwin, body.dragging #appwin { transform: none; box-shadow: -10px 0 30px rgba(0,0,0,.16); }
