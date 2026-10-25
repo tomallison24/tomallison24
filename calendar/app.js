@@ -618,7 +618,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function renderMonth() {
     const p = partsOf(st.sel), first = monthStart(st.sel), n = daysIn(p.y, p.m);
     const start = weekStartOf(first);
-    const rows = Math.ceil((wdMon(first) - (settings.weekStart === 0 ? 6 : 0) + 7) % 7 / 7 + n / 7) >= 6 ? 6 : Math.ceil((((wdMon(first) - (settings.weekStart === 0 ? 6 : 0) + 7) % 7) + n) / 7);
+    const rows = Math.ceil((((wdMon(first) - (settings.weekStart === 0 ? 6 : 0) + 7) % 7) + n) / 7);
     let cells = '';
     const tod = today();
     for (let i = 0; i < rows * 7; i++) {
@@ -796,7 +796,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (st.view === 'day') goTo(addDays(st.sel, n));
     else if (st.view === 'week') goTo(addDays(st.sel, 7 * n));
     else if (st.view === 'month') { const m = addMonths(monthStart(st.sel), n); goTo(m === monthStart(today()) ? today() : m); }
-    else if (st.view === 'year') { const p = partsOf(st.sel); goTo((p.y + n) + st.sel.slice(4)); }
+    else if (st.view === 'year') { const p = partsOf(st.sel), y = p.y + n; goTo(y + '-' + pad(p.m) + '-' + pad(Math.min(p.d, daysIn(y, p.m)))); }   // Feb 29 lands on Feb 28
   }
   document.querySelectorAll('.tab').forEach(b => b.onclick = () => { closeSearch(); setView(b.dataset.view); });
   $('todayBtn').onclick = () => { listFrom = null; goTo(today()); };
@@ -1312,7 +1312,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           delete rule.COUNT; rule.UNTIL = untilBefore(x, x.allDay);
           I.setProp(m, 'RRULE', I.fmtRRule(rule));
           cal.children = cal.children.filter(c => c.name !== 'VEVENT' || c === m || I.toMs(I.dateProp(c, 'RECURRENCE-ID'), cal, TZ) < cut);
-          for (const p of I.props(m, 'EXDATE')) { /* keep: dates before the cut still matter, later ones are harmless */ }
+          // EXDATEs stay as they are: dates before the cut still matter, later ones are harmless
           I.setProp(m, 'DTSTAMP', I.stamp()); I.setProp(m, 'LAST-MODIFIED', I.stamp()); I.setProp(m, 'SEQUENCE', String((parseInt(I.text(m, 'SEQUENCE'), 10) || 0) + 1));
           await writeItem(uid + '.ics', cal2, null);
           await writeItem(x.name, cal, item.etag);

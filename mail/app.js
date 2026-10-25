@@ -3760,7 +3760,7 @@ function pullMove(y, e) {
     if (dy < -4) { pull = null; return; }
     if (dy < 10) return;
     pull.on = true;
-    if (typeof cancelPress === 'function') cancelPress();
+    cancelPress();
     document.querySelector('main').classList.add('pulling');
   }
   if (e?.cancelable) e.preventDefault();                      // the page doesn't bounce as well
@@ -4095,7 +4095,6 @@ document.addEventListener('click', async e => {
     case 'tidy-unkeep': setTidyKeep(el.dataset.email, false); toast('Tidy can tidy ' + el.dataset.email + ' again'); return render();
     case 'tidy-now': return runTidy(false);
     case 'tidy-on': return runTidy(true);
-    case 'tidy-off': ls.del(K.tidy); toast('Tidy is off'); return render();
     case 'tidy-toggle':
       if (tidyOn()) { ls.del(K.tidy); toast('Tidy is off'); return render(); }
       ls.set(K.tidy, 'on'); ls.del(K.tidied);     // due now: the first run starts in the background, gently
@@ -4242,7 +4241,7 @@ document.addEventListener('click', async e => {
           () => { if (state.view === 'rules') loadRules({ force: true }); });
       } catch (err) {
         el.disabled = false;
-        el.textContent = 'Add rule';
+        el.textContent = 'Add tag';
         failed(err);
       }
       return;

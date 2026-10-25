@@ -70,7 +70,7 @@ AllisonOS apps' dates alongside.
   Any layer item but Drinks has **Add to the Family calendar**, which opens
   the editor with it filled in.
 - **Settings**: the design (below), the iCloud connection and a **Check for changes now** button,
-  the layers, week starts on Monday or Sunday (Monday by default), 12- or
+  the layers, week starts on Sunday or Monday (Sunday by default), 12- or
   24-hour time, temperature units, when the Day view opens, and the length
   and alerts of new events.
 - **Offline**: the events last seen are kept on the phone, so the calendar

@@ -97,7 +97,7 @@
 
   // Steps in the same two windows: the average a day (over the days with a count)
   // and the days at or over the goal. 'floor' is the first day the phone still
-  // keeps (with the Google Sheet connected, 30 days back): a window reaching
+  // keeps (with the Google Sheet connected, 90 days back): a window reaching
   // past it is left out (null) rather than read as no steps.
   function steps(list, today, days, goal, floor) {
     const from = add(today, -(days - 1)), beforeTo = add(from, -1), beforeFrom = add(beforeTo, -(days - 1));

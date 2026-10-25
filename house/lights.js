@@ -147,7 +147,7 @@ family({
     const r = this.read(id), L = r.L, ms = this.members(L), tint = r.on ? r.pc : PAL.on;
     const memberRows = ms.map(m => {
       const q = this.read(m), nm = L_NAMES[m] || (attr(m, 'friendly_name') || m.replace(/^light\./, '').replace(/_/g, ' ')).replace(/^\w/, c => c.toUpperCase());
-      return `<div class="mrow" data-m="${m}">${swRow('mtoggle', `<span translate="no">${esc(nm)}</span>`, q.on ? 'lightbulb' : 'lightbulbOff', q.on, q.on ? q.pc : PAL.on, { v: m, dis: q.offline, wait: tWaiting(q.d, 'power') })}
+      return `<div class="mrow" data-m="${esc(m)}">${swRow('mtoggle', `<span translate="no">${esc(nm)}</span>`, q.on ? 'lightbulb' : 'lightbulbOff', q.on, q.on ? q.pc : PAL.on, { v: m, dis: q.offline, wait: tWaiting(q.d, 'power') })}
         ${q.onoff ? '' : sliderHTML('mbri', q.bri, 1, 100, 1, { v: m, tint: q.pc, cls: 'thin', unit: '%', aria: nm + ' brightness', dis: q.offline })}</div>`;
     }).join('');
     return {

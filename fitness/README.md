@@ -471,7 +471,7 @@ the top of `app.js`.
   Shoulders, Core". Its details list the exercises with their sets, reps and
   weight. **Open in Fitness** opens that day here, using
   `../fitness/?date=YYYY-MM-DD`.
-- **Week start**: the week starts on Monday, or on Sunday if Calendar's
+- **Week start**: the week starts on Sunday, or on Monday if Calendar's
   Settings say so, so the two apps agree.
 
 Both of these work because the apps share this phone's storage when they are
