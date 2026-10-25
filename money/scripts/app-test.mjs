@@ -98,7 +98,8 @@ async function gmail(route) {
   gmailCalls.push(u.pathname + u.search);
   if (route.request().headers().authorization !== 'Bearer fake-token') return route.fulfill({ status: 401, body: '{}' });
   if (u.pathname.endsWith('/profile')) return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ emailAddress: 'pat@example.com' }) });
-  if (u.pathname.endsWith('/messages')) return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ messages: Object.keys(MAIL).map(id => ({ id })) }) });
+  // m6: listed, but gone by the time it's fetched (404): the rest are read all the same
+  if (u.pathname.endsWith('/messages')) return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ messages: [...Object.keys(MAIL), 'm6'].map(id => ({ id })) }) });
   const id = u.pathname.split('/').pop(), m = MAIL[id];
   if (!m) return route.fulfill({ status: 404, body: '{}' });
   const parts = []; if (m.text) parts.push({ mimeType: 'text/plain', body: { data: b64(m.text) } }); if (m.html) parts.push({ mimeType: 'text/html', body: { data: b64(m.html) } });
@@ -174,7 +175,7 @@ const mainText = p => p.locator('#main').innerText();
 const A = await phone({ sess: PAT, token: true, data: JSON.stringify({ tx: SEED, alerts: [], hints: [{ name: 'Stream Box', freq: 'Monthly' }], settings: { cards: { 'rocket credit card': { base: 3, online: 0, grocery: 0, cap: 0 } }, dismissed: [], at: 1 }, setDirty: true, mAt: {}, dirty: [ym(-3), ym(-2), ym(-1), ym(0)], seen: ['m5'], lastScan: Date.now() - 2 * 3600e3, readAt: 0 }) });
 const { p } = A;
 
-await test('reads Monarch’s emails: the alert, the summary’s new one (not its repeat), the can’t-sync email; the newsletter is nothing', async () => {
+await test('reads Monarch’s emails: the alert, the summary’s new one (not its repeat), the can’t-sync email; the newsletter is nothing; one that can’t be fetched stops nothing', async () => {
   await p.waitForFunction(() => window.__money && window.__money.D.alerts.length === 1 && !window.__money.st.reading, null, { timeout: 15000 });
   const D = await p.evaluate(() => window.__money.D);
   const book = D.tx.filter(x => x.merchant === 'Book Nook');
@@ -182,7 +183,8 @@ await test('reads Monarch’s emails: the alert, the summary’s new one (not it
   assert.equal(book[0].account, ROCKET); assert.equal(book[0].mid, '998877665544332211'); assert.equal(book[0].cat, 'Books');
   assert.ok(D.tx.some(x => x.merchant === 'Corner Diner' && x.amt === 15.75 && x.src === 'summary'));
   assert.deepEqual(D.alerts.map(a => [a.inst, a.what]), [['Rocket Bank', 'Access Expired']]);
-  assert.deepEqual(D.seen.sort(), ['m1', 'm2', 'm3', 'm4', 'm5']);
+  assert.deepEqual(D.seen.sort(), ['m1', 'm2', 'm3', 'm4', 'm5'], 'm6 couldn’t be read: not seen, so it’s tried again next time');
+  assert.equal(D.lastScan < Date.now() - 3600e3, true, 'and the next read looks back as far again');
   assert.ok(gmailCalls.some(c => /q=after%3A\d+\+%7Bfrom%3Amonarch\.com/.test(c)), 'asks for what came since the last read, from Monarch: ' + gmailCalls[0]);
 });
 await test('sends what it read to aOS, a month at a time, and becomes the reader', async () => {

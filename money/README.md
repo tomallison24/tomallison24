@@ -133,7 +133,8 @@ card and the category.
 
 - **One phone reads the emails**: Money's reader. It reads its own Gmail, read-only (below), the
   first time five years back, then what's new each time it opens (at most hourly) or when you tap
-  the refresh button. Each email is read once.
+  the refresh button. Each email is read once; one that can't be fetched just then (gone, or the
+  connection dropped) is tried again next time, and the rest are kept as they're read.
 - **Signed in to the family account**, the reader's phone sends what it read to aOS
   (`functions/money/api`, in the accounts' Workers KV: `money:share`, `money:meta`,
   `money:tx:<YYYY-MM>`), a month at a time, only the months that changed. The first phone to send
