@@ -241,6 +241,15 @@ for (const scheme of ['light', 'dark']) {
     assert.match(txt, /^BEGIN:VCALENDAR\r\n/); assert.match(txt, /END:VCALENDAR\r\n$/);
     assert.equal((txt.match(/BEGIN:VEVENT/g) || []).length, 8);       // 3 flights, 1 stay, car pick-up and return, 2 rides
     assert.match(txt, /DTSTART;VALUE=DATE:\d{8}/);
+    // the zones: both known gives the exact end; only the start's known gives the usual two hours, not the wall-clock
+    // difference across two zones (DEN 07:05 → BOS 12:45 is 3h40, which that would call 5h40); neither gives floating times
+    const fl = ([dep, depIso, arr, arrIso]) => window.__travel.ics([{ id: 'tz', type: 'flight', status: 'confirmed', airlineCode: 'F9', flightNo: '1', from: 'DEN', to: 'BOS', dep, depIso, arr, arrIso }]);
+    const both = await page.evaluate(fl, ['2027-03-04T07:05', '2027-03-04T07:05:00-07:00', '2027-03-04T12:45', '2027-03-04T12:45:00-05:00']);
+    assert.match(both, /DTSTART:20270304T140500Z/); assert.match(both, /DTEND:20270304T174500Z/);
+    const one = await page.evaluate(fl, ['2027-03-04T07:05', '2027-03-04T07:05:00-07:00', '2027-03-04T12:45', '']);
+    assert.match(one, /DTSTART:20270304T140500Z/); assert.match(one, /DTEND:20270304T160500Z/);
+    const none = await page.evaluate(fl, ['2027-03-04T07:05', '', '2027-03-04T12:45', '']);
+    assert.match(none, /DTSTART:20270304T070500/); assert.match(none, /DTEND:20270304T124500/);
   });
   await step(scheme + ': a deleted booking stays deleted when Gmail is read again', async () => {
     await page.click('#tpDone');

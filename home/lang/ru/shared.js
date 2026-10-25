@@ -893,6 +893,7 @@
   };
 
   const KIND = { 'Australian Shepherd': 'австралийская овчарка', Fox: 'лиса', Owl: 'сова', Robot: 'робот', Octopus: 'осьминог', Hedgehog: 'ёжик', Otter: 'выдра' };   // the helpers, in Account's line
+  const own = k => Object.prototype.hasOwnProperty.call(W, k);   // its own words only, never 'constructor'
   const P = [
     // ---- the welcome and walkthroughs ----
     // your helper's name where the words say Ipsy ("Ask Mia about meals", "Mia is reading…"): Ipsy's own words, with the name kept
@@ -923,8 +924,8 @@
     [/^Everything in aOS([\d.]+)$/, m => 'Всё новое в aOS' + m[1]],
     // aOS's own lists: "aOS2 · Every app, one home", "Mail: Mail.Controlled."
     // (only a value from this file: anything else, maybe what the family wrote, is left whole)
-    [/^· (.+)$/, m => (m[1] in W ? '· ' + W[m[1]] : null)],   // only its own words: null lets an app's pattern try
-    [new RegExp('^(' + APPS + '): (.+)$'), m => (m[2] in W && /[\s.]/.test(m[2]) ? T(m[1]) + ': ' + W[m[2]] : null)],   // an app's tagline, not one word (else an app's own pattern may try)
+    [/^· (.+)$/, m => (own(m[1]) ? '· ' + W[m[1]] : null)],   // only its own words: null lets an app's pattern try
+    [new RegExp('^(' + APPS + '): (.+)$'), m => (own(m[2]) && /[\s.]/.test(m[2]) ? T(m[1]) + ': ' + W[m[2]] : null)],   // an app's tagline, not one word (else an app's own pattern may try)
 
     // ---- the family's plan ended ----
     [new RegExp('^(' + APPS + '|aOS) is off$'), m => (m[1] === 'aOS' ? 'aOS' : 'Приложение «' + T(m[1]) + '»') + ' выключено'],

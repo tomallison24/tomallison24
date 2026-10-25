@@ -89,9 +89,10 @@ export async function onRequest(ctx, f = fetch) {
     }
     const cal = await discover(acct);
     if (route === 'events' && method === 'GET') return reply(await listEvents(cal, acct, q.get('start'), q.get('end')));
-    if (route === 'event' && method === 'PUT') { await countWrite(db, me); return reply(await putEvent(cal, acct, q.get('name'), await readBody(request), request.headers.get('If-Match'), q.get('overwrite') === '1')); }
-    if (route === 'event' && method === 'DELETE') { await countWrite(db, me); return reply(await deleteEvent(cal, acct, q.get('name'), request.headers.get('If-Match'))); }
-    if (route === 'import' && method === 'POST') { await countWrite(db, me); return reply(await importEvents(cal, acct, await readBody(request))); }
+    const count = () => countWrite(db, me);   // once the request has been checked, before iCloud is asked
+    if (route === 'event' && method === 'PUT') return reply(await putEvent(cal, acct, q.get('name'), await readBody(request), request.headers.get('If-Match'), q.get('overwrite') === '1', count));
+    if (route === 'event' && method === 'DELETE') return reply(await deleteEvent(cal, acct, q.get('name'), request.headers.get('If-Match'), count));
+    if (route === 'import' && method === 'POST') return reply(await importEvents(cal, acct, await readBody(request), count));
   } catch (e) {
     return reply({ error: code(e), calendars: owner ? e.calendars || undefined : undefined }, e.status || 502);
   }
@@ -225,7 +226,8 @@ async function readBody(request) {
 const looksLikeCalendar = ics => /^\s*BEGIN:VCALENDAR/i.test(ics) && /BEGIN:VEVENT/i.test(ics) && /END:VCALENDAR\s*$/i.test(ics);
 
 // Every write goes to iCloud as the owner: at most WRITES_DAILY a person a day (an import of many
-// events is one), so a phone can't fill the family's calendar. Counted before the write.
+// events is one), so a phone can't fill the family's calendar. Counted once the request has been
+// checked (a malformed one spends nothing) and before iCloud is asked.
 async function countWrite(db, me) {
   if (!db || !me) return;
   const key = 'calendar:writes:' + me.id + ':' + today(), n = (+(await db.get(key)) || 0) + 1;
@@ -247,9 +249,10 @@ export function stripScheduling(ics) {
   return out.join('\r\n');
 }
 
-async function putEvent(cal, acct, name, ics, ifMatch, overwrite) {
+async function putEvent(cal, acct, name, ics, ifMatch, overwrite, count) {
   if (!name || !NAME_OK.test(name) || !/\.ics$/i.test(name)) throw err('bad-request', 400);
   if (!looksLikeCalendar(ics)) throw err('bad-request', 400);
+  if (count) await count();
   ics = stripScheduling(ics);
   const headers = { 'Content-Type': 'text/calendar; charset=utf-8' };
   if (ifMatch) headers['If-Match'] = ifMatch;
@@ -260,8 +263,9 @@ async function putEvent(cal, acct, name, ics, ifMatch, overwrite) {
   return { ok: true, name, etag: res.headers.get('ETag') || '' };
 }
 
-async function deleteEvent(cal, acct, name, ifMatch) {
+async function deleteEvent(cal, acct, name, ifMatch, count) {
   if (!name || !NAME_OK.test(name) || !/\.ics$/i.test(name)) throw err('bad-request', 400);
+  if (count) await count();
   const headers = {};
   if (ifMatch) headers['If-Match'] = ifMatch;
   const { res } = await dav(cal.url + name, acct, { method: 'DELETE', headers });
@@ -274,7 +278,7 @@ async function deleteEvent(cal, acct, name, ifMatch) {
 // Each VEVENT in the text becomes its own file, named after its UID, with
 // the file's own header lines and time zones; the same UID written again
 // replaces the event (so Travel can re-send a changed booking).
-async function importEvents(cal, acct, ics) {
+async function importEvents(cal, acct, ics, count) {
   if (!looksLikeCalendar(ics)) throw err('bad-request', 400);
   // A lone \r is never a valid line ending in iCalendar; drop it rather than
   // let it act as one, so text with a stray \r can't start a line of its own.
@@ -283,6 +287,7 @@ async function importEvents(cal, acct, ics) {
   const zones = [...text.matchAll(/BEGIN:VTIMEZONE\r\n[\s\S]*?END:VTIMEZONE\r\n/g)].map(m => m[0]).join('');
   const head = text.split('\r\n').filter(l => /^(VERSION|PRODID|CALSCALE|METHOD):/i.test(l)).join('\r\n');
   if (!events.length || events.length > 50) throw err('bad-request', 400);
+  if (count) await count();   // an import of many events is one write
   const names = [];
   for (const ev of events) {
     const uid = (/^UID:(.+)$/m.exec(ev) || [])[1];

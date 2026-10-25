@@ -4,6 +4,7 @@
 (() => {
   const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const pick = (o, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);   // a message of the list itself, never 'constructor'
   const tx = s => (window.aosLang ? aosLang.t(s) : s);   // a text the page doesn't show as text (a confirm), or one whose words move around its <b>, in Russian (../home/lang.js)
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   // Every app carries both its designs itself (picked in its own Settings, ../home/design.js), so its folder has
@@ -53,26 +54,6 @@
     document.querySelectorAll('[data-get]').forEach(b => { const on = INST.has(b.dataset.get); b.classList.toggle('done', on); b.textContent = on ? 'Installed' : 'Get'; });
     document.querySelectorAll('[data-gone]').forEach(b => { b.hidden = !INST.has(b.dataset.gone); });
   };
-  // ---- designs: an app that comes in more than one design (home/welcome.js DESIGNS) ----
-  // One row for the app, a Design menu on its page. Each design is its own app, so the one
-  // picked here (kept on this device) decides which app Get adds and which one says Installed.
-  const DESIGNS = D.DESIGNS, hasDesigns = id => !!DESIGNS[id];
-  const baseOf = app => Object.keys(DESIGNS).find(b => DESIGNS[b].some(d => d.app === app));
-  const LOOK_DOTS = { glass: ['#6FA597', '#8193BC', '#BE918F'], vintage: ['#1F6F6B', '#E3A72F', '#D8572A'] };
-  const lookDots = d => `<span class="dd" aria-hidden="true">${LOOK_DOTS[d.look].map(c => `<i style="background:${c}"></i>`).join('')}</span>`;
-  const DKEY = id => 'aos.design.' + id;
-  const chosenDesign = id => {
-    const ds = DESIGNS[id]; let want = null; try { want = localStorage.getItem(DKEY(id)); } catch {}
-    // a pick made here; else, in the Vintage look, the Vintage design, even when the Standard app is already on the
-    // Home Screen (so Get offers the Vintage app, and every link goes to it); else the design already added, else Standard
-    const vintage = ds.find(d => d.look === 'vintage'), glassLook = window.aosLook && aosLook.get() === 'glass';
-    return ds.find(d => d.id === want) || (!glassLook && vintage) || ds.find(d => INST.has(d.app)) || ds[0];
-  };
-  const appOf = id => hasDesigns(id) ? chosenDesign(id).app : id;
-  const pickDesign = (id, did) => { try { localStorage.setItem(DKEY(id), did); } catch {} };
-  const dopts = id => { const cur = chosenDesign(id); return DESIGNS[id].map(d => `<button type="button" role="option" class="dopt" data-did="${d.id}" aria-selected="${d.id === cur.id}"><span class="dth ${d.look}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${esc(d.name)}</b><small>${esc(d.note)} · ${INST.has(d.app) ? 'Installed' : 'Not added'}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join(''); };
-  const CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-  const dsel = id => { const cur = chosenDesign(id); return `<div class="dsel" data-dsel="${id}"><button type="button" class="dbtn" aria-haspopup="listbox" aria-expanded="false"><span class="dl">Design</span>${lookDots(cur)}<b>${esc(cur.name)}</b>${CHEV}</button><div class="dmenu" role="listbox" aria-label="Design" hidden>${dopts(id)}</div></div>`; };
   let repaintLists = () => {};
   const goneBtn = id => `<button type="button" class="gone" data-gone="${id}"${INST.has(id) ? '' : ' hidden'}>Removed it from your Home Screen?</button>`;
   async function markGone(b) {
@@ -106,7 +87,7 @@
   const rnd = (n => () => (n = (n * 1664525 + 1013904223) >>> 0) / 2 ** 32)(day);
   const mix = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const fresh = Date.now() - Date.parse(now.date || 0) < 30 * 864e5;
-  const added = fresh ? (now.added || []).filter(id => D.APPS.includes(id) && !D.VARIANTS.has(id)) : [];
+  const added = fresh ? (now.added || []).filter(id => D.APPS.includes(id)) : [];
   const brought = added.map((_, i) => added[(i + day) % added.length]);
   const HEAD = { travel: 'Every trip, the whole family\'s' };
   const meet = (id, k) => ({ id, k, h: HEAD[id] || `${D.NAMES[id]}: ${T(id).tag}`, art: (T(id).cards[0] || {}).i, body: () => T(id).cards.map(c => `<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p>`).join('') });
@@ -169,7 +150,7 @@
   const intro = fresh && now.intro === 'ipsy';
   // apps still being tested: never on Today (as Meet or App of the day) until they're announced
   const QUIET = ['sparkle'];
-  const pool = mix([...D.APPS.filter(id => !D.VARIANTS.has(id) && !added.includes(id) && !QUIET.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS]), ...(intro ? [] : [IPSY])]);
+  const pool = mix([...D.APPS.filter(id => !added.includes(id) && !QUIET.includes(id)).map(id => SETUP[id] || meet(id, 'Meet')), FAM, ...(fresh ? [] : [NEWS]), ...(intro ? [] : [IPSY])]);
   const STORIES = [...(intro ? [IPSY] : []), ...brought.slice(0, 1).map(id => meet(id, 'New in aOS')), ...(fresh ? [NEWS] : []), ...brought.slice(1).map(id => meet(id, 'New in aOS'))];
   for (const s of pool) if (STORIES.length < SHAPE.length && !STORIES.some(o => o.id && o.id === s.id)) STORIES.push(s);
   const aotd = STORIES.find(s => s.k === 'Meet'); if (aotd) aotd.k = 'App of the day';   // the first app shown (one from the pool can be left out: Meet Ipsy is Orders')
@@ -178,20 +159,19 @@
   $('stories').innerHTML = STORIES.map((s, i) => s.ipsy
     ? `<div class="story ipsy ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:129,147,188"><div class="art">${ipsyStage('ipsy-stage', IPSY_SAYS[0][1])}</div>
        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
-       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>Ipsy is in ${IPSY_APPS.length} apps</b><i>On aOS Home, and in each app</i></span>${getBtn(appOf(s.id))}</div></div>`
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>Ipsy is in ${IPSY_APPS.length} apps</b><i>On aOS Home, and in each app</i></span>${getBtn(s.id)}</div></div>`
     : s.plain
     ? `<div class="story plain ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}"><div class="art"></div><div class="txt"><span class="chip">${esc(s.k)}</span><h2 id="power">${s.h}</h2></div><div class="mk ink" id="mark">${mk(v)}</div></div>`
     : `<div class="story ${s.cls} ${SHAPE[i]}" role="button" tabindex="0" data-story="${i}" style="--c:${HUE[s.id]}"><div class="art">${line(s.art)}<img src="${icon(s.id)}" alt=""></div>
        <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div>
-       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div></div>`).join('');
+       <div class="foot"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div></div>`).join('');
 
   wakeIpsy($('stories'));
 
   // ---- Apps, and Search ----
-  const rows = ids => ids.map(id => { const ap = appOf(id), ds = hasDesigns(id);
-    return `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[ap]}"><img src="${icon(ap)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${sub(id)}</i>${ds ? `<em class="dtag">${DESIGNS[id].map(d => `<span class="dd" aria-hidden="true"><i style="background:${LOOK_DOTS[d.look][1]}"></i></span>`).join('')}${DESIGNS[id].length} designs</em>` : ''}</span>${getBtn(ap)}</span></div>`; }).join('');
-  // two collections: the core apps, then the Allison family's own (a design of an app is not a row of its own)
-  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], group(id), ...(DESIGNS[id] || []).map(d => d.name + ' ' + d.note), ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = [...D.CORE, ...D.FAMILY].filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
+  const rows = ids => ids.map(id => `<div class="row" role="button" tabindex="0" data-app="${id}" style="--c:${HUE[id]}"><img src="${icon(id)}" alt=""><span class="t"><span><b>${esc(D.NAMES[id])}</b><i>${sub(id)}</i></span>${getBtn(id)}</span></div>`).join('');
+  // two collections: the core apps, then the Allison family's own
+  const find = () => { const q = $('q').value.trim().toLowerCase(); const hit = id => !q || [D.NAMES[id], T(id).tag, CAT[id], group(id), ...T(id).cards.map(c => c.t + ' ' + c.d)].join(' ').toLowerCase().includes(q); const ids = [...D.CORE, ...D.FAMILY].filter(hit); $('found').innerHTML = ids.length ? rows(ids) : '<p class="muted">No apps match.</p>'; };
   const paintList = () => { $('list').innerHTML = `<div class="sec"><h2>Core apps</h2></div>${rows(D.CORE)}<div class="sec"><h2>Allison family apps</h2></div>${rows(D.FAMILY)}`; find(); };
   repaintLists = paintList; paintList();
   $('q').oninput = find;
@@ -228,8 +208,7 @@
   function appPage(id) {
     const r = live.find(x => { const e = D.entry((x.apps || {})[id]); return e.highlights.length + e.notes.length; });
     const e = r ? D.entry(r.apps[id]) : null;
-    const ap = appOf(id);
-    const el = page(`<div class="apphead"><img src="${icon(ap)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p>${hasDesigns(id) ? dsel(id) : ''}<span class="gets">${window.aosHomeTab ? `<button type="button" class="get open" data-open="${id}">Open</button>` : ''}${getBtn(ap)}${goneBtn(ap)}</span></div></div>
+    const el = page(`<div class="apphead"><img src="${icon(id)}" alt=""><div><h1>${esc(D.NAMES[id])}</h1><p>${esc(T(id).tag)}</p><span class="gets">${window.aosHomeTab ? `<button type="button" class="get open" data-open="${id}">Open</button>` : ''}${getBtn(id)}${goneBtn(id)}</span></div></div>
       <div class="strip">
         <div><b class="ink">${mk(v)}</b><small>Latest</small></div>
         <div>${line((T(id).cards[0] || {}).i)}<i>${esc(CAT[id])}</i></div>
@@ -245,37 +224,9 @@
       <div class="sec"><h2>About</h2></div>
       <div class="desc">${T(id).cards.map(c => `<p><b>${esc(c.t)}.</b> <span class="muted">${esc(c.d)}</span></p>`).join('')}</div>
       <div class="sec"><h2>Information</h2></div>
-      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Collection</span><span>${group(id)}</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[ap] });
+      <div class="info"><div><span>Provider</span><span>Allison Corporation</span></div><div><span>Collection</span><span>${group(id)}</span></div><div><span>Category</span><span>${esc(CAT[id])}</span></div><div><span>Compatibility</span><span>iOS &amp; Android</span></div><div><span>Languages</span><span>English</span></div><div><span>Price</span><span>Free</span></div></div>`, { c: HUE[id] });
     el.addEventListener('click', ev => {
       const g = ev.target.closest('[data-gone]'); if (g && !g.disabled) return markGone(g);
-      const ds = el.querySelector('.dsel'); if (!ds) return;
-      const btn = ds.querySelector('.dbtn'), menu = ds.querySelector('.dmenu');
-      const setOpen = on => { menu.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
-      if (ev.target.closest('.dbtn')) return setOpen(menu.hidden);
-      const o = ev.target.closest('.dopt');
-      if (o) {   // a design picked: this page, and the app's row, follow it
-        pickDesign(id, o.dataset.did); setOpen(false);
-        const nap = appOf(id);
-        el.style.setProperty('--c', HUE[nap]); el.querySelector('.apphead img').src = icon(nap);
-        el.querySelector('.gets').innerHTML = getBtn(nap) + goneBtn(nap);
-        const cur = chosenDesign(id); btn.querySelector('b').textContent = cur.name; btn.querySelector('.dd').outerHTML = lookDots(cur);
-        menu.innerHTML = dopts(id); repaintLists(); return;
-      }
-      setOpen(false);
-    });
-  }
-  // Get on an app with designs, not yet added: pick the design first, then the app's own address
-  // opens (it shows how to add it). Several designs can be added; each is its own Home Screen app.
-  function designSheet(id) {
-    const goHtml = ap => INST.has(ap) ? `<a class="get big done" data-go="${ap}" href="${appUrl(ap)}" target="_blank" rel="noopener">Installed</a>` : `<a class="get big" data-go="${ap}" href="${appUrl(ap)}" target="_blank" rel="noopener">Open ${esc(D.NAMES[ap])} to add it</a>`;
-    const ap0 = appOf(id);
-    const el = page(`<div class="dsheet"><h1>Make ${esc(D.NAMES[id])} yours</h1><p>Pick a design.</p>
-      <div class="dlist" role="listbox" aria-label="Design">${dopts(id)}</div><div class="dgo">${goHtml(ap0)}</div></div>`, { up: true, c: HUE[ap0] });
-    el.addEventListener('click', ev => {
-      const o = ev.target.closest('.dopt'); if (!o) return;
-      pickDesign(id, o.dataset.did); const nap = appOf(id);
-      el.style.setProperty('--c', HUE[nap]);
-      el.querySelector('.dlist').innerHTML = dopts(id); el.querySelector('.dgo').innerHTML = goHtml(nap); repaintLists();
     });
   }
   function storyPage(i) {
@@ -284,13 +235,13 @@
       const el = page(`<div class="hero ipsy ${s.cls}"><div class="art">${ipsyStage('ipsy-hero', IPSY_SAYS[0][1])}</div>
         <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${esc(s.h)}</h2></div></div>
         <div class="body">${s.body()}</div>
-        <div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div>`, { up: true, c: '129,147,188' });
+        <div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div>`, { up: true, c: '129,147,188' });
       return wakeIpsy(el);
     }
     page(`<div class="hero ${s.cls}" style="${s.plain ? 'color:var(--text)' : ''}"><div class="art" style="${s.plain ? 'background:var(--card)' : ''}">${s.plain ? `<div class="mk ink" style="position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 90px);text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px">${mk(v)}</div>` : `<img src="${icon(s.id)}" alt="">`}</div>
       <div class="txt"><span class="chip">${esc(s.k)}</span><h2>${s.plain ? s.h : esc(s.h)}</h2></div></div>
       <div class="body">${s.body()}</div>
-      ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(appOf(s.id))}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
+      ${s.id ? `<div class="approw"><img src="${icon(s.id)}" alt=""><span><b>${esc(D.NAMES[s.id])}</b><i>${esc(T(s.id).tag)}</i></span>${getBtn(s.id)}</div>` : ''}`, { up: true, c: s.id ? HUE[s.id] : '' });
   }
   // ---- your account (the avatar): family accounts with passkeys (Face ID) ----
   // The owner sets up once with the owner code; everyone else joins with an
@@ -343,7 +294,7 @@
   async function setPlan(btn, body) {
     busy(btn, true);
     try { const r = await ACC.call('plan', body); state.plan = r.plan; paintPlans(); paintSigninCard(); }
-    catch (e) { paintPlans({ err: PLAN_WHY[e && e.message] || why(e) }); }
+    catch (e) { paintPlans({ err: pick(PLAN_WHY, e && e.message) || why(e) }); }
   }
   function onPlanTap(ev) {
     const cur = state && state.plan;
@@ -456,7 +407,7 @@
     storage: 'Family accounts aren\'t switched on yet.', 'owner-exists': 'The owner\'s account already exists: sign in instead.', unknown: 'That account isn\'t in the family any more.',
     NotAllowedError: 'Canceled, or Face ID didn\'t finish.', 'no-passkeys': 'This browser can\'t make passkeys: use Safari on your iPhone.',
     'passkey-exists': 'That passkey already belongs to an account here: sign in instead.' };
-  const why = e => WHY[e && (e.name === 'NotAllowedError' ? e.name : e.message)] || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
+  const why = e => pick(WHY, e && (e.name === 'NotAllowedError' ? e.name : e.message)) || 'Something went wrong (' + ((e && (e.message || e.name)) || '?') + ').';
   const busy = (b, on) => { b.disabled = on; b.style.opacity = on ? .6 : 1; };
   let state = null;
   const getState = async () => {
@@ -877,7 +828,7 @@
           await sheetCall(id + '/config', { url: box.querySelector(`[data-shurl="${id}"]`).value.trim(), secret: box.querySelector(`[data-shkey="${id}"]`).value });
           m.style.color = 'var(--muted)'; m.textContent = 'Connected.';
           setTimeout(paintSheets, 1500);
-        } catch (x) { m.textContent = SHEET_WHY[x.message] || 'Couldn\'t connect (' + x.message + ').'; }
+        } catch (x) { m.textContent = pick(SHEET_WHY, x.message) || 'Couldn\'t connect (' + x.message + ').'; }
         busy(b, false);
       }
     };
@@ -902,13 +853,7 @@
 
   // ---- taps ----
   document.addEventListener('click', ev => {
-    if (ev.target.closest('[data-go]')) { watch(); return; }    // the design sheet's button: the link opens the app's own address
-    const gt = ev.target.closest('[data-get]');
-    if (gt) {   // Get: the link opens the app's own address, which shows how to add it - after a design is picked, for an app that has them
-      const base = baseOf(gt.dataset.get);
-      if (base && !INST.has(gt.dataset.get)) { ev.preventDefault(); ev.stopPropagation(); designSheet(base); return; }
-      watch(); return;
-    }
+    if (ev.target.closest('[data-get]')) { watch(); return; }   // Get: the link opens the app's own address, which shows how to add it
     const a = ev.target.closest('[data-app]'); if (a) return appPage(a.dataset.app);
     const s = ev.target.closest('[data-story]'); if (s) return storyPage(+s.dataset.story);
     if (ev.target.closest('[data-signin-card]')) return acctPage();

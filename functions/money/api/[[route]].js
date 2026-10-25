@@ -35,7 +35,7 @@
 //   money:meta         { at, months: { 'YYYY-MM': at }, alerts, hints, settings, readAt }
 //   money:tx:YYYY-MM   { at, items: [transactions] }
 // Free plan: a push writes only the months the phone says changed, plus the meta; a request gets
-// 10 ms of CPU, so a month is at most 1,500 transactions and a push at most 6 months.
+// 10 ms of CPU, so a month keeps at most its newest 1,500 transactions and a push is at most 6 months.
 // Five years are kept (KEEP_MONTHS, as the phone's money/calc.js): a push lets go of the months
 // older than that, and a month that old is never taken in.
 //
@@ -246,8 +246,10 @@ export async function onRequest({ request, params, env }) {
       const months = {};
       for (const [ym, items] of sent) {
         if (!YM.test(ym) || !Array.isArray(items)) return reply({ error: 'month' }, 400);
-        if (items.length > MAX_MONTH) return reply({ error: 'too-big' }, 413);
-        months[ym] = items.map(cleanTx).filter(x => x && x.date.slice(0, 7) === ym);
+        if (items.length > 4 * MAX_MONTH) return reply({ error: 'too-big' }, 413);
+        // a month with more than MAX_MONTH keeps its newest (a push that was refused was never sent again)
+        const list = items.map(cleanTx).filter(x => x && x.date.slice(0, 7) === ym);
+        months[ym] = list.length > MAX_MONTH ? list.sort((a, b) => b.date.localeCompare(a.date) || b.at - a.at).slice(0, MAX_MONTH) : list;
       }
       if (!share) await putJSON(db, 'money:share', { by: me.id, with: [], at: now });   // the first phone to send is the reader
       const from = keepFrom(now);

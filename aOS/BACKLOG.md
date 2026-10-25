@@ -64,40 +64,16 @@ English and its Russian.
 
 ### Bugs to fix
 
-1. **Travel's extract can refuse a long email quietly.** The app sends up to
-   12,000 characters; `functions/travel/api` refuses a body over 24 KB (bytes),
-   so an email heavy in accents, Cyrillic or emoji gets 413 and the app skips it
-   without saying. Fix: slice to about 8,000 characters, or size both checks in bytes.
-2. **Money's push can stick.** The server keeps at most 1,500 transactions a
-   month (`MAX_MONTH`); the phone never caps a month, so a bigger month gets 413
-   on every sync and the later dirty months are never sent. Fix: cap on the phone
-   (newest 1,500) or accept the newest 1,500 on the server.
-3. **Notes Undo can delete a note that arrived meanwhile.** `withUndo` restores
-   the whole `notes` array; a note merged by a sync inside the 4-second window
-   is removed, gets a grave, and the next sync deletes it from the Sheet and the
-   other phone. Fix: snapshot and restore only the affected ids, as
-   `notes/ipsy-tools.js` `undoTo` does. Also `finishEdit` drops an edit when the
-   note was deleted on another phone (`notes[-1] = e`); say so (needs words).
-4. **Offline fallbacks answer scripts with index.html.** `aOS/sw.js`,
-   `home/sw.js`, `news/sw.js`, `notes/sw.js` and `places/sw.js` hand the cached
-   page to any failed same-origin GET; `orders/sw.js` does it right (only for
-   `request.mode === 'navigate'`). Needs a CACHE bump in each.
-5. **Travel's calendar event length is wrong across zones** when only the
-   departure offset is known (DEN to BOS off by two hours): use the fallback
-   length when one offset is missing. Live status's `scheduled.utc`, once known,
-   would also fix countdowns while away.
-6. **Weather's alert cards** render "undefined" for an alert with no `event`
-   and "Until Invalid Date" for a bad `ends` (needs a fallback word).
-7. **Calendar's "0 days before"** for an all-day alarm set after the event
-   (only from other calendar apps); `alarmWords` needs an "after" branch (words).
-8. **prefs-sync records `seen` even when the write failed** (`aOS/prefs-sync.js`),
-   so that setting is never downloaded again; `welcome.js` `tour()` leaks a
-   resize listener each play; Notes' push Worker re-reads the Sheet only when
-   its cron minute is a multiple of 15 (keep `pulledAt` in KV instead);
-   `news/app.js` `status()` throws if a feed entry lacks `source`;
-   `functions/calendar/api` `countWrite` spends a daily write before validating.
-9. **Date parameters** (`calendar/?date=`, Drinks, Fitness) are shape-checked
-   only (2026-02-30 passes); use the round-trip check from `calendar/ipsy-tools.js`.
+Done, all nine, in the follow-up PR (aOS2.2): Travel's extract size (the server
+takes 64 KB, the app sends 8,000 characters and says when one couldn't be read);
+Money's 1,500-row month (the newest 1,500 go, on the phone and on the server);
+Notes' Undo restores only the notes it touched, and an edit to a note deleted
+elsewhere is kept as a new note; the offline fallbacks in aOS, home, News, Notes
+and Places serve the page only to a page load; Travel's event length with one
+offset; Weather's nameless alerts and bad end dates; Calendar's "after" alarms;
+prefs-sync's seen-on-failure, the tour's resize listener, the Notes push Worker's
+15-minute read, News's source-less feed and Calendar's count-before-check; the
+date parameters' round-trip check.
 
 ### Security to consider
 
@@ -106,22 +82,16 @@ English and its Russian.
   localStorage, readable by every app's script (Money reads Mail's by design).
   Any script injection in any app would reach the Home Assistant token. The
   strict CSPs are the defence; keep every app's `connect-src` to the hosts it uses
-  (Calendar and Fitness were tightened; Podcasts' `img-src`/`media-src` still allow
-  `http:` though `media()` upgrades every address).
+  (Calendar, Fitness and Podcasts were tightened).
 - **Push servers typed by hand get the family session.** Notes (and Mail) accept
   any `*.workers.dev` address as their push server and send it the 400-day family
   token (Mail: its Gmail token). Pin the address in the repo, or have aOS publish
   the family's push server as an owner setting that the apps read.
-- **Frame refusal in script** is missing from `house/app.js`, `podcasts/app.js`
-  and `weather/app.js` (the other apps have Travel's four lines); `_headers`
-  covers it on Cloudflare. Needs words, or refuse silently.
-- **Backups.** Orders' Import a backup keeps any shape; a `tidy`-style whitelist
-  (as Notes' `saneNote` and Places' `tidy`) would keep stored data clean.
-  Money's CSV export quotes cells but not formula-leading text (`=`, `+`, `-`, `@`).
-- Home's `#join=` link can make a phone with no saved connection join a
-  stranger's Home Assistant if the person types that stranger's code (nothing of
-  theirs leaks). `safariDemo` in `welcome.js` interpolates `iconUrl` unescaped
-  (all callers internal). Erase-on-lost-phone leaves the `aos_look` cookie.
+- Done in the follow-up PR: frame refusal in Home, Podcasts and Weather; Orders'
+  backup whitelist (`saneOrder`); Money's CSV formula cells; Home's `#join=` link
+  shows the address and asks for a second tap; `safariDemo` escapes its icon
+  address; erase clears the `aos_look` cookie; own-key lookups in aOS's error
+  words and the shared Russian.
 
 ### Condensing worth a PR of its own
 
@@ -132,8 +102,10 @@ English and its Russian.
 - `esc()` is defined in every app and four core files; `see()`, the
   standalone/iOS/Android checks, `IPSY_APPS` and the LOOKS list are each in two
   to five core files; the FNV `hash()` is in Podcasts, Travel and `parse.js`.
-- About 55 lines of unused Design-menu machinery in `welcome.js` and
-  `aOS/app.js` (the README says unused; `designs-test` asserts its absence).
+- ~~About 55 lines of unused Design-menu machinery in `welcome.js` and
+  `aOS/app.js`.~~ Done (87 lines of `aOS/app.js`); its dead CSS (`.dsel`, `.dbtn`,
+  `.dmenu`, `.dtag`, `.dsheet`, `.dgo`, `.dd`) still sits in `aOS/index.html`'s
+  Vintage block and the generated looks: drop it with `make-looks.mjs`.
 - `b64e`/`b64d` in Notes and Orders use deprecated `escape`/`unescape`
   (TextEncoder, as `server/auth.js`).
 
@@ -167,8 +139,8 @@ English and its Russian.
    fallback writes 14 apps' designs where aOS has 16 (Money, Sparkle): use `W.data.APPS`.
 8. **Fewer round trips.** Calendar and Fitness each ask `../drinks/api/summary`
    (an Apps Script call); a short shared cache in `home/` halves it. Fitness
-   re-serialises 400 days of logs on every persist; share the layer only when
-   `data.logs` changed. Money should prefer Mail's Gmail token over a silent renew
+   ~~re-serialises 400 days of logs on every persist~~ (done: shared only when
+   the log changed). Money should prefer Mail's Gmail token over a silent renew
    of its own. Podcasts could adopt the server's `X-Feed-Url` after a redirect.
 9. **Ipsy in Money** (read-only tools through the Money route, reader/viewer
    gated), and `podcasts.cc` and playback speed in Ipsy's settings list.

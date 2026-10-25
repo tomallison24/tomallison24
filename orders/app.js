@@ -1342,8 +1342,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { data = JSON.parse(await f.text()); } catch { toast('That file isn’t an Orders backup.'); return; }
     if (!data || data.app !== 'allison-orders' || !Array.isArray(data.orders)) { toast('That file isn’t an Orders backup.'); return; }
     const have = new Set(orders.map(o => o.id));
-    const ok = o => o && typeof o.id === 'string' && o.status in P.STATUS_NAMES;
-    const add = data.orders.filter(o => ok(o) && !have.has(o.id));
+    // Each order kept to the shape the app writes (parse.js saneOrder): a file can say anything.
+    const add = data.orders.map(P.saneOrder).filter(o => o && !have.has(o.id));
     orders.push(...add);
     save(); render(); closeSheet('setSheet');
     toast('Restored ' + plural(add.length, 'order'));

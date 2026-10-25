@@ -1,7 +1,7 @@
 // Offline shell for the Notes app (both designs; also at the old Notes Vintage address). Same-origin files load network-first so a
 // new deploy shows up on the next open; the cache is only the fallback when
 // offline. Notes themselves live in localStorage, never in this cache.
-const CACHE = 'notes-v56';
+const CACHE = 'notes-v57';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest?v=4', 'icon.svg?v=2', 'icon-glass.svg?v=1', 'icon-180.png?v=6', 'icon-512.png?v=6', 'icon-glass-180.png?v=6', 'icon-glass-512.png?v=6', '../home/slide.js', '../home/welcome.js', '../home/aisles.js', '../home/account.js', '../home/sheet.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/notes.js'];
 
 self.addEventListener('install', e => {
@@ -26,7 +26,8 @@ self.addEventListener('fetch', e => {
         return res;
       })
       .catch(() => caches.match(e.request, {ignoreSearch: url.pathname.endsWith('/') || url.pathname.endsWith('index.html')})
-        .then(r => r || caches.match('index.html')))
+        // offline with no copy: the app's page for a page load only; a script or an image fails as it would with no worker
+        .then(r => r || (e.request.mode === 'navigate' ? caches.match('index.html') : Response.error())))
   );
 });
 

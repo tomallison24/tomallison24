@@ -136,9 +136,8 @@ pastel stop that slides between them, and your avatar top right.
   Standard (Sea glass), picked in the app's own **Settings → Design**, so aOS shows one
   row per app, with no Design menu, and **Get** always adds the app itself. The old
   Vintage apps (`mailvintage` and the rest) are not offered; their addresses open the
-  app itself (the deploy copies each app there). `DESIGNS` in `home/welcome.js` (a
-  design that is its own app folder) is empty, and the Design menu code is unused.
-  `node aOS/scripts/designs-test.mjs` covers it.
+  app itself (the deploy copies each app there). The Design menu code is gone;
+  `node aOS/scripts/designs-test.mjs` checks the store shows none.
 - **Search**: by name, tagline, category, design or what its walkthrough says.
 - **An app's page**: centred, a halo of its colour, **Get**; its facts as chips
   (version, category, shared or yours, maker); What's New (the latest version only);

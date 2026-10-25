@@ -688,6 +688,75 @@ await step('Just me on a list keeps it and its reminders to Ella; a reminder can
   assert.equal(sheet.tab('✓ Surprise party'), null, 'no tab for it in the Sheet');
 });
 
+await step('Undo puts back only what it undid: a note another phone added, merged by a sync while the toast was up, stays, with no deletion mark', async () => {
+  const p = ella.page, t = tom.page;
+  await p.click('.tab[data-tab="notes"]');
+  await p.click('#fab'); await p.waitForSelector('#editor:not([hidden])');
+  await p.fill('#edTitle', 'Shopping list'); await p.fill('#edBody', 'Bread');
+  await p.click('#edDone');
+  await sentBy('ella', c => c.notes.some(n => n.title === 'Shopping list'));
+  // Tom's phone hasn't synced since. He writes a note and moves it to Trash; the sync inside the Undo window brings Ella's.
+  await t.click('.tab[data-tab="notes"]');
+  await t.click('#fab'); await t.waitForSelector('#editor:not([hidden])');
+  await t.fill('#edTitle', 'Draft'); await t.click('#edDone'); await t.waitForTimeout(300);
+  await t.click('.nrow:has-text("Draft")'); await t.waitForSelector('#editor:not([hidden])');
+  await t.click('#edDelete');
+  await t.waitForSelector('#toast:not([hidden])');
+  assert.match(await t.textContent('#toastMsg'), /Moved to Trash/);
+  await syncNow(t);
+  await until(async () => (await stored(t)).notes.some(n => n.title === 'Shopping list'), 'Ella\'s note reaches Tom\'s phone');
+  const shop = (await stored(t)).notes.find(n => n.title === 'Shopping list');
+  assert.equal(await t.evaluate(() => document.getElementById('toast').hidden), false, 'Undo is still offered');
+  await t.click('#toastAct'); await t.waitForTimeout(300);
+  const got = await stored(t);
+  assert.ok(got.notes.some(n => n.title === 'Draft' && !n.deletedAt), 'Undo brought the draft back');
+  assert.ok(got.notes.some(n => n.id === shop.id), 'and left Ella\'s note alone');
+  assert.ok(!(await t.evaluate(KEY => JSON.parse(localStorage.getItem(KEY + '-graves')) || {}, KEY))['notes:' + shop.id], 'no deletion mark for it');
+  await sentBy('tom', c => c.notes.some(n => n.title === 'Draft' && !n.deletedAt) && !(c.graves || {})['notes:' + shop.id]);
+  assert.ok((await stored(p)).notes.some(n => n.id === shop.id), 'so it stays on Ella\'s phone');
+});
+
+await step('a note deleted for good on another phone while it is open here: Done keeps what you changed as a new note, and says so', async () => {
+  const p = ella.page, t = tom.page;
+  const graveFor = async title => {   // Ella deletes her note for good (Trash, then Delete for good) and her phone tells the Sheet
+    const id = (await stored(p)).notes.find(n => n.title === title).id;
+    await p.click('.nrow:has-text("' + title + '")'); await p.waitForSelector('#editor:not([hidden])');
+    await p.click('#edDelete'); await p.waitForTimeout(300);
+    await p.click('[data-coll="trash"]'); await p.waitForSelector('[data-purge="' + id + '"]');
+    await p.click('[data-purge="' + id + '"]'); await p.waitForTimeout(300);
+    await p.click('#collBack');
+    await sentBy('ella', c => !!(c.graves || {})['notes:' + id]);
+    return id;
+  };
+  // Tom has Shopping list open and changes it
+  await t.click('.nrow:has-text("Shopping list")'); await t.waitForSelector('#editor:not([hidden])');
+  const id = await graveFor('Shopping list');
+  await syncNow(t);
+  await until(async () => !(await stored(t)).notes.some(n => n.id === id), 'the note left Tom\'s phone while open');
+  await t.fill('#edBody', 'Bread and milk');
+  await t.click('#edDone'); await t.waitForTimeout(300);
+  assert.equal(await t.textContent('#toastMsg'), 'That note was deleted on another phone, so your changes were kept as a new note.');
+  let got = await stored(t);
+  const kept = got.notes.find(n => n.title === 'Shopping list');
+  assert.ok(kept && kept.body === 'Bread and milk' && kept.id !== id && !kept.deletedAt, 'kept as a new note, under a new id');
+  assert.ok(!got.notes.some(n => n.id === id), 'the deleted one isn\'t brought back');
+  // Tom has Temp open and changes nothing: just told
+  await p.click('#fab'); await p.waitForSelector('#editor:not([hidden])');
+  await p.fill('#edTitle', 'Temp'); await p.click('#edDone');
+  await sentBy('ella', c => c.notes.some(n => n.title === 'Temp'));
+  await syncNow(t);
+  await until(async () => (await stored(t)).notes.some(n => n.title === 'Temp'), 'Temp reaches Tom\'s phone');
+  await t.click('.nrow:has-text("Temp")'); await t.waitForSelector('#editor:not([hidden])');
+  const id2 = await graveFor('Temp');
+  await syncNow(t);
+  await until(async () => !(await stored(t)).notes.some(n => n.id === id2), 'Temp left Tom\'s phone while open');
+  await t.click('#edDone'); await t.waitForTimeout(300);
+  assert.equal(await t.textContent('#toastMsg'), 'That note was deleted on another phone.');
+  got = await stored(t);
+  assert.ok(!got.notes.some(n => n.title === 'Temp'), 'nothing kept: nothing was changed');
+  assert.equal(await t.evaluate(() => document.getElementById('editor').hidden), true, 'the editor closed');
+});
+
 await step('Tom makes his note Just me: it leaves Ella\'s phone at her next sync, with no deletion mark', async () => {
   const p = tom.page;
   await p.click('.tab[data-tab="notes"]');

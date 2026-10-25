@@ -177,6 +177,8 @@
     'Overdue': 'Просрочено',
     'Moved back to notes': 'Возвращено в заметки',
     'Moved to Trash': 'Перемещено в корзину',
+    'That note was deleted on another phone.': 'Эту заметку удалили на другом телефоне.',
+    'That note was deleted on another phone, so your changes were kept as a new note.': 'Эту заметку удалили на другом телефоне, поэтому ваши изменения сохранены как новая заметка.',
     'Restored': 'Восстановлено',
     'Deleted for good': 'Удалено навсегда',
     'Trash emptied': 'Корзина очищена',

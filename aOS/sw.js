@@ -1,6 +1,6 @@
 // Offline shell for aOS. Same-origin requests load network-first, so a new
 // deploy shows on the next open; the cache is only the fallback offline.
-const CACHE = 'aos-v44';
+const CACHE = 'aos-v45';
 const SHELL = ['./', 'index.html', 'app.js', 'home-tab.js', 'home-find.js', 'prefs-sync.js', '../calendar/ical.js', '../weather/data.js', 'look.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/sky.js', '../home/welcome.js', '../home/account.js', '../home/ipsy.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/aos.js'];
 
 self.addEventListener('install', e => {
@@ -23,7 +23,7 @@ self.addEventListener('fetch', e => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
         return res;
       })
-      .catch(() => caches.match(e.request).then(r => r || caches.match('index.html')))
+      .catch(() => caches.match(e.request).then(r => r || (e.request.mode === 'navigate' ? caches.match('index.html') : Response.error())))   // offline: a page gets the shell; a script or JSON fails cleanly, never gets HTML
   );
 });
 

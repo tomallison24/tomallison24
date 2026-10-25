@@ -243,10 +243,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // Calendar's Fitness layer: the last 400 days of your log, just what Calendar shows,
   // kept in your own family account (home/welcome.js AllisonOS.layer), since Calendar
-  // can't read this app's storage on an iPhone.
+  // can't read this app's storage on an iPhone. Every persist() comes here (a med dose,
+  // a steps fetch), so the layer is built only when the log changed since it was last
+  // handed over: the fingerprint is the window's first day and each log's id and updated
+  // (track() stamps updated on any change; a merge or delete changes the ids).
+  let sharedFp = null;
   function shareCal() {
     const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
     const since = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10);
+    const fp = since + '|' + data.logs.map(x => x.id + ':' + (x.updated || 0)).join(',');
+    if (fp === sharedFp) return;
+    sharedFp = fp;
     L.share('fitness', { logs: data.logs.filter(x => x && x.date >= since).map(x => ({ date: x.date, exercise: String(x.exercise || '').slice(0, 80), group: x.group, cardio: !!x.cardio, sets: x.sets, reps: x.reps, timed: !!x.timed, weight: x.weight, mins: x.mins, dist: x.dist, unit: x.unit })) });
   }
   addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
@@ -280,6 +287,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   const noon = s => new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10), 12);
   const today = () => ymd(new Date());
+  // A real calendar day, 'YYYY-MM-DD' (2026-02-30 is not), as calendar/ipsy-tools.js's isDay: for a ?date= or ?day= link.
+  const isDay = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); if (!m) return false; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3]; };
   const addDays = (s, n) => { const d = noon(s); d.setDate(d.getDate() + n); return ymd(d); };
   // Sunday, unless Calendar has been set to start its weeks on Monday.
   const weekStartsSunday = () => { const c = ls.json('allison-calendar-v1-settings', {}); return !(c.weekStart === 1 && c.weekStartPicked); };   // Sunday, unless Monday was picked in Calendar
@@ -1604,13 +1613,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   animateIn(main);
   // An old setup link from another phone (#sync=…): aOS keeps the Sheet now, so it's only taken off the address.
   if (location.hash.startsWith('#sync=')) history.replaceState(null, '', location.pathname + location.search);
-  // Opened from Calendar's Fitness layer: ?date=YYYY-MM-DD opens that day.
+  // Opened from Calendar's Fitness layer: ?date=YYYY-MM-DD opens that day (a day that isn't real counts as none).
   const q = new URLSearchParams(location.search).get('date');
-  if (/^\d{4}-\d{2}-\d{2}$/.test(q || '') && !isNaN(noon(q))) { st.view = 'week'; st.week = weekStartOf(q); render(); openDay(q); }
+  if (isDay(q)) { st.view = 'week'; st.week = weekStartOf(q); render(); openDay(q); }
   // From the vitals alert (a notification, through aOS): ?view=health&day=YYYY-MM-DD opens Health on that day.
   else if (new URLSearchParams(location.search).get('view') === 'health') {
     const d = new URLSearchParams(location.search).get('day');
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d || '') && !isNaN(noon(d)) && d <= today()) st.healthDay = d;
+    if (isDay(d) && d <= today()) st.healthDay = d;
     setView('health');
   }
   // Another tab may have changed the log, or Calendar's week start.

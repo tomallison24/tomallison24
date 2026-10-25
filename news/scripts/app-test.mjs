@@ -263,6 +263,8 @@ await test('News | Scores still switches, and the pill is there on the news list
   assert.equal(await page.locator('#feed .sect').count(), 0);
   assert.ok(await page.locator('.fb-top .chip.pill').isVisible());
   assert.ok((await page.locator('#feed').innerText()).includes('Liverpool edge a thriller'));
+  // the status line under the list: when, and the sources that answered, "BBC Sport" as BBC (one feed entry has no source: skipped, not an error)
+  assert.match((await page.locator('#feed .status').innerText()).trim(), /^Updated .+ · BBC$/);
   await page.locator('.modes [data-mode="scores"]').click();
   await page.waitForSelector('.sect');
 });

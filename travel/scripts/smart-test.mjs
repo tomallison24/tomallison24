@@ -142,6 +142,7 @@ async function open({ calendar = true, ai = true, board = true, empty = false, s
     if (u.pathname.endsWith('/extract')) {
       const body = JSON.parse(req.postData() || '{}');
       seen.extract.push(body); seen.auth.push(req.headers().authorization || '');
+      if (seen.tooBig) return route.fulfill({ status: 413, json: { error: 'too-big' } });   // the server's answer to a body over its limit
       // the made-up AI: knows the airports when asked for them, and says nothing it cannot quote; checking a booking,
       // it reads the new time out of United's schedule change
       if (body.check) return route.fulfill({ json: { ok: true, fields: /now departs at 9:05 PM/.test(body.text) ? { airlineCode: 'UA', flightNo: '110', from: 'DEN', to: 'BOS', date: iso(BACK), depTime: '21:05', arrTime: '00:30' } : {} } });
@@ -224,6 +225,7 @@ const pick = (page, f) => page.evaluate(f);
     assert.deepEqual(seen.extract[0].missing.sort(), ['from', 'to']);
     assert.equal(seen.extract[0].type, 'flight');
     assert.ok(!JSON.stringify(seen.extract[0]).includes('pat@example.com'));
+    assert.ok(seen.extract[0].text.length <= 8000, 'an excerpt the server takes (functions/travel/api MAX_BODY): ' + seen.extract[0].text.length);
     const b = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'TRZ4KD'));
     assert.equal(b.from, 'MCO'); assert.equal(b.to, 'PHL'); assert.equal(b.filled.from, 'ai'); assert.equal(b.guess, true);
     const ua = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'KQ7T2M'));
@@ -238,6 +240,19 @@ const pick = (page, f) => page.evaluate(f);
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is back while something is missing');
     await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = 'MCO'; b.to = 'PHL'; window.__travel.render(); });
     assert.equal(!!(await page.$('.tripwrap [data-ai]')), false);
+  });
+  await step('an email the server will not take (too-big) is said, not passed off as read', async () => {
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = ''; b.to = ''; delete b.filled; window.__travel.render(); });
+    seen.tooBig = true;
+    const before = seen.extract.length;
+    await page.click('.tripwrap [data-ai]');
+    await page.waitForFunction(() => /couldn’t read the emails/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    assert.equal(seen.extract.length, before + 1, 'asked once');
+    assert.doesNotMatch(await page.textContent('#toastMsg'), /doesn’t say anything more/);
+    const b = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'TRZ4KD'));
+    assert.equal(b.from, ''); assert.equal(b.filled, undefined, 'nothing filled in');
+    seen.tooBig = false;
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); b.from = 'MCO'; b.to = 'PHL'; window.__travel.render(); });
   });
   await step('a flight with an airline, airports, day and time but no number gets it from the flight board; an edited one does not', async () => {
     await page.evaluate(day => {

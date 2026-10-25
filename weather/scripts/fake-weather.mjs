@@ -65,7 +65,9 @@ export async function installWeather(ctx, opts = {}) {
   }
   const alerts = opts.alerts ? [{ properties: { status: 'Actual', messageType: 'Alert', event: 'Wind Advisory', severity: 'Moderate', headline: 'Wind Advisory until 8 PM',
     ends: iso(now + 6 * 3600e3), description: 'Southwest winds 20 to 30 mph with gusts up to 45 mph expected. Made-up text for a test.', instruction: 'Secure outdoor objects.' } },
-    { properties: { status: 'Actual', messageType: 'Alert', event: 'Flood Watch', severity: 'Severe', headline: 'Flood Watch', ends: iso(now + 30 * 3600e3), description: 'Heavy rain may cause flooding. Made-up text for a test.', instruction: '' } }] : [];
+    { properties: { status: 'Actual', messageType: 'Alert', event: 'Flood Watch', severity: 'Severe', headline: 'Flood Watch', ends: iso(now + 30 * 3600e3), description: 'Heavy rain may cause flooding. Made-up text for a test.', instruction: '' } },
+    // alerts: 'odd' adds one with no name and an end that is not a date (NWS leaves a field out now and then)
+    ...(opts.alerts === 'odd' ? [{ properties: { status: 'Actual', messageType: 'Alert', severity: 'Minor', headline: '', ends: 'later today', description: 'An alert with no name. Made-up text for a test.', instruction: '' } }] : [])] : [];
 
   await ctx.route('https://api.weather.gov/**', route => {
     const u = new URL(route.request().url()), p = u.pathname;

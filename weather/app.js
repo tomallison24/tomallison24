@@ -5,6 +5,11 @@
 // colours (CSS variables from index.html's #vintage block) with a sky of flat shapes; Standard,
 // Weather's own glowing colours and gradient skies. Everything else is the same in both.
 'use strict';
+// Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
+if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
+  document.body.textContent = 'Weather can’t be opened inside another page.';
+  throw new Error('Weather refuses to run inside a frame');
+}
 // Which design is on (design.js), read at each draw, and the screen and any open sheet redrawn on a change
 // (aos:design, at the bottom). vintage(): a flat design - Vintage, or Night Drive and Folk, which repaint it.
 const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
@@ -888,13 +893,16 @@ function alertCards(m) {
   const tint = vin ? { Extreme: 'var(--wv-al-hi)', Severe: 'var(--wv-al-hi)', Moderate: 'var(--wv-al-mid)' } : { Extreme: '#FF453A', Severe: '#FF453A', Moderate: '#FF9F0A' };
   return m.alerts.slice().sort((a, b) => (rank[a.severity] ?? 4) - (rank[b.severity] ?? 4)).map((a, i) => {
     const c = tint[a.severity] || (vin ? 'var(--wv-al-lo)' : '#FFD60A');
-    const until = a.ends ? 'Until ' + new Date(a.ends).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: m.tz }) : a.severity || '';
-    const key = a.event + '|' + a.ends;
+    // NWS leaves out a field now and then: a nameless alert is a "Weather alert", and an end that is not a date shows its severity instead
+    const ends = a.ends ? new Date(a.ends) : null;
+    const until = ends && !isNaN(ends) ? 'Until ' + ends.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: m.tz }) : a.severity || '';
+    const event = a.event || 'Weather alert';
+    const key = event + '|' + a.ends;
     const open = !!S.alertOpen[key];
     return `<div class="alert${open ? ' open' : ''}">
       <button data-alert="${esc(key)}" aria-expanded="${open}">
         <span class="dot" style="background:${vin ? `color-mix(in srgb, ${c} 16%, transparent)` : c + '22'};color:${c};">${svg('alert', 20)}</span>
-        <span class="t"><b translate="no">${esc(a.event)}</b><small>${esc(until)}</small></span>
+        <span class="t"><b${a.event ? ' translate="no"' : ''}>${esc(event)}</b><small>${esc(until)}</small></span>
         <span class="chev">${svg('chevron-right', 20)}</span>
       </button>
       <div class="body" translate="no">${esc([a.desc, a.instr].filter(Boolean).join('\n\n'))}</div>

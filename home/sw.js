@@ -2,7 +2,7 @@
 // so a new deploy shows up on the next open; the cache is only the fallback
 // when offline. The other apps' icons are same-origin too, so they are kept
 // the same way.
-const CACHE = 'home-v28';
+const CACHE = 'home-v29';
 const SHELL = ['./', 'index.html', 'moved-head.js', 'moved.js', 'manifest.webmanifest', 'slide.js', 'welcome.js', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -24,6 +24,6 @@ self.addEventListener('fetch', e => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
         return res;
       })
-      .catch(() => caches.match(e.request).then(r => r || caches.match('index.html')))
+      .catch(() => caches.match(e.request).then(r => r || (e.request.mode === 'navigate' ? caches.match('index.html') : Response.error())))   // offline: a page gets the shell; a script or JSON fails cleanly, never gets HTML
   );
 });

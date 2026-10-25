@@ -58,14 +58,14 @@
     if (!o || typeof o !== 'object' || Array.isArray(o) || !(it.field in o)) return null;
     return JSON.stringify(it.out ? it.out(o[it.field]) : o[it.field]);
   }
-  function write(it, v) {
+  function write(it, v) {   // true once it is written; false when it can't be (a field's value that isn't JSON)
     try {
-      if (!it.field) { if (v == null) localStorage.removeItem(it.key); else localStorage.setItem(it.key, v); return; }
+      if (!it.field) { if (v == null) localStorage.removeItem(it.key); else localStorage.setItem(it.key, v); return true; }
       let o; try { o = JSON.parse(raw(it.key)); } catch {}
       if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
       if (v == null) delete o[it.field]; else o[it.field] = JSON.parse(v);
-      localStorage.setItem(it.key, JSON.stringify(o));
-    } catch {}
+      localStorage.setItem(it.key, JSON.stringify(o)); return true;
+    } catch { return false; }
   }
 
   // o: { apps: [ids], account, wait: app => true while it's on screen (its settings come down later),
@@ -99,7 +99,7 @@
     }
     const take = down.filter(([it]) => it.quiet || !wait(it.app)), came = new Set(take.filter(([it]) => !it.quiet).map(([it]) => it.app));   // the app on screen: next time
     if (take.length) await ready([...came]);
-    for (const [it, there] of take) { write(it, there.v); seen[it.id] = { h: read(it), at: there.at }; }
+    for (const [it, there] of take) if (write(it, there.v)) seen[it.id] = { h: read(it), at: there.at };   // not written: not seen, so what replaces it still comes
     try { localStorage.setItem(SEEN, JSON.stringify(seen)); } catch {}
     if (came.size) applied([...came]);
     return came.size > 0 || Object.keys(up).length > 0;

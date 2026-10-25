@@ -111,6 +111,16 @@ await test('five years kept: a push lets go of older months, and never takes one
   assert.deepEqual(Object.keys(r.body.months).filter(ym => ym < from), []);
   await call('push', { token: pat, body: { months: { [from]: [] } } });
 });
+await test('a month with more than 1,500 transactions keeps its newest 1,500 (a refused push was never sent again)', async () => {
+  const from = keepFrom(), many = Array.from({ length: 1503 }, (_, i) => tx('m' + i, from + '-' + String(1 + (i % 28)).padStart(2, '0'), 1 + i, { at: 1e12 + i }));
+  const r = await call('push', { token: pat, body: { months: { [from]: many } } });
+  assert.equal(r.status, 200);
+  const kept = JSON.parse(db.m.get('money:tx:' + from)).items;
+  assert.equal(kept.length, 1500);
+  assert.ok(!kept.some(x => x.id === 'm0' || x.id === 'm28' || x.id === 'm56'), 'the three oldest on the 1st (by date, then at) are the ones let go');
+  assert.equal((await call('push', { token: pat, body: { months: { [from]: Array.from({ length: 6001 }, (_, i) => tx('x' + i, from + '-05', 1)) } } })).status, 413, 'four times that is refused outright');
+  await call('push', { token: pat, body: { months: { [from]: [] } } });
+});
 await test('settings: anyone who sees it may change them; an older change doesn’t win', async () => {
   const r = await call('settings', { token: alex, body: { settings: { cards: { 'rocket credit card': { base: 3, online: 99, cap: -5 } }, online: ['Amazon', ''], dismissed: ['al1'], at: 1000 } } });
   assert.equal(r.body.ok, true);

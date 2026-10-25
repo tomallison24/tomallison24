@@ -832,9 +832,52 @@
     return changed ? 'changed' : 'same';
   }
 
+  // ---------------------------------------------------------------------
+  // An order from a backup file (the app's Import a backup), kept to the
+  // shape the app writes: the fields it knows, each of its own type and
+  // length, a tracking link only ever a web address. A valid order comes
+  // back exactly as it was (export then import changes nothing); a field
+  // that isn't right is left out, and anything unknown is dropped. null: not
+  // an order at all (no id, or a status the app doesn't know).
+  // ---------------------------------------------------------------------
+  const SANE = (() => {
+    const DAY = /^\d{4}-\d{2}-\d{2}$/, WEB = /^https?:\/\//i, KEYISH = /^[A-Za-z][A-Za-z0-9_]{0,29}$/;
+    const str = n => v => typeof v === 'string' && v.length <= n ? v : undefined;
+    const day = v => v === '' || (typeof v === 'string' && DAY.test(v)) ? v : undefined;
+    const web = v => v === '' || (typeof v === 'string' && v.length <= 500 && WEB.test(v)) ? v : undefined;
+    const num = v => typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+    const money = v => v === null ? null : num(v);
+    const bool = v => typeof v === 'boolean' ? v : !!v;
+    const oneOf = list => v => list.includes(v) ? v : undefined;
+    const days = v => { if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined; const o = {}; for (const k of Object.keys(v)) if (KEYISH.test(k) && day(v[k]) !== undefined) o[k] = v[k]; return o; };
+    const locks = v => { if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined; const o = {}; for (const k of Object.keys(v)) if (KEYISH.test(k) && v[k]) o[k] = true; return o; };
+    const item = i => { if (!i || typeof i !== 'object' || typeof i.name !== 'string' || !i.name || i.name.length > 300) return null; const o = { name: i.name }; if (Number.isInteger(i.qty) && i.qty > 0 && i.qty < 1000) o.qty = i.qty; if (num(i.price) !== undefined) o.price = i.price; return o; };
+    const items = v => Array.isArray(v) ? v.map(item).filter(Boolean).slice(0, 100) : undefined;
+    const names = v => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x && x.length <= 300).slice(0, 12) : undefined;
+    const shape = fields => v => {
+      if (v === null) return null;
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+      const o = {};
+      for (const k of Object.keys(fields)) if (k in v) { const x = fields[k](v[k]); if (x !== undefined) o[k] = x; }
+      return o;
+    };
+    const source = shape({ msgId: str(200), threadId: str(200), subject: str(200), from: str(200), date: num });
+    const ret = shape({ status: v => v === '' ? '' : oneOf(Object.keys(RETURN_NAMES))(v), steps: days, by: day, where: str(200), reason: str(200), rma: str(80), refund: money, cur: str(8), refundTo: str(200),
+      tracking: str(80), carrier: str(60), trackUrl: web, items: names, undelivered: bool, source, locks });
+    const order = shape({ id: str(80), store: str(200), storeKey: str(120), orderNo: str(80), orderDate: day, items, total: money, cur: str(8), status: oneOf(Object.keys(STATUS_NAMES)), kind: oneOf(KINDS),
+      carrier: str(60), tracking: str(80), trackUrl: web, eta: day, etaEnd: day, pickupBy: day, steps: days, issue: str(500), source, guess: bool, created: num, updated: num, notes: str(5000), locks,
+      checked: bool, private: bool, hide: bool, auto: bool, ai: bool, by: str(40), ret: v => { const r = ret(v); return r === null ? undefined : r; } });
+    return order;
+  })();
+  function saneOrder(o) {
+    if (!o || typeof o !== 'object' || typeof o.id !== 'string' || !o.id || !(o.status in STATUS_NAMES)) return null;
+    const s = SANE(o);
+    return s && s.id ? s : null;
+  }
+
   const api = { parseEmail, parseText, upsert, findMatch, findTotal, findOrderNo, trackingIn, trackUrl, statusOf, itemsFromText, fromSchema, htmlToText, jsonLdBlocks, microdata,
     findDates, dateIn, senderInfo, storeOf, kindOf, idFor, hash, keyOf, addDays, daysBetween, localYmd, rank, STATUS_NAMES, KINDS, carrierName, lastDay,
-    returnOf, retRank, RETURN_NAMES };
+    returnOf, retRank, RETURN_NAMES, saneOrder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OrdersParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

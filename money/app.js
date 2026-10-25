@@ -794,7 +794,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         if ((s.reader || s.open) && hasGmail() && D.dirty.length && D.tx.length) {
           while (D.dirty.length) {
             const batch = D.dirty.slice(0, 6), months = {};
-            for (const ym of batch) months[ym] = D.tx.filter(x => C.ymOf(x.date) === ym);
+            for (const ym of batch) months[ym] = C.newest(D.tx.filter(x => C.ymOf(x.date) === ym));   // at most the 1,500 aOS keeps a month, else 413 and the months after it never go
             const r = await api('push', { months, alerts: D.alerts, hints: D.hints, readAt: D.readAt });
             for (const ym of batch) D.mAt[ym] = (r.months || {})[ym] || r.at;
             D.dirty = D.dirty.filter(x => !batch.includes(x));
@@ -948,7 +948,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   });
   function exportCSV() {
     prep();
-    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const q = C.csvCell;   // a merchant name starting with = + - @ is text, not a formula, in the spreadsheet
     const rows = [['Date', 'Merchant', 'Amount', 'In or out', 'Card or account', 'Category', 'Monarch’s category', 'Cash back']].concat(
       [...view()].sort((a, b) => a.at - b.at).map(x => { const r = st.rw.get(x.id); return [x.date, x.merchant, x.amt.toFixed(2), x.dir === 'in' ? 'In' : 'Out', st.acct(x).name, x.cat, x.how ? x.mcat : x.cat, r && r.rate != null ? r.earned.toFixed(2) : '']; }));
     const blob = new Blob([rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' });

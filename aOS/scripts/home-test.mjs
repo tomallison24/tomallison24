@@ -439,6 +439,13 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await phone.pg.evaluate(() => AllisonOS.welcome.theme.set('light')); await back(phone.pg); await phone.pg.waitForTimeout(600);
   await back(ipad.pg); await ipad.pg.waitForTimeout(800);
   check(await ipad.pg.evaluate(() => document.documentElement.dataset.theme) === 'light', 'light chosen on the iPhone: the iPad is light too');
+  // a value the server holds that can't be written (a field's value that isn't JSON): left as it was, and not marked as seen, so what replaces it still comes
+  const bump = v => { const all = synced(); all['home.settings#theme'] = { v, at: all['home.settings#theme'].at + 1 }; m.set('prefs:O1', JSON.stringify(all)); return all['home.settings#theme'].at; };
+  const badAt = bump('{bad'); await back(ipad.pg); await ipad.pg.waitForTimeout(800);
+  const seenAt = await ipad.pg.evaluate(() => (JSON.parse(localStorage.getItem('aos.prefs.seen') || '{}')['home.settings#theme'] || {}).at);
+  check(await ipad.pg.evaluate(() => document.documentElement.dataset.theme) === 'light' && seenAt !== badAt, `a setting that can't be written (not JSON) is left as it was and not marked as seen (seen at ${seenAt}, the bad one at ${badAt})`);
+  bump('"dark"'); await back(ipad.pg); await ipad.pg.waitForTimeout(800);
+  check(await ipad.pg.evaluate(() => document.documentElement.dataset.theme) === 'dark', 'and the good value that replaces it comes down');
   // an app open out of sight on the iPad starts again with what came (Weather, on its new design)
   await ipad.pg.evaluate(() => { aosHomeTab.show('weather'); }); await ipad.pg.waitForTimeout(1500);
   await ipad.pg.evaluate(() => aosHomeTab.show(null)); await ipad.pg.waitForTimeout(500);
