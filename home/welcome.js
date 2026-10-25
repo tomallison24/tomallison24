@@ -95,6 +95,7 @@
         'Ipsy can change how things look and read for you, with Undo: light or dark, the look, the language, Favorites, Calendar, Clock, Weather\'s units, Podcasts, Fitness goals and what Orders counts. It asks first before a new event\'s defaults or turning its own access down, never touches sign-ins, the plan, privacy or the family\'s allergies, and opens the right screen for those',
         'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings',
         'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour',
+        'The status bar is the colour of the page with Appearance set to Light or Dark too (it could keep the other mode\'s colour, a band across the top)',
         'aOS: now and then Ipsy rolls across the bar at the top of Home and back (never with Reduce Motion; a tap sends it straight home)',
         'aOS: removing someone from the family takes them out completely: signed out of every app, and their account and everything aOS keeps for them deleted (no more Invite back: inviting them again makes a new account)',
         'aOS: Home is where it opens (in place of Apps): the Ipsy bar at the top, your Favorites with a Weather and a Calendar widget (today\'s weather, what\'s next), then every app as an icon in four groups (Family, Every day, Out and about, You): one tap opens any app',

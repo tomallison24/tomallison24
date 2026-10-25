@@ -191,5 +191,20 @@ for (const scheme of ['light', 'dark']) {
   report(`under a solid status bar (${scheme}), an app's shapes fade in from its own ground in Vintage, Night Drive and Folk, and the tint matches`, pr); await ctx.close();
 }
 
+// 8. aOS's bar is the colour of the page, whichever mode's meta iOS goes by: Appearance set to Dark on a phone in
+// light mode, at night, in Vintage and then Night Drive; then Light again
+{
+  const { ctx, p, errs } = await open('light', { 'aos.sky': 'night', 'home.settings': JSON.stringify({ theme: 'dark' }) }); const pr = [...errs];
+  const bar = async () => { await p.waitForTimeout(300); return p.evaluate(() => { const g = getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    return { ground: '#' + g, metas: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content.toUpperCase()) }; }); };
+  const check = async what => { const s = await bar(); if (s.metas.some(m => m !== s.ground)) pr.push(`${what}: the bar's metas ${s.metas.join(', ')} are not the page's ${s.ground}`); };
+  await check('Vintage, Dark on a light phone');
+  await openLook(p); await p.click('#looks [data-look="neon"]');
+  await check('Night Drive, Dark on a light phone');
+  await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('home.settings')); s.theme = 'light'; localStorage.setItem('home.settings', JSON.stringify(s)); document.documentElement.setAttribute('data-theme', 'light'); dispatchEvent(new CustomEvent('aos:theme', { detail: 'light' })); });
+  await check('Night Drive, Light');
+  report('aOS\'s bar takes the colour the page shows, with Appearance set to Light or Dark, in Vintage and Night Drive', pr); await ctx.close();
+}
+
 await b.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed'); process.exit(failed ? 1 : 0);
