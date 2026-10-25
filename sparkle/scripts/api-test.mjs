@@ -7,7 +7,7 @@
 import assert from 'assert/strict';
 import fs from 'fs';
 import vm from 'vm';
-import { onRequest, okSave, okClips, speak, VOICES } from '../../functions/sparkle/api/[[route]].js';
+import { onRequest, okSave, okClips, speak, VOICES, SOUNDS } from '../../functions/sparkle/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
 vm.runInThisContext(fs.readFileSync(new URL('../engine.js', import.meta.url), 'utf8'));
@@ -100,6 +100,15 @@ await test('natural voices: signed in only, its voices, short sentences, the req
   assert.equal(sent.length, 2, 'another voice is another sentence');
   r = await speak(kenv, u({ v: 'gemma', t: 'Tap the gems.', r: '0.75' }), google);
   assert.equal(r.status, 200); assert.equal(sent.length, 4); assert.equal(sent[3].b.audioConfig.speakingRate, undefined, 'a refused speed: asked again without one');
+  // a letter's sound: Google is told how to say it, so "sss" isn't read as "s, s, s"
+  assert.equal((await speak(kenv, u({ v: 'owl', t: 'sss', s: '1' }), google)).status, 400, 'only a letter');
+  r = await speak(kenv, u({ v: 'owl', t: 'sss', s: 's', r: '0.9' }), google);
+  assert.equal(r.status, 200); assert.equal(sent.length, 5);
+  assert.deepEqual(sent[4].b.input, { text: 'sss', customPronunciations: { pronunciations: [{ phrase: 'sss', phoneticEncoding: 'PHONETIC_ENCODING_IPA', pronunciation: SOUNDS.s }] } });
+  await speak(kenv, u({ v: 'owl', t: 'sss', r: '0.9' }), google);
+  assert.equal(sent.length, 6, 'the sound and the same words read as text are kept apart');
+  const no = async () => new Response('{"error":{}}', { status: 400 });
+  assert.equal((await speak(kenv, u({ v: 'owl', t: 'mmm', s: 'm' }), no)).status, 422, 'a sound Google won\'t say: the phone says it');
   const bad = async () => new Response('{}', { status: 403 });
   assert.equal((await speak(kenv, u({ v: 'bloom', t: 'Pop!' }), bad)).status, 502, 'Google refusing: 502, and the phone speaks itself');
   delete globalThis.caches;

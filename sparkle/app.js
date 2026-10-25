@@ -119,7 +119,7 @@
     if (!p) return;
     me = p; V.unlock();
     if (!me.introSeen) return intro();
-    enterWorld();
+    enterWorld(true);
   }
 
   // ---- the story, once per player ----
@@ -130,7 +130,7 @@
       <div class="story" id="storyText"></div><button type="button" class="big pink" id="introGo">${ICON.go}<span>Let's go!</span></button>`;
     let i = 0; const next = () => { $('storyText').textContent = lines[i]; V.say([lines[i]], { who: 'narrator' }); };
     next();
-    $('introGo').onclick = () => { V.sfx('sparkle'); i++; if (i < lines.length) return next(); me.introSeen = true; persist(true); enterWorld(); };
+    $('introGo').onclick = () => { V.sfx('sparkle'); i++; if (i < lines.length) return next(); me.introSeen = true; persist(true); enterWorld(true); };
   }
 
   // ---- the kingdom ----
@@ -180,12 +180,16 @@
     m.scrollTo({ left: Math.max(0, x), top: Math.max(0, y), behavior: smooth && !reduce() ? 'smooth' : 'auto' });
   }
   const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function enterWorld() {
+  // greet: she's just picked her princess, so the storyteller says hello and where to go; back from a
+  // game, the castle or a chapter, the kingdom is quiet (the quest at the bottom still shows the way)
+  function enterWorld(greet) {
     show('world'); paintHud(); paintMap();
     requestAnimationFrame(() => centre(W.NODES[me.world.at] || W.NODES.castle, false));
-    const nx = nextStop();
-    const GO = { tower: "Let's visit Story Tower.", mine: "Let's go to the Gem Mine.", meadow: "Let's go to Star Meadow.", garden: "Let's go to the Fairy Garden.", workshop: "Let's go to the Tiara Workshop." };
-    V.say([nx ? `Hi ${me.name}! ${GO[nx]} Tap where you want to go.` : `Hi ${me.name}! Where shall we go?`], { who: 'narrator' });
+    if (greet === true) {
+      const nx = nextStop();
+      const GO = { tower: "Let's visit Story Tower.", mine: "Let's go to the Gem Mine.", meadow: "Let's go to Star Meadow.", garden: "Let's go to the Fairy Garden.", workshop: "Let's go to the Tiara Workshop." };
+      V.say([nx ? `Hi ${me.name}! ${GO[nx]} Tap where you want to go.` : `Hi ${me.name}! Where shall we go?`], { who: 'narrator' });
+    }
     sync();
   }
   // where a tap on the map lands, in the kingdom's units
@@ -220,35 +224,55 @@
     try {
       const path = W.route(me.world.at, to, me.world.open || {});
       if (!path) return;
+      // walked in one smooth glide up to each gate that's still shut, and on from it once it opens
+      let run = [path[0]];
       for (let i = 1; i < path.length; i++) {
         const a = path[i - 1], b = path[i], g = W.gateOn(a, b);
         if (g && !session.open[g]) {
+          await walk(run.map(n => W.NODES[n])); me.world.at = a; run = [a];
           const ok = await gate(g);
           if (!ok) return;
           session.open[g] = true;
           if (g === 'bridge') { paintMap(); place(W.NODES[a]); }
         }
-        await walk(W.NODES[a], W.NODES[b]);
-        me.world.at = b;
+        run.push(b);
       }
+      await walk(run.map(n => W.NODES[n])); me.world.at = path[path.length - 1];
       persist();
       if (to === 'castle' && path.length >= 1) return openCastle();
       if (LAND[to]) return startRound(LAND[to]);
     } finally { busy = false; }
   }
-  function walk(p, q) {
+  // the princess and her unicorn glide along the curved paths: sampled, followed at an even pace that eases in
+  // and out, moved by a transform (no layout or repaint a frame), the view following every frame
+  const easeSine = t => (1 - Math.cos(Math.PI * t)) / 2;
+  function walk(nodes) {
     return new Promise(done => {
-      const r = $('rider'); if (!r) return done();
-      r.classList.toggle('flip', q.x < p.x);
-      if (reduce()) { place(q); centre(q, false); return done(); }
-      const mx = (p.x + q.x) / 2 + (q.y - p.y) * 0.12, my = (p.y + q.y) / 2 - (q.x - p.x) * 0.12;
-      const dist = Math.hypot(q.x - p.x, q.y - p.y), dur = Math.max(450, dist * 2.4), t0 = performance.now();
+      const r = $('rider'), m = $('map'), box = $('mapIn'), end = nodes[nodes.length - 1];
+      if (!r || nodes.length < 2) return done();
+      if (reduce()) { r.classList.toggle('flip', end.x < nodes[0].x); place(end); centre(end, false); return done(); }
+      const pts = [nodes[0]];
+      for (let i = 1; i < nodes.length; i++) {
+        const p = nodes[i - 1], q = nodes[i], mx = (p.x + q.x) / 2 + (q.y - p.y) * 0.12, my = (p.y + q.y) / 2 - (q.x - p.x) * 0.12;
+        for (let k = 1; k <= 24; k++) { const t = k / 24, u = 1 - t; pts.push({ x: u * u * p.x + 2 * u * t * mx + t * t * q.x, y: u * u * p.y + 2 * u * t * my + t * t * q.y }); }
+      }
+      const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+      const total = len[len.length - 1] || 1, dur = Math.max(600, total * 2.4);
+      const sx = box.clientWidth / W.W, sy = box.clientHeight / W.H, s0 = nodes[0];
+      let i = 1, vx = m.scrollLeft, vy = m.scrollTop;
+      const at = d => { while (i < len.length - 1 && len[i] < d) i++; const f = Math.min(1, Math.max(0, (d - len[i - 1]) / ((len[i] - len[i - 1]) || 1)));
+        return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * f, y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * f, dx: pts[i].x - pts[i - 1].x }; };
       r.classList.add('walk'); V.sfx('whoosh');
+      const t0 = performance.now();
       const step = now => {
-        const t = Math.min(1, (now - t0) / dur), u = 1 - t;
-        const x = u * u * p.x + 2 * u * t * mx + t * t * q.x, y = u * u * p.y + 2 * u * t * my + t * t * q.y;
-        place({ x, y }); if (Math.round(t * 20) % 4 === 0) centre({ x, y }, false);
-        if (t < 1) requestAnimationFrame(step); else { r.classList.remove('walk'); done(); }
+        const t = Math.min(1, (now - t0) / dur), p = at(easeSine(t) * total);
+        if (Math.abs(p.dx) > 0.5) r.classList.toggle('flip', p.dx < 0);
+        r.style.transform = `translate3d(${(p.x - s0.x) * sx}px, ${(p.y - s0.y) * sy}px, 0)`;
+        // the view eases after her (kept in fractions of a pixel, so it never stalls)
+        vx += (Math.max(0, p.x * sx - m.clientWidth / 2) - vx) * 0.12; vy += (Math.max(0, p.y * sy - m.clientHeight * 0.55) - vy) * 0.12;
+        m.scrollLeft = vx; m.scrollTop = vy;
+        if (t < 1) return requestAnimationFrame(step);
+        r.style.transform = ''; place(end); r.classList.remove('walk'); centre(end); done();
       };
       requestAnimationFrame(step);
     });
@@ -362,12 +386,26 @@
     if (!PLAY[q.kind] && !$('show').innerHTML.trim()) $('stage').classList.add('noshow');   // only heard: the answers take the room
     $('hostBtn').onclick = () => ask(q);
     if (q.kind === 'syll') $('show').insertAdjacentHTML('beforeend', `<button type="button" class="drum" id="drum" aria-label="Tap the drum">${ICON.drum}</button>`);
-    if ($('drum')) $('drum').onclick = () => { V.sfx('note', 0); };
+    if ($('drum')) drum($('drum'));
     R.tries = 0;
     // the games she plays rather than picks: the wand, spelling with gems, Flower Match, What's Missing
     if (PLAY[q.kind]) { const go = () => PLAY[q.kind]($('show'), q, { who, choices: $('choices') }).then(score => { if (round === R && R.q === q) answered(score); });
       if (q.kind === 'missing' || q.kind === 'match') { R.asked = V.say(q.say, { who }); go(); } else (R.asked = ask(q)).then(go); return; }
     R.asked = ask(q);
+  }
+  // the drum: a beat for every tap however fast, on the finger going down, each one bouncing it and lighting
+  // a dot above it, so she sees every part counted; the dots clear when she stops for a moment
+  function drum(el) {
+    let beats = 0, idle = null, downAt = 0;
+    const beat = () => {
+      V.sfx('drum'); beats = Math.min(beats + 1, 6);
+      el.querySelector('.beats').innerHTML = '<i></i>'.repeat(beats);
+      el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit');
+      clearTimeout(idle); idle = setTimeout(() => { beats = 0; el.querySelector('.beats').innerHTML = ''; }, 2500);
+    };
+    el.insertAdjacentHTML('beforeend', '<span class="beats" aria-hidden="true"></span>');
+    el.addEventListener('pointerdown', () => { downAt = Date.now(); beat(); });
+    el.onclick = () => { if (Date.now() - downAt > 700) beat(); };   // the demo's hand, or a keyboard
   }
   function ask(q) {
     const [who] = HOST[round.skill];
@@ -1029,7 +1067,7 @@
   };
   // natural voices (voice.js), from this server, for a phone signed in to the family account
   V.natural = { ok: () => set().natural !== false && !!token(), headers: () => ({ 'X-Sparkle': '1', Authorization: 'Bearer ' + token() }),
-    url: (who, text, r) => API + 'speak?' + new URLSearchParams({ v: who, t: text, r: (Math.round(r * 20) / 20).toFixed(2) }) };
+    url: (who, text, r, snd) => API + 'speak?' + new URLSearchParams(Object.assign({ v: who, t: text, r: (Math.round(r * 20) / 20).toFixed(2) }, snd ? { s: snd } : {})) };
   let syncing = null, lastSent = '';
   function sync(force) {
     if (!token() || !navigator.onLine) return Promise.resolve();

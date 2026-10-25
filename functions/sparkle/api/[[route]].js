@@ -9,7 +9,8 @@
 //                                                   merges (sparkle/engine.js merge) and sends again
 //   GET  clips                   -> { clips }       the letter sounds a grown-up recorded
 //   POST clips  { clips }        -> { ok }          { letter: 'data:audio/...;base64,...' }, each short
-//   GET  speak?v=&t=&r=          -> audio/mpeg      a sentence (t) in a character's own voice (v: VOICES)
+//   GET  speak?v=&t=&r=&s=       -> audio/mpeg      a sentence (t) in a character's own voice (v: VOICES); s: t is
+//                                                   that letter's sound (SOUNDS)
 //                                                   at a speed (r), from Google Cloud Text-to-Speech's
 //                                                   Chirp 3: HD voices with the GOOGLE_TTS_KEY secret;
 //                                                   503 { error: 'no-voice' } until that secret is set,
@@ -31,6 +32,10 @@ import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.j
 export const SAVE_MAX = 256 * 1024, CLIPS_MAX = 1536 * 1024, CLIP_MAX = 96 * 1024, SPEAK_MAX = 400;
 // each character's voice (Chirp 3: HD, en-US): the narrator and her unicorn, Professor Hoot, Pebble, Gemma, Bloom
 export const VOICES = { narrator: 'Sulafat', owl: 'Charon', dragon: 'Puck', gemma: 'Leda', bloom: 'Vindemiatrix' };
+// a letter's sound (s: the letter) said as that sound: read as text, "sss" or "mmm" comes out as the letter's
+// name three times, so Google is given how to say it (IPA, its custom pronunciations)
+export const SOUNDS = { a: 'æ', e: 'ɛ', i: 'ɪ', o: 'ɑ', u: 'ʌ', s: 'sː', m: 'mː', f: 'fː', n: 'nː', l: 'lː', r: 'ɹː', z: 'zː', v: 'vː',
+  h: 'hə', t: 'tə', p: 'pə', c: 'kə', k: 'kə', b: 'bə', d: 'də', g: 'ɡə', j: 'dʒə', w: 'wə', y: 'jə', x: 'ks', q: 'kwə' };
 const TTS = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 const LETTER = /^[a-z]$/;
 const AUDIO = /^data:audio\/[a-z0-9.+-]+(;[a-z0-9=.+-]+)*;base64,[A-Za-z0-9+/]+=*$/i;
@@ -51,19 +56,20 @@ export function okClips(c) {
 
 // a sentence's audio: from the cache, else made by Google and kept
 export async function speak(env, url, fetcher = fetch) {
-  const v = url.searchParams.get('v'), t = (url.searchParams.get('t') || '').trim();
+  const v = url.searchParams.get('v'), t = (url.searchParams.get('t') || '').trim(), s = url.searchParams.get('s') || '';
   const r = Math.round(Math.min(1.2, Math.max(0.6, +url.searchParams.get('r') || 0.9)) * 20) / 20;
-  if (!VOICES[v] || !t || t.length > SPEAK_MAX) return reply({ error: 'bad-speak' }, 400);
+  if (!VOICES[v] || !t || t.length > SPEAK_MAX || (s && !SOUNDS[s])) return reply({ error: 'bad-speak' }, 400);
   if (!env.GOOGLE_TTS_KEY) return reply({ error: 'no-voice' }, 503);
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v + '|' + r + '|' + t));
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v + '|' + r + '|' + t + (s ? '|' + s : '')));
   const key = new Request('https://sparkle-voice.invalid/' + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('') + '.mp3');
   const cache = typeof caches !== 'undefined' && caches.default;
   const hit = cache && await cache.match(key).catch(() => null);
   if (hit) return hit;
   const ask = rate => fetcher(TTS, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.GOOGLE_TTS_KEY },
-    body: JSON.stringify({ input: { text: t }, voice: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-' + VOICES[v] }, audioConfig: Object.assign({ audioEncoding: 'MP3' }, rate ? { speakingRate: rate } : {}) }) });
+    body: JSON.stringify({ input: Object.assign({ text: t }, s ? { customPronunciations: { pronunciations: [{ phrase: t, phoneticEncoding: 'PHONETIC_ENCODING_IPA', pronunciation: SOUNDS[s] }] } } : {}), voice: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-' + VOICES[v] }, audioConfig: Object.assign({ audioEncoding: 'MP3' }, rate ? { speakingRate: rate } : {}) }) });
   let g = await ask(r);
   if (g.status === 400) g = await ask(0);   // Google's docs disagree on whether these voices take a speed
+  if (g.status === 400 && s) return reply({ error: 'no-sound' }, 422);   // a sound it won't say: the phone says it, never "s, s, s"
   if (!g.ok) return reply({ error: 'voice-failed', status: g.status }, 502);
   const j = await g.json().catch(() => ({}));
   if (!j.audioContent) return reply({ error: 'voice-failed' }, 502);

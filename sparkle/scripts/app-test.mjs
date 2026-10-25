@@ -40,15 +40,15 @@ const ENV = { ACCOUNTS: db };
 // Google's text-to-speech, stood in for: every sentence is a moment of silence (a real WAV), and each request is counted
 const SPOKEN = [], SILENCE = (() => { const n = 80, w = Buffer.alloc(44 + n * 2); w.write('RIFF', 0); w.writeUInt32LE(36 + n * 2, 4); w.write('WAVEfmt ', 8); w.writeUInt32LE(16, 16); w.writeUInt16LE(1, 20); w.writeUInt16LE(1, 22); w.writeUInt32LE(8000, 24); w.writeUInt32LE(16000, 28); w.writeUInt16LE(2, 32); w.writeUInt16LE(16, 34); w.write('data', 36); w.writeUInt32LE(n * 2, 40); return w.toString('base64'); })();
 const realFetch = globalThis.fetch;
-globalThis.fetch = async (url, init) => { if (String(url).startsWith('https://texttospeech.googleapis.com/')) { const b = JSON.parse(init.body); SPOKEN.push({ voice: b.voice.name, text: b.input.text });
+globalThis.fetch = async (url, init) => { if (String(url).startsWith('https://texttospeech.googleapis.com/')) { const b = JSON.parse(init.body); SPOKEN.push({ voice: b.voice.name, text: b.input.text, how: b.input.customPronunciations });
   return new Response(JSON.stringify({ audioContent: SILENCE }), { headers: { 'Content-Type': 'application/json' } }); } return realFetch(url, init); };
 
 const b = await chromium.launch();
 let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
 
-async function phone({ look = 'vintage', scheme = 'light', signed = false, seed = null, size = [390, 844] } = {}) {
-  const ctx = await b.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block', reducedMotion: 'reduce', locale: 'en-US' });
+async function phone({ look = 'vintage', scheme = 'light', signed = false, seed = null, size = [390, 844], motion = 'reduce' } = {}) {
+  const ctx = await b.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block', reducedMotion: motion, locale: 'en-US' });
   await ctx.route('**/*', async route => {
     const u = new URL(route.request().url());
     if (u.origin !== BASE) return route.abort();
@@ -510,6 +510,14 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   const asked = SPOKEN.length;
   await sp(p, () => window.sparkle.enterWorld()); await p.waitForTimeout(800);
   if (SPOKEN.length !== asked) pr.push('a sentence heard before was asked for again: ' + JSON.stringify(SPOKEN.slice(asked)));
+  // punctuation on its own is a pause, never read out; a letter's sound goes with how to say it (not "s, s, s")
+  SPOKEN.length = 0;
+  await sp(p, () => SparkleVoice.say(['Which picture starts with', { snd: 's' }, '?', '...', ', as in', 'sun', '!'], { who: 'owl' }));
+  const heard = SPOKEN.map(x => x.text);
+  if (heard.some(t => !/[a-z]/i.test(t))) pr.push('punctuation was read out: ' + JSON.stringify(heard));
+  if (!heard.includes('as in')) pr.push('", as in" was not said as "as in": ' + JSON.stringify(heard));
+  const sss = SPOKEN.find(x => x.text === 'sss');
+  if (!sss || !sss.how || sss.how.pronunciations[0].pronunciation !== 'sː') pr.push('the sound of s went without how to say it: ' + JSON.stringify(sss));
   pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
   await ctx.close();
   // signed out: nothing asked of the server, the phone's own voice
@@ -520,6 +528,57 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   pr.push(...two.errs); await two.ctx.close();
   delete ENV.GOOGLE_TTS_KEY;
   report('natural voices: each friend in their own voice when signed in, kept on the phone once heard; the phone\'s voice signed out', pr);
+}
+
+// 12. the syllable drum: every tap a beat, however quick, each one a dot above the drum; the dots clear after a pause
+{
+  const ava = JSON.parse(JSON.stringify(AVA));
+  ava.skills.read = { level: 1, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 1 }; ava.demos = { 'read:1': 1 };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava) }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(400);
+  let kind = null;
+  for (let i = 0; i < 6 && kind !== 'syll'; i++) { await sp(p, () => { window.sparkle.startRound('read'); }); await state(p); kind = await sp(p, () => window.sparkle.round && window.sparkle.round.q && window.sparkle.round.q.kind); }
+  if (kind !== 'syll') pr.push('no syllable question at reading level 1: ' + kind);
+  else {
+    const drum = p.locator('#drum');
+    for (let i = 0; i < 3; i++) await drum.tap();
+    const dots = await p.locator('#drum .beats i').count();
+    if (dots !== 3) pr.push('three quick taps on the drum made ' + dots + ' beats');
+    await p.waitForTimeout(2800);
+    if (await p.locator('#drum .beats i').count()) pr.push('the beats did not clear after a pause');
+  }
+  pr.push(...errs); await ctx.close();
+  report('the syllable drum: a beat and a dot for every tap, however quick', pr);
+}
+
+// 13. on the map: the storyteller says hello once, when she picks her princess, not again back from a game; a trip
+// through a place on the way is one smooth glide (no stop at the place, no jumps), and she ends on the place
+{
+  const ava = JSON.parse(JSON.stringify(AVA)); ava.introSeen = true; ava.world = Object.assign({}, ava.world, { at: 'sign' });
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava), motion: 'no-preference' }); const pr = [];
+  await sp(p, () => { window.__said = []; const say = SparkleVoice.say; SparkleVoice.say = (parts, o) => { window.__said.push([].concat(parts).filter(x => typeof x === 'string').join(' ')); return say(parts, o); }; });
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(500);
+  if (!(await sp(p, () => window.__said.some(t => t.startsWith('Hi Ava'))))) pr.push('no hello when she picked her princess');
+  await sp(p, () => { window.__said = []; window.sparkle.enterWorld(); }); await p.waitForTimeout(300);
+  const again = await sp(p, () => window.__said);
+  if (again.length) pr.push('the kingdom spoke again on coming back: ' + JSON.stringify(again));
+  const track = await sp(p, async () => {
+    const r = document.getElementById('rider'), box = document.getElementById('mapIn'), out = [];
+    const go = window.sparkle.travel('bridgeA');
+    let on = true; go.then(() => { on = false; });
+    while (on) { await new Promise(f => requestAnimationFrame(f)); const a = r.getBoundingClientRect(), m = box.getBoundingClientRect(); out.push([a.left - m.left, a.top - m.top]); }
+    return { out, at: window.sparkle.me.world.at };
+  });
+  const steps = track.out.slice(1).map((q, i) => Math.hypot(q[0] - track.out[i][0], q[1] - track.out[i][1]));
+  const mid = steps.slice(Math.floor(steps.length * 0.2), Math.ceil(steps.length * 0.8)), avg = mid.reduce((a, x) => a + x, 0) / (mid.length || 1);
+  if (track.at !== 'bridgeA') pr.push('she did not end at the bridge: ' + track.at);
+  if (steps.length < 20) pr.push('the trip was not animated: ' + steps.length + ' frames');
+  else {
+    if (mid.some(x => x < avg * 0.2)) pr.push('she stopped part way (at the castle?): ' + mid.map(x => x.toFixed(1)).join(' '));
+    if (steps.some(x => x > avg * 3 + 2)) pr.push('she jumped: ' + steps.map(x => x.toFixed(1)).join(' '));
+  }
+  pr.push(...errs); await ctx.close();
+  report('the map: hello only on picking her princess; a trip is one smooth glide that ends on the place', pr);
 }
 
 await b.close(); server.close();

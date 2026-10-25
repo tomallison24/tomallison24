@@ -8,7 +8,9 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 - **Who's playing**: a portrait for each child (her princess), so nobody needs to read to pick.
   The first player is made right there; more are added by a grown-up.
 - **The kingdom** (`world.js`): one big scrolling picture. She taps where to go and her unicorn
-  walks the paths. The paths themselves are practice, at her level:
+  glides along the paths in one smooth trip up to each shut gate (a transform each frame, the view
+  easing after her). The storyteller says hello and where to go once, when she picks her princess;
+  back from a game the kingdom is quiet. The paths themselves are practice, at her level:
   - a **signpost** to read on the way to Story Tower,
   - the **rainbow bridge** to mend by counting planks, on the way to the Gem Mine,
   - the **crystal door** that opens to a sparkle pattern, on the way to Star Meadow.
@@ -78,7 +80,9 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   Text-to-Speech, that each release copies to Cloudflare like the others in `.github/workflows/news.yml`)
   for a phone signed in to the family account. Each sentence is made once: kept in Cloudflare's cache and
   on the phone that heard it (Cache Storage `sparkle-voice-v1`), and a chapter's pages are fetched when it
-  opens. Signed out, without the key, offline, or switched off in the Parent corner, the phone's own
+  opens. A letter's sound ("sss") goes with how to say it (IPA, `SOUNDS` in the route; read as text it
+  came out as "s, s, s"), and a part that's only punctuation ('?', '...') is a pause, never read out.
+  Signed out, without the key, offline, or switched off in the Parent corner, the phone's own
   voice speaks instead. Google's first million characters a month are free; a family's play is a small
   part of that.
 - **Letter sounds**: a phone's voice says letter names well and letter sounds poorly, so a grown-up

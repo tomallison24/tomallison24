@@ -13,7 +13,7 @@
 //   stop()                        stops speaking.
 //   unlock()                      call from a tap: an iPhone only lets a page speak after one.
 //   sfx(name)                     a little sound made in code (no files): right, again, coin, sparkle,
-//                                 fanfare, whoosh, pop, plank.
+//                                 fanfare, whoosh, pop, plank, drum.
 //   clips: letter sounds a grown-up recorded (Parent corner), as data: URLs, kept on this phone
 //     (localStorage sparkle.clips) and in the family account (app.js syncs them):
 //     has(l), set(l, url), all(), load(obj), record() -> { stop(): Promise<url> }, play(l)
@@ -65,9 +65,10 @@
   const SILENT = 'data:audio/wav;base64,UklGRsQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
   // one audio element, unlocked by a tap: an iPhone plays later sounds on it without one
   const getPlayer = () => player || (player = root.Audio ? new Audio() : null);
-  async function clipFor(who, text) {
+  // snd: the letter whose sound this is, so the server says it as that sound (not "s, s, s" for "sss")
+  async function clipFor(who, text, snd) {
     if (!natural || Date.now() < restUntil || !natural.ok()) return null;
-    const url = natural.url(SPEAKER[who] || 'narrator', text, rate);
+    const url = natural.url(SPEAKER[who] || 'narrator', text, rate, snd);
     try {
       const box = root.caches ? await caches.open(VOICES).catch(() => null) : null;
       let res = box && await box.match(url);
@@ -75,7 +76,7 @@
         const ac = new AbortController(), t = setTimeout(() => ac.abort(), 4000);
         try { res = await fetch(url, { headers: natural.headers(), signal: ac.signal }); } finally { clearTimeout(t); }
         // not set up, signed out or failing: the phone's voice for a while, then try again
-        if (!res.ok) { if (res.status !== 400) restUntil = Date.now() + (res.status === 503 || res.status === 401 ? 600000 : 60000); return null; }
+        if (!res.ok) { if (res.status !== 400 && res.status !== 422) restUntil = Date.now() + (res.status === 503 || res.status === 401 ? 600000 : 60000); return null; }
         if (box) await box.put(url, res.clone()).catch(() => {});
       }
       return URL.createObjectURL(await res.blob());
@@ -97,9 +98,9 @@
       const p = a.play(); if (p && p.catch) p.catch(end);
     });
   }
-  async function speakOne(text, who, onWord) {
+  async function speakOne(text, who, onWord, snd) {
     if (!text || !text.trim()) return;
-    const me = token, url = await clipFor(who, text);
+    const me = token, url = await clipFor(who, text, snd);
     if (me !== token) { if (url) URL.revokeObjectURL(url); return; }
     if (url && await playNatural(url, text, onWord)) return;
     if (me === token) await speakPhone(text, who, onWord);
@@ -123,21 +124,27 @@
       const part = list[k];
       if (me !== token) return;
       if (opt.onPart) opt.onPart(k);
-      if (typeof part === 'string') { await speakOne(part, opt.who, opt.onWord ? i => opt.onWord(k, i) : null); continue; }
-      if (part && part.snd) { if (clips[part.snd]) await playClip(clips[part.snd]); else await speakOne(SOUND[part.snd] || part.snd, opt.who); await wait(160); continue; }
+      // a part that's only punctuation ('?', '...', '!') is a pause, not something to read out
+      if (typeof part === 'string') { const off = part.length - part.replace(/^[\s.,;:!?…-]+/, '').length, text = part.slice(off);
+        if (!/[a-z0-9]/i.test(text)) { await wait(/\.\.|…/.test(part) ? 350 : 120); continue; }
+        await speakOne(text, opt.who, opt.onWord ? i => opt.onWord(k, i + off) : null); continue; }
+      if (part && part.snd) { if (clips[part.snd]) await playClip(clips[part.snd]); else await speakOne(SOUND[part.snd] || part.snd, opt.who, null, part.snd); await wait(160); continue; }
       if (part && part.rime) { await speakOne(RIME[part.rime] || part.rime, opt.who); continue; }
     }
   }
   function stop() { token++; try { synth && synth.cancel(); } catch {} if (endPlay) endPlay(); }
+  let spoke = false;
   function unlock() {
-    try { if (synth && !synth.speaking) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } } catch {}
+    // once: a silent sentence on every tap took the phone's sound away from the drum and the natural voices
+    try { if (synth && !spoke && !synth.speaking) { spoke = true; const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } } catch {}
     try { const a = getPlayer(); if (a && !unlocked && !endPlay) { unlocked = true; a.src = SILENT; const p = a.play(); if (p && p.catch) p.catch(() => { unlocked = false; }); } } catch {}
     ctx();
   }
 
   // ---- sounds made in code ----
   let ac = null;
-  function ctx() { try { if (!ac) ac = new (root.AudioContext || root.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch { ac = null; } return ac; }
+  // resumed whenever it isn't running: an iPhone's 'interrupted' too, after other sound has played
+  function ctx() { try { if (!ac) ac = new (root.AudioContext || root.webkitAudioContext)(); if (ac.state !== 'running') ac.resume().catch(() => {}); } catch { ac = null; } return ac; }
   function tone(freq, at, dur, type = 'sine', vol = 0.18) {
     const a = ctx(); if (!a) return;
     const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + at;
@@ -154,6 +161,7 @@
     whoosh: () => { [300, 420, 560, 700].forEach((f, i) => tone(f, i * 0.04, 0.12, 'sine', 0.05)); },
     pop: () => tone(660, 0, 0.08, 'sine', 0.12),
     plank: () => { tone(220, 0, 0.1, 'triangle', 0.16); tone(330, 0.04, 0.08, 'triangle', 0.08); },
+    drum: () => { tone(150, 0, 0.22, 'sine', 0.35); tone(95, 0.01, 0.28, 'triangle', 0.22); },
     note: n => tone([523, 587, 659, 698, 784, 880, 988, 1047, 1175][n % 9], 0, 0.35, 'triangle', 0.14),
   };
   const sfx = (name, arg) => { if (sounds && SFX[name]) try { SFX[name](arg); } catch {} };

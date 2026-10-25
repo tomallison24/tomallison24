@@ -2,7 +2,7 @@
 // files load network-first, so a new deploy shows up on the next open and the cache is only the
 // fallback. The players' saves never pass through here: they live in this phone's storage, and the
 // calls to the family account (../sparkle/api/) are left alone.
-const CACHE = 'sparkle-v4';
+const CACHE = 'sparkle-v5';
 const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'content.js', 'art.js', 'pictures.js', 'chapters.js', 'rooms.js', 'world.js', 'voice.js', 'letters.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/sparkle.js'];
 
 self.addEventListener('install', e => {
