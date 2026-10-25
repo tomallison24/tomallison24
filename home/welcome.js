@@ -99,7 +99,9 @@
         'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Tron, a lit visor',
         'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
         'Your language now follows you to your other devices, as your look does',
-        'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name'],
+        'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name',
+        'Fixes from a review of every app: Places no longer re-syncs a place that came back unchanged (it sent it again every second while open); Calendar\'s Year view steps from Feb 29 to Feb 28; Travel says "tomorrow" by your own day, not UTC, and drops a Gmail sign-in Google refused instead of failing for an hour; Podcasts\' mini player shows the right show for an episode with a repeated title; Weather\'s My Location no longer waits out another place\'s forecast; Mail\'s Add tag keeps its name after a failed add',
+        'Tighter everywhere: Calendar and Fitness talk only to the sites they use; Home escapes what Home Assistant reports and plays a camera stream only from its own address; a look or a setting named like one of a program\'s own words (__proto__) is refused rather than kept; Orders links only web addresses for tracking; Places keeps only pins that are on the globe'],
       apps: {
         aos: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'Each helper crosses the Ipsy bar on Home in its own way', 'Run through setup in Account: language, look and your helper'],
           tour: [{ sel: '#askIpsy', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. Now and then it crosses this bar, in its own way.', g: 'tap' }] },
