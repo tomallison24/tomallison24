@@ -1008,8 +1008,8 @@
         },
         {
           "i": "sliders",
-          "t": "Two designs",
-          "d": "Vintage, mid-century modern, or Standard, in Sea glass, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
+          "t": "Four designs",
+          "d": "Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
         }
       ]
     }
@@ -1993,7 +1993,7 @@ html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next C
     { sel: ['#players .pcard', '#players'], t: 'Just hard enough', d: 'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.' },
     { sel: ['#players .pcard', '#players'], t: 'Earned by learning', d: 'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.' },
     { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for the Parent corner: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
-    { sel: '#grownBtn', t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
+    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Night Drive or Folk, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
   const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };

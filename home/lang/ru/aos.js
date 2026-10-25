@@ -7,7 +7,7 @@
 'use strict';
 (() => {
   const t = s => aosLang.t(s), pl = (n, a, b, c) => n + ' ' + aosLang.plural(n, a, b, c);
-  const APP = '(Mail|Clock|Calendar|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Home)';
+  const APP = '(Mail|Clock|Calendar|News|Weather|Notes|Podcasts|Travel|Places|Fitness|Drinks|Meals|Orders|Home|Sparkle Kingdom)';
   const FUN = ' Just for fun: nothing is charged.', FUN_RU = ' Это всё понарошку: деньги не списываются.';
   const OFF_RU = 'все приложения, кроме aOS, отключатся';
   const plan = n => (n === 'The trial' ? 'Пробный период' : n === 'Trial' ? 'Пробный' : n);
