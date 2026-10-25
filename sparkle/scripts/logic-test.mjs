@@ -1,6 +1,7 @@
 // Sparkle Kingdom's learning logic in Node (sparkle/engine.js and sparkle/content.js): moving up and
 // down a skill's ladder, the warm-up, spaced review, a round's plan, coins, merging two phones'
-// copies of a player, and every question every level can make (thousands of them, seeded).
+// copies of a player, and every question every level can make (thousands of them, seeded); Pattern Parade,
+// the Unicorn Bakery and the stables (care.js).
 //   node sparkle/scripts/logic-test.mjs
 import assert from 'assert/strict';
 import fs from 'fs';
@@ -8,8 +9,8 @@ import path from 'path';
 import vm from 'vm';
 
 const DIR = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
-for (const f of ['engine.js', 'content.js', 'pictures.js', 'chapters.js', 'art.js', 'rooms.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
-const E = globalThis.SparkleEngine, C = globalThis.SparkleContent, Ch = globalThis.SparkleChapters;
+for (const f of ['engine.js', 'content.js', 'pictures.js', 'chapters.js', 'art.js', 'rooms.js', 'kitchen.js', 'care.js']) vm.runInThisContext(fs.readFileSync(path.join(DIR, f), 'utf8'), { filename: f });
+const E = globalThis.SparkleEngine, C = globalThis.SparkleContent, Ch = globalThis.SparkleChapters, K = globalThis.SparkleKitchen, Care = globalThis.SparkleCare;
 
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('ok -', name); };
@@ -236,5 +237,56 @@ test('rounds in a land are kept per phone, and a merge loses none; nor the lifte
   const m = E.mergePlayer(a, b);
   assert.equal(E.roundsIn(m, 'read'), 3); assert.equal(E.roundsIn(m, 'math'), 1); assert.equal(E.roundsIn(m, 'wand'), 0);
   assert.deepEqual(m.world.open, { garden: 5, workshop: 9 }); assert.equal(m.rank, 2);
+});
+test('Pattern Parade: the answer follows the pattern, is one of three different choices, and every piece is drawn', () => {
+  for (let seed = 1; seed < 400; seed++) for (let level = 1; level <= C.LADDERS.pattern; level++) {
+    const r = E.rng(seed), q = C.make('pattern', level, r), ids = q.choices.map(c => c.id);
+    assert.equal(new Set(ids).size, ids.length, 'choices differ'); assert.ok(ids.length >= 2 && ids.length <= 3); assert.ok(ids.includes(q.answer));
+    if (q.show.type === 'grow') { const [a, b, c] = q.show.counts; assert.equal(b - a, c - b); assert.equal(+q.answer, c + (c - b)); continue; }
+    const seq = q.show.seq, at = seq.indexOf(null);
+    assert.ok(at > 0 && seq.filter(x => x === null).length === 1);
+    // the smallest repeat that explains every shown piece also gives the answer
+    const known = seq.map((x, i) => [x, i]).filter(([x]) => x);
+    const len = [2, 3, 4].find(L => known.every(([x, i]) => known.every(([y, j]) => i % L !== j % L || x === y)));
+    assert.ok(len, 'a repeating pattern'); const same = known.find(([, i]) => i % len === at % len);
+    assert.equal(q.answer, same[0], `level ${level} seed ${seed}`);
+    for (const id of [...ids, ...seq.filter(Boolean)]) { const [sh, hu] = id.split('.'); assert.ok(K.SHAPES[sh] && K.COLORS[hu], id); }
+  }
+});
+test('the Unicorn Bakery: every recipe can be made from what she has, and every ingredient and treat is drawn', () => {
+  for (let seed = 1; seed < 300; seed++) for (let level = 1; level <= C.LADDERS.bake; level++) {
+    const q = C.make('bake', level, E.rng(seed));
+    assert.ok(K.TREATS[q.treat] && Care.FOODS[q.treat] && Care.FOODS[q.treat].treat, q.treat);
+    if (q.mode === 'share') { assert.equal(q.n % q.plates, 0); assert.equal(q.n / q.plates, q.need.each); continue; }
+    for (const [id, n] of Object.entries(q.need)) {
+      assert.ok(K.ING[id], id); const have = (q.start || {})[id] || 0;
+      assert.ok(n >= 1 && n <= 20);
+      if (n > have) assert.ok(q.pantry.includes(id), `level ${level}: ${id} can be added`);
+      if (q.sack) assert.ok(n >= 10);
+    }
+    for (const id of Object.keys(q.start || {})) assert.ok(q.need[id] !== undefined);
+  }
+});
+test('the stables: needs fall with time, asleep she rests, care fills them, and she gets sad (never worse) when left', () => {
+  const H = 36e5, t0 = 1e12, pet = Care.fresh(t0);
+  assert.equal(Care.mood(pet), 'happy');
+  Care.tick(pet, t0 + 10 * H);
+  assert.ok(pet.food < 30 && pet.fun < 30 && pet.rest < 50, JSON.stringify(pet)); assert.ok(['food', 'fun'].includes(Care.want(pet)), 'she wants what fell most');
+  Care.tick(pet, t0 + 200 * H); assert.equal(pet.food, 0); assert.equal(Care.mood(pet), 'sad', 'sad, and that is all');
+  assert.ok(Care.feed(pet, 'oats')); assert.equal(pet.food, 25); assert.equal(Care.feed(pet, 'cupcake'), false, 'no cupcakes yet');
+  Care.bake(pet, 'cupcake', 2); assert.ok(Care.feed(pet, 'cupcake')); assert.equal(pet.pantry.cupcake, 1);
+  pet.food = 97; assert.equal(Care.feed(pet, 'oats'), false, 'full');
+  Care.wash(pet, 200); assert.equal(pet.clean, 100); assert.equal(Care.dirt(pet), 0);
+  assert.equal(Care.play(pet, 'kite'), false, 'not her kite'); Care.buy(pet, 'kite'); assert.ok(Care.play(pet, 'kite'));
+  // asleep for the night: rested, then awake
+  const now = pet.at; pet.rest = 10; Care.sleep(pet); Care.tick(pet, now + 2 * H); assert.ok(pet.asleep && pet.rest > 60);
+  Care.tick(pet, now + 6 * H); assert.equal(pet.asleep, false); assert.ok(pet.rest > 80);
+  const mud = Care.fresh(t0); Care.adventure(mud, 'math'); assert.ok(mud.clean < 70 && mud.rest < 80 && mud.fun > 80);
+});
+test('two phones\' unicorns: the one cared for last is kept', () => {
+  const a = E.newPlayer('p', 'A'), b = JSON.parse(JSON.stringify(a));
+  a.pet = Care.fresh(100); b.pet = Care.fresh(200); b.pet.food = 12; a.updated = 300;
+  assert.equal(E.mergePlayer(a, b).pet.food, 12); assert.equal(E.mergePlayer(b, a).pet.food, 12);
+  delete b.pet; assert.equal(E.mergePlayer(a, b).pet.food, 80);
 });
 console.log(`${n} passed; ${used.size} pictures used`);

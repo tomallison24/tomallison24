@@ -356,6 +356,12 @@ details.tview th{color:var(--faint);font-size:12px} details.tview td.n,details.t
 /* ---- Money ---- */
 .label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:4px 8px -6px}
 .list{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+/* Ipsy (../home/ipsy.js), the helper you chat with, for whoever sees Money: just above the view pill,
+   on the left, clear of it; the page then scrolls clear of it too, and a sheet covers it */
+.ipsyslot{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 70px);z-index:7;width:78px;height:78px}
+.ipsyslot[hidden]{display:none}
+html.ipsy-on .list{padding-bottom:calc(184px + env(safe-area-inset-bottom,0px))}
+html.locked .ipsyslot{opacity:0;pointer-events:none}
 /* a bank Monarch can't sync: one card each, until it syncs again or is marked fixed */
 .alert{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;border-radius:22px;background:color-mix(in srgb,var(--flag) 12%,var(--tile));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--flag) 42%,transparent)}
 .alert > svg{color:var(--flag);margin-top:1px}
@@ -738,6 +744,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
   <main class="list" id="main"></main>
 
   <!-- the view: one at a time, picked from the pill at the bottom (as Home's views) -->
+  <span class="ipsyslot" id="ipsySlot" hidden></span>
   <nav class="vbar" id="vBar" aria-label="View">
     <button id="vBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="vMenu" aria-label="Show a view"><span class="vb-ic" id="vIcon"></span><span id="vName">This month</span><span class="vb-chev"><svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg></span></button>
     <div class="viewmenu" id="vMenu" role="listbox" aria-label="Show" hidden></div>
@@ -770,6 +777,8 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="../home/account.js"></script>   <!-- family accounts: signing in, to share Money with the family -->
 <script src="parse.js"></script>
 <script src="calc.js"></script>
+<script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here: read-only) -->
+<script src="ipsy-tools.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="money" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>

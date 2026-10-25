@@ -71,6 +71,12 @@
     'Sign-in did not finish': 'Вход не завершён',
     // a player's report
     'Skills': 'Навыки',
+    'Pattern Parade': 'Парад узоров', 'Unicorn Bakery': 'Пекарня единорога', 'Bakery': 'Пекарня',
+    // the new games' levels (their names in a player's report)
+    'AB patterns': 'Узоры AB', 'AAB patterns': 'Узоры AAB', 'ABB patterns': 'Узоры ABB', 'ABC patterns': 'Узоры ABC', 'AABB patterns': 'Узоры AABB',
+    'Missing in the middle': 'Пропуск в середине', 'Colour patterns': 'Узоры из цветов', 'Growing patterns': 'Растущие узоры',
+    'Count to 5': 'Счёт до 5', 'Count to 10': 'Счёт до 10', 'Two ingredients': 'Два продукта', 'One more, one fewer': 'На один больше, на один меньше',
+    'Put together': 'Сложить вместе', 'Take away': 'Убрать', 'Make 10': 'Дополнить до 10', 'Tens and ones': 'Десятки и единицы', 'Share fairly': 'Поделить поровну', 'Within 20': 'В пределах 20',
     'Reading': 'Чтение', 'Spelling': 'Правописание', 'Math': 'Математика', 'Wand Sparkle': 'Волшебная палочка', 'Flower Match': 'Цветочные пары', "What's Missing": 'Чего не хватает', 'Story Recall': 'Вспомни историю',
     'Play time': 'Время игры', 'Today': 'Сегодня', 'This week': 'На этой неделе', 'The last 30 days': 'Последние 30 дней',
     'Minutes played each day, the last 30 days': 'Минуты игры по дням за последние 30 дней',
