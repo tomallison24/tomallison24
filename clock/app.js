@@ -820,7 +820,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('setAnalog').setAttribute('aria-checked', String(!!S.set.analog));
   }
   $('setBtn').addEventListener('click', () => { paintSettings(); openSheet('setSheet'); });
-  // Design: Vintage, Standard, Night Drive, Folk or Grid, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
+  // Design: Vintage, Standard, Night Drive, Folk or Tron, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
   $('setDesign').addEventListener('click', e => {
     const b = e.target.closest('[data-design]'); if (!b || b.dataset.design === S.set.design) return;
     S.set.design = b.dataset.design; save();

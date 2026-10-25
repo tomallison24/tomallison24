@@ -190,7 +190,7 @@ html[data-sky="night"] .aos-star { display: block; }
   // (iOS 26: the body's background, or a full-width fixed element's at the top, such as aOS's frame
   // around an app). The shapes and the sun's rays would stop flat under it, a band across the top of
   // every page; here they fade in from the ground instead: the sky's in Vintage, the page's own in Night Drive,
-  // Folk and Grid (their sunsets, flowers and discs run to the top too). Inside aOS, an app goes by aOS's bar.
+  // Folk and Tron (their sunsets, flowers and discs run to the top too). Inside aOS, an app goes by aOS's bar.
   // localStorage aos.bar = 'solid' shows it anywhere (the tests).
   function solidBar() {
     try { if (localStorage.getItem('aos.bar') === 'solid') return true; } catch {}

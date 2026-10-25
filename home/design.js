@@ -1,5 +1,5 @@
 // Every app's design: Vintage (mid-century modern, the default), Standard (Sea glass), Night Drive
-// (neon), Folk (Gzhel and Khokhloma) or Grid (light cycles), picked in the app's own Settings > Design, as in Clock, or
+// (neon), Folk (Gzhel and Khokhloma) or Tron (light cycles), picked in the app's own Settings > Design, as in Clock, or
 // for every app at once in aOS (Account > Appearance: aOS/look.js writes each app's design.<id>). Shared by every app (like sky.js), so they can't
 // drift apart. Loaded in <head> after the styles, before ../home/sky.js, so the page is drawn once,
 // in the right design:
@@ -157,7 +157,7 @@
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
     ['neon', 'Night Drive', '80s neon: a striped sunset, magenta and cyan on midnight'],
     ['folk', 'Folk', 'Gzhel by day, Khokhloma by night: cobalt, cinnabar and gold'],
-    ['grid', 'Grid', 'Light cycles: red light on a black grid, as in Tron: Ares'],
+    ['grid', 'Tron', 'Light cycles: red light on a black grid, as in Tron: Ares'],
   ];
   const picker = () => '<div class="aos-design" role="radiogroup" aria-label="Design">' + ROWS.map(([id, name, note]) =>
     `<button type="button" role="radio" data-design="${id}" aria-checked="${id === look}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${name}</b><small>${note}</small></span>${TICK}</button>`).join('') + '</div>';

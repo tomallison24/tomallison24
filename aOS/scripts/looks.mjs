@@ -1,5 +1,5 @@
 // The looks that are drawn from Vintage: Night Drive (neon), Folk (Gzhel by day, Khokhloma by
-// night) and Grid (light cycles, as in the car's Tron mode: red light on a black grid). Each keeps Vintage's flat shapes and repaints them: every colour in a page's Vintage block
+// night) and Tron (light cycles, as in the car's Tron mode: red light on a black grid). Each keeps Vintage's flat shapes and repaints them: every colour in a page's Vintage block
 // is moved to the same role in the look's palette (the cream ground to the look's ground, the walnut
 // ink to its ink, mustard, teal, burnt orange and olive to its four accents), in the OKLCH colour
 // space so lightness, and with it contrast, stays as Vintage had it. Used by make-looks.mjs (the
@@ -83,7 +83,7 @@ export const LOOKS = {
     ground: ['#F5F7FB', '#0D0B0A'],
   },
   grid: {
-    name: 'Grid',
+    name: 'Tron',
     light: {   // the grid by day, as a car's screen in light mode: clean white and grey, red light
       neutral: { L: [[0.2, 0.17], [0.27, 0.22], [0.55, 0.5], [0.94, 0.965], [0.97, 0.99], [1, 1]], h: 255, C: L => 0.003 + 0.012 * (1 - L) },
       orange: { h: 27, C: 1.55, dL: -0.03 }, mustard: { h: 31, C: 1.45, dL: -0.08 }, olive: { h: 255, C: 0.3, dL: -0.02 },
@@ -252,7 +252,7 @@ ${SHAPE(3)}{background:var(--fk-leaf);border-radius:100% 0}
     const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
     const CYR = 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116';
     const face = (fam, w, file, range) => `@font-face{font-family:"${fam}";font-style:normal;font-weight:${w};font-display:swap;src:url("../home/fonts/${file}.woff2") format("woff2");unicode-range:${range}}`;
-    return `/* Grid: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
+    return `/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
    the cabin lit red. Red light on black at night, on clean white by day: Orbitron headings (Exo 2 for Cyrillic), Exo 2 for
    the rest (SIL Open Font License, ../home/fonts); an identity disc, a white square and a red light trail for the shapes,
    a grid floor under them, and a glow on what's lit. */
