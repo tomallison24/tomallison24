@@ -3,7 +3,7 @@
 // online and 2% grocery up to a quarterly cap, and a card with no rate set), the better card for a
 // kind of spend, spending by card, what repeats, a month against the three before (like for like
 // while the older months only had alerts over $200), where you could save, and which "can't
-// sync" alerts are still open.
+// sync" alerts are still open, and the five years kept.
 //   node money/scripts/calc-test.mjs
 import assert from 'assert/strict';
 import fs from 'fs';
@@ -180,6 +180,13 @@ test('Ipsy’s check: what to send (this month and the last 3 days, never twice)
   assert.deepEqual(back.check, { s: 'kept', at: 6 }, 'kept as the app read it, and never checked again');
   assert.equal(C.toCheck([back], '2026-11-02').length, 0);
   assert.deepEqual(C.applyCheck(x, { s: 'fix', issues: [{ field: 'direction', value: 'sideways' }] }, 7, P).check, { s: 'flag', at: 7 }, 'nothing usable: flagged, not fixed');
+});
+
+test('five years kept: this month and the 59 before it, at the end of a month and the start of a year too', () => {
+  assert.equal(C.KEEP_MONTHS, 60);
+  assert.equal(C.keepFrom('2026-10-25'), '2021-11'); assert.equal(C.keepFrom('2026-01-01'), '2021-02'); assert.equal(C.keepFrom('2026-12-31'), '2022-01');
+  const list = [T('2021-10-31', 1, 'Too old'), T('2021-11-01', 2, 'Oldest kept'), T('2026-10-25', 3, 'Today')];
+  assert.deepEqual(C.prune(list, '2026-10-25').map(x => x.merchant), ['Oldest kept', 'Today']);
 });
 
 console.log(n + ' calc tests passed');

@@ -14,6 +14,7 @@
 //   passed marked and never sent again, all shared through aOS;
 // - the spouse's phone: nothing until the reader shares it (Settings > Who sees Money), then the
 //   same months, and no Gmail;
+// - kept in IndexedDB (moved from localStorage), five years of it, and read back after a reload;
 // - signed out with no data: the empty page asks to connect Gmail;
 // - dark mode, the designs (Vintage, the default, and Standard, from Settings > Design), and nothing
 //   tripping the page's Content Security Policy or throwing.
@@ -72,6 +73,7 @@ for (const n of [-3, -2, -1, 0]) {
   SEED.push(T(on(n, 6), 120, 'Costco', { account: CUSTOM, last4: '1111' }));
   SEED.push(T(on(n, 7), 24.5, 'Corner Diner', { account: CUSTOM, last4: '1111', cat: 'Restaurants', emoji: '🍽' }));
 }
+SEED.push(T(on(-62, 10), 5, 'Long Ago Shop'));   // over five years ago: let go of
 SEED.push(Object.assign(T(new Date(RECENT_SEED), 88.2, 'Joes Garag', { cat: 'Auto Maintenance', emoji: '🚗' }), { id: 'm5' }));
 SEED.sort((a, b) => b.at - a.at);
 
@@ -301,6 +303,19 @@ await test('Recurring: what repeats, a year of it, and what Monarch named', asyn
   assert.match(t, /a year/); assert.match(t, /Little Learners/); assert.match(t, /Weekly/); assert.match(t, /Mortgage Co/); assert.match(t, /Monthly/);
   assert.match(t, /Monarch found these too/i); assert.match(t, /Stream Box/);
   await snap(p, 'repeats');
+});
+await test('kept in IndexedDB, five years of it: moved from localStorage, read back after a reload', async () => {
+  const saved = () => new Promise((res, rej) => { const r = indexedDB.open('allison-money'); r.onerror = () => rej(r.error); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('data'); q.onsuccess = () => res(q.result && q.result.tx.length); }; });
+  const n = await p.evaluate(() => window.__money.D.tx.length);
+  for (let i = 0; i < 50 && await p.evaluate(saved) !== n; i++) await p.waitForTimeout(200);
+  assert.equal(await p.evaluate(saved), n, 'saved in IndexedDB');
+  assert.equal(await p.evaluate(() => localStorage.getItem('allison-money-v1')), null, 'nothing left in localStorage');
+  assert.equal(await p.evaluate(() => window.__money.D.tx.some(x => x.merchant === 'Long Ago Shop')), false, 'over five years old: let go of');
+  assert.equal(kv.has('money:tx:' + ym(-62)), false);
+  await p.reload();
+  await p.waitForSelector('#main .sum', { timeout: 10000 });
+  assert.equal(await p.evaluate(() => window.__money.D.tx.length), n);
+  assert.equal(await p.evaluate(saved), n);
 });
 assert.deepEqual(A.errs, []);
 

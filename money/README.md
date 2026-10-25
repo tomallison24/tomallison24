@@ -107,7 +107,7 @@ card and the category.
 ## Who sees it
 
 - **One phone reads the emails**: Money's reader. It reads its own Gmail, read-only (below), the
-  first time two years back, then what's new each time it opens (at most hourly) or when you tap
+  first time five years back, then what's new each time it opens (at most hourly) or when you tap
   the refresh button. Each email is read once.
 - **Signed in to the family account**, the reader's phone sends what it read to aOS
   (`functions/money/api`, in the accounts' Workers KV: `money:share`, `money:meta`,
@@ -117,7 +117,13 @@ card and the category.
   even the family's owner. Their phones get it from aOS each time they open Money, and can change
   the card rewards, the online stores and the alerts marked fixed (shared, the newer change wins);
   they can't read Gmail for it.
-- **Signed out**, it all stays on the phone (localStorage `allison-money-v1`).
+- **Signed out**, it all stays on the phone.
+- **Five years are kept**, on the phones and in aOS: this month and the 59 before it
+  (`money/calc.js`, `KEEP_MONTHS`; the server's `KEEP_MONTHS`). Anything older is let go: the
+  phone drops it when it saves, and aOS deletes those months with the reader's next send. On the
+  phone it's in IndexedDB (`allison-money`), not localStorage, whose 5 MB or so every aOS app
+  shares: five years is about 2 to 6 MB (100 to 300 transactions a month). A phone that had it in
+  localStorage (`allison-money-v1`) moves it over the first time it opens.
 - **Delete all data** on the reader's phone deletes it from aOS too, for everyone; on anyone else's,
   from that phone. Removing the reader from the family deletes it from aOS; removing someone it was
   shared with takes them off the list.
