@@ -37,7 +37,7 @@
 //   config:announced   the newest aOS version the family was told about (notifications)
 //   push:<id>, config:vapid   that person's phones for notifications, and the server's push
 //                    key (functions/aOS/api, server/push.js); only they can change their phones
-//   meals:settings, meals:deals:<store>, meals:draft, meals:plan, meals:log,
+//   meals:settings, meals:taste, meals:draft, meals:plan, meals:log,
 //   meals:log:<id>, meals:history   the family's Meals
 //                    (functions/meals/api): shared by the whole family, not per person
 //   news:sum:<hash>  one story's summary and takeaways, kept a week for the whole family;

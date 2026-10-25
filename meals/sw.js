@@ -1,9 +1,9 @@
 // Offline shell for the Meals app. Same-origin files load network-first, so
 // a new deploy shows up on the next open and the cache is only the fallback.
-// The family's plan and deals never pass through here: the last ones are kept
+// The family's plan never passes through here: the last ones are kept
 // in this phone's storage by app.js, and the calls to the server (api/) are
 // left alone.
-const CACHE = 'meals-v7';
+const CACHE = 'meals-v8';
 const SHELL = ['./', 'index.html', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=2', 'icon-glass-512.png?v=2', '../home/aisles.js', '../home/slide.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/meals.js'];
 
 self.addEventListener('install', e => {

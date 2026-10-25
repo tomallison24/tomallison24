@@ -221,7 +221,7 @@ jobs:
           # also deploys functions/ (the Podcasts app's feed fetcher,
           # /podcasts/api/*, Travel's flight status, /travel/api/*, and
           # Calendar's iCloud connection, /calendar/api/*, and Weather's forecast
-          # radar run time, /weather/api/*, Meals' plans and deals, /meals/api/*, and News's summaries, /news/api/*, and Orders' Fix with Claude, /orders/api/*,
+          # radar run time, /weather/api/*, Meals' plans, /meals/api/*, and News's summaries, /news/api/*, and Orders' Fix with Claude, /orders/api/*,
           # and Fitness's steps from Home Assistant, /fitness/api/*, and Sparkle Kingdom's players, /sparkle/api/*)
           # as Pages Functions.
           mkdir -p _site && cp -r home news weather mail notes podcasts travel calendar places house fitness drinks meals orders clock sparkle aOS aos _headers _site/ && if [ -d labs ]; then cp -r labs _site/; fi

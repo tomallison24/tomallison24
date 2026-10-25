@@ -1,26 +1,24 @@
 "use strict";
 
-// Meals: dinner for the family.
+// Meals: the family's meals, planned with Ipsy.
 //
-// - Three tabs on one screen: Dinners (this week's plan, each night opening to
-//   its recipe), Deals (this week's sales at the family's Whole Foods, in the
-//   same grocery sections as Notes' grocery lists) and List (what to buy for
-//   the plan, in those sections, ticked off in the store).
-// - + plans dinners: a meat, how many nights and people, and whether to build
-//   them around this week's deals. Each night is a different cuisine and way
-//   of cooking, and different from what the family had lately.
-// - The plan and the deals are the family's, made by an AI model on the
-//   server (functions/meals/api), which also checks every plan against what
-//   the family avoids. The last ones are kept on this phone
-//   (allison-meals-v1), so the list works in the store with no signal; ticks
-//   stay on this phone only.
-// - Settings (the gear): the store, Prime prices, what the family avoids, your
-//   account, and the family's Google Sheet, the record of every plan ever
-//   accepted (google-sheet-sync.gs, through aOS: aOS/SHEETS.md). Meals copies
-//   the family's plans, deals, list and settings there, and reads back the
-//   plans the family server no longer keeps (Past plans → Older plans).
-// - Two designs, picked in Settings > Design: Vintage (the default) and Standard
-//   (Sea glass), kept on this phone (../home/design.js, as in Clock).
+// - Three tabs on one screen: Ipsy (say what you fancy: which meals, what to build them around,
+//   what's in the fridge; then Ipsy asks the rest one question at a time and plans it), Plan
+//   (the plan, a card a day, each meal opening to its recipe) and List (what to buy for the
+//   plan, in the grocery sections Notes uses, ticked off in the store).
+// - Every plan keeps to the family's rules (Settings, the gear): vegetables and protein in
+//   every meal, how many they cook for, the weeknight time, what they never eat; and learns
+//   from the meals the family loved, or never wants again (the thumbs on a recipe).
+// - The plan is the family's, made by an AI model on the server (functions/meals/api), which
+//   also checks every meal against what the family avoids. The last copy is kept on this
+//   phone (allison-meals-v2), so the list works in the store with no signal; ticks stay on
+//   this phone only.
+// - Ipsy (bottom left) is the helper you chat with: "Or just tell Ipsy", "Change anything",
+//   Swap and Ask Ipsy all open it, with what you typed.
+// - The family's Google Sheet is the record of every plan ever accepted
+//   (google-sheet-sync.gs, through aOS: aOS/SHEETS.md). Meals copies the plans, the list
+//   and the rules there, and reads back the plans the family server no longer keeps.
+// - The designs, picked in Settings > Design or for every app in aOS (../home/design.js).
 
 // Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
 if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
@@ -37,43 +35,39 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
     del: k => { try { localStorage.removeItem(k); } catch {} },
   };
-  // (v2: deals by store. The v1 copy, one store's deals, is left behind.)
-  const KEY = 'allison-meals-v2', K = { ticks: 'allison-meals-v1-ticks', tab: 'allison-meals-v1-tab', store: 'allison-meals-v1-store',
+  const KEY = 'allison-meals-v2', K = { ticks: 'allison-meals-v1-ticks', tab: 'allison-meals-v1-tab',
     // the family's Google Sheet: when it last synced, the plans it holds, plans taken back here (Undo);
     // sheet and sheetSent are the link, phrase and sent list from before aOS kept them (handed over, then gone)
     sheetAt: 'allison-meals-v1-sheet-synced', sheetHas: 'allison-meals-v1-sheet-has', sheetGraves: 'allison-meals-v1-sheet-graves',
     sheet: 'allison-meals-v1-sheet', sheetSent: 'allison-meals-v1-sheet-sent', sheetOldAt: 'allison-meals-v1-sheet-at',
-    fold: 'allison-meals-v1-fold' };   // the plan folded away on Dinners (this phone only)
+    fold: 'allison-meals-v1-fold' };   // the plan folded away (this phone only)
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const cap = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
-  const MEATS = [['chicken', 'Chicken'], ['beef', 'Beef'], ['pork', 'Pork'], ['turkey', 'Turkey'], ['lamb', 'Lamb'], ['salmon', 'Salmon'], ['white fish', 'White fish'], ['shrimp', 'Shrimp'], ['on sale', 'Whatever’s on sale']];
+  const join = a => a.length <= 2 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const SLOTS = [['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner']];
+  const FOODS = [['chicken', 'Chicken'], ['lamb', 'Lamb'], ['beef', 'Beef'], ['pork', 'Pork'], ['turkey', 'Turkey'], ['fish', 'Fish'], ['shrimp', 'Shrimp'], ['vegetarian', 'Vegetarian']];
+  const PROTEIN = [['some', 'Some', 20], ['good', 'Good', 30], ['high', 'High', 40]];
+  const WEEKNIGHT = [[0, 'No limit'], [20, '20 minutes'], [30, '30 minutes'], [40, '40 minutes'], [60, 'An hour']];
   const ICON = {
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     sheet: '<svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg>',
     chev: '<svg viewBox="0 0 24 24" class="b"><path d="M8.6 10l3.4 3.4 3.4-3.4"/></svg>',
     clear: '<svg viewBox="0 0 24 24" class="b"><path d="M7 7l10 10M17 7L7 17"/></svg>',
     copy: '<svg viewBox="0 0 24 24"><rect x="8.4" y="8.4" width="11.6" height="11.6" rx="2.4"/><path d="M15.6 8.4V6.2A2.2 2.2 0 0 0 13.4 4H6.2A2.2 2.2 0 0 0 4 6.2v7.2a2.2 2.2 0 0 0 2.2 2.2h2.2"/></svg>',
+    up: '<svg viewBox="0 0 24 24"><path d="M7.5 10.5V20H4.8a.8.8 0 0 1-.8-.8v-7.9a.8.8 0 0 1 .8-.8zM7.5 10.5l3.8-6.2a1.6 1.6 0 0 1 2.9 1.2l-.8 3.9h5a1.8 1.8 0 0 1 1.8 2.1l-1.2 6.9A1.8 1.8 0 0 1 17.2 20H7.5"/></svg>',
+    down: '<svg viewBox="0 0 24 24"><path d="M7.5 13.5V4H4.8a.8.8 0 0 0-.8.8v7.9a.8.8 0 0 0 .8.8zM7.5 13.5l3.8 6.2a1.6 1.6 0 0 0 2.9-1.2l-.8-3.9h5a1.8 1.8 0 0 0 1.8-2.1l-1.2-6.9A1.8 1.8 0 0 0 17.2 4H7.5"/></svg>',
   };
-
-  // The stores Meals knows (the server's STORES; this copy until it answers).
-  const STORES = [['wholefoods', 'Whole Foods', 'Whole Foods Market, 102 New Waverly Pl, Cary, NC', 'prime', 'Prime'], ['harristeeter', 'Harris Teeter', 'Harris Teeter, 750 W Williams St, Apex, NC', 'vic', 'VIC'],
-    ['publix', 'Publix', 'Publix, 1441 Kelly Rd, Apex, NC'], ['lidl', 'Lidl', 'Lidl, 670 Grand Central Station, Apex, NC'], ['lowesfoods', 'Lowes Foods', 'Lowes Foods, 5400 Apex Peakway, Apex, NC'],
-    ['aldi', 'Aldi', 'Aldi, 1770 W Williams St, Apex, NC'], ['walmart', 'Walmart', 'Walmart Supercenter, 3151 Apex Peakway, Apex, NC'], ['target', 'Target', 'Target, 1201 Beaver Creek Commons Dr, Apex, NC']]
-    .map(([id, name, where, card, cardName]) => ({ id, name, where, card, cardName }));
-  const CARDS = [['prime', 'Amazon Prime (Whole Foods)'], ['vic', 'VIC (Harris Teeter)']];
+  const DEFAULT_SETTINGS = { avoid: ['tree nuts', 'coconut'], veg: 2, protein: 'good', people: 4, weeknight: 40 };
 
   // ---------------------------------------------------------------------
-  // The family's Meals: { ai, week, stores, settings, deals: { store id: deals },
-  // plan } from the server, the last copy kept here for when there's no signal.
+  // The family's Meals: { ai, model, settings, taste, draft, plan, log } from the server,
+  // the last copy kept here for when there's no signal.
   // ---------------------------------------------------------------------
-  let data = ls.json(KEY, null) || { ai: null, model: null, week: '', stores: STORES, settings: { stores: STORES.map(x => x.id), cards: ['prime', 'vic'], avoid: ['tree nuts', 'coconut'] }, deals: {}, plan: null };
-  const st = { tab: ['dinners', 'deals', 'list'].includes(ls.json(K.tab, '')) ? ls.json(K.tab, '') : 'dinners', store: ls.json(K.store, ''), state: 'idle', busy: null, error: '' };
-  const storeById = id => (data.stores || STORES).find(x => x.id === id) || null;
-  const mine = () => (data.settings.stores || []).map(storeById).filter(Boolean);
-  // this week's deals at these stores, as one list, each item saying where it is
-  const weekItems = ids => ({ items: ids.flatMap(id => { const d = (data.deals || {})[id], s = storeById(id); return d && d.week === data.week && s ? d.items.map(x => ({ ...x, at: s })) : []; }) });
-  const shopIds = shop => shop === 'all' ? data.settings.stores || [] : [shop];
-  const memberTag = x => x.member && x.at && x.at.cardName ? ' <span class="prime">' + esc(x.at.cardName) + '</span>' : '';
+  const blank = { ai: null, model: null, settings: DEFAULT_SETTINGS, taste: { loved: [], nope: [] }, draft: null, plan: null, log: [] };
+  let data = Object.assign({}, blank, ls.json(KEY, null) || {});
+  data.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings || {});
+  data.taste = data.taste || { loved: [], nope: [] };
+  const st = { tab: ['ipsy', 'plan', 'list'].includes(ls.json(K.tab, '')) ? ls.json(K.tab, '') : (data.plan || data.draft ? 'plan' : 'ipsy'), state: 'idle', busy: null, error: '' };
   let ticks = ls.json(K.ticks, { at: 0, keys: [] });
   let folded = ls.json(K.fold, false) === true;
 
@@ -95,15 +89,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     'no-ai': 'Meals needs its AI key first: the owner adds it (see Meals’ README).',
     'accounts-off': 'Family accounts aren’t switched on yet, so Meals can’t plan for the family.',
     'setup': 'Family accounts aren’t switched on yet, so Meals can’t plan for the family.',
-    'signin': 'Sign in with your family account to see the family’s dinners.',
+    'signin': 'Sign in with your family account to see the family’s meals.',
     'off': 'Meals’ server isn’t set up on this site.',
     'offline': 'You’re offline. Showing what this phone kept.',
     'ai-key': 'The AI service didn’t accept Meals’ key. The owner can check it.',
     'ai-busy': 'The AI service is busy. Try again in a minute.',
     'ai-unreachable': 'Couldn’t reach the AI service. Try again in a minute.',
     'ai-format': 'That didn’t come back right. Try again.',
-    'avoid': 'Every plan it made used something the family avoids, so none was kept. Try again, or pick another meat.',
-    'owner-only': 'Only the owner can change what the family avoids. Your stores and cards were kept.',
+    'avoid': 'Every plan it made used something the family avoids, so none was kept. Try again, or pick something else.',
+    'limit': 'That’s a lot of plans today. Try again tomorrow.',
+    'owner-only': 'Only the owner can change what the family avoids. Your other rules were kept.',
     'changed': 'Someone in the family changed the plan just now. Here’s the plan as it is.',
   };
   const say = code => SAY[code] || 'Something went wrong. Try again in a minute.';
@@ -113,7 +108,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try {
       const j = await api('state');
       // got: when this was read from the family server (the Sheet keeps the newest copy read)
-      data = { ai: j.ai, model: j.model, week: j.week, stores: j.stores || STORES, settings: j.settings, deals: j.deals || {}, draft: j.draft || null, plan: j.plan, log: j.log || [], got: Date.now() };
+      data = { ai: j.ai, model: j.model, settings: Object.assign({}, DEFAULT_SETTINGS, j.settings || {}), taste: j.taste || { loved: [], nope: [] },
+        draft: j.draft || null, plan: j.plan, log: j.log || [], got: Date.now() };
       ls.set(KEY, data); st.state = 'ok'; st.error = '';
       scheduleSheet();   // the family's Google Sheet hears what the family changed
     } catch (e) { st.state = e.code; st.error = e.code; }
@@ -124,126 +120,178 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // The screen
   // ---------------------------------------------------------------------
   const main = $('main');
-  // the store the Deals tab shows: one of the family's, or 'all'
-  const curStore = () => st.store === 'all' || mine().some(x => x.id === st.store) ? st.store : (mine()[0] || {}).id || 'all';
   const notice = () => {
     if (!st.error || st.error === 'loading') return '';
     const signin = st.error === 'signin';
     return '<div class="card" style="--i:0"><p>' + esc(say(st.error)) + '</p>' + (signin ? '<div class="btns"><button class="btn" type="button" data-act="signin">Sign in with Face ID</button></div>' : '') + '</div>';
   };
   const noAI = () => data.ai === null && st.state === 'ok';
-  const thisWeek = d => d && d.week === data.week;
   const busyCard = (title, line) => '<div class="card busy" role="status" style="--i:1"><span class="spin" aria-hidden="true"></span><strong>' + esc(title) + '</strong>' + esc(line) + '</div>';
 
   function render() {
     document.querySelectorAll('#tabs [data-tab]').forEach(b => { const on = b.dataset.tab === st.tab; b.setAttribute('aria-pressed', on); b.setAttribute('aria-selected', on); });
     slideTabs(true);
-    $('fab').hidden = st.tab !== 'dinners' || !!(data.draft && data.draft.meals);   // a new plan waiting: accept, try again or discard it first
-    main.innerHTML = notice() + (st.tab === 'dinners' ? dinners() : st.tab === 'deals' ? deals() : list());
+    $('fab').hidden = st.tab !== 'plan' || !!(data.draft && data.draft.meals) || st.busy === 'plan';   // a new plan waiting: accept, try again or discard it first
+    main.innerHTML = notice() + (st.tab === 'ipsy' ? talk() : st.tab === 'plan' ? planTab() : list());
   }
 
   // dates: 'YYYY-MM-DD' on this phone's calendar
   const isoDay = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const dayLabel = (iso, o) => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', o || { weekday: 'short', month: 'short', day: 'numeric' });
   const span = e => dayLabel(e.start, { month: 'short', day: 'numeric' }) + ' – ' + dayLabel(e.end, { month: 'short', day: 'numeric' });
-  const where = p => p.shop && p.shop !== 'all' && storeById(p.shop) ? storeById(p.shop).name : p.shop === 'all' ? 'Best deals' : p.shopName || '';
-  // a plan's nights as cards; src says which plan a tap opens ('draft', 'plan' or 'past')
-  const nights = (p, src, from) => p.meals.map((m, i) => '<button class="card rgroup" type="button" data-meal="' + i + '" data-src="' + src + '" style="--i:' + (from + i) + '">'
-    + '<span class="night">Night ' + m.day + (p.dates && p.dates[i] ? ' · ' + esc(dayLabel(p.dates[i])) : '') + '</span><span class="ct" translate="no">' + esc(m.title) + '</span>'
-    + '<span class="cm" translate="no">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : ''].filter(Boolean).join(' · ')) + '</span>'
-    + (m.uses && m.uses.length ? '<span class="saletag">On sale: ' + esc(m.uses.join(', ')) + '</span>' : '') + '</button>').join('');
-  function startOptions() {
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDay(d); };
+  const slotOf = m => m.slot || 'dinner';
+  const slotName = m => (SLOTS.find(s => s[0] === slotOf(m)) || SLOTS[2])[1];
+  // a plan's day d (from 1) as a date: its own dates once accepted, else from the day it was planned from
+  const dateOf = (p, d) => (p.dates && p.dates[d - 1]) || (p.start ? addDays(p.start, d - 1) : '');
+  const dayName = (p, d) => { const iso = dateOf(p, d); return iso ? dayLabel(iso, { weekday: 'long', month: 'short', day: 'numeric' }) : 'Day ' + d; };
+  // "Monday lunch" (a recipe's title, Ipsy's words): the weekday, else "Day 2"
+  const mealName = (p, m) => { const iso = dateOf(p, m.day || 1); return (iso ? dayLabel(iso, { weekday: 'long' }) : 'Day ' + (m.day || 1)) + ' ' + slotName(m).toLowerCase(); };
+  // what a plan was built around, in a few words: "Chicken and lamb · lunch and dinner · for 4"; plans from before: "Chicken · for 4"
+  const foodWords = p => p.foods ? (p.foods.includes('surprise') && p.foods.length === 1 ? 'Anything' : cap(join(p.foods.filter(f => f !== 'surprise')))) : cap(p.meat === 'on sale' ? 'Whatever’s on sale' : p.meat || '');
+  const slotWords = p => p.slots ? join(SLOTS.filter(s => p.slots.includes(s[0])).map(s => s[1].toLowerCase())) : 'dinners';
+  const about = p => [foodWords(p), slotWords(p), 'for ' + p.people].filter(Boolean).join(' · ');
+  const tags = m => {
+    const t = [];
+    if (m.leftover) t.push('<span class="tag lo">Leftovers</span>');
+    if (Array.isArray(m.veg) && m.veg.length) t.push('<span class="tag veg">' + esc(plural(m.veg.length, 'vegetable')) + '</span>');
+    if (m.protein) t.push('<span class="tag pro">' + esc('about ' + m.protein + ' g protein') + '</span>');
+    if (m.minutes) t.push('<span class="tag">' + esc(m.minutes + ' min') + '</span>');
+    if (Array.isArray(m.fridge) && m.fridge.length) t.push('<span class="tag fr">' + esc('uses your ' + join(m.fridge)) + '</span>');
+    return t.length ? '<span class="tags">' + t.join('') + '</span>' : '';
+  };
+  // a plan's days as cards, a meal a row; src says which plan a tap opens ('draft', 'plan' or 'past')
+  function days(p, src, from) {
+    const by = new Map();
+    p.meals.forEach((m, i) => { const d = m.day || i + 1; if (!by.has(d)) by.set(d, []); by.get(d).push([m, i]); });
+    return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([d, ms], k) => '<div class="card dayc" style="--i:' + (from + k) + '"><p class="night">' + esc(dayName(p, d)) + '</p>'
+      + ms.map(([m, i]) => '<button class="mrow" type="button" data-meal="' + i + '" data-src="' + src + '"><span class="slot">' + esc(slotName(m)) + '</span>'
+        + '<span class="ct" translate="no">' + esc(m.title) + '</span>' + tags(m) + '</button>').join('') + '</div>').join('');
+  }
+
+  // ---- the Ipsy tab: what you fancy, then Ipsy's questions, one at a time ----
+  const flow = { step: 'pick', slots: ['dinner'], foods: [], fridge: '', days: 0, people: 0, lunches: '', note: '' };
+  const rules = () => data.settings;
+  const proteinG = () => (PROTEIN.find(x => x[0] === rules().protein) || PROTEIN[1])[2];
+  const rulesLine = () => (rules().veg ? plural(rules().veg, 'vegetable').replace(/^(\d+)/, '$1+') + ' and about ' + proteinG() + ' g protein in every meal' : 'About ' + proteinG() + ' g protein in every meal')
+    + ((rules().avoid || []).length ? ' · never ' + join(rules().avoid) : '');
+  const lastPeople = () => (data.plan && +data.plan.people) || rules().people || 4;
+  // the questions still to ask, in order: how far ahead, how many, leftovers (lunch and dinner both), anything else
+  const QUESTIONS = () => ['days', 'people', ...(flow.slots.includes('lunch') && flow.slots.includes('dinner') ? ['lunches'] : []), 'note'];
+  const ASK = {
+    days: ['Lovely. How far ahead should I plan?', [[1, 'Just today'], [3, 'Next 3 days'], [7, 'The week']]],
+    people: [null, [1, 2, 3, 4, 5, 6, 8].map(n => [n, String(n)])],
+    lunches: ['For lunches: the night before’s leftovers, or something fresh each day?', [['leftovers', 'Leftovers are great'], ['fresh', 'Fresh each day'], ['mix', 'A mix']]],
+  };
+  const answerWords = q => q === 'days' ? (ASK.days[1].find(x => x[0] === flow.days) || [0, ''])[1] : q === 'people' ? plural(flow.people, 'person').replace('persons', 'people')
+    : q === 'lunches' ? (ASK.lunches[1].find(x => x[0] === flow.lunches) || [0, ''])[1] : flow.note || 'Nothing else';
+  const pickWords = () => [cap(join(SLOTS.filter(s => flow.slots.includes(s[0])).map(s => s[1].toLowerCase()))),
+    flow.foods.length ? join(flow.foods.map(f => f === 'surprise' ? 'surprise me' : f)) : 'surprise me', flow.fridge ? 'use up ' + flow.fridge : ''].filter(Boolean).join(' · ');
+  const chip = (attr, v, label, on, multi) => '<button class="opt" type="button" role="' + (multi ? 'checkbox' : 'radio') + '" ' + attr + '="' + esc(v) + '" aria-checked="' + !!on + '">' + esc(label) + '</button>';
+  const bub = (who, html) => '<div class="bub' + (who === 'me' ? ' me' : '') + '">' + html + '</div>';
+  function talk() {
+    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.n, 'meal') + '…', st.planning.n > 6 ? 'About a minute.' : 'About half a minute.');
+    const user = A() && A().user(), hi = 'Hi' + (user && user.name ? ' ' + user.name.split(' ')[0] : '') + '. What are we eating? Pick a few things and I’ll ask the rest.';
+    let h = '<div class="chat">' + bub('ipsy', esc(hi));
+    if (flow.step === 'pick') {
+      h += '<div class="card pick" style="--i:1">'
+        + '<p class="label" id="lSlots">Which meals</p><div class="opts" role="group" aria-labelledby="lSlots">' + SLOTS.map(([k, n]) => chip('data-slot', k, n, flow.slots.includes(k), true)).join('') + '</div>'
+        + '<p class="label" id="lFoods">What do you fancy</p><div class="opts" role="group" aria-labelledby="lFoods">' + FOODS.map(([k, n]) => chip('data-food', k, n, flow.foods.includes(k), true)).join('')
+        + chip('data-food', 'surprise', 'Surprise me', flow.foods.includes('surprise'), true) + '</div>'
+        + '<label class="label" for="fFridge">In the fridge (optional)</label><div class="rgroup"><div class="frow"><input class="txt" id="fFridge" maxlength="300" placeholder="Half a cabbage, feta, eggs…" value="' + esc(flow.fridge) + '"></div></div>'
+        + '<div class="rules"><p>' + esc('Family rules: ' + rulesLine()) + '</p><button class="linkbtn" type="button" data-act="rules">Edit</button></div>'
+        + '<div class="btns"><button class="btn okbtn" type="button" data-act="pick"' + (noAI() || !flow.slots.length ? ' disabled' : '') + '>Plan it</button></div></div>';
+    } else {
+      h += bub('me', esc(pickWords()));
+      const qs = QUESTIONS();
+      for (const q of qs) {
+        const asked = q === 'people' ? 'How many at the table?' + (data.plan && data.plan.people ? ' Last time it was ' + data.plan.people + '.' : ' Usually it’s ' + rules().people + '.') : q === 'note' ? 'Anything else? (No spicy food, kid-friendly…)' : ASK[q][0];
+        h += bub('ipsy', esc(asked));
+        const answered = q === 'note' ? flow.step === 'done' : !!flow[q];
+        if (answered) { h += bub('me', esc(answerWords(q))); continue; }
+        if (q === 'note') {
+          h += '<div class="card ready"><p>' + esc(summary()) + '</p>'
+            + '<div class="rgroup"><div class="frow"><label class="vh" for="fNote">Anything else</label><input class="txt" id="fNote" maxlength="200" placeholder="Anything else? (optional)" value="' + esc(flow.note) + '"></div></div>'
+            + '<div class="btns"><button class="btn okbtn" type="button" data-act="make"' + (noAI() ? ' disabled' : '') + '>Make it</button></div></div>';
+        } else {
+          const cur = q === 'people' ? lastPeople() : null;
+          h += '<div class="opts answers" role="radiogroup" aria-label="' + esc(q === 'days' ? 'How far ahead' : q === 'people' ? 'How many at the table' : 'Lunches') + '">'
+            + ASK[q][1].map(([v, n]) => chip('data-' + q, v, n, v === cur, false)).join('') + '</div>';
+        }
+        break;
+      }
+      h += '<button class="linkbtn" type="button" data-act="restart">Start over</button>';
+    }
+    h += '</div>' + askBar('Or just tell Ipsy…', 'tell');
+    return h;
+  }
+  function summary() {
+    const n = flow.days * flow.slots.length, which = join(SLOTS.filter(s => flow.slots.includes(s[0])).map(s => ({ breakfast: 'breakfasts', lunch: 'lunches', dinner: 'dinners' })[s[0]]));
+    return 'Planning ' + (flow.days === 1 ? 'today’s ' + which : flow.days + ' days of ' + which) + ' for ' + flow.people
+      + (flow.lunches === 'leftovers' && flow.days > 1 ? ', lunches from the night before' : '') + ': ' + plural(n, 'meal') + ', each with ' + rulesLine().split(' · ')[0].replace(/ in every meal$/, '') + '.';
+  }
+  const askBar = (ph, act) => '<div class="rgroup askbar"><div class="frow"><label class="vh" for="askIn">' + esc(ph) + '</label><input class="txt" id="askIn" maxlength="300" placeholder="' + esc(ph) + '">'
+    + '<button class="btn" type="button" data-act="' + act + '">Ask</button></div></div>';
+
+  // ---- the Plan tab ----
+  function startOptions(sel) {
     const now = new Date();
     return Array.from({ length: 8 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i), iso = isoDay(d);
-      return '<option value="' + iso + '">' + esc((i === 0 ? 'Today, ' : i === 1 ? 'Tomorrow, ' : '') + dayLabel(iso)) + '</option>'; }).join('');
+      return '<option value="' + iso + '"' + (iso === sel ? ' selected' : '') + '>' + esc((i === 0 ? 'Today, ' : i === 1 ? 'Tomorrow, ' : '') + dayLabel(iso)) + '</option>'; }).join('');
   }
-  function dinners() {
+  function planTab() {
     const p = data.plan, d = data.draft;
-    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.days, 'dinner') + '…', 'About half a minute.');
+    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.n, 'meal') + '…', st.planning.n > 6 ? 'About a minute.' : 'About half a minute.');
     let h = '';
     if (d && d.meals && d.meals.length) {
-      // a new plan to look over: nothing is saved until someone accepts it
-      // the choice first, where it's seen; the dinners under it
+      // a new plan to look over: nothing is saved until someone accepts it; the choice first, where it's seen
       h += '<div class="card accept" style="--i:1"><strong>New plan · not saved yet</strong>'
-        + '<p>' + esc([cap(d.meat), 'for ' + d.people, where(d)].filter(Boolean).join(' · ')) + '</p>'
-        + '<div class="frow storepick"><label for="aStart">Starting</label><select id="aStart">' + startOptions() + '</select></div>'
+        + '<p>' + esc(about(d) + (d.by ? ' · by ' + d.by : '')) + '</p>'
+        + '<div class="frow storepick"><label for="aStart">Starting</label><select id="aStart">' + startOptions(d.start && d.start >= isoDay(new Date()) ? d.start : isoDay(new Date())) + '</select></div>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="accept">Accept plan</button><button class="btn" type="button" data-act="again"' + (noAI() ? ' disabled' : '') + '>Try again</button></div>'
         + '<div class="btns" style="margin-top:0"><button class="btn quiet" type="button" data-act="discard">Discard</button></div></div>'
-        + nights(d, 'draft', 2) + (d.tip ? '<div class="card"><p><b>Tip:</b> <span translate="no">' + esc(d.tip) + '</span></p></div>' : '');
+        + days(d, 'draft', 2) + (d.tip ? '<div class="card"><p><b>Tip:</b> <span translate="no">' + esc(d.tip) + '</span></p></div>' : '')
+        + askBar('Change anything…', 'change');
     } else if (p && p.meals && p.meals.length) {
-      // the plan's bar: tap it to fold the dinners away (a small dropdown, kept folded on this phone),
-      // × to clear the plan (it stays in Past plans, with Undo)
+      // the plan's bar: tap it to fold the days away (kept folded on this phone), × to clear the plan
+      // (it stays in Past plans, with Undo)
       const when = p.dates && p.dates.length ? span({ start: p.dates[0], end: p.dates[p.dates.length - 1] }) : dayLabel(isoDay(new Date(p.at)));
-      const ti = (p.dates || []).indexOf(isoDay(new Date())), tonight = ti >= 0 && p.meals[ti] ? 'Tonight: ' + p.meals[ti].title : '';
-      h += '<div class="planbar card" style="--i:1"><button class="pfold" type="button" data-act="fold" aria-expanded="' + !folded + '" aria-controls="planNights">'
-        + '<span class="chev" aria-hidden="true">' + ICON.chev + '</span><span class="pt">' + esc([cap(p.meat), 'for ' + p.people, where(p)].filter(Boolean).join(' · '))
-        + '<small>' + esc(folded && tonight ? tonight : when + ' · ' + plural(p.meals.length, 'dinner')) + '</small></span></button>'
+      const ti = (p.dates || []).indexOf(isoDay(new Date())), tonight = ti >= 0 ? p.meals.filter(m => (m.day || 1) === ti + 1 && slotOf(m) === 'dinner')[0] : null;
+      h += '<div class="planbar card" style="--i:1"><button class="pfold" type="button" data-act="fold" aria-expanded="' + !folded + '" aria-controls="planDays">'
+        + '<span class="chev" aria-hidden="true">' + ICON.chev + '</span><span class="pt">' + esc(about(p))
+        + '<small>' + esc(folded && tonight ? 'Tonight: ' + tonight.title : when + ' · ' + plural(p.meals.length, 'meal')) + '</small></span></button>'
         + '<button class="iconbtn pclear" type="button" data-act="clear" aria-label="Clear this plan">' + ICON.clear + '</button></div>'
-        + '<div class="pnights" id="planNights"' + (folded ? ' hidden' : '') + '>' + nights(p, 'plan', 2);
-      if (p.tip) h += '<div class="card" style="--i:' + (p.meals.length + 2) + '"><p><b>Tip:</b> <span translate="no">' + esc(p.tip) + '</span></p></div>';
+        + '<div class="pnights" id="planDays"' + (folded ? ' hidden' : '') + '>' + days(p, 'plan', 2);
+      if (p.tip) h += '<div class="card"><p><b>Tip:</b> <span translate="no">' + esc(p.tip) + '</span></p></div>';
       if (p.acceptedBy || p.by) h += '<p class="hint">' + esc(p.acceptedBy ? 'Accepted by ' + p.acceptedBy : 'Planned by ' + p.by) + '.</p>';
-      h += '</div>';
+      h += '</div>' + askBar('Change anything…', 'change');
     } else {
-      h += '<div class="card" style="--i:1"><strong>No dinners planned yet</strong>'
-        + '<div class="btns"><button class="btn okbtn" type="button" data-act="plan"' + (noAI() ? ' disabled' : '') + '>Plan dinners</button></div></div>';
+      h += '<div class="card" style="--i:1"><strong>Nothing planned yet</strong><p>Tell Ipsy what you fancy, and it plans the meals.</p>'
+        + '<div class="btns"><button class="btn okbtn" type="button" data-act="new"' + (noAI() ? ' disabled' : '') + '>Plan with Ipsy</button></div></div>';
     }
     // every accepted plan, as Fitness keeps every workout: the family server's last 52, then older ones
     // read back from the family's Google Sheet
     const log = pastList(), olderOn = signedIn() && sheetAt && !older.done;
     if (log.length || (olderOn && sheetHas.size)) h += '<p class="sechead"><span>Past plans</span><span>' + log.length + '</span></p><div class="rgroup">'
-      + log.map(e => '<button class="rowbtn" type="button" data-past="' + esc(e.id) + '"><span>' + esc(span(e) + ' · ' + cap(e.meat) + (e.shop && e.shop !== 'all' && storeById(e.shop) ? ' · ' + storeById(e.shop).name : e.shopName ? ' · ' + e.shopName : ''))
+      + log.map(e => '<button class="rowbtn" type="button" data-past="' + esc(e.id) + '"><span>' + esc(span(e) + ' · ' + about(e))
         + (p && p.id === e.id ? ' <span class="prime">Current</span>' : '') + '<span class="sub" translate="no">' + esc(e.titles.join(' · ')) + '</span></span></button>').join('')
       + (olderOn ? '<button class="rowbtn" type="button" data-act="older"' + (older.busy ? ' disabled' : '') + '><span class="ic">' + ICON.sheet + '</span><span>' + (older.busy ? 'Looking in the Sheet…' : 'Show older plans from the Sheet')
         + '</span></button>' : '') + '</div>';
     return h;
   }
 
-  function deals() {
-    const cur = curStore(), all = cur === 'all', store = storeById(cur), d = all ? null : (data.deals || {})[cur];
-    const has = id => thisWeek((data.deals || {})[id]) && data.deals[id].items.length;
-    const pick = '<div class="frow storepick"><label for="dStore">Store</label><select id="dStore">'
-      + mine().map(x => '<option value="' + x.id + '"' + (x.id === cur ? ' selected' : '') + '>' + esc(x.name) + (has(x.id) ? ' ✓' : '') + '</option>').join('')
-      + (mine().length > 1 ? '<option value="all"' + (all ? ' selected' : '') + '>All my stores</option>' : '') + '</select></div>';
-    const off = noAI() || st.busy ? ' disabled' : '';
-    let h = '<div class="card" style="--i:1">' + pick;
-    if (all) {
-      const n = mine().filter(x => has(x.id)).length;
-      h += '<p>' + esc(n + ' of ' + plural(mine().length, 'store') + ' have this week’s deals. ' + L.weekLabel(data.week || '')) + '</p>'
-        + '<div class="btns"><button class="btn" type="button" data-act="find-all"' + off + '>' + (n < mine().length ? 'Find deals at the rest' : 'All found') + '</button></div></div>';
-    } else {
-      const card = store.cardName && (data.settings.cards || []).includes(store.card) ? ' · ' + store.cardName + ' prices' : '';
-      h += '<p>' + esc(store.where.replace(/^[^,]+,\s*/, '') + (d && d.items && d.items.length ? ' · ' + (thisWeek(d) ? 'This week' : 'An earlier week') + ', ' + L.weekLabel(d.week, d.validFrom, d.validTo) : '') + card) + '</p>'
-        + '<div class="btns"><button class="btn" type="button" data-act="find"' + off + '>' + (thisWeek(d) ? 'Look again' : 'Find this week’s deals') + '</button>'
-        + '<button class="btn quiet" type="button" data-act="paste"' + off + '>Paste deals</button></div></div>';
-    }
-    if (st.busy === 'deals') return h + busyCard('Looking for this week’s sales…', st.finding || 'This can take up to a minute.');
-    // all stores: the same thing at different stores side by side, to compare
-    const items = all ? weekItems(data.settings.stores || []).items.sort((a, b) => a.name.localeCompare(b.name, 'en-US')) : d && d.items ? d.items.map(x => ({ ...x, at: store })) : [];
-    if (!items.length) return h + '<div class="empty" style="--i:2"><strong>No deals yet</strong></div>';
-    h += L.sections(items, x => x.name).map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.length + '</span></p><div class="rgroup" style="--i:' + (i + 2) + '">'
-      + g.items.map(x => '<div class="drow"><span class="dn" translate="no">' + esc(x.name) + ((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).length ? '<small>' + esc((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).join(' · ')) + '</small>' : '') + '</span>'
-        + '<span class="dp">' + esc(x.price || '') + memberTag(x) + (x.regular ? '<small>usually ' + esc(x.regular) + '</small>' : '') + '</span></div>').join('') + '</div>').join('');
-    h += '<button class="btn okbtn" type="button" data-act="plan-deals"' + (noAI() ? ' disabled' : '') + '>Plan dinners with ' + (all ? 'the best of these' : 'these deals') + '</button>';
-    const src = all ? [] : (d.sources || []);
-    if (src.length) h += '<p class="src">Found on: ' + src.map(u => { let host = u; try { host = new URL(u).hostname.replace(/^www\./, ''); } catch {} return '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(host) + '</a>'; }).join(', ') + '.</p>';
-    else if (!all && d.how === 'paste') h += '<p class="src">From the sales you pasted.</p>';
-    return h;
-  }
-
-  // the plan's sale items: its store's this week, or every store's for a plan across stores
-  // a plan's sale items: the ones it was planned with (an older plan: its store's this week)
-  const dealsOf = p => !p ? null : p.sales ? { items: p.sales.map(x => ({ ...x, at: storeById(x.store) || { name: x.store } })) } : weekItems(shopIds(p.shop || 'all'));
-  const saleTag = (x, p) => x.deal ? '<span class="saletag">On sale' + (p && p.shop && p.shop !== 'all' ? ' ' : ' at ' + esc(x.deal.at.name) + ' ') + esc(x.deal.price || '') + '</span>' : '';
-  const shopOf = p => L.shopping((p && p.meals) || [], dealsOf(p));
+  // ---- the List tab ----
+  const shopOf = p => L.shopping((p && p.meals) || []);
   function shop() { return shopOf(data.plan); }
+  // which days an item is for: "Mon, Wed" from the plan's dates, else "days 1, 3"
+  const whenWords = (x, p) => { const d = x.nights.map(n => dateOf(p, n)); return d.every(Boolean) ? d.map(iso => dayLabel(iso, { weekday: 'short' })).join(', ') : 'day' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', '); };
   function list() {
     const p = data.plan;
-    if (!p || !p.meals || !p.meals.length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>' + (data.draft ? 'Accept the new plan on Dinners.' : 'Plan dinners first.') + '</div>';
+    if (!p || !p.meals || !p.meals.length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>' + (data.draft ? 'Accept the new plan first.' : 'Plan your meals with Ipsy first.') + '</div>';
     if (ticks.at !== p.at) ticks = { at: p.at, keys: [] };
     const s = shop(), done = new Set(ticks.keys);
     const row = x => '<button class="irow" type="button" role="checkbox" aria-checked="' + done.has(x.key) + '" data-key="' + esc(x.key) + '"><span class="box">' + ICON.tick + '</span>'
-      + '<span class="it"><span translate="no">' + esc(cap(x.item)) + '</span><small>' + esc([L.total(x.amounts), 'night' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', ')].filter(Boolean).join(' · ')) + '</small>'
-      + saleTag(x, p) + '</span></button>';
+      + '<span class="it"><span translate="no">' + esc(cap(x.item)) + '</span><small>' + esc([L.total(x.amounts), whenWords(x, p)].filter(Boolean).join(' · ')) + '</small></span></button>';
     const groups = L.sections(s.buy, x => x.item);
     let h = groups.map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.filter(x => !done.has(x.key)).length + '</span></p><div class="rgroup" style="--i:' + (i + 1) + '">' + g.items.map(row).join('') + '</div>').join('');
     if (s.pantry.length) h += '<p class="sechead"><span>You probably have</span><span>' + s.pantry.length + '</span></p><div class="rgroup">' + s.pantry.map(row).join('') + '</div>';
@@ -255,8 +303,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Doing things
   // ---------------------------------------------------------------------
+  const toggle = (a, v) => { const i = a.indexOf(v); if (i < 0) a.push(v); else a.splice(i, 1); };
   main.addEventListener('click', async e => {
-    const b = e.target.closest('[data-act], [data-meal], [data-key], [data-past]'); if (!b) return;
+    const b = e.target.closest('[data-act], [data-meal], [data-key], [data-past], [data-slot], [data-food], [data-days], [data-people], [data-lunches]'); if (!b) return;
     if (b.dataset.meal) return openRecipe(+b.dataset.meal, b.dataset.src === 'draft' ? data.draft : data.plan);
     if (b.dataset.past) return openPast(b.dataset.past);
     if (b.dataset.key) {
@@ -265,17 +314,28 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       ls.set(K.ticks, ticks); b.setAttribute('aria-checked', i < 0);
       return;
     }
+    // what you fancy: the chips toggle in place (Surprise me and the foods take turns)
+    if (b.dataset.slot) { toggle(flow.slots, b.dataset.slot); b.setAttribute('aria-checked', flow.slots.includes(b.dataset.slot)); const go = main.querySelector('[data-act="pick"]'); if (go) go.disabled = noAI() || !flow.slots.length; return; }
+    if (b.dataset.food) {
+      const f = b.dataset.food; toggle(flow.foods, f);
+      if (f === 'surprise' && flow.foods.includes('surprise')) flow.foods = ['surprise']; else if (f !== 'surprise') flow.foods = flow.foods.filter(x => x !== 'surprise');
+      main.querySelectorAll('[data-food]').forEach(x => x.setAttribute('aria-checked', flow.foods.includes(x.dataset.food)));
+      return;
+    }
+    // an answer to Ipsy's question: the next question comes
+    for (const q of ['days', 'people', 'lunches']) if (b.dataset[q] != null) { flow[q] = q === 'lunches' ? b.dataset[q] : +b.dataset[q]; return next(); }
     const act = b.dataset.act;
-    if (act === 'plan') return openPlan(false);
-    if (act === 'plan-deals') return openPlan(true);
-    if (act === 'find') return findDeals();
-    if (act === 'find-all') return findAll();
+    if (act === 'pick') { flow.fridge = ($('fFridge') || {}).value || ''; flow.fridge = flow.fridge.trim(); flow.step = 'ask'; return next(); }
+    if (act === 'make') { flow.note = (($('fNote') || {}).value || '').trim(); return makePlan(); }
+    if (act === 'restart') { Object.assign(flow, { step: 'pick', days: 0, people: 0, lunches: '', note: '' }); return render(); }
+    if (act === 'rules') return openSettings();
+    if (act === 'tell' || act === 'change') { const t = (($('askIn') || {}).value || '').trim(); return askIpsy(act === 'change' && t && data.draft ? t + ' (on the new plan waiting)' : t); }
+    if (act === 'new') return goTab('ipsy');
     if (act === 'accept') return accept();
     if (act === 'again') return again();
     if (act === 'discard') return discard();
     if (act === 'fold') { folded = !folded; ls.set(K.fold, folded); return render(); }
     if (act === 'clear') return clearPlan();
-    if (act === 'paste') { $('pasteText').value = ''; openSheet('pasteSheet'); setTimeout(() => $('pasteText').focus(), 300); return; }
     if (act === 'signin') return signIn();
     if (act === 'older') return loadOlder();
     if (act === 'untick') { ticks.keys = []; ls.set(K.ticks, ticks); render(); return; }
@@ -285,98 +345,34 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       catch { toast('Couldn’t copy on this phone.'); }
     }
   });
+  main.addEventListener('input', e => { if (e.target.id === 'fFridge') flow.fridge = e.target.value; if (e.target.id === 'fNote') flow.note = e.target.value; });
+  main.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'askIn') { e.preventDefault(); main.querySelector('.askbar [data-act]').click(); } });
+  // the next question, scrolled into sight
+  function next() { render(); const last = [...main.querySelectorAll('.bub')].pop(); if (last && last.scrollIntoView) last.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  function goTab(t) { st.tab = t; ls.set(K.tab, t); render(); slideTabs(false); scrollTo(0, 0); }
   async function signIn() {
     try { await A().signIn(); toast('Signed in.'); load(); }
     catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
   }
   addEventListener('aos:account', e => { if (e.detail) { load(); handOver(); } });
-  main.addEventListener('change', e => { if (e.target.id === 'dStore') { st.store = e.target.value; ls.set(K.store, st.store); render(); } });
 
-  // one store's deals: searched for, or read from pasted text
-  async function oneStore(id, text) {
-    const j = await api('deals', text ? { store: id, text } : { store: id, refresh: thisWeek((data.deals || {})[id]) });
-    if (j.deals && j.deals.items.length) { data.deals = Object.assign({}, data.deals, { [id]: j.deals }); ls.set(KEY, data); scheduleSheet(); }
-    return j.deals ? j.deals.items.length : 0;
-  }
-  async function findDeals(text) {
-    const id = curStore(), s = storeById(id); if (!s) return;
-    st.busy = 'deals'; st.finding = 'At ' + s.name + '. This can take up to a minute.'; st.tab = 'deals'; render();
-    try {
-      const n = await oneStore(id, text);
-      toast(n ? 'Found ' + plural(n, 'deal') + ' at ' + s.name + '.' : text ? 'No food deals in that text.' : 'Couldn’t find ' + s.name + '’s sales online this week. Paste them from its app instead.', null, n ? 4000 : 7000);
-    } catch (e) { toast(say(e.code), null, 7000); }
-    st.busy = null; render();
-  }
-  // every store without this week's deals yet, one after another
-  async function findAll() {
-    const todo = mine().filter(x => !(thisWeek((data.deals || {})[x.id]) && data.deals[x.id].items.length));
-    let found = 0, none = [];
-    st.busy = 'deals'; st.tab = 'deals';
-    for (const [i, s] of todo.entries()) {
-      st.finding = s.name + ' (' + (i + 1) + ' of ' + todo.length + '). About half a minute a store.'; render();
-      try { const n = await oneStore(s.id); found += n; if (!n) none.push(s.name); }
-      catch (e) { st.busy = null; render(); toast(say(e.code), null, 7000); return; }
-    }
-    st.busy = null; render();
-    toast('Found ' + plural(found, 'deal') + (none.length ? '. None online for ' + none.join(', ') + ': paste theirs from their apps.' : '.'), null, none.length ? 8000 : 4000);
-  }
-  $('pasteGo').onclick = () => {
-    const t = $('pasteText').value.trim();
-    if (t.length < 20) { toast('Paste the sales first.'); return; }
-    closeSheet('pasteSheet'); findDeals(t);
-  };
-
-  // A new plan
-  const form = { meat: 'chicken', days: 4, people: 4, useDeals: true, shop: 'all', note: '' };
-  const haveDeals = shop => weekItems(shopIds(shop)).items.length > 0;
-  function openPlan(withDeals) {
-    if (data.plan) Object.assign(form, { meat: data.plan.meat, days: data.plan.days, people: data.plan.people, shop: data.plan.shop || 'all' });
-    if (withDeals) form.shop = curStore();
-    if (form.shop !== 'all' && !mine().some(x => x.id === form.shop)) form.shop = 'all';
-    form.useDeals = haveDeals(form.shop) && (withDeals || form.useDeals);
-    const nums = (a, b, v) => Array.from({ length: b - a + 1 }, (_, i) => a + i).map(n => '<option' + (n === v ? ' selected' : '') + '>' + n + '</option>').join('');
-    $('planBody').innerHTML = '<p class="label">Built around</p><div class="opts" id="meats" role="radiogroup" aria-label="Built around">'
-      + MEATS.map(([k, n]) => '<button class="opt" type="button" role="radio" data-meat="' + k + '" aria-checked="' + (form.meat === k) + '">' + esc(n) + '</button>').join('') + '</div>'
-      + '<div class="rgroup">'
-      + '<div class="frow"><label for="pDays">Nights</label><select id="pDays">' + nums(2, 7, form.days) + '</select></div>'
-      + '<div class="frow"><label for="pPeople">People</label><select id="pPeople">' + nums(1, 8, form.people) + '</select></div>'
-      + '<div class="frow"><label for="pShop">Shop at</label><select id="pShop"><option value="all"' + (form.shop === 'all' ? ' selected' : '') + '>Best deals, any store</option>'
-      + mine().map(x => '<option value="' + x.id + '"' + (form.shop === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select></div>'
-      + '<div class="frow"><label for="pDeals">Use this week’s deals</label>' + dealsPick() + '</div>'
-      + '<div class="frow"><label class="vh" for="pNote">Anything else</label><input class="txt" id="pNote" maxlength="200" placeholder="Anything else? (kid-friendly, no spice…)" value="' + esc(form.note) + '"></div></div>'
-      + ((data.settings.avoid || []).length ? '<p class="hint">Never ' + esc(data.settings.avoid.join(' or ')) + '.</p>' : '')
-      + '<button class="btn okbtn" type="button" id="planGo">Plan ' + plural(form.days, 'dinner') + '</button>';
-    openSheet('planSheet');
-  }
-  $('planBody').addEventListener('click', e => {
-    const m = e.target.closest('[data-meat]');
-    if (m) { form.meat = m.dataset.meat; $('meats').querySelectorAll('[data-meat]').forEach(x => x.setAttribute('aria-checked', x === m)); return; }
-    if (e.target.closest('#planGo')) makePlan();
-  });
-  function dealsPick() {
-    const have = haveDeals(form.shop);
-    return '<select id="pDeals"' + (have ? '' : ' disabled') + '><option value="1"' + (form.useDeals && have ? ' selected' : '') + '>Yes</option><option value="0"' + (form.useDeals && have ? '' : ' selected') + '>' + (have ? 'No' : 'None found yet') + '</option></select>';
-  }
-  $('planBody').addEventListener('change', e => {
-    if (e.target.id === 'pShop') { form.shop = e.target.value; form.useDeals = haveDeals(form.shop); $('pDeals').outerHTML = dealsPick(); }
-    if (e.target.id === 'pDays') { form.days = +e.target.value; $('planGo').textContent = 'Plan ' + plural(form.days, 'dinner'); }
-    if (e.target.id === 'pPeople') form.people = +e.target.value;
-    if (e.target.id === 'pDeals') form.useDeals = e.target.value === '1';
-  });
-  $('planBody').addEventListener('input', e => { if (e.target.id === 'pNote') form.note = e.target.value; });
+  // A new plan: what was picked and answered, or (Try again) the draft's own choices
   async function makePlan(more) {
-    closeSheet('planSheet');
-    const ask = more ? { ...more, again: true } : { ...form };
-    st.busy = 'plan'; st.planning = ask; st.tab = 'dinners'; render(); scrollTo(0, 0);
+    const ask = more || { slots: flow.slots.slice(), foods: flow.foods.length ? flow.foods.slice() : ['surprise'], days: flow.days, people: flow.people, lunches: flow.lunches || 'leftovers',
+      fridge: flow.fridge, note: flow.note, start: isoDay(new Date()) };
+    const n = ask.days * ask.slots.length;
+    st.busy = 'plan'; st.planning = { ...ask, n }; st.tab = 'plan'; ls.set(K.tab, st.tab); render(); slideTabs(false); scrollTo(0, 0);
     try {
       const j = await api('plan', ask);
       data.draft = j.draft; ls.set(KEY, data);
+      Object.assign(flow, { step: 'pick', days: 0, people: 0, lunches: '', note: '', fridge: '' });
       st.busy = null; toast('Here’s a plan. Accept it to save it.', null, 6000);
     } catch (e) { st.busy = null; toast(say(e.code), null, 8000); }
     render();
   }
   // another go at the draft, with the same choices
-  const again = () => { const d = data.draft; if (d) makePlan({ meat: d.meat, days: d.days, people: d.people, useDeals: d.useDeals, shop: d.shop, note: d.note || '' }); };
+  const again = () => { const d = data.draft; if (d) makePlan({ slots: d.slots || ['dinner'], foods: d.foods || ['surprise'], days: d.days || d.meals.length, people: d.people, lunches: d.lunches || 'leftovers',
+    fridge: d.fridge || '', note: d.note || '', start: d.start && d.start >= isoDay(new Date()) ? d.start : isoDay(new Date()), again: true }); };
   async function accept() {
     const start = ($('aStart') || {}).value;
     try {
@@ -404,7 +400,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       catch (e) { toast(say(e.code), null, 6000); if (e.code === 'changed') load(); }
     }, 7000);
   }
-  // a past plan: its dinners and shopping list, as it was
+  // a past plan: its meals and shopping list, as it was
   const pastCache = {};
   async function openPast(id) {
     let p = id === (data.plan || {}).id ? data.plan : pastCache[id] || sheetPlans.get(id);
@@ -412,77 +408,138 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     st.past = p;
     const s = shopOf(p);
     $('pastLbl').textContent = span({ start: p.start, end: p.dates[p.dates.length - 1] || p.start });
-    $('pastBody').innerHTML = '<p class="hint" style="margin:0 2px">' + esc([cap(p.meat), 'for ' + p.people, where(p), p.acceptedBy ? 'accepted by ' + p.acceptedBy : ''].filter(Boolean).join(' · ')) + '</p>'
-      + nights(p, 'past', 0)
+    $('pastBody').innerHTML = '<p class="hint" style="margin:0 2px">' + esc([about(p), p.acceptedBy ? 'accepted by ' + p.acceptedBy : ''].filter(Boolean).join(' · ')) + '</p>'
+      + days(p, 'past', 0)
       + '<p class="label">Shopping list</p>' + L.sections(s.buy, x => x.item).map(g => '<div class="rgroup"><p class="sechead" style="margin:10px 14px 2px"><span>' + esc(g.name) + '</span></p><ul class="plain">'
-        + g.items.map(x => '<li><span translate="no">' + esc(cap(x.item)) + '</span> <small>' + esc(L.total(x.amounts)) + '</small> ' + saleTag(x, p) + '</li>').join('') + '</ul></div>').join('');
+        + g.items.map(x => '<li><span translate="no">' + esc(cap(x.item)) + '</span> <small>' + esc(L.total(x.amounts)) + '</small></li>').join('') + '</ul></div>').join('');
     openSheet('pastSheet');
   }
   $('pastBody').addEventListener('click', e => { const b = e.target.closest('[data-meal]'); if (b) openRecipe(+b.dataset.meal, st.past); });
-  $('fab').onclick = () => openPlan(false);
+  $('fab').onclick = () => goTab('ipsy');
 
+  // One meal's recipe: what it's like, the ingredients (what's from the fridge marked), the steps, the
+  // thumbs (the family loved it, or never again), and Swap or Ask Ipsy about it
+  const lovedNow = t => data.taste.loved.some(x => x.title.toLowerCase() === t.toLowerCase()) ? true : data.taste.nope.some(x => x.title.toLowerCase() === t.toLowerCase()) ? false : null;
+  const fromFridge = (item, m) => (m.fridge || []).some(f => { const a = f.toLowerCase(), b = item.toLowerCase(); return a.includes(b) || b.includes(a); });
   function openRecipe(i, p) {
     const m = p && p.meals[i]; if (!m) return;
-    $('recipeLbl').textContent = 'Night ' + m.day + (p.dates && p.dates[i] ? ' · ' + dayLabel(p.dates[i]) : '');
-    const d = dealsOf(p);
-    $('recipeBody').innerHTML = '<div><h3 translate="no">' + esc(m.title) + '</h3><p class="cm" translate="no">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : '', 'serves ' + p.people].filter(Boolean).join(' · ')) + '</p></div>'
+    st.recipe = { p, i };
+    $('recipeLbl').textContent = mealName(p, m);
+    if (m.leftover) {
+      const j = p.meals.findIndex(x => x.day === m.leftover && slotOf(x) === 'dinner');
+      $('recipeBody').innerHTML = '<div><h3 translate="no">' + esc(m.title) + '</h3>' + tags(m) + '</div><p class="hint" style="margin:0 2px">The night before’s dinner, cooked double for today’s lunch.</p>'
+        + (j >= 0 ? '<button class="btn" type="button" data-open="' + j + '">See that recipe</button>' : '');
+      return openSheet('recipeSheet');
+    }
+    const up = lovedNow(m.title);
+    $('recipeBody').innerHTML = '<div><h3 translate="no">' + esc(m.title) + '</h3><p class="cm">' + ([m.cuisine, m.method].filter(Boolean).length ? '<span translate="no">' + esc([m.cuisine, m.method].filter(Boolean).join(' · ')) + '</span> · ' : '') + '<span>' + esc('serves ' + p.people) + '</span></p>' + tags(m) + '</div>'
+      + (m.veg && m.veg.length ? '<p class="hint" style="margin:0 2px">' + esc('Vegetables: ' + join(m.veg) + '. The vegetables and protein are Ipsy’s estimates.') + '</p>' : '')
       + (m.why ? '<p class="hint" style="margin:0 2px" translate="no">' + esc(m.why) + '</p>' : '')
-      + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => { const deal = L.dealFor(x.item, d); return '<li><span translate="no">' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + '</span>' + (deal ? ' ' + saleTag({ deal }, p) : '') + '</li>'; }).join('') + '</ul></div>'
+      + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => '<li><span translate="no">' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + '</span>'
+        + (fromFridge(x.item, m) ? ' <span class="tag fr">In your fridge</span>' : '') + '</li>').join('') + '</ul></div>'
       + '<p class="label">Steps</p><div class="rgroup"><ol>' + m.steps.map(s => '<li translate="no">' + esc(s) + '</li>').join('') + '</ol></div>'
+      + '<div class="opts rate" role="group" aria-label="What the family thought">'
+      + '<button class="opt" type="button" role="checkbox" data-rate="up" aria-checked="' + (up === true) + '">' + ICON.up + 'Loved it</button>'
+      + '<button class="opt" type="button" role="checkbox" data-rate="down" aria-checked="' + (up === false) + '">' + ICON.down + 'Not again</button></div>'
+      + (p === data.plan || p === data.draft ? '<div class="btns two"><button class="btn" type="button" data-act="swap">Swap this meal</button><button class="btn okbtn" type="button" data-act="askmeal">Ask Ipsy about it</button></div>' : '')
       + '<p class="hint">Made by AI: check times, temperatures and labels.</p>';
     openSheet('recipeSheet');
   }
+  $('recipeBody').addEventListener('click', async e => {
+    const o = e.target.closest('[data-open]'); if (o) return openRecipe(+o.dataset.open, st.recipe.p);
+    const r = e.target.closest('[data-rate]'), cur = st.recipe, m = cur && cur.p.meals[cur.i];
+    if (r && m) {
+      const want = r.getAttribute('aria-checked') === 'true' ? null : r.dataset.rate === 'up';
+      try { const j = await api('rate', { title: m.title, up: want }); data.taste = j.taste; ls.set(KEY, data); }
+      catch (err) { toast(say(err.code), null, 6000); return; }
+      $('recipeBody').querySelectorAll('[data-rate]').forEach(x => x.setAttribute('aria-checked', want !== null && (x.dataset.rate === 'up') === want));
+      toast(want === true ? 'Noted: Ipsy will make more like it.' : want === false ? 'Noted: Ipsy won’t make it again.' : 'Forgotten.');
+      return;
+    }
+    const a = e.target.closest('[data-act]'); if (!a || !m) return;
+    const which = (cur.p === data.draft ? 'the new plan’s ' : '') + mealName(cur.p, m);
+    // Swap asks Ipsy straight away; Ask Ipsy opens the chat over the recipe (Ipsy sees which one is open)
+    if (a.dataset.act === 'swap') { closeSheet('recipeSheet'); askIpsy('Swap ' + which + ' (' + m.title + ') for something else.'); } else askIpsy('');
+  });
 
-  // Settings: the family's stores and member cards, what they avoid, your account
+  // Ipsy, the helper you chat with, with what was typed (or a start for it)
+  let ipsy = null;
+  function askIpsy(t) {
+    if (!ipsy) { toast('Ipsy isn’t ready yet. Try again in a moment.'); return; }
+    if (t) ipsy.prompt(t); else ipsy.open();
+  }
+
+  // Settings: the family's rules (vegetables, protein, how many, weeknights, what they never eat), what
+  // Ipsy has learned from the thumbs, your account
   const modelName = () => String(data.model || '').replace(/^.*\//, '').replace(/^claude-(\w+)-(\d+)-(\d+)$/, (_, n, a, b) => 'Claude ' + cap(n) + ' ' + a + '.' + b);
+  let draft = null, draftAvoid = null;
+  // the owner, or no one signed in yet (the server decides then)
+  const canAvoid = () => { const u = A() && A().user(); return !u || u.role === 'owner'; };
+  const avoidChip = a => canAvoid() ? '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '"><span translate="no">' + esc(cap(a)) + '</span> ✕</button>'
+    : '<span class="opt" aria-checked="true" translate="no">' + esc(cap(a)) + '</span>';
   function renderSettings() {
-    const s = data.settings, user = A() && A().user();
-    const model = modelName();
-    const ai = data.ai === 'anthropic' ? model + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
+    const user = A() && A().user(), t = data.taste;
+    const ai = data.ai === 'anthropic' ? modelName() + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
+    const sel = (id, opts, v) => '<select id="' + id + '">' + opts.map(([k, n]) => '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>';
+    const learned = (who, a) => a.map(x => '<button class="opt" type="button" aria-checked="true" data-forget="' + esc(x.title) + '" aria-label="Forget ' + esc(x.title) + '"><span translate="no">' + esc(x.title) + '</span> ✕</button>').join('');
     $('setBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
       + '<p class="label">Account</p><div class="rgroup acct"><p><strong' + (user ? ' translate="no"' : '') + '>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + (user ? '' : 'Sign in to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
-      + '<p class="label">Your stores</p><div class="opts" id="sStores" role="group" aria-label="Your stores">'
-      + (data.stores || STORES).map(x => '<button class="opt" type="button" role="checkbox" data-store="' + x.id + '" aria-checked="' + draft.stores.includes(x.id) + '">' + esc(x.name) + '</button>').join('') + '</div>'
-      + '<p class="hint">Deals and plans come from these stores.</p>'
-      + '<p class="label">Member cards</p><div class="opts" id="sCards" role="group" aria-label="Member cards">'
-      + CARDS.map(([k, n]) => '<button class="opt" type="button" role="checkbox" data-card="' + k + '" aria-checked="' + draft.cards.includes(k) + '">' + esc(n) + '</button>').join('') + '</div>'
-      + '<p class="hint">With a card, deals show its member prices.</p>'
+      + '<p class="label" id="rulesHead">Family rules</p><div class="rgroup">'
+      + '<div class="frow"><label for="sVeg">Vegetables<small>at least, in every meal</small></label><span class="step"><button class="iconbtn" type="button" data-veg="-1" aria-label="Fewer">−</button>'
+      + '<output id="sVeg">' + draft.veg + '</output><button class="iconbtn" type="button" data-veg="1" aria-label="More">+</button></span></div>'
+      + '<div class="frow"><span class="flabel" id="lPro">Protein<small>a person, every meal</small></span><span class="unit" role="radiogroup" aria-labelledby="lPro">'
+      + PROTEIN.map(([k, n, g]) => '<button type="button" role="radio" data-protein="' + k + '" aria-pressed="' + (draft.protein === k) + '" aria-checked="' + (draft.protein === k) + '">' + esc(n + ' (' + g + ' g)') + '</button>').join('') + '</span></div>'
+      + '<div class="frow"><label for="sPeople">Usually cooking for</label>' + sel('sPeople', Array.from({ length: 10 }, (_, i) => [i + 1, String(i + 1)]), draft.people) + '</div>'
+      + '<div class="frow"><label for="sWeek">Weeknight dinners<small>ready in</small></label>' + sel('sWeek', WEEKNIGHT, draft.weeknight) + '</div></div>'
       // what the family avoids is a safety list: only the owner changes it (the server refuses anyone else)
-      + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => canAvoid() ? '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '"><span translate="no">' + esc(cap(a)) + '</span> ✕</button>'
-        : '<span class="opt" aria-checked="true" translate="no">' + esc(cap(a)) + '</span>').join('') + '</div>'
+      + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + draftAvoid.map(avoidChip).join('') + '</div>'
       + (canAvoid() ? '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
         : '<p class="hint">Only the owner can change what the family avoids.</p>')
+      + '<p class="label">What Ipsy has learned</p>'
+      + (t.loved.length ? '<p class="hint">Loved</p><div class="opts">' + learned('up', t.loved) + '</div>' : '')
+      + (t.nope.length ? '<p class="hint">Not again</p><div class="opts">' + learned('down', t.nope) + '</div>' : '')
+      + (t.loved.length || t.nope.length ? '' : '<p class="hint">Nothing yet. Use Loved it or Not again on a recipe, and Ipsy plans with it.</p>')
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
   }
-  let draftAvoid = null, draft = { stores: [], cards: [] };
-  // the owner, or no one signed in yet (the server decides then)
-  const canAvoid = () => { const u = A() && A().user(); return !u || u.role === 'owner'; };
-  if (window.aosDesign) aosDesign.bind($('setBody'));   // Design: Vintage or Standard, at once (../home/design.js)
-  $('setBtn').onclick = () => { draftAvoid = [...(data.settings.avoid || [])]; draft = { stores: [...(data.settings.stores || [])], cards: [...(data.settings.cards || [])] }; renderSettings(); openSheet('setSheet'); };
+  function openSettings() {
+    const s = data.settings;
+    draft = { veg: s.veg, protein: s.protein, people: s.people, weeknight: s.weeknight }; draftAvoid = [...(s.avoid || [])];
+    renderSettings(); openSheet('setSheet');
+  }
+  if (window.aosDesign) aosDesign.bind($('setBody'));   // Design, at once (../home/design.js)
+  $('setBtn').onclick = openSettings;
   $('setBody').addEventListener('click', async e => {
     if (e.target.closest('[data-act="signin"]')) { closeSheet('setSheet'); return signIn(); }
-    const tg = e.target.closest('[data-store], [data-card]');
-    if (tg) {
-      const [list, v] = tg.dataset.store ? [draft.stores, tg.dataset.store] : [draft.cards, tg.dataset.card], i = list.indexOf(v);
-      if (i < 0) list.push(v); else if (!(tg.dataset.store && list.length === 1)) list.splice(i, 1); else { toast('Keep at least one store.'); return; }
-      tg.setAttribute('aria-checked', i < 0); return;
+    const v = e.target.closest('[data-veg]');
+    if (v) { draft.veg = Math.max(0, Math.min(5, draft.veg + +v.dataset.veg)); $('sVeg').textContent = draft.veg; return; }
+    const pr = e.target.closest('[data-protein]');
+    if (pr) { draft.protein = pr.dataset.protein; $('setBody').querySelectorAll('[data-protein]').forEach(x => { x.setAttribute('aria-pressed', x === pr); x.setAttribute('aria-checked', x === pr); }); return; }
+    const fg = e.target.closest('[data-forget]');
+    if (fg) {
+      try { const j = await api('rate', { title: fg.dataset.forget, up: null }); data.taste = j.taste; ls.set(KEY, data); fg.remove(); toast('Forgotten.'); }
+      catch (err) { toast(say(err.code), null, 6000); }
+      return;
     }
     const rm = e.target.closest('[data-avoid]');
-    if (rm) { draftAvoid = draftAvoid.filter(a => a !== rm.dataset.avoid); rm.remove(); return; }
+    if (rm && canAvoid()) { draftAvoid = draftAvoid.filter(a => a !== rm.dataset.avoid); rm.remove(); return; }
     if (e.target.closest('#sAddGo')) {
-      const v = $('sAdd').value.trim().toLowerCase(); if (!v) return;
-      if (!draftAvoid.includes(v)) { draftAvoid.push(v); $('avoid').insertAdjacentHTML('beforeend', '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(v) + '" aria-label="Remove ' + esc(v) + '"><span translate="no">' + esc(cap(v)) + '</span> ✕</button>'); }
+      const a = $('sAdd').value.trim().toLowerCase(); if (!a) return;
+      if (!draftAvoid.includes(a)) { draftAvoid.push(a); $('avoid').insertAdjacentHTML('beforeend', avoidChip(a)); }
       $('sAdd').value = ''; return;
     }
   });
+  $('setBody').addEventListener('change', e => {
+    if (e.target.id === 'sPeople') draft.people = +e.target.value;
+    if (e.target.id === 'sWeek') draft.weeknight = +e.target.value;
+  });
   // Done (the tick) saves what was changed, then closes; with nothing changed it only closes
   $('sSave').addEventListener('click', async () => {
-    const body = { stores: draft.stores, cards: draft.cards, ...(canAvoid() ? { avoid: draftAvoid } : {}) }, was = data.settings;
+    const was = data.settings, body = { ...draft, ...(canAvoid() ? { avoid: draftAvoid } : {}) };
     const same = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
-    if (same(body.stores, was.stores) && same(body.cards, was.cards) && (!('avoid' in body) || same(body.avoid, was.avoid))) return closeSheet('setSheet');
-    try { const j = await api('settings', body); data.settings = j.settings; ls.set(KEY, data); scheduleSheet(); closeSheet('setSheet'); toast('Saved for the family.'); render(); }
+    if (['veg', 'protein', 'people', 'weeknight'].every(k => body[k] === was[k]) && (!('avoid' in body) || same(body.avoid, was.avoid))) return closeSheet('setSheet');
+    try { const j = await api('settings', body); data.settings = Object.assign({}, DEFAULT_SETTINGS, j.settings); ls.set(KEY, data); scheduleSheet(); closeSheet('setSheet'); toast('Saved for the family.'); render(); }
     catch (err) { toast(say(err.code), null, 6000); }
   });
 
@@ -558,7 +615,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // ---------------------------------------------------------------------
   // The family's Google Sheet: the record of the family's dinners (aOS/SHEETS.md, google-sheet-sync.gs).
-  // The family's server is the working copy (the plan, the deals, the last 52 plans: Claude plans
+  // The family's server is the working copy (the plan, the rules, the last 52 plans: Claude plans
   // against it); Meals copies it to the Sheet, which keeps every plan ever accepted, and reads back from
   // the Sheet the plans the server no longer keeps: the last 90 days with each copy, and older ones when
   // you look back (Past plans → Older plans). Syncs go through aOS (../home/sheet.js,
@@ -589,7 +646,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     'sheet-unreachable': 'Couldn’t reach the Sheet. Trying again later.',
     'not-json': 'The Sheet didn’t answer as expected. Trying again later.',
   };
-  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDay(d); };
 
   // The link and phrase this phone used to keep (before aOS kept them: localStorage, a copy in IndexedDB,
   // or a #sync= setup link opened here): on the owner's phone they go to aOS once (it keeps them from then
@@ -623,10 +679,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // A plan read back from the Sheet, as the app shows one (the Sheet keeps what it shows: no sale prices).
-  const fromSheet = x => !x || typeof x.id !== 'string' || !Array.isArray(x.meals) || !/^\d{4}-\d\d-\d\d$/.test(x.start || '') ? null : {
-    id: x.id, start: x.start, dates: Array.isArray(x.dates) ? x.dates : [], meat: x.meat || '', people: x.people || '', shop: x.shop || '', shopName: x.shopName || '',
-    tip: x.tip || '', acceptedAt: x.at || 0, acceptedBy: x.planner || '', sales: [], fromSheet: true,
-    meals: x.meals.map((m, i) => ({ ...m, day: m.day || i + 1, uses: m.uses || [], ingredients: m.ingredients || [], steps: m.steps || [] })) };
+  // (Meals sends each meal's own date there, and "Breakfast: " or "Lunch: " before a title that isn't a dinner.)
+  const fromSheet = x => {
+    if (!x || typeof x.id !== 'string' || !Array.isArray(x.meals) || !/^\d{4}-\d\d-\d\d$/.test(x.start || '')) return null;
+    const meals = x.meals.map((m, i) => { const t = /^(Breakfast|Lunch): (.+)$/.exec(m.title || '');
+      return { ...m, day: m.day || i + 1, slot: t ? t[1].toLowerCase() : 'dinner', title: t ? t[2] : m.title, uses: m.uses || [], ingredients: m.ingredients || [], steps: m.steps || [] }; });
+    const dates = Array.isArray(x.dates) ? x.dates : [], perMeal = dates.length === meals.length && new Set(meals.map(m => m.day)).size < meals.length;
+    const byDay = []; if (perMeal) meals.forEach((m, i) => { byDay[m.day - 1] = byDay[m.day - 1] || dates[i]; });
+    return { id: x.id, start: x.start, dates: perMeal ? byDay : dates, meat: x.meat || '', people: x.people || '', shop: x.shop || '', shopName: x.shopName || '',
+      tip: x.tip || '', acceptedAt: x.at || 0, acceptedBy: x.planner || '', fromSheet: true, meals };
+  };
   const gone = id => !!sheetGraves['plans:' + id];
   // what the Sheet sent back: the plans the family server doesn't keep are added to Past plans
   function takeSheetPlans(list, graves) {
@@ -643,7 +705,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function pastList() {
     const log = data.log || [], ids = new Set(log.map(e => e.id));
     const more = [...sheetPlans.values()].filter(p => !ids.has(p.id) && !gone(p.id)).sort((a, b) => b.start.localeCompare(a.start) || b.acceptedAt - a.acceptedAt)
-      .map(p => ({ id: p.id, start: p.start, end: p.dates[p.dates.length - 1] || p.start, meat: p.meat, shop: p.shop, shopName: p.shopName, people: p.people, titles: p.meals.map(m => m.title) }));
+      .map(p => ({ id: p.id, start: p.start, end: p.dates[p.dates.length - 1] || p.start, meat: p.meat, people: p.people, titles: p.meals.map(m => m.title) }));
     return log.concat(more);
   }
   // A plan taken back (Undo of Accept, in Ipsy): the log shrinks. Its grave tells the Sheet, so a phone that
@@ -657,12 +719,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ls.set(K.sheetGraves, sheetGraves);
   }
 
-  // What goes to the Sheet. Each plan is whole (without the sale prices kept for its list: the Sheet
-  // doesn't show them), stamped with when this phone read it from the family server, so the newest copy
-  // wins there. The current plan always goes; past plans the Sheet doesn't hold yet (it says which it
-  // holds) are fetched whole, once a session, three at a time.
-  const sheetPlan = p => { const { sales, by, got, fromSheet: f, ...rest } = p;
-    return { ...rest, shopName: where(p), updated: Math.max(+p.acceptedAt || 0, +got || (data.plan && p.id === data.plan.id ? +data.got || 0 : 0)) }; };
+  // What goes to the Sheet. Each plan is whole, stamped with when this phone read it from the family server,
+  // so the newest copy wins there. The current plan always goes; past plans the Sheet doesn't hold yet (it
+  // says which it holds) are fetched whole, once a session, three at a time. Its Plans tab has a row a meal
+  // with the date beside it: dinners first (an older Sheet script keeps 14 meals a plan), each meal with its
+  // own date, "Breakfast: " or "Lunch: " before its title, and no leftover lunches (no recipe of their own).
+  const sheetPlan = p => { const { sales, by, got, fromSheet: f, dates, foods, slots, ...rest } = p;
+    const rank = m => ['dinner', 'lunch', 'breakfast'].indexOf(slotOf(m)) * 10 + (m.day || 0);
+    const meals = p.meals.filter(m => !m.leftover).slice().sort((a, b) => rank(a) - rank(b));
+    return { ...rest, meat: foods ? foodWords(p) : p.meat, shopName: foods ? cap(slotWords(p)) : '', dates: meals.map(m => dateOf(p, m.day || 1)),
+      meals: meals.map(m => ({ ...m, title: slotOf(m) === 'dinner' ? m.title : slotName(m) + ': ' + m.title })),
+      updated: Math.max(+p.acceptedAt || 0, +got || (data.plan && p.id === data.plan.id ? +data.got || 0 : 0)) }; };
   async function wholePlan(id) {
     if (data.plan && data.plan.id === id) return data.plan;
     if (pastCache[id]) return pastCache[id];
@@ -673,12 +740,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function sheetShopping() {
     const p = data.plan;
     if (!p || !p.meals || !p.meals.length) return { buy: [], pantry: [] };
-    const s = shop(), all = !p.shop || p.shop === 'all';
-    const nights = x => 'night' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', ');
+    const s = shop();
     return {
-      buy: L.sections(s.buy, x => x.item).flatMap(g => g.items.map(x => ({ section: g.name, item: cap(x.item), amount: L.total(x.amounts), nights: nights(x),
-        sale: x.deal ? (x.deal.price || 'On sale') + (all && x.deal.at && x.deal.at.name ? ' at ' + x.deal.at.name : '') : '' }))),
-      pantry: s.pantry.map(x => ({ item: cap(x.item), amount: L.total(x.amounts), nights: nights(x) })),
+      buy: L.sections(s.buy, x => x.item).flatMap(g => g.items.map(x => ({ section: g.name, item: cap(x.item), amount: L.total(x.amounts), nights: whenWords(x, p), sale: '' }))),
+      pantry: s.pantry.map(x => ({ item: cap(x.item), amount: L.total(x.amounts), nights: whenWords(x, p) })),
     };
   }
   // (only with the family server answering: a call that fails with a 401 would ask for Face ID, and a copy never should)
@@ -696,11 +761,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       }
     };
     await Promise.all([worker(), worker(), worker()]);
-    const deals = Object.entries(data.deals || {}).map(([id, d]) => { const s = storeById(id);
-      return s && d && d.week && d.items && d.items.length ? { store: s.name, week: d.week, at: d.at || 0, validFrom: d.validFrom || '', validTo: d.validTo || '',
-        items: d.items.map(x => ({ name: x.name, price: x.price || '', regular: x.regular || '', member: !!x.member, note: x.note || '' })) } : null; }).filter(Boolean);
-    const set = data.settings || {};
-    const settings = { stores: mine().map(x => x.name), cards: (set.cards || []).map(k => (CARDS.find(c => c[0] === k) || [k, k])[1]), avoid: set.avoid || [], model: modelName() };
+    // (deals: none now; the Sheet keeps the weeks it had. Its Settings tab: the family's rules in its Stores row.)
+    const deals = [], set = data.settings || {};
+    const settings = { stores: [rulesLine().split(' · ')[0], 'cooking for ' + set.people, set.weeknight ? 'weeknight dinners in ' + set.weeknight + ' min' : 'no weeknight limit'], cards: [], avoid: set.avoid || [], model: modelName() };
     const shopping = sheetShopping();
     // what's compared with the last copy: the current plan (not when it was read), the rest, and the graves
     const key = JSON.stringify({ cur: cur && { ...sheetPlan(cur), updated: 0 }, deals, shopping, settings, graves: sheetGraves });
@@ -775,23 +838,23 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // data and change the family's plan only through this app's own server calls (api), so the
   // server's allergy check applies to everything it saves; Claude answers through functions/meals/api (ipsy).
   if (window.AllisonOS && window.AllisonOS.ipsy && window.MealsIpsy) {
-    const TAB_NAMES = { dinners: 'the Dinners tab', deals: 'the Deals tab', list: 'the List tab (the shopping list)' };
-    window.AllisonOS.ipsy.mount({
+    const TAB_NAMES = { ipsy: 'the Ipsy tab (planning a new plan)', plan: 'the Plan tab', list: 'the List tab (the shopping list)' };
+    ipsy = window.AllisonOS.ipsy.mount({
       app: 'meals', name: 'Meals', endpoint: '../meals/api/ipsy', headers: { 'X-Meals': '1' }, slot: document.querySelector('.dock > span'),
       ...window.MealsIpsy({
-        L, api, say, toast, storeById, mine, shopOf, dayLabel, past: wholePlan,
+        L, api, say, toast, shopOf, dayLabel, dateOf, slotName, about, past: wholePlan,
         get data() { return data; }, state: () => st.state,
         keep,
         today: () => isoDay(new Date()),
-        planning: ask => { st.busy = ask ? 'plan' : null; st.planning = ask; if (ask) { st.tab = 'dinners'; ls.set(K.tab, st.tab); } render(); slideTabs(true); },
+        planning: ask => { st.busy = ask ? 'plan' : null; st.planning = ask && { ...ask, n: (ask.days || 1) * (ask.slots || ['dinner']).length }; if (ask) { st.tab = 'plan'; ls.set(K.tab, st.tab); } render(); slideTabs(true); },
         ticked: () => data.plan && ticks.at === data.plan.at ? ticks.keys.slice() : [],
         setTicks: keys => { ticks = { at: data.plan && data.plan.at, keys: keys.slice() }; ls.set(K.ticks, ticks); render(); },
-        show: (p, i) => { st.tab = 'dinners'; ls.set(K.tab, st.tab); render(); slideTabs(true); openRecipe(i, p); },
-        screen: () => !$('recipeSheet').hidden ? 'the recipe for ' + $('recipeLbl').textContent : TAB_NAMES[st.tab] || 'Meals',
+        show: (p, i) => { st.tab = 'plan'; ls.set(K.tab, st.tab); render(); slideTabs(true); openRecipe(i, p); },
+        screen: () => !$('recipeSheet').hidden ? 'the recipe for ' + $('recipeLbl').textContent + (st.recipe ? ' (' + st.recipe.p.meals[st.recipe.i].title + ')' : '') : TAB_NAMES[st.tab] || 'Meals',
       }),
     });
   }
 
   // For the tests (meals/scripts/app-test.mjs) only.
-  window.__meals = { st, data: () => data, render, load, openPlan, openRecipe, openPast, keep, sheetSync, loadOlder, sheetPlans: () => [...sheetPlans.keys()], graves: () => sheetGraves };
+  window.__meals = { st, flow, data: () => data, render, load, makePlan, openRecipe, openPast, openSettings, keep, sheetSync, loadOlder, sheetPlans: () => [...sheetPlans.keys()], graves: () => sheetGraves };
 })();
