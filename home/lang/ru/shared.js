@@ -323,6 +323,43 @@
     'Your week': 'Ваша неделя',
     'Each day shows its standard drinks or alcohol-free. Swipe sideways to move a week at a time.': 'Каждый день показывает стандартные порции или «без алкоголя». Смахивайте вбок, чтобы листать по неделям.',
     'The week adds up here against the limit you set.': 'Здесь неделя суммируется и сравнивается с вашим лимитом.',
+    // Your helper (aOS2.2: home/ipsy.js)
+    'Meet your helper': 'Знакомьтесь: ваш помощник',
+    'Ipsy is yours now: pick a helper and give it a name': 'Ипси теперь ваш: выберите помощника и дайте ему имя',
+    'It acts out its work: reading, glasses on to search, writing': 'Он показывает, что делает: читает, надевает очки для поиска, пишет',
+    'Mia is one of seven helpers to pick from': 'Мия — один из семи помощников на выбор',
+    'Each helper crosses the Ipsy bar on Home in its own way': 'Каждый помощник по-своему пробегает по строке Ипси на главной',
+    'Change yours any time in Account, Your helper': 'Сменить его можно в любой момент: Аккаунт, «Ваш помощник»',
+    'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.': 'Нажмите, чтобы выбрать помощника и дать ему имя. За работой он читает, надевает очки для поиска и пишет.',
+    'Tap it to pick your helper and give it a name. Now and then it crosses this bar, in its own way.': 'Нажмите, чтобы выбрать помощника и дать ему имя. Время от времени он по-своему пробегает по этой строке.',
+    'Seven helpers: Mia, the family\'s Australian Shepherd, a fox, an owl, a robot, an octopus, a hedgehog and an otter. The first time you tap Ipsy you see them all, unnamed: pick one and give it a name (up to 16 letters). Until then they take turns peeking out of the corner':
+      'Семь помощников: Мия, австралийская овчарка семьи, лиса, сова, робот, осьминог, ёжик и выдра. При первом нажатии на Ипси вы видите их всех без имён: выберите одного и дайте ему имя (до 16 букв). А пока они по очереди выглядывают из угла',
+    'Your helper is yours alone, in aOS and every app, and follows you to your other devices. Change it or its name any time: tap its name at the top of the chat, or aOS, Account, Your helper. Or just ask it to change its name':
+      'Помощник только ваш, в aOS и во всех приложениях, и переходит с вами на другие устройства. Сменить его или имя можно в любой момент: нажмите на имя вверху чата или aOS, Аккаунт, «Ваш помощник». Или просто попросите его сменить имя',
+    'While it works, your helper acts it out: it reads a book while it looks at your things, puts its glasses on and sweeps a magnifying glass to search, writes in a notepad when it changes something, points when it opens something on screen, puts a hand to its ear while you type and hops when a change is saved. The chat says what it\'s doing, like "Mia is reading…"':
+      'За работой помощник показывает, что делает: читает книгу, когда смотрит ваши данные, надевает очки и водит лупой, когда ищет, пишет в блокноте, когда что-то меняет, показывает пальцем, когда открывает что-то на экране, прикладывает руку к уху, пока вы печатаете, и подпрыгивает, когда изменение сохранено. В чате написано, что он делает, например «Мия читает…»',
+    'On aOS Home, now and then your helper crosses the Ipsy bar in its own way: Mia\'s zoomies, the fox creeping then pouncing, the owl looping the loop, the robot moonwalking, the octopus jetting, the hedgehog rolling up, the otter belly-sliding (never with Reduce Motion)':
+      'На главной aOS помощник время от времени по-своему пробегает по строке Ипси: Мия носится кругами, лиса крадётся и прыгает, сова делает мёртвую петлю, робот идёт лунной походкой, осьминог плывёт рывками, ёжик катится клубком, выдра скользит на животе (никогда при «Уменьшении движения»)',
+    'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Grid, a lit visor': 'В стиле «Ночная трасса» на каждом помощнике зеркальные очки, в «Народном» — красный платок в белый горошек, а в «Сетке» — светящийся визор',
+    'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works': 'Ипси больше не стволовая клетка и не превращается в другие клетки за работой',
+    'Your language now follows you to your other devices, as your look does': 'Язык теперь переходит с вами на другие устройства, как и оформление',
+    'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
+    'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name':
+      'aOS: «Пройти настройку» в начале Аккаунта проводит по вашим настройкам по одной: язык, стиль, светлая или тёмная тема, помощник и его имя',
+    'Who’s your helper?': 'Кто ваш помощник?',
+    'Pick one and give it a name. Change either any time: tap its name up here, or in aOS, Account.': 'Выберите помощника и дайте ему имя. Сменить можно в любой момент: нажмите на имя вверху или в aOS, Аккаунт.',
+    'Your helper': 'Ваш помощник',
+    'Pick another, or change its name.': 'Выберите другого или смените имя.',
+    'Your helper: change it or its name': 'Ваш помощник: сменить его или имя',
+    'Your helper (Ipsy)': 'Ваш помощник (Ипси)',
+    'Give them a name': 'Дайте ему имя',
+    'Name': 'Имя',
+    'Pick a helper first': 'Сначала выберите помощника',
+    'Your helper is yours alone, in every app, and follows you to your other devices.': 'Помощник только ваш, во всех приложениях, и переходит с вами на другие устройства.',
+    'Not picked yet': 'Ещё не выбран',
+    'Ipsy is thinking…': 'Ипси думает…', 'Ipsy is reading…': 'Ипси читает…', 'Ipsy is searching…': 'Ипси ищет…', 'Ipsy is writing…': 'Ипси пишет…',
+    'Ipsy is showing you': 'Ипси показывает', 'Ipsy is done': 'Ипси: готово',
+    'Mia, the family’s Australian Shepherd': 'Мия, австралийская овчарка семьи', 'fox': 'лиса', 'owl': 'сова', 'retro robot': 'ретро-робот', 'octopus': 'осьминог', 'hedgehog': 'ёжик', 'otter': 'выдра',
     // Meals
     'Tell Ipsy what you fancy': 'Скажите Ипси, чего хочется',
     'Ipsy plans it': 'Ипси всё спланирует',
@@ -853,6 +890,16 @@
 
   const P = [
     // ---- the welcome and walkthroughs ----
+    // your helper's name where the words say Ipsy ("Ask Mia about meals", "Mia is reading…"): Ipsy's own words, with the name kept
+    [/^(.+)$/, m => {
+      const I = window.AllisonOS && AllisonOS.ipsy, n = I && I.name ? I.name() : '';
+      if (!n || n === 'Ipsy') return null;
+      const re = new RegExp('(^|[^\\p{L}])' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^\\p{L}])', 'gu');
+      if (!re.test(m[1])) return null;
+      const r = T(m[1].replace(re, '$1Ipsy'));
+      return r === m[1].replace(re, '$1Ipsy') ? null : r.replace(/Ипси|Ipsy/g, n);
+    }],
+    [/^(.+) · (Australian Shepherd|Fox|Owl|Robot|Octopus|Hedgehog|Otter)$/, m => (m[1] === 'Ipsy' ? 'Ипси' : m[1]) + ' · ' + ({ 'Australian Shepherd': 'австралийская овчарка', Fox: 'лиса', Owl: 'сова', Robot: 'робот', Octopus: 'осьминог', Hedgehog: 'ёжик', Otter: 'выдра' })[m[2]]],
     [/^Welcome to (.+)$/, m => 'Добро пожаловать в ' + acc(m[1])],
     [/^Add (.+) to your Home Screen$/, m => 'Добавьте ' + acc(m[1]) + ' на экран «Домой»'],
     [/^Add (.+) to this device, so it opens on its own like any other app\.$/, m => 'Добавьте ' + acc(m[1]) + ' на это устройство, чтобы открывать отдельно, как любое приложение.'],
@@ -937,6 +984,7 @@
     'Orders: Ipsy rereads and fixes orders by itself': 'Заказы: Ипси сам проверяет и исправляет заказы',
     'Travel: Ipsy fills in what\'s missing from bookings': 'Поездки: Ипси дополняет брони',
     'Travel: Ipsy checks new bookings by itself': 'Поездки: Ипси сам проверяет новые брони',
+    'Your helper\'s look': 'Внешний вид помощника',
   };
   const APP = { calendar: 'Календарь', clock: 'Часы', drinks: 'Напитки', fitness: 'Фитнес', house: 'Дом', mail: 'Почта', meals: 'Меню', news: 'Новости', notes: 'Заметки', orders: 'Заказы', places: 'Места', podcasts: 'Подкасты', travel: 'Поездки', weather: 'Погода' };
   const LAYER = { holidays: 'праздники', notes: 'заметки', travel: 'поездки', mail: 'почту', fitness: 'фитнес', drinks: 'напитки', weather: 'погоду' };
@@ -953,6 +1001,7 @@
     if ((m = /^Just (\w+)'s own design$/.exec(a))) return 'Дизайн приложения «' + (APP[m[1]] || m[1]) + '»';
     return null;
   };
+  Object.assign(VAL, { mia: 'Мия', fox: 'лиса', owl: 'сова', robot: 'робот', octopus: 'осьминог', hedgehog: 'ёжик', otter: 'выдра' });
   const val = v => VAL[v] || v;
   aosLang.add({
     'Looking at your settings': 'Смотрю ваши настройки',
@@ -962,6 +1011,7 @@
   }, [
     [/^Change (.+) to (.+)\?$/, m => { const a = about(m[1]); return a ? 'Изменить: ' + a + ' — ' + val(m[2]) + '?' : null; }],
     [/^(.+): ([\w,-]+)$/, m => { const a = about(m[1]); return a ? a + ': ' + val(m[2]) : null; }],
+    [/^Your helper's name: (.+)$/, m => 'Имя помощника: ' + m[1]],
   ]);
 })();
 

@@ -85,6 +85,27 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
+      highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
+      notes: ['Seven helpers: Mia, the family\'s Australian Shepherd, a fox, an owl, a robot, an octopus, a hedgehog and an otter. The first time you tap Ipsy you see them all, unnamed: pick one and give it a name (up to 16 letters). Until then they take turns peeking out of the corner',
+        'Your helper is yours alone, in aOS and every app, and follows you to your other devices. Change it or its name any time: tap its name at the top of the chat, or aOS, Account, Your helper. Or just ask it to change its name',
+        'While it works, your helper acts it out: it reads a book while it looks at your things, puts its glasses on and sweeps a magnifying glass to search, writes in a notepad when it changes something, points when it opens something on screen, puts a hand to its ear while you type and hops when a change is saved. The chat says what it\'s doing, like "Mia is reading…"',
+        'On aOS Home, now and then your helper crosses the Ipsy bar in its own way: Mia\'s zoomies, the fox creeping then pouncing, the owl looping the loop, the robot moonwalking, the octopus jetting, the hedgehog rolling up, the otter belly-sliding (never with Reduce Motion)',
+        'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Grid, a lit visor',
+        'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
+        'Your language now follows you to your other devices, as your look does',
+        'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name'],
+      apps: {
+        aos: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'Each helper crosses the Ipsy bar on Home in its own way', 'Run through setup in Account: language, look and your helper'],
+          tour: [{ sel: '#askIpsy', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. Now and then it crosses this bar, in its own way.', g: 'tap' }] },
+        calendar: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
+        fitness: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
+        meals: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
+        news: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
+        notes: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
+        orders: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
+        travel: { highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'], tour: [{ sel: '.ipsy-btn', t: 'Your helper', d: 'Tap it to pick your helper and give it a name. It reads, puts its glasses on to search and writes as it works.', g: 'tap' }] },
+      } },
     { v: '2.1', date: '2026-10-24', title: 'New looks, new language', look: 'vintage', added: ['money'],
       highlights: ['Two new looks: Night Drive and Folk',
         'aOS in Russian: Appearance, Language',

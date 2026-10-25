@@ -99,7 +99,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
   await ctx.addInitScript(([apps, look]) => { if (window.top !== window) return;
     const s = { aos: '999' }; for (const a of apps) s[a] = '999';
-    localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.look', look); }, [APPS, look]);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.look', look); }, [APPS, look]);
   const pg = await ctx.newPage(), errs = [];
   pg.on('pageerror', e => errs.push(e.message));
   const tag = `(${look}, ${scheme})`;
@@ -141,12 +141,12 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(await pg.locator('#hfound .htop').count() === 0 && /Nothing on this phone/.test(await pg.textContent('#hfound')), `nothing found says so, and offers Ipsy ${tag}`);
   await pg.locator('#hq').press('Escape'); await pg.waitForTimeout(100);
   check(await pg.inputValue('#hq') === '' && await pg.isVisible('#hmain'), `Escape clears it ${tag}`);
-  // now and then Ipsy rolls across the bar and back; a tap sends it home at once; never with Reduce Motion
-  check(await pg.evaluate(() => aosHomeTab.roll()) === true, `Ipsy rolls across the bar ${tag}`);
+  // now and then your helper crosses the bar and back, in its own way; a tap sends it home at once; never with Reduce Motion
+  check(await pg.evaluate(() => aosHomeTab.roll()) === true, `Ipsy crosses the bar ${tag}`);
   await pg.waitForTimeout(1000);
-  const rollMid = () => pg.evaluate(() => ({ x: Math.round(new DOMMatrix(getComputedStyle(document.getElementById('ipsySlot')).transform).m41), turn: getComputedStyle(document.querySelector('#ipsySlot .i-bob')).transform !== 'none', rolling: document.getElementById('askIpsy').classList.contains('rolling'), words: getComputedStyle(document.getElementById('hq')).opacity }));
+  const rollMid = () => pg.evaluate(() => ({ x: Math.round(new DOMMatrix(getComputedStyle(document.getElementById('ipsySlot')).transform).m41), turn: getComputedStyle(document.querySelector('#ipsySlot .h-pose')).transform !== 'none' || document.querySelector('#ipsySlot .ipsy-host').dataset.mood === 'cross', rolling: document.getElementById('askIpsy').classList.contains('rolling'), words: getComputedStyle(document.getElementById('hq')).opacity }));
   const mid = await rollMid();
-  check(mid.x > 80 && mid.turn && mid.rolling && mid.words === '0', `it's out along the bar, turning, the words out of its way (${JSON.stringify(mid)}) ${tag}`);
+  check(mid.x > 80 && mid.turn && mid.rolling && mid.words === '0', `it's out along the bar, in its move, the words out of its way (${JSON.stringify(mid)}) ${tag}`);
   await pg.evaluate(() => document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))); await pg.waitForTimeout(50);
   const home = await rollMid();
   check(home.x === 0 && !home.rolling, `a tap sends it home (${JSON.stringify(home)}) ${tag}`);
@@ -481,6 +481,43 @@ for (const signedIn of [false, true]) {
   else check(note && !note.faceId && /on its way/.test(note.text) && sent.length === 1 && sent[0].app === 'news' && sent[0].data['news.test'] === 'icon',
     `signed in: it hands what it keeps on the phone to the family account, once, and says so (${sent.length} sent)`);
   check(!errs.length, `no script errors (from its icon, ${signedIn ? 'signed in' : 'signed out'})` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
+  await ctx.close();
+}
+
+// ---- Run through setup (Account): language, look, light or dark, your helper and its name, a step at a time ----
+{
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });
+  await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
+  await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
+  await ctx.addInitScript(apps => { if (window.top !== window) return; const s = { aos: '999' }; for (const a of apps) s[a] = '999';
+    localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); }, APPS);
+  const pg = await ctx.newPage(), errs = [];
+  pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto(BASE + '/aOS/'); await pg.waitForSelector('#ipsySlot .ipsy-char', { timeout: 15000 });
+  check(await pg.evaluate(() => AllisonOS.ipsy.helper()) === null, 'no helper yet: none picked');
+  await pg.evaluate(() => aosAccount.open()); await pg.waitForSelector('[data-setup]');
+  await pg.click('[data-setup]'); await pg.waitForSelector('#setupBox #sLang');
+  check(/Step 1 of 4/.test(await pg.textContent('#setupBox')) && await pg.locator('#setupBox [data-sback]').count() === 0, 'Run through setup starts with the language, step 1 of 4');
+  await pg.click('#setupBox [data-snext]');
+  await pg.click('#setupBox [data-look="glass"]'); await pg.waitForTimeout(600);
+  check(await pg.evaluate(() => localStorage.getItem('aos.look')) === 'glass', 'the look is saved as it is picked');
+  await pg.click('#setupBox [data-snext]');
+  await pg.click('#setupBox [data-t="dark"]');
+  check(JSON.parse(await pg.evaluate(() => localStorage.getItem('home.settings'))).theme === 'dark', 'light or dark, saved');
+  await pg.click('#setupBox [data-snext]');
+  check(await pg.locator('#setupBox .ipsy-whobtn').count() === 7 && await pg.locator('#setupBox .ipsy-whobtn[aria-checked="true"]').count() === 0, 'then every helper, none picked yet');
+  await pg.click('#setupBox .ipsy-whobtn[data-who="otter"]'); await pg.fill('#setupBox .ipsy-name', 'Biscuit');
+  await pg.click('#setupBox [data-snext]');
+  check(/You’re all set/.test(await pg.textContent('#setupBox')) && /Biscuit · Otter/.test(await pg.textContent('#setupBox')), 'all set, with what was picked');
+  check(await pg.textContent('#helperSub') === 'Biscuit · Otter' && await pg.locator('#helperPick .ipsy-whobtn[data-who="otter"][aria-checked="true"]').count() === 1, 'Account\'s Your helper, under it, follows');
+  const h = await pg.evaluate(() => ({ h: AllisonOS.ipsy.helper(), who: document.querySelector('#ipsySlot .ipsy-char').dataset.who, label: document.querySelector('#ipsySlot .ipsy-btn').getAttribute('aria-label') }));
+  check(h.h && h.h.who === 'otter' && h.h.name === 'Biscuit' && h.who === 'otter' && h.label === 'Ask Biscuit', `the helper is yours at once, on Home too (${JSON.stringify(h)})`);
+  await pg.click('#setupBox [data-snext]'); await pg.waitForTimeout(500);
+  check(await pg.locator('#setupBox').count() === 0, 'Done closes it');
+  // a language picked draws aOS again in it: the walk-through carries on from the next step
+  await pg.evaluate(() => sessionStorage.setItem('aos.setup', '1')); await pg.reload(); await pg.waitForSelector('#setupBox .dlist', { timeout: 8000 }).catch(() => {});
+  check(/Step 2 of 4/.test(await pg.textContent('#setupBox').catch(() => '')), 'after the language, it carries on with the look');
+  check(!errs.length, 'Run through setup: no script errors' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
 

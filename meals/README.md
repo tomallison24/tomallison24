@@ -134,7 +134,7 @@ more a question (below).
 
 ## Ipsy
 
-**Ipsy** is the little stem cell in the bottom left corner: the full chat about
+**Ipsy** is your helper (the one you picked and named) in the bottom left corner: the full chat about
 the family's meals, in the design picked in Settings. The Ipsy tab's questions are
 the quick way in; the chat takes anything in your own words, e.g. *What's for
 dinner tonight?*, *Swap Thursday's dinner for something quicker*, *A week of

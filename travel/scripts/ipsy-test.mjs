@@ -172,7 +172,7 @@ const overlap = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bott
 for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass', 'dark'], ['vintage', 'light']]) {
   const tag = 'travel (' + design + ', ' + scheme + ')', full = design === 'glass' ? scheme === 'light' : scheme === 'dark';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
-  await ctx.addInitScript(d => { localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.travel', d); }, design);
+  await ctx.addInitScript(d => { localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.travel', d); }, design);
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|429/.test(m.text())) problems.push(m.text()); });
@@ -267,7 +267,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     const lookups0 = await T(() => JSON.parse(localStorage.getItem('allison-travel-v1-lookups')).n);
     const mine = await ask('Is my flight tomorrow on time?', 'delayed 35 minutes');
     assert.equal(mine.length, 3);
-    assert.match(mine[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Travel has 7 bookings in 4 trips: 4 coming up \(the next: .*\), 1 to check\. On screen: the Upcoming trips\.\]$/);
+    assert.match(mine[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Travel has 7 bookings in 4 trips: 4 coming up \(the next: .*\), 1 to check\. On screen: the Upcoming trips\.(?: You are this person’s helper[^\]]*)?\]$/);
     assert.deepEqual(mine[1][1].content[0], think, 'thinking goes back unchanged');
     const found = JSON.parse(mine[1][2].content[0].content);
     assert.equal(found.found, 4); assert.ok(found.trips.every(t => t.id && t.name && t.from && t.bookings.length));

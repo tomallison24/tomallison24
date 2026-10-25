@@ -332,7 +332,7 @@ they go onto the order, with **Undo**.
 
 ## Ipsy
 
-**Ipsy** is the little stem cell in the bottom left corner: a helper you chat
+**Ipsy** is your helper in the bottom left corner (the one you picked and named): a helper you chat
 with about your orders, in the design picked in Settings (mustard, teal and cream
 in Vintage, pastel glass in Standard; it changes with the design at once). Ask in your own words, e.g. *What's arriving this week?*,
 *Find duplicate orders and merge them*, *The Walmart total should be $49.99*,
@@ -357,9 +357,10 @@ in Vintage, pastel glass in Standard; it changes with the design at once). Ask i
   goes to the family's Google Sheet and its Log tab like any other change.
   Asked about older orders (or with no dates given, the last year), Ipsy's
   `find_orders` first fetches them from the Sheet (`lookBack` in `app.js`).
-- **It changes shape as it works**: a stem cell at rest, a nerve cell (sparks
-  at its tips) while it thinks, a white blood cell while it runs one of its
-  tools, and it talks while the answer appears. Reduce Motion holds it still.
+- **It acts out its work** (`../home/ipsy.js`): it thinks with a hand on its
+  chin while it waits for Claude, reads a book while a tool looks at your orders,
+  puts its glasses on to search, writes in a notepad when it changes something,
+  and talks while the answer appears. Reduce Motion holds it still.
 - **How it works.** The chat lives on the phone. Each step sends the whole
   conversation to the family server (`functions/orders/api`, `POST ipsy`),
   which adds Ipsy's instructions and tools and asks **Claude Sonnet 5.5**

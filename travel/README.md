@@ -37,7 +37,7 @@ with the details filled in.
 - **Add by hand** (the + button): a flight, hotel or rental car. The clipboard
   button reads a **pasted confirmation** (from any inbox, e.g. one forwarded
   by someone else) the same way Gmail's are read.
-- **Ipsy**, the little stem cell at the bottom left: ask about your trips in your
+- **Ipsy**, your helper at the bottom left: ask about your trips in your
   own words, change them (each change with Undo), look up any flight live, and
   check your Gmail (below).
 - **Private** (the pill on a booking, or **Private trip** on a trip's page)
@@ -316,7 +316,7 @@ board, and last the AI:
 
 ## Ipsy
 
-**Ipsy** is the little stem cell at the bottom left, just above the Trips and
+**Ipsy** is your helper (the one you picked and named) at the bottom left, just above the Trips and
 Explore tabs: a helper you chat with about your trips, in the design picked in
 Settings (mustard, teal and cream in Vintage, pastel glass in Standard; it
 changes with the design at once). It took the place of the Ask AI bar under the

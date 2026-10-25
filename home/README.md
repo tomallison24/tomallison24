@@ -27,9 +27,12 @@ What stays in this folder:
   `window.aosSky.mode()`, `.tone()` and `.ground()` tell a page which sky it is, and
   `aos:sky` fires when it changes. Weather Vintage doesn't load it: it draws its
   own sky from the forecast. `aOS/scripts/sky-test.mjs` checks it.
-- **`ipsy.js`**: Ipsy, the helper you chat with: a little stem cell that turns
-  into other cells as it works (a nerve cell while it thinks, a white blood cell
-  while it runs a tool), its chat sheet, and the loop that asks Claude through the
+- **`ipsy.js`**: Ipsy, the helper you chat with: the character each person picks
+  and names (Mia, the family's Australian Shepherd, a fox, an owl, a robot, an
+  octopus, a hedgehog or an otter; `aos.helper`, synced with your settings), acting
+  out each job (reading, glasses on to search, writing, showing, a hop when a change
+  is saved; `jobOf` reads it from the tool's name), crossing aOS Home's bar in its
+  own way (`cross`), its chat sheet, and the loop that asks Claude through the
   app's own server route and runs the app's tools on the phone. It takes the app's
   look (Sea glass, or Vintage with `data-look="vintage"`) and its light or dark
   tokens. An app loads it before its own script, lists it in its `sw.js` SHELL and

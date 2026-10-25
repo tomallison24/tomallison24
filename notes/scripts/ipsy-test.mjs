@@ -125,7 +125,7 @@ const texts = (page, sel) => page.$$eval(sel, els => els.map(e => e.textContent.
 for (const design of ['glass', 'vintage']) for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block', timezoneId: TZ });
   await ctx.addInitScript(([d, seed]) => {
-    localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
     if (!localStorage.getItem('allison-notes-v1')) localStorage.setItem('allison-notes-v1', JSON.stringify(seed));
   }, [design, { ...SEED, notes: [...SEED.notes, ...Array.from({ length: 12 }, (_, i) => N('nfill' + i, 'Note ' + i, 'Some words\nand more words', { tags: ['t' + (i % 4)] }))] }]);
   const page = await ctx.newPage();
@@ -159,7 +159,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   const tag = 'notes (' + design + ')';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block', timezoneId: TZ });
   await ctx.addInitScript(([d, seed]) => {
-    localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
+    localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ notes: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.notes', d);
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('allison-notes-v1', JSON.stringify(seed));
@@ -237,7 +237,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.ok(acts.includes('Looking at your lists') && acts.includes('Adding to Groceries') && acts.includes('Sorting into store sections'), acts.join(' | '));
     assert.equal(await page.locator('.ipsy-it').last().locator('b').first().textContent(), 'Milk');
     // what went to Claude: the note from the app, then only ever added to; nothing private
-    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Notes has 4 notes, plus 1 private one you can’t see, and \d+ open reminders in the lists Personal, Groceries, Home\. On screen: the Notes home\.\]$/);
+    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .* \(\d{4}-\d\d-\d\d\)\. Notes has 4 notes, plus 1 private one you can’t see, and \d+ open reminders in the lists Personal, Groceries, Home\. On screen: the Notes home\.(?: You are this person’s helper[^\]]*)?\]$/);
     assert.equal(sent[0][0].content[1].text, 'Sort out my groceries');
     for (let i = 1; i < sent.length; i++) assert.deepEqual(sent[i].slice(0, sent[i - 1].length), sent[i - 1], 'step ' + i + ' changed an earlier message');
     assert.deepEqual(sent[1][1].content[0], think, 'thinking goes back unchanged');

@@ -2,7 +2,7 @@
 // (RELEASES), so it holds whatever that release is and whatever today's date:
 //   - while the release is fresh (under 30 days old), an app it brought (its `added`) leads, big,
 //     with What's new beside it; with no app brought, What's new leads; every app brought is there.
-//     A release that introduces Ipsy (intro: 'ipsy') leads with Meet Ipsy instead, the stem cell
+//     A release that introduces Ipsy (intro: 'ipsy') leads with Meet Ipsy instead, your helper
 //     drawn on the card and telling what it can do, with What's new beside it
 //   - after that, no "New in aOS" card, and the mix of apps changes from one day to the next
 //   - the same day gives the same mix; no app twice; What's new never squeezed into the wide card
@@ -66,11 +66,11 @@ const base = id => id.replace(/vintage$/, '');
     if (intro) {
       if (c[0].k !== 'Meet Ipsy' || c[0].wide) pr.push(`day ${n}: the first card is ${c[0].k}, not Meet Ipsy, big`);
       if (!c[1].news) pr.push(`day ${n}: What's new is not beside Meet Ipsy: ${c[1].k}`);
-      if (!await p.locator('#stories .story.ipsy .ipsy-stage .ipsy-cell .i-body').count()) pr.push(`day ${n}: Ipsy isn't drawn on its card`);
+      if (!await p.locator('#stories .story.ipsy .ipsy-stage .ipsy-char .h-pose').count()) pr.push(`day ${n}: Ipsy isn't drawn on its card`);
       const said = await p.locator('#stories .story.ipsy .ipsy-say').textContent();
       await p.clock.runFor(3000);
-      const form = await p.locator('#stories .story.ipsy .ipsy-cell').getAttribute('data-form');
-      if (said === await p.locator('#stories .story.ipsy .ipsy-say').textContent() || form === 'stem') pr.push(`day ${n}: Ipsy doesn't move on to its next line and shape (${said}, ${form})`);
+      const mood = await p.locator('#stories .story.ipsy .ipsy-stage').getAttribute('data-mood');
+      if (said === await p.locator('#stories .story.ipsy .ipsy-say').textContent() || mood === 'idle') pr.push(`day ${n}: Ipsy doesn't move on to its next line and job (${said}, ${mood})`);
     } else if (added.length) {
       if (c[0].k !== 'New in aOS' || !added.includes(base(c[0].app))) pr.push(`day ${n}: the first card is ${c[0].k} ${c[0].app}, not an app ${rel.v} brought (${added.join()})`);
       if (!c[1].news) pr.push(`day ${n}: What's new is not beside it: ${c[1].k}`);
@@ -106,7 +106,7 @@ const base = id => id.replace(/vintage$/, '');
   const { ctx, p, errs } = await open(after(1), 'glass'); const pr = [...errs];
   common(await cards(p), pr);
   await p.click('#stories .story:not(.plain)'); await p.waitForSelector('.page.on .approw');
-  if (intro && await p.locator('.page.on .ipsy-forms .ipsy-mini .ipsy-cell').count() !== 6) pr.push('Meet Ipsy\'s page doesn\'t show its six cells');
+  if (intro && await p.locator('.page.on .ipsy-forms .ipsy-mini .ipsy-char').count() !== 7) pr.push('Meet Ipsy\'s page doesn\'t show its seven helpers');
   if (!await p.locator('.page.on .approw [data-get]').count()) pr.push('the postcard\'s page has no Get');
   report('Sea glass: Today\'s postcards, and one opens its page', pr); await ctx.close();
 }

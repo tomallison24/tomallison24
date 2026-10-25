@@ -7,7 +7,7 @@
 //   Mail: which Google account, and that Gmail is connected - never the sign-in itself: on a new device
 //         Mail signs in to that account by itself as it opens (silently when Google knows the device,
 //         else with one tap), and that one sign-in covers Travel and Orders, as everywhere
-//   every app's design (Vintage, Sea glass)  aOS: its look, light or dark, Favorites
+//   every app's design (Vintage, Sea glass)  aOS: its look, light or dark, Favorites, your helper (Ipsy) and its name
 //
 // Never a sign-in, a token (Gmail's included), Home Assistant's address, a cache, where you are now (Weather's GPS fix)
 // or what's running (Clock's stopwatch and timers, an alarm's next ring: each device works its own out).
@@ -44,6 +44,7 @@
     { id: 'aos.look', key: 'aos.look', app: 'aos' },
     { id: 'aos.lang', key: 'aos.lang', app: 'aos', blank: v => v === 'en' },
     { id: 'aos.home.picks', key: 'aos.home.picks', app: 'aos' },
+    { id: 'aos.helper', key: 'aos.helper', app: 'aos' },   // your helper and its name (home/ipsy.js)
     { id: 'home.settings#theme', key: 'home.settings', field: 'theme', app: 'aos', blank: v => v === '"auto"' },
   ];
   // as the app first had it: nothing set up yet

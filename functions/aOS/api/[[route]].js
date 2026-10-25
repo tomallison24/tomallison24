@@ -52,9 +52,9 @@ const HANDOFF_MAX = 240 * 1024, HANDOFF_DAYS = 14;   // one app's data moving in
 const MOVE_MAX = 5 * 1024 * 1024, MOVE_DAYS = 2;       // all of aOS's, moving to a new aOS icon
 // Settings that follow you between your devices (aOS/prefs-sync.js): Weather's places and units, Clock's
 // world clocks, alarms, Bedtime, settings and recent timers, Calendar's settings, each app's design, aOS's
-// look, light or dark and Favorites; and which Google account Mail uses, and that Gmail is connected (so
+// look, light or dark, Favorites and your helper (Ipsy, and its name); and which Google account Mail uses, and that Gmail is connected (so
 // Mail signs in to it by itself on a new device). Never a sign-in, a token or what a device keeps for itself.
-export const PREF_ITEM = /^(wx\.(places|units)|allison-clock-v1#(cities|alarms|sleep|set|tsound|recents)|allison-calendar-v1-settings|mail\.hint|mail\.token\.ever|design\.[a-z]{2,16}|aos\.look|aos\.home\.picks|home\.settings#theme)$/;
+export const PREF_ITEM = /^(wx\.(places|units)|allison-clock-v1#(cities|alarms|sleep|set|tsound|recents)|allison-calendar-v1-settings|mail\.hint|mail\.token\.ever|design\.[a-z]{2,16}|aos\.look|aos\.lang|aos\.home\.picks|aos\.helper|home\.settings#theme)$/;
 const PREF_MAX = 64 * 1024, PREFS_MAX = 192 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"

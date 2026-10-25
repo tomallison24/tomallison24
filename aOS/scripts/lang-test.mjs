@@ -26,7 +26,7 @@ const report = (name, problems) => { if (problems.length) { failed++; console.lo
 async function phone(seed = {}) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps: {} };
-  await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999', meals: '999', notes: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' }));
+  await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.helper', '{"who":"mia","name":""}'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999', meals: '999', notes: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' }));
     for (const k in s) if (!sessionStorage.getItem('seeded.' + k)) { localStorage.setItem(k, s[k]); sessionStorage.setItem('seeded.' + k, '1'); } } catch {} }, seed);
   await ctx.route('**/*', r => {
     const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort();
