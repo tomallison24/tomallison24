@@ -362,12 +362,26 @@
     if (!PLAY[q.kind] && !$('show').innerHTML.trim()) $('stage').classList.add('noshow');   // only heard: the answers take the room
     $('hostBtn').onclick = () => ask(q);
     if (q.kind === 'syll') $('show').insertAdjacentHTML('beforeend', `<button type="button" class="drum" id="drum" aria-label="Tap the drum">${ICON.drum}</button>`);
-    if ($('drum')) $('drum').onclick = () => { V.sfx('note', 0); };
+    if ($('drum')) drum($('drum'));
     R.tries = 0;
     // the games she plays rather than picks: the wand, spelling with gems, Flower Match, What's Missing
     if (PLAY[q.kind]) { const go = () => PLAY[q.kind]($('show'), q, { who, choices: $('choices') }).then(score => { if (round === R && R.q === q) answered(score); });
       if (q.kind === 'missing' || q.kind === 'match') { R.asked = V.say(q.say, { who }); go(); } else (R.asked = ask(q)).then(go); return; }
     R.asked = ask(q);
+  }
+  // the drum: a beat for every tap however fast, on the finger going down, each one bouncing it and lighting
+  // a dot above it, so she sees every part counted; the dots clear when she stops for a moment
+  function drum(el) {
+    let beats = 0, idle = null, downAt = 0;
+    const beat = () => {
+      V.sfx('drum'); beats = Math.min(beats + 1, 6);
+      el.querySelector('.beats').innerHTML = '<i></i>'.repeat(beats);
+      el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit');
+      clearTimeout(idle); idle = setTimeout(() => { beats = 0; el.querySelector('.beats').innerHTML = ''; }, 2500);
+    };
+    el.insertAdjacentHTML('beforeend', '<span class="beats" aria-hidden="true"></span>');
+    el.addEventListener('pointerdown', () => { downAt = Date.now(); beat(); });
+    el.onclick = () => { if (Date.now() - downAt > 700) beat(); };   // the demo's hand, or a keyboard
   }
   function ask(q) {
     const [who] = HOST[round.skill];
@@ -1029,7 +1043,7 @@
   };
   // natural voices (voice.js), from this server, for a phone signed in to the family account
   V.natural = { ok: () => set().natural !== false && !!token(), headers: () => ({ 'X-Sparkle': '1', Authorization: 'Bearer ' + token() }),
-    url: (who, text, r) => API + 'speak?' + new URLSearchParams({ v: who, t: text, r: (Math.round(r * 20) / 20).toFixed(2) }) };
+    url: (who, text, r, snd) => API + 'speak?' + new URLSearchParams(Object.assign({ v: who, t: text, r: (Math.round(r * 20) / 20).toFixed(2) }, snd ? { s: snd } : {})) };
   let syncing = null, lastSent = '';
   function sync(force) {
     if (!token() || !navigator.onLine) return Promise.resolve();

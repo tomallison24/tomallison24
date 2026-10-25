@@ -40,7 +40,7 @@ const ENV = { ACCOUNTS: db };
 // Google's text-to-speech, stood in for: every sentence is a moment of silence (a real WAV), and each request is counted
 const SPOKEN = [], SILENCE = (() => { const n = 80, w = Buffer.alloc(44 + n * 2); w.write('RIFF', 0); w.writeUInt32LE(36 + n * 2, 4); w.write('WAVEfmt ', 8); w.writeUInt32LE(16, 16); w.writeUInt16LE(1, 20); w.writeUInt16LE(1, 22); w.writeUInt32LE(8000, 24); w.writeUInt32LE(16000, 28); w.writeUInt16LE(2, 32); w.writeUInt16LE(16, 34); w.write('data', 36); w.writeUInt32LE(n * 2, 40); return w.toString('base64'); })();
 const realFetch = globalThis.fetch;
-globalThis.fetch = async (url, init) => { if (String(url).startsWith('https://texttospeech.googleapis.com/')) { const b = JSON.parse(init.body); SPOKEN.push({ voice: b.voice.name, text: b.input.text });
+globalThis.fetch = async (url, init) => { if (String(url).startsWith('https://texttospeech.googleapis.com/')) { const b = JSON.parse(init.body); SPOKEN.push({ voice: b.voice.name, text: b.input.text, how: b.input.customPronunciations });
   return new Response(JSON.stringify({ audioContent: SILENCE }), { headers: { 'Content-Type': 'application/json' } }); } return realFetch(url, init); };
 
 const b = await chromium.launch();
@@ -510,6 +510,14 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   const asked = SPOKEN.length;
   await sp(p, () => window.sparkle.enterWorld()); await p.waitForTimeout(800);
   if (SPOKEN.length !== asked) pr.push('a sentence heard before was asked for again: ' + JSON.stringify(SPOKEN.slice(asked)));
+  // punctuation on its own is a pause, never read out; a letter's sound goes with how to say it (not "s, s, s")
+  SPOKEN.length = 0;
+  await sp(p, () => SparkleVoice.say(['Which picture starts with', { snd: 's' }, '?', '...', ', as in', 'sun', '!'], { who: 'owl' }));
+  const heard = SPOKEN.map(x => x.text);
+  if (heard.some(t => !/[a-z]/i.test(t))) pr.push('punctuation was read out: ' + JSON.stringify(heard));
+  if (!heard.includes('as in')) pr.push('", as in" was not said as "as in": ' + JSON.stringify(heard));
+  const sss = SPOKEN.find(x => x.text === 'sss');
+  if (!sss || !sss.how || sss.how.pronunciations[0].pronunciation !== 'sː') pr.push('the sound of s went without how to say it: ' + JSON.stringify(sss));
   pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c));
   await ctx.close();
   // signed out: nothing asked of the server, the phone's own voice
@@ -520,6 +528,27 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   pr.push(...two.errs); await two.ctx.close();
   delete ENV.GOOGLE_TTS_KEY;
   report('natural voices: each friend in their own voice when signed in, kept on the phone once heard; the phone\'s voice signed out', pr);
+}
+
+// 12. the syllable drum: every tap a beat, however quick, each one a dot above the drum; the dots clear after a pause
+{
+  const ava = JSON.parse(JSON.stringify(AVA));
+  ava.skills.read = { level: 1, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 1 }; ava.demos = { 'read:1': 1 };
+  const { ctx, p, errs } = await phone({ seed: seedOf(ava) }); const pr = [];
+  await p.click('[data-player="p1"]'); await p.waitForTimeout(400);
+  let kind = null;
+  for (let i = 0; i < 6 && kind !== 'syll'; i++) { await sp(p, () => { window.sparkle.startRound('read'); }); await state(p); kind = await sp(p, () => window.sparkle.round && window.sparkle.round.q && window.sparkle.round.q.kind); }
+  if (kind !== 'syll') pr.push('no syllable question at reading level 1: ' + kind);
+  else {
+    const drum = p.locator('#drum');
+    for (let i = 0; i < 3; i++) await drum.tap();
+    const dots = await p.locator('#drum .beats i').count();
+    if (dots !== 3) pr.push('three quick taps on the drum made ' + dots + ' beats');
+    await p.waitForTimeout(2800);
+    if (await p.locator('#drum .beats i').count()) pr.push('the beats did not clear after a pause');
+  }
+  pr.push(...errs); await ctx.close();
+  report('the syllable drum: a beat and a dot for every tap, however quick', pr);
 }
 
 await b.close(); server.close();

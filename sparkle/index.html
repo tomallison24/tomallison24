@@ -237,6 +237,10 @@ svg{display:block}
 .tens .bag{width:56px;height:70px;border-radius:14px 14px 22px 22px;background:var(--k-lilac);box-shadow:inset 0 0 0 3px var(--k-ink);display:grid;place-items:center;font-weight:800;color:#fff;font-size:20px}
 .drum{position:absolute;right:10px;bottom:10px;width:70px;height:70px;border-radius:50%;background:var(--k-pink);box-shadow:inset 0 0 0 3px var(--k-ink),0 3px 0 #D9579A;display:grid;place-items:center}
 .drum svg{width:44px;height:44px}
+.drum.hit{animation:drumhit .18s ease-out}
+@keyframes drumhit{40%{transform:scale(.86)}}
+.drum .beats{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:6px;display:flex;gap:5px;pointer-events:none}
+.drum .beats i{width:12px;height:12px;border-radius:50%;background:var(--k-pink);box-shadow:inset 0 0 0 2px var(--k-ink)}
 .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .choices.two{grid-template-columns:repeat(2,1fr)}
 .choices.four{grid-template-columns:repeat(4,1fr)}
@@ -476,7 +480,7 @@ svg{display:block}
   .card.swap,.slots i.on,.tile.wrong,.cover{animation:none!important}
 }
 @media (prefers-reduced-motion:reduce){
-  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.hand,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
+  .ambient i,.kingdom .drift,.tw,.flap,.glow,.host.talk,#rider.walk .wrap,.dance,.dash,.giftbox,.chbook,.fly,.hand,.drum.hit,.choice.right,.choice.wrong,.planks i.on,.reveal,.toast,.show .gems .lit{animation:none!important}
   .fly{opacity:0}
 }
 </style>

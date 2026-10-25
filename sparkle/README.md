@@ -78,7 +78,9 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   Text-to-Speech, that each release copies to Cloudflare like the others in `.github/workflows/news.yml`)
   for a phone signed in to the family account. Each sentence is made once: kept in Cloudflare's cache and
   on the phone that heard it (Cache Storage `sparkle-voice-v1`), and a chapter's pages are fetched when it
-  opens. Signed out, without the key, offline, or switched off in the Parent corner, the phone's own
+  opens. A letter's sound ("sss") goes with how to say it (IPA, `SOUNDS` in the route; read as text it
+  came out as "s, s, s"), and a part that's only punctuation ('?', '...') is a pause, never read out.
+  Signed out, without the key, offline, or switched off in the Parent corner, the phone's own
   voice speaks instead. Google's first million characters a month are free; a family's play is a small
   part of that.
 - **Letter sounds**: a phone's voice says letter names well and letter sounds poorly, so a grown-up
