@@ -16,6 +16,7 @@
 //   passed marked and never sent again, all shared through aOS;
 // - the spouse's phone: nothing until the reader shares it (Settings > Who sees Money), then the
 //   same months, and no Gmail;
+// - Ipsy, the helper you chat with: there for whoever sees Money, its tools on the family's own view;
 // - kept in IndexedDB (moved from localStorage), five years of it, and read back after a reload;
 // - back from Google's sign-in inside aOS: the token kept before the page goes back into aOS;
 // - signed out with no data: the empty page asks to connect Gmail;
@@ -378,6 +379,33 @@ await test('Ipsy’s ideas: once a month on its own; Accept, No thanks, asked ag
   await p.click('#setSheet [data-close].iconbtn');
   await p.waitForFunction(() => !window.__money.D.setDirty, null, { timeout: 10000 });
 });
+await test('Ipsy, the helper you chat with: there for whoever sees Money, and its tools read the family’s own view', async () => {
+  await p.waitForSelector('#ipsySlot .ipsy-btn', { state: 'visible' });
+  const r = await p.evaluate(async ym0 => {
+    const M = window.__money, today = new Date().toLocaleDateString('en-CA');
+    const I = window.MoneyIpsy({ calc: window.MoneyCalc, view: () => M.st.T, raw: () => M.D.tx, settings: () => M.D.settings, today: () => today, reader: () => 'Pat', alerts: () => [], screen: () => 'This month' });
+    const from = ym0 + '-01';
+    const bad = await I.tools.totals({ from, to: today, by: 'colour' }).then(() => 'ok', e => e.message);
+    return {
+      totals: (await I.tools.totals({ from, to: today, by: 'category' })).content,
+      diner: (await I.tools.transactions({ from: '2000-01-01', to: today, merchant: 'corner diner' })).content,
+      rec: (await I.tools.recurring()).content, cards: (await I.tools.cards({ from: ym0, to: ym0 })).content,
+      ctx: (await I.tools.context()).content, bad, label: I.label('transactions', { merchant: 'Costco', from, to: today }), words: [I.intro, I.consent],
+    };
+  }, ym(0));
+  assert.ok(r.totals.groups.some(g => g.category === 'Eating out'), 'the family’s own categories');
+  assert.ok(r.totals.total > 0 && r.totals.count > 0);
+  assert.ok(r.diner.count >= 2 && r.diner.transactions.every(x => x.category === 'Eating out' && x.monarch_category === 'Restaurants'), 'Monarch’s too, where they changed it');
+  assert.ok(r.rec.recurring.some(x => x.merchant === 'Little Learners' && x.active));
+  assert.ok(r.cards.cards.some(c => c.card === 'Rocket Credit Card' && c.cash_back > 0 && c.rates.on_everything > 0));
+  assert.ok(r.ctx.categories.includes('Eating out') && r.ctx.cards_and_accounts.includes('Rocket Credit Card') && r.ctx.money_keeps.startsWith('five years'));
+  assert.match(r.bad, /by must be/);
+  assert.match(r.label, /^Looking at your transactions at Costco, /);
+  assert.match(r.words[1], /isn’t a financial adviser/);
+  const btn = await p.locator('#ipsySlot .ipsy-btn').boundingBox(), bar = await p.locator('#vBar').boundingBox();
+  assert.ok(btn.y + btn.height <= bar.y, 'above the view pill, clear of it');
+  if (SHOTS) { await p.waitForSelector('#toast', { state: 'hidden', timeout: 8000 }).catch(() => {}); await p.screenshot({ path: path.join(SHOTS, pad(++shot) + '-ipsy.png') }); }   // where it sits on the screen
+});
 await test('kept in IndexedDB, five years of it: moved from localStorage, read back after a reload', async () => {
   const saved = () => new Promise((res, rej) => { const r = indexedDB.open('allison-money'); r.onerror = () => rej(r.error); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('data'); q.onsuccess = () => res(q.result && q.result.tx.length); }; });
   const n = await p.evaluate(() => window.__money.D.tx.length);
@@ -412,6 +440,7 @@ await test('the spouse sees nothing until it’s shared, then the same months, a
   const D = await B.p.evaluate(() => window.__money.D);
   assert.equal(D.tx.length, await p.evaluate(() => window.__money.D.tx.length));
   assert.ok((await B.p.evaluate(() => window.__money.st.T)).filter(x => x.merchant === 'Corner Diner').every(x => x.cat === 'Eating out'), 'the family’s own categories too');
+  assert.equal(await B.p.locator('#ipsySlot .ipsy-btn').isVisible(), true, 'and Ipsy, once it’s shared');
   assert.equal(await B.p.locator('#readBtn').isHidden(), true, 'no Gmail reading on this phone');
   await B.p.click('#setBtn');
   const s = await B.p.locator('#setBody').innerText();
@@ -439,6 +468,7 @@ await test('signed out with nothing yet: asks to connect Gmail', async () => {
   const t = await mainText(C.p);
   assert.match(t, /See where your money goes/);
   assert.equal(await C.p.locator('#main [data-act="connect"]').count(), 1);
+  assert.equal(await C.p.locator('#ipsySlot').isHidden(), true, 'no Ipsy signed out: there’s nothing of the family’s to ask about');
   await C.p.click('#setBtn');
   assert.match(await C.p.locator('#setBody').innerText(), /On this phone only/);
   // Settings > Design: Standard, at once

@@ -135,7 +135,16 @@
     'changed on its own': 'изменены по отдельности', 'Ask Ipsy for ideas': 'Спросить идеи у Ипси', 'Categories to merge, and merchants to move': 'Какие категории объединить и каких получателей перенести',
     'Shared with whoever sees Money. Once a month Ipsy also looks on its own; nothing changes until you accept an idea. It uses Claude Sonnet 5.5: under a cent each time.': 'Видно всем, кто видит Деньги. Раз в месяц Ипси смотрит и сам; ничего не меняется, пока вы не примете идею. Работает на Claude Sonnet 5.5: меньше цента за раз.',
     'Removed: Monarch’s categories are back for it.': 'Удалено: для него вернулись категории из Monarch.',
+    // Ipsy, the helper you chat with (ipsy-tools.js)
+    'Hi, I’m Ipsy! Ask me where your money goes: a merchant, a category, a card, or how a month compares.': 'Привет, я Ипси! Спросите, куда уходят деньги: получатель, категория, карта или как месяц выглядит на фоне других.',
+    'Ask Ipsy about your spending': 'Спросите Ипси о расходах',
+    'What did we spend at Costco this month?': 'Сколько мы потратили в Costco в этом месяце?', 'What are our biggest categories this year?': 'Какие у нас самые большие категории в этом году?',
+    'Which subscriptions could we cut?': 'От каких подписок можно отказаться?', 'Are we using the right card for online shopping?': 'Той ли картой мы платим за покупки онлайн?',
+    'Your question and only the transactions Ipsy needs go to Claude, by Anthropic, through aOS; Anthropic doesn’t train on it. Ipsy only reads Money, has no web search, and isn’t a financial adviser.': 'Ваш вопрос и только нужные Ипси операции уходят в Claude от Anthropic через aOS; Anthropic не обучается на них. Ипси только читает Деньги, не ищет в интернете и не финансовый советник.',
+    'Looking at what repeats': 'Смотрю регулярные платежи', 'Looking at your cards and cash back': 'Смотрю карты и кешбэк', 'Looking at Money': 'Смотрю Деньги',
   }, [
+    [/^Looking at your transactions(?: at (.+?))?(?: in (.+?))?(?:, (.+))?$/, m => 'Смотрю операции' + (m[1] ? ' в «' + m[1] + '»' : '') + (m[2] ? ' в категории «' + m[2] + '»' : '') + (m[3] ? ', ' + m[3] : '')],
+    [/^Adding up by (category|merchant|card|month|week)$/, m => 'Считаю по ' + { category: 'категориям', merchant: 'получателям', card: 'картам', month: 'месяцам', week: 'неделям' }[m[1]]],
     [/^Every (.+) is (.+) now\.$/, m => 'Все «' + m[1] + '» теперь в категории «' + m[2] + '».'],
     [/^Moved to (.+)\.$/, m => 'Перенесено в «' + m[1] + '».'],
     [/^(.+) is in (.+) now\.$/, m => '«' + m[1] + '» теперь в «' + m[2] + '».'],

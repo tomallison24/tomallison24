@@ -18,6 +18,8 @@
 //   category into another, move a merchant), from Settings > Categories > Ask Ipsy for ideas and once
 //   a month on its own. Kept in the shared settings (calc.js, recat), so whoever sees Money sees them
 //   and may change them; Monarch's own category stays underneath (Use Monarch's puts it back).
+// - Ipsy, the helper you chat with (../home/ipsy.js), for whoever is signed in and sees Money: ask
+//   it about your spending (ipsy-tools.js, read-only; Claude through ../money/api, no web search).
 // - Once a day the reader's phone has Ipsy check this month's new transactions against
 //   their Monarch emails (functions/money/api, POST check: Claude Sonnet 5.5): what passed is
 //   marked and never sent again; a misreading is corrected from the email's own words (Undo
@@ -200,6 +202,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function render() {
     view();
     drawBar();
+    placeIpsy();
     $('readBtn').hidden = !hasGmail() || !mayRead();
     if (!D.tx.length && !D.alerts.length) { main.innerHTML = emptyHtml(); return; }
     main.innerHTML = { month: monthHtml, activity: activityHtml, cards: cardsHtml, repeats: repeatsHtml }[st.view]();
@@ -1066,6 +1069,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   window.addEventListener('online', () => sync());
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy (../home/ipsy.js), the helper you chat with: for whoever is signed in and sees Money. Its tools
+  // (ipsy-tools.js) only read the transactions as the family sees them; Claude answers through
+  // ../money/api (ipsy), with no web search.
+  let ipsy = null;
+  function placeIpsy() {
+    const slot = $('ipsySlot'), on = !!slot && signedIn() && !!(st.server && st.server.can) && !!window.MoneyIpsy && !!(window.AllisonOS && AllisonOS.ipsy);
+    document.documentElement.classList.toggle('ipsy-on', on);
+    if (slot) slot.hidden = !on;
+    if (!on || ipsy) return;
+    ipsy = AllisonOS.ipsy.mount({
+      app: 'money', name: 'Money', endpoint: '../money/api/ipsy', headers: { 'X-Money': '1' }, slot,
+      ...window.MoneyIpsy({
+        calc: C, view: () => st.T || view(), raw: () => D.tx, settings, today, reader: () => D.reader,
+        alerts: () => C.openAlerts(D.alerts, D.tx, settings().dismissed, today()),
+        screen: () => (VIEWS.find(v => v.id === st.view) || { name: st.view }).name + (st.view !== 'repeats' ? ', ' + monthName(st.ym) : '')
+          + (!$('txSheet').hidden && st.txId && !st.list ? ', a transaction open (' + ((byId(st.txId) || {}).merchant || '') + ')' : !$('txSheet').hidden && st.list ? ', a list open (' + st.list.title + ')' : ''),
+      }),
+    });
+  }
 
   // For the tests (money/scripts/app-test.mjs) only.
   window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings, dailyCheck, askIdeas };

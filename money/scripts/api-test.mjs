@@ -7,10 +7,10 @@
 // stand-in for Anthropic's API: the reader only, the key, the daily limit, what is sent, and that a
 // correction is kept only with words that really are in the email; the family's own categories (two
 // phones' changes both kept) and Ipsy's ideas for them (POST ideas: only about what was sent, never one
-// said no to).
+// said no to); and Ipsy's chat (POST ipsy: whoever sees Money, its tools, no web search).
 //   node money/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, cleanTx, cleanSettings, keepResults, keepIdeas, keepFrom, CHECK_MODEL, CHECK_DAILY, IDEAS_DAILY } from '../../functions/money/api/[[route]].js';
+import { onRequest, cleanTx, cleanSettings, keepResults, keepIdeas, keepFrom, CHECK_MODEL, CHECK_DAILY, IDEAS_DAILY, IPSY_CLIENT_TOOLS } from '../../functions/money/api/[[route]].js';
 import { onRequest as accounts } from '../../functions/aOS/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
@@ -213,6 +213,25 @@ await test('Ipsy’s ideas: anyone who sees Money, only about what was sent, nev
   } finally { globalThis.fetch = realFetch; }
   assert.deepEqual(keepIdeas(null, input), []);
 });
+await test('Ipsy’s chat: whoever sees Money, Money’s own read-only tools, no web search, counted', async () => {
+  const sent = [], realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => { sent.push(JSON.parse(opts.body)); return new Response(JSON.stringify({ role: 'assistant', content: [{ type: 'text', text: 'You spent **$42**.' }], stop_reason: 'end_turn' }), { status: 200 }); };
+  const ask = { messages: [{ role: 'user', content: '[Today is Sunday, Oct 25] What did we spend at Book Nook?' }] };
+  try {
+    const AI = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test-key' };
+    assert.equal((await call('ipsy', { token: alex, body: ask })).status, 503, 'no key: says so');
+    assert.equal((await call('ipsy', { token: sam, body: ask, e: AI })).status, 403, 'not shared with Sam');
+    const r = await call('ipsy', { token: alex, body: ask, e: AI });
+    assert.equal(r.status, 200); assert.equal(r.body.content[0].text, 'You spent **$42**.');
+    const b = sent[0], names = b.tools.map(t => t.name);
+    assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['transactions', 'totals', 'recurring', 'cards', 'context']);
+    for (const n of ['transactions', 'totals', 'recurring', 'cards', 'context']) assert.ok(names.includes(n), n);
+    assert.ok(!names.some(n => /^web_/.test(n)), 'no web search or web pages: nothing about the family’s money in a search query');
+    assert.equal(b.model, CHECK_MODEL); assert.match(b.system[0].text, /inside Money/); assert.match(b.system[0].text, /not a financial adviser/);
+    assert.equal(b.messages[0].content, ask.messages[0].content);
+    assert.ok([...db.m.keys()].some(k => /^money:ipsy:SPOUSE1:/.test(k)), 'the question is counted');
+  } finally { globalThis.fetch = realFetch; }
+});
 await test('bad input', async () => {
   assert.equal((await call('months?from=2026-10&to=2026-09', { token: pat })).status, 400);
   assert.equal((await call('months?from=2020-01&to=2026-10', { token: pat })).status, 400, 'too many months');
@@ -234,7 +253,7 @@ await test('removing someone it was shared with takes them off the list; removin
   // the reader leaves (here the owner removes a member who became the reader: make Sam the reader first)
   await putJSON(db, 'money:share', { by: 'KID1', with: [], at: 1 });
   await removeAs(pat, 'KID1');
-  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:') && !k.startsWith('money:ideas:')), []);
+  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:') && !k.startsWith('money:ideas:') && !k.startsWith('money:ipsy:')), []);
 });
 await test('forget: the reader deletes everything; nobody else can', async () => {
   const pat2 = await issue(db, 'OWNER1');
@@ -244,6 +263,6 @@ await test('forget: the reader deletes everything; nobody else can', async () =>
   const jo = await issue(db, 'SPOUSE2');
   assert.equal((await call('forget', { token: jo, body: {} })).status, 403);
   assert.equal((await call('forget', { token: pat2, body: {} })).body.ok, true);
-  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:') && !k.startsWith('money:ideas:')), []);
+  assert.deepEqual([...db.m.keys()].filter(k => k.startsWith('money:') && !k.startsWith('money:check:') && !k.startsWith('money:ideas:') && !k.startsWith('money:ipsy:')), []);
 });
 console.log(n + ' api tests passed');

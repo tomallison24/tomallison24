@@ -192,9 +192,21 @@ node money/scripts/app-test.mjs      # the page at iPhone size: every view, a tr
 
 All made-up data: no one's real transactions are in this repository.
 
+## Ipsy, the helper you chat with
+
+For whoever is signed in and sees Money: the helper sits above the view pill, on the left (as in the
+other apps). Ask it where the money goes ("what did we spend at Costco this month?", "which
+subscriptions could we cut?"). Its tools (`ipsy-tools.js`) only read, on the phone, the transactions as
+the family sees them (their own categories included): `transactions`, `totals` (by category,
+merchant, card, month or week), `recurring`, `cards` (spending, cash back, a better card) and
+`context`. Claude answers through `functions/money/api` (POST ipsy, `server/ipsy.js`), with **no web
+search**, so nothing about the family's money can end up in a search query; only what a question needs
+leaves the phone, and nothing is kept (questions a day are counted, `money:ipsy:<id>:<day>`). It isn't
+a financial adviser, and says when Monarch's alert threshold or a bank it can't sync could change an
+answer.
+
 ## Not yet
 
-- **Ipsy** can't answer money questions yet ("what did we spend at Costco this month?").
 - No notifications: a bank that stops syncing shows when Money is opened, not on the lock screen.
 - Monarch's deposit alert wording hasn't been seen yet: parse.js reads "deposit", "income",
   "credit" and "refund" alerts in the expense alert's shape, and its test has made-up ones. Check

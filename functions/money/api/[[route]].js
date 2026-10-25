@@ -19,6 +19,13 @@
 //                                        changes both stay
 //   POST ideas  { categories, yourChanges, saidNo } (anyone who may see it) Ipsy's ideas for the
 //                                        categories: { ideas: [{ kind, from, to, merchant, why }] }
+//   POST ipsy   { messages }             (anyone who may see it) one step of Ipsy's chat
+//                                        (server/ipsy.js): IPSY_SYSTEM and IPSY_CLIENT_TOOLS added, asks
+//                                        Claude Sonnet 5.5 (MONEY_IPSY_MODEL names another), answers as
+//                                        it comes. The tools run on the phone (money/ipsy-tools.js), read
+//                                        only; no web search, so nothing about the family's money can
+//                                        end up in a search query. Nothing is kept: only IPSY_DAILY
+//                                        questions a person a day are counted (money:ipsy:<id>:<day>)
 //   GET  people                         (the reader) the family, first names and ids, to pick from
 //   POST share  { with: [ids] }         (the reader) who else sees Money
 //   POST forget                         (the reader) everything here deleted: Settings > Delete all data
@@ -36,6 +43,51 @@
 // _middleware.js locks it to signed-in family.
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
+import { T, DAY, persona, modelOf, requestHead, ipsyStep } from '../../../server/ipsy.js';
+
+// ---- Ipsy, the helper you chat with: its tools in Money (money/ipsy-tools.js runs them, read only) ----
+const MONTH = { type: 'string', description: 'YYYY-MM' };
+const FILTERS = {
+  merchant: { type: 'string', description: 'Only this merchant (any part of its name, any case)' },
+  category: { type: 'string', description: 'Only this category, as the family sees it (exact name, any case)' },
+  card: { type: 'string', description: 'Only this card or account (any part of its name, or its last four digits)' },
+  direction: { type: 'string', enum: ['out', 'in'], description: 'out: spending (the default), in: money in (deposits, refunds)' },
+};
+export const IPSY_CLIENT_TOOLS = [
+  T('transactions', 'The transactions from one date to another (at most 5 years), newest first, at most 200: date, merchant, amount, money in or out, card or account (with its last four digits), category as the family sees it (and Monarch\'s, if they changed it), and cash back. With the count and total of all that matched, and how many more there were past the 200.', {
+    from: DAY, to: DAY, ...FILTERS,
+    min_amount: { type: 'number', description: 'Only amounts of at least this many dollars' },
+  }, ['from', 'to']),
+  T('totals', 'Add up the transactions from one date to another (at most 5 years), grouped by category, merchant, card, month or week: each group\'s count and total, the biggest first (at most 40 groups), with the grand total. Filters as for transactions.', {
+    from: DAY, to: DAY, by: { type: 'string', enum: ['category', 'merchant', 'card', 'month', 'week'] }, ...FILTERS,
+  }, ['from', 'to', 'by']),
+  T('recurring', 'What repeats (subscriptions, bills, a weekly charge): each merchant, how often, the usual amount, what it comes to a year, the last date, and whether it still looks active.', {}),
+  T('cards', 'Spending and cash back per card from one month to another (at most 24 months), with each card\'s cash back rates as set in Money (on everything, online, groceries, and the bonus limit a quarter), and what a better card would have earned on that spending.', {
+    from: MONTH, to: MONTH,
+  }, ['from', 'to']),
+  T('context', 'Today\'s date, what\'s on the screen, the months Money has, the cards and accounts, the categories, how small a charge Monarch emails about (so what may be missing), banks Monarch can\'t sync now, and who reads Monarch\'s emails.', {}),
+];
+export const IPSY_SYSTEM = persona({
+  app: 'Money',
+  about: 'an iPhone app where a family sees where its money goes: the transactions Monarch Money (their budgeting service) emails them about, read on one family member\'s phone and shared with the family members who may see it. It shows this month against the usual, spending and cash back per card, what repeats, and where they could save. You help them understand their own spending',
+  can: [
+    'Look at their transactions (transactions), filtered by dates, merchant, category, card or amount.',
+    'Add them up by category, merchant, card, month or week (totals).',
+    'See what repeats, and what it comes to a year (recurring).',
+    'See spending and cash back per card, the rates set for each, and what a better card would have earned (cards).',
+    'See today\'s date, the screen, the months, cards and categories there are, and what Monarch may not have emailed (context).',
+  ],
+  rules: [
+    'You only read. You can\'t add, change or delete anything; to change a category, say: tap the transaction, then Change.',
+    'Never guess a number: look with your tools first, every time, and add up with totals rather than in your head. Quote the amounts, the dates they cover and how many transactions they rest on.',
+    'Money only knows what Monarch emailed: charges over the amount set in Monarch\'s alerts (context says), and nothing from a bank Monarch can\'t sync. If that could change an answer, say so.',
+    'You are not a financial adviser: no advice on investing, taxes, debt or credit, and nothing that needs a professional. Noticing patterns in their spending, and where they could save, is fine.',
+    'Talk about money plainly and kindly, never judging what they spend on.',
+  ],
+  bold: 'an amount or a merchant',
+  web: false, privacy: false,
+});
+export const ipsyRequestHead = env => requestHead({ model: modelOf(env, 'MONEY_IPSY_MODEL'), system: IPSY_SYSTEM, tools: IPSY_CLIENT_TOOLS, web: false });
 
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -249,6 +301,12 @@ export async function onRequest({ request, params, env }) {
     if (route === 'check' && method === 'POST') {
       if (!reader) return reply({ error: 'not-reader' }, 403);
       return check(request, env, db, me);
+    }
+
+    if (route === 'ipsy' && method === 'POST') {
+      if (!can) return reply({ error: 'not-shared' }, 403);
+      if (!String(env.ANTHROPIC_API_KEY || '').trim()) return reply({ error: 'no-ai' }, 503);
+      return ipsyStep({ env, request, db, me, app: 'money', head: ipsyRequestHead(env) });
     }
 
     if (route === 'ideas' && method === 'POST') {
