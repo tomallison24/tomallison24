@@ -272,6 +272,53 @@
     return [...latest.values()].sort((a, b) => b.at - a.at);
   }
 
+  // ---------------------------------------------------------------------
+  // Ipsy's daily check (functions/money/api, POST check): each transaction against its own email.
+  // x.check: { s: 'ok' | 'fixed' | 'flag' | 'kept', at, issues?: [{ field, was, now }], note? }.
+  // Only what hasn't been checked, this calendar month (and the last 3 days, so the last of a month
+  // is checked on the 1st); what passed, was fixed or flagged is never sent again.
+  // ---------------------------------------------------------------------
+  function toCheck(txs, today) {
+    const ym = ymOf(today), t = dayNo(today);
+    return txs.filter(x => !x.check && (ymOf(x.date) === ym || (t - dayNo(x.date) <= 3 && t >= dayNo(x.date)))).sort((a, b) => a.at - b.at);
+  }
+  // A transaction with what the check said applied (a new object; the old one is left as it was).
+  // parse: { account(s) -> { account, last4 }, category(s) -> { cat, emoji } } (money/parse.js).
+  const FIELD_OF = { amount: x => x.amt, direction: x => x.dir, merchant: x => x.merchant, account: x => x.account + (x.last4 ? ' (...' + x.last4 + ')' : ''), category: x => x.cat };
+  function applyCheck(x, r, at, parse) {
+    const y = Object.assign({}, x);
+    if (!r) return y;
+    if (r.s === 'ok') { y.check = { s: 'ok', at }; return y; }
+    if (r.s === 'unsure') { y.check = { s: 'flag', at }; if (r.note) y.check.note = r.note; return y; }
+    const issues = [];
+    for (const i of r.issues || []) {
+      const was = FIELD_OF[i.field] ? String(FIELD_OF[i.field](y)) : '';
+      if (i.field === 'amount') { const n = Math.round(parseFloat(String(i.value).replace(/[^\d.]/g, '')) * 100) / 100; if (!isFinite(n)) continue; y.amt = n; }
+      else if (i.field === 'direction') { if (i.value !== 'in' && i.value !== 'out') continue; y.dir = i.value; }
+      else if (i.field === 'merchant') y.merchant = String(i.value);
+      else if (i.field === 'account') { const a = parse.account(i.value); y.account = a.account; y.last4 = a.last4; }
+      else if (i.field === 'category') { const c = parse.category(i.value); y.cat = c.cat; if (c.emoji) y.emoji = c.emoji; }
+      else continue;
+      issues.push({ field: i.field, was, now: String(FIELD_OF[i.field](y)) });
+    }
+    y.check = issues.length ? { s: 'fixed', at, issues } : { s: 'flag', at };
+    return y;
+  }
+  // Undo a fix: what the app read comes back, and it stays as it is (never checked again).
+  function undoCheck(x, parse) {
+    const y = Object.assign({}, x);
+    if (!x.check || x.check.s !== 'fixed') return y;
+    for (const i of x.check.issues || []) {
+      if (i.field === 'amount') y.amt = parseFloat(i.was) || y.amt;
+      else if (i.field === 'direction') y.dir = i.was === 'in' ? 'in' : 'out';
+      else if (i.field === 'merchant') y.merchant = i.was;
+      else if (i.field === 'account') { const a = parse.account(i.was); y.account = a.account; y.last4 = a.last4; }
+      else if (i.field === 'category') y.cat = i.was;
+    }
+    y.check = { s: 'kept', at: x.check.at };
+    return y;
+  }
+
   root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
-    recurring, minFor, month, pace, compare, tips, openAlerts };
+    recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck };
 })(typeof window !== 'undefined' ? window : globalThis);
