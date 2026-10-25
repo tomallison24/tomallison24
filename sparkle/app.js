@@ -1034,6 +1034,7 @@
   function paintStable() {
     const pet = petNow(), w = Care.want(pet);
     $('stableCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
+    $('stall').classList.toggle('night', !!pet.asleep);
     $('stall').innerHTML = (ST ? ST.scene({ night: pet.asleep, lantern: pet.asleep }) : '')
       + `<div class="uni" id="uni" role="button" aria-label="Your unicorn">${uniSvg(pet)}</div><div class="fx" id="stallFx">${pet.asleep ? '<span class="zz" style="left:60%;top:30%">z</span><span class="zz" style="left:66%;top:22%;animation-delay:.8s">z</span>' : ''}</div>`
       + (w && !pet.asleep && ST ? `<span class="want" aria-hidden="true">${ST.need(w, 42)}</span>` : '');
@@ -1113,7 +1114,7 @@
     }
   });
   // where her mouth is in the unicorn's picture (a share of its width and height), for food to fly to
-  const MOUTH = [0.8, 0.42];
+  const MOUTH = [0.88, 0.52];
   // the sponge and the brush: rub across her (a tap scrubs a little too); a tap with nothing in hand is a pat
   let rub = null;
   $('stall').addEventListener('pointerdown', e => {
@@ -1151,7 +1152,7 @@
   const BED_TABS = [['mine', 'My things'], ['shop', 'Shop'], ['walls', 'Walls'], ['floors', 'Floors']];
   const BED_MAX = 30;
   let editing = false, bedTab = 'mine', bedAsk = null, sel = -1, bdrag = null;
-  const bfx = { night: false, on: {}, px: 60, py: 288, flip: false };
+  const bfx = { night: false, on: {}, px: 80, py: 284, flip: false };
   const bedDef = id => BR.ITEMS[id] || BR.WALLS[id] || BR.FLOORS[id];
   const bedOwns = id => (me.owned || []).includes(id) || (!!bedDef(id) && !bedDef(id).gift && !bedDef(id).price);
   // her bedroom, from the starter (or the pieces she had in the old fixed spots)
@@ -1176,7 +1177,8 @@
   const lit = (it, i) => !!(it.on || bfx.on[i]);
   function itemHtml(it, i) {
     const d = BR.ITEMS[it.id], b = boxOf(it), sleeping = bfx.night && d.act === 'sleep' && i === bfx.bed;
-    const art = BR.item(it.id, { on: sleeping || lit(it, i), sleeper: sleeping ? A.princess(me.look, wearing(me), { head: true, mood: 'calm' }) : undefined });
+    // (at night bedroom.js tints each thing but keeps what's lit shining)
+    const art = BR.item(it.id, { on: sleeping || lit(it, i), night: bfx.night, sleeper: sleeping ? A.princess(me.look, wearing(me), { head: true, mood: 'happy' }) : undefined });
     const glow = d.act === 'light' && lit(it, i) ? `<span class="glow" style="left:${pct(it.x - d.w * 1.4, 400)};top:${pct((d.place === 'wall' ? it.y : it.y - d.h) - d.w * 1.2, 300)};width:${pct(d.w * 2.8, 400)};height:${pct(d.w * 2.8 * 4 / 3, 300)}"></span>` : '';
     return `<div class="bi ${it.flip ? 'flip' : ''} ${i === sel ? 'sel' : ''}" data-i="${i}" role="button" aria-label="${esc(d.name)}" style="left:${b.left};top:${b.top};width:${b.width};height:${b.height};z-index:${b.z}">${art}</div>${glow}`;
   }
@@ -1188,7 +1190,7 @@
     const stars = b.items.some((it, i) => BR.ITEMS[it.id].act === 'stars' && lit(it, i));
     box.classList.toggle('dark', bfx.night); box.classList.toggle('stars', stars);
     const pr = bfx.night ? '' : `<div class="bpr ${bfx.flip ? 'flip' : ''}" id="bpr" role="button" aria-label="${esc(me.name)}" style="left:${pct(bfx.px, 400)};top:${pct(bfx.py - 112, 300)};height:37.3%;z-index:${10 + Math.round(bfx.py)}">${A.princess(me.look, wearing(me), { mood: 'happy' })}</div>`;
-    box.innerHTML = BR.room(b.wall, b.floor, {}).replace('<svg', '<svg class="wallfloor"') + '<div class="starsky"></div>' + b.items.map(itemHtml).join('') + pr + '<div class="night" style="z-index:400"></div>'
+    box.innerHTML = BR.room(b.wall, b.floor, { night: bfx.night }).replace('<svg', '<svg class="wallfloor"') + '<div class="starsky"></div>' + b.items.map(itemHtml).join('') + pr
       + (bfx.night && bfx.bed >= 0 && b.items[bfx.bed] ? (() => { const it = b.items[bfx.bed], d = BR.ITEMS[it.id], pl = d.pillow || { x: d.w * 0.25, y: d.h * 0.4 };
         return `<span class="zz" style="z-index:401;left:${pct(it.x - d.w / 2 + pl.x + 10, 400)};top:${pct(it.y - d.h + pl.y - 30, 300)}">z</span><span class="zz" style="z-index:401;animation-delay:.9s;left:${pct(it.x - d.w / 2 + pl.x + 26, 400)};top:${pct(it.y - d.h + pl.y - 44, 300)}">z</span>`; })() : '')
       + (editing && sel >= 0 && b.items[sel] ? selBar(b.items[sel]) : '');
@@ -1225,13 +1227,14 @@
   function placeNew(id) {
     const d = BR.ITEMS[id], b = bedState();
     if (b.items.length >= BED_MAX) { V.say(['Your room is full! Put something away first.'], { who: 'narrator' }); return false; }
-    const x = 200 + (Math.random() - 0.5) * 120, y = d.place === 'wall' ? Math.max(d.h / 2 + 4, BR.FLOOR_Y - d.h / 2 - 30) : d.place === 'rug' ? 278 : 292;
+    // (big things stand back by the wall, small ones further forward)
+    const x = 200 + (Math.random() - 0.5) * 120, y = d.place === 'wall' ? Math.max(d.h / 2 + 4, BR.FLOOR_Y - d.h / 2 - 30) : d.place === 'rug' ? 278 : d.h >= 90 ? 250 : 288;
     b.items.push(clampItem({ id, x, y })); sel = b.items.length - 1; return true;
   }
   function clampItem(it) {
     const d = BR.ITEMS[it.id], F = BR.FLOOR_Y;
     it.x = Math.max(d.w / 2, Math.min(400 - d.w / 2, it.x));
-    if (d.place === 'wall') it.y = Math.max(d.h / 2 + 2, Math.min(F - d.h / 2 - 2, it.y)); else it.y = Math.max(Math.min(F + 14, 300), Math.min(300, it.y));
+    if (d.place === 'wall') it.y = Math.max(d.h / 2 + 2, Math.min(F - 14 - d.h / 2, it.y)); else it.y = Math.max(d.place === 'rug' ? F + 24 : F + 34, Math.min(299, it.y));
     return it;
   }
   $('bedItems').addEventListener('click', e => {

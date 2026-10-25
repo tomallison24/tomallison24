@@ -102,7 +102,7 @@
     const s = `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="${f(Math.min(10, h * 0.25))}" fill="${C.hay}" ${sw(ow)}/>`
       + straw(x + 5, y + 6, w - 14, h - 14, Math.round(w * h / 90), seed, [C.hayD, C.hayL, C.hayD])
       + hl(`M${f(x + 8)} ${f(y + 5)}H${f(x + w * 0.45)}`, 2.5)
-      + [0.28, 0.72].map(t => `<path d="M${f(x + w * t)} ${f(y + 1)}V${f(y + h - 1)}" stroke="${INK}" stroke-width="${f(3 + ow)}"/><path d="M${f(x + w * t)} ${f(y + 1)}V${f(y + h - 1)}" stroke="${C.rose}" stroke-width="3"/>`).join('');
+      + [0.28, 0.72].map(t => `<path d="M${f(x + w * t)} ${f(y + 1)}V${f(y + h - 1)}" stroke="${INK}" stroke-width="${f(ow * 2)}"/><path d="M${f(x + w * t)} ${f(y + 1)}V${f(y + h - 1)}" stroke="${C.rose}" stroke-width="${f(ow)}"/>`).join('');
     return s;
   }
   // a lantern: ring, cap, glass, base; lit has a flame and a halo
@@ -121,9 +121,14 @@
       + hl(`M${P(-6, 18)}V${P(-6, 25).split(' ')[1]}`, 2.2);
     return g;
   }
-  // a horseshoe, open side down, top of the curve at (x, y)
-  const horseshoe = (x, y, s = 1, ow = 3) => bar(`M${f(x - 12 * s)} ${f(y + 30 * s)}V${f(y + 14 * s)}Q${f(x - 12 * s)} ${f(y)} ${f(x)} ${f(y)}Q${f(x + 12 * s)} ${f(y)} ${f(x + 12 * s)} ${f(y + 14 * s)}V${f(y + 30 * s)}`, C.silver, 8 * s, ow)
-    + [[-12, 24], [-11, 10], [11, 10], [12, 24]].map(([u, v]) => `<circle cx="${f(x + u * s)}" cy="${f(y + v * s)}" r="${f(1.4 * s)}" fill="#fff"/>`).join('');
+  // a horseshoe, open side up (for luck), hung by a pink string from a gold nail; (x, y) is the
+  // middle of the shoe, the nail 30 * s above it
+  const horseshoe = (x, y, s = 1, ow = 3) => { const P = (u, v) => `${f(x + u * s)} ${f(y + v * s)}`;
+    return `<path d="M${P(-10, -16)}L${P(0, -30)}L${P(10, -16)}" fill="none" stroke="${C.rose}" stroke-width="${f(Math.max(1, 2.2 * s))}" stroke-linejoin="round"/>`
+      + `<path d="M${P(-14, -16)}C${P(-16, 4)} ${P(-10, 16)} ${P(0, 16)}C${P(10, 16)} ${P(16, 4)} ${P(14, -16)}H${f(x + 7 * s)}C${P(8, 0)} ${P(5, 9)} ${P(0, 9)}C${P(-5, 9)} ${P(-8, 0)} ${P(-7, -16)}Z" fill="#D3CCF0" ${sw(ow)}/>`
+      + [[-10.8, -8], [-10, 3], [-4.5, 12.3], [4.5, 12.3], [10, 3], [10.8, -8]].map(([u, v]) => `<circle cx="${f(x + u * s)}" cy="${f(y + v * s)}" r="${f(1.3 * s)}" fill="${INK}" opacity=".55"/>`).join('')
+      + `<path d="M${P(-11, -12)}C${P(-12, 0)} ${P(-9, 8)} ${P(-4, 11)}" fill="none" stroke="#fff" stroke-width="${f(Math.max(1, 1.8 * s))}" stroke-linecap="round" opacity=".8"/>`
+      + `<circle cx="${f(x)}" cy="${f(y - 30 * s)}" r="${f(3.4 * s)}" fill="${C.gold}" ${sw(Math.max(1, ow * 0.7))}/>`; };
 
   // ---- the stable ----
   function scene(opt = {}) {
@@ -166,18 +171,18 @@
       + hl('M128 250Q160 242 196 244', 2.5);
     // left: the lantern on its chain, and the hay bales
     const hay = bale(14, 166, 80, 44, 21) + bale(2, 208, 104, 56, 5) + straw(0, 258, 120, 12, 12, 17, [C.hayD, C.hay], 2.5)
-      + `<path d="M6 264Q20 252 34 264Q48 254 62 264Z" fill="${C.hay}" ${T}/>`;
+      + blob([[18, 266, 15, 6], [40, 268, 13, 5], [60, 268, 9, 4]], C.hay, 2) + straw(8, 262, 58, 8, 8, 23, [C.hayD], 2);
     // right: the hook with its horseshoe, the bunting, the water trough
-    const hook = `<circle cx="344" cy="52" r="5" fill="${C.woodD}" ${T}/>` + horseshoe(344, 62, 1.15) + bar('M344 52V64Q344 70 350 69', C.gold, 3.5, 2.5) + twinkle(372, 66, 6, '#fff') + twinkle(318, 98, 4, C.gold);
+    const hook = horseshoe(344, 86, 1.3) + twinkle(374, 70, 6, '#fff') + twinkle(314, 104, 4, C.gold);
     const flags = [C.pink, C.mint, C.gold, C.lilac, C.sky, C.rose, C.mint];
     const bunt = `<path d="M228 16Q314 44 404 16" fill="none" stroke="${INK}" stroke-width="2"/>` + flags.map((c, i) => { const t = (i + 0.5) / flags.length, x = 228 + 176 * t, y = 16 + 2 * t * (1 - t) * 28;
       return `<path d="M${f(x - 9)} ${f(y)}L${f(x + 9)} ${f(y)}L${f(x)} ${f(y + 17)}Z" fill="${c}" ${sw(2)}/>`; }).join('');
     const trough = `${shadow(347, 270, 54)}<path d="M312 254V272M382 254V272" stroke="${INK}" stroke-width="12" stroke-linecap="round"/><path d="M312 254V272M382 254V272" stroke="${C.woodD}" stroke-width="6" stroke-linecap="round"/>
-      <rect x="298" y="206" width="98" height="14" rx="6" fill="${C.woodD}" ${O}/>
-      <ellipse cx="347" cy="215" rx="44" ry="5.5" fill="${C.water}"/><path d="M318 214Q328 211 338 214M352 216Q362 213 372 216" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-      <path d="M296 214H398L392 258H302Z" fill="${C.wood}" ${O}/><path d="M300 236H395" stroke="${C.woodD}" stroke-width="2"/>
+      <rect x="296" y="200" width="102" height="24" rx="9" fill="${C.woodD}" ${O}/>
+      <rect x="303" y="205" width="88" height="14" rx="6" fill="${C.water}" ${T}/><path d="M314 210Q322 207 330 210M350 212Q358 209 366 212" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+      <path d="M296 216H398L392 258H302Z" fill="${C.wood}" ${O}/><path d="M300 237H395" stroke="${C.woodD}" stroke-width="2"/>
       ${[316, 378].map(x => `<path d="M${x} 216V256" stroke="${INK}" stroke-width="9"/><path d="M${x} 216V256" stroke="${C.lilac}" stroke-width="5"/>`).join('')}
-      ${heart(347, 236, 6, C.pink, T)}${hl('M304 222H338', 2.5)}`;
+      ${heart(347, 238, 6, C.pink, T)}${hl('M304 224H338', 2.5)}`;
     const lamp = `<path d="M52 12V40" stroke="${INK}" stroke-width="2.5" stroke-dasharray="4 3"/>` + lantern(52, 40, 1, lit);
     const body = `<defs><clipPath id="${clip}"><rect width="400" height="300" rx="18"/></clipPath>
       <linearGradient id="${sky}" x1="0" y1="0" x2="0" y2="1">${night ? `<stop offset="0" stop-color="#1F2257"/><stop offset="1" stop-color="#4A4A9C"/>` : `<stop offset="0" stop-color="#9FD8FF"/><stop offset="1" stop-color="#E4F5FF"/>`}</linearGradient>
@@ -187,7 +192,7 @@
       <rect x="-4" y="190" width="408" height="6" fill="${C.woodD}" ${T}/>
       ${bed}${hay}${hook}${bunt}${trough}
       <rect x="-4" y="-4" width="408" height="18" fill="${C.woodD}" ${O}/><path d="M0 8H400" stroke="#DDA574" stroke-width="2.5"/>
-      ${night ? `<rect width="400" height="300" fill="${NIGHT}" opacity="${lit ? 0.3 : 0.4}"/>` : ''}
+      ${night ? `<rect width="400" height="300" fill="#7C7FD6" opacity="${lit ? 0.6 : 0.7}" style="mix-blend-mode:multiply"/>` : ''}
       ${lit ? `<rect width="400" height="300" fill="url(#${glow})"/>` : ''}
       ${lamp}</g>
       <rect x="1.5" y="1.5" width="397" height="297" rx="17" fill="none" ${O}/>`;
@@ -199,9 +204,9 @@
   const NAMES = { oats: 'A bucket of oats', apple: 'An apple', carrot: 'A carrot', sugar: 'Sugar cubes', clover: 'Clover', sponge: 'A sponge', brush: 'A mane brush', bucket: 'A bucket of water', towel: 'A fluffy towel',
     ball: 'A ball', bubbles: 'Bubbles', ribbon: 'A ribbon wand', kite: 'A kite', lantern: 'A lantern' };
   const bub = (x, y, r) => `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}" fill="#EAF7FF" fill-opacity=".55" stroke="${INK}" stroke-width="1.6" stroke-opacity=".7"/><path d="M${f(x - r * 0.55)} ${f(y - r * 0.1)}A${f(r * 0.6)} ${f(r * 0.6)} 0 0 1 ${f(x - r * 0.05)} ${f(y - r * 0.6)}" fill="none" stroke="#fff" stroke-width="${f(Math.max(1.4, r * 0.22))}" stroke-linecap="round"/>`;
-  const clover3 = (x, y, s, rot = 0) => `<g transform="rotate(${rot} ${x} ${y})">${[0, 120, 240].map(a => `<g transform="rotate(${a} ${x} ${y})">${heart(x, y - 7.2 * s, 6.4 * s, C.leaf, T).replace('<path', `<path transform="rotate(180 ${x} ${f(y - 7.2 * s)})"`)}</g>`).join('')}<circle cx="${x}" cy="${y}" r="${f(1.8 * s)}" fill="#4FB57A"/></g>`;
+  const clover3 = (x, y, s, rot = 0) => `<g transform="rotate(${rot} ${x} ${y})">${[0, 120, 240].map(a => `<g transform="rotate(${a} ${x} ${y})">${heart(x, y - 7.6 * s, 6.6 * s, C.leaf, T)}</g>`).join('')}<circle cx="${x}" cy="${y}" r="${f(1.8 * s)}" fill="#4FB57A"/></g>`;
   const PROP = {
-    oats: () => `${shadow(50, 90, 32)}${bar('M22 46C22 12 78 12 78 46', C.lilac, 4)}
+    oats: () => `${shadow(50, 90, 32)}${bar('M22 46C22 12 78 12 78 46', C.lilac, 4)}${bar('M70 40Q74 22 84 10', C.hayD, 2.5, 2)}${[[76, 26, 30], [79, 19, 30], [82, 13, 30], [72, 31, -40], [75, 23, -40], [78, 16, -40]].map(([x, y, a]) => `<ellipse cx="${x + (a > 0 ? 3 : -3)}" cy="${y}" rx="2.4" ry="4.4" transform="rotate(${a} ${x + (a > 0 ? 3 : -3)} ${y})" fill="${C.gold}" ${sw(1.3)}/>`).join('')}
       ${blob([[50, 44, 28, 12], [38, 38, 12], [56, 36, 13], [66, 42, 10]], '#F3DDA6')}
       ${[[34, 36, 20], [46, 30, -30], [58, 34, 40], [66, 40, -10], [42, 44, 60], [54, 44, -50], [28, 44, 10], [72, 46, 30], [50, 38, 0]].map(([x, y, a]) => `<ellipse cx="${x}" cy="${y}" rx="4" ry="2.4" transform="rotate(${a} ${x} ${y})" fill="#FFF6DA" ${sw(1.2)}/>`).join('')}
       <path d="M18 46H82L74 88H26Z" fill="${C.wood}" ${O}/>
@@ -210,8 +215,8 @@
     apple: () => `${shadow(50, 91, 30)}<path d="M50 30C32 16 12 30 15 54C18 78 36 94 50 86C64 94 82 78 85 54C88 30 68 16 50 30Z" fill="${C.apple}" ${O}/>
       ${bar('M50 30C50 22 52 16 56 12', '#A86B45', 4)}<path d="M55 20C62 8 78 10 80 14C74 24 62 24 55 20Z" fill="${C.leaf}" ${O}/><path d="M58 19Q68 15 76 15" fill="none" stroke="#4FB57A" stroke-width="1.8" stroke-linecap="round"/>
       ${hl('M26 46Q28 34 38 30', 4)}<ellipse cx="34" cy="62" rx="5" ry="3" fill="#fff" opacity=".35"/>${twinkle(84, 30, 6, C.gold)}`,
-    carrot: () => `${shadow(46, 91, 26)}<g transform="rotate(38 50 50)">
-      <path d="M50 28C40 14 34 8 32 2C42 6 48 14 50 24C52 12 58 4 66 2C62 10 56 18 52 28Z" fill="${C.leaf}" ${T}/><path d="M50 26C48 14 50 6 50 0" stroke="${C.leaf}" stroke-width="5" stroke-linecap="round"/><path d="M50 26C48 14 50 6 50 0" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round" opacity=".0"/>
+    carrot: () => `${shadow(46, 91, 26)}<g transform="translate(4 4) rotate(38 50 50) scale(.92)">
+      ${[[42, 18, -28], [58, 18, 28], [50, 14, 0]].map(([x, y, a]) => `<ellipse cx="${x}" cy="${y}" rx="5" ry="12" transform="rotate(${a} ${x} ${y + 10})" fill="${C.leaf}" ${T}/>`).join('')}<path d="M50 6V24" stroke="#4FB57A" stroke-width="1.8" stroke-linecap="round"/>
       <path d="M36 32Q50 22 64 32Q62 64 50 98Q38 64 36 32Z" fill="#FFA24C" ${O}/>
       <path d="M40 44H48M54 56H61M42 66H48M52 78H57" stroke="#E07A2A" stroke-width="2.4" stroke-linecap="round"/>${hl('M42 34Q44 52 47 68', 3)}</g>${twinkle(84, 22, 6, C.gold)}`,
     sugar: () => { const cube = (x, y, s) => { const P = (u, v) => `${f(x + u * s)} ${f(y + v * s)}`;
@@ -233,12 +238,13 @@
       <ellipse cx="50" cy="40" rx="31" ry="8" fill="#B8C7F5" ${O}/><ellipse cx="50" cy="41" rx="26" ry="5.5" fill="${C.water}"/><path d="M36 41Q44 38 52 41" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
       <path d="M19 40Q24 60 28 86H72Q76 60 81 40Q66 50 50 50Q34 50 19 40Z" fill="${C.sky}" ${O}/>
       ${bar('M24 62Q50 70 76 62', '#fff', 3.5, 2.5)}${hl('M28 54L32 78', 3)}
-      <path d="M62 30C56 22 58 16 62 10C66 16 68 22 62 30Z" fill="${C.water}" ${T}/><path d="M40 26C36 21 37 17 40 13C43 17 44 21 40 26Z" fill="${C.water}" ${T}/>${twinkle(84, 20, 5, '#fff')}`,
-    towel: () => `${shadow(50, 88, 38)}<rect x="14" y="58" width="72" height="26" rx="9" fill="${C.mint}" ${O}/><path d="M18 70H82" stroke="#fff" stroke-width="3" stroke-dasharray="1 6" stroke-linecap="round"/>
-      <path d="M18 28H82Q90 28 90 38V44Q90 54 80 54H20Q10 54 10 44V38Q10 28 18 28Z" fill="${C.pink}" ${O}/>
-      <path d="M10 48Q30 58 90 48V54Q90 62 80 62H20Q10 62 10 54Z" fill="${C.blush}" ${O}/>
-      ${bar('M28 28V62', '#fff', 4, 2)}${bar('M38 28V62', C.lilac, 3, 2)}${hl('M18 34H50', 3)}
-      ${[[16, 28], [30, 27], [46, 27], [62, 27], [78, 28]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="#fff"/>`).join('')}${heart(68, 44, 5, '#fff')}${twinkle(86, 16, 6, C.gold)}`,
+      ${[[38, 26, 3.6], [60, 20, 4.4], [50, 12, 2.8], [70, 30, 2.6]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${C.water}" ${sw(1.6)}/>`).join('')}${twinkle(86, 16, 6, C.gold)}`,
+    towel: () => {
+      const towel = (x, y, w, h, c, d) => { const bumps = Array.from({ length: Math.round(w / 9) }, (_, i) => [x + 6 + i * ((w - 12) / (Math.round(w / 9) - 1)), y + 1, 4.4]);
+        return bumps.map(([bx, by, r]) => `<circle cx="${f(bx)}" cy="${f(by)}" r="${r + 1.5}" fill="${INK}"/>`).join('') + `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="11" fill="${c}" ${O}/>` + bumps.map(([bx, by, r]) => `<circle cx="${f(bx)}" cy="${f(by)}" r="${r}" fill="${c}"/>`).join('')
+          + `<path d="M${x + 12} ${y + 4}Q${x + 4} ${y + h / 2} ${x + 12} ${y + h - 4}" fill="none" stroke="${d}" stroke-width="2.5" stroke-linecap="round"/>`
+          + `<path d="M${x + w - 18} ${y + 3}V${y + h - 3}M${x + w - 12} ${y + 3}V${y + h - 3}" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`; };
+      return `${shadow(50, 89, 38)}${towel(12, 62, 76, 22, C.mint, '#4FC3A7')}${towel(18, 36, 64, 24, C.pink, C.rose)}${hl('M30 42H52', 3)}${heart(50, 49, 4.5, '#fff')}${twinkle(86, 18, 6, C.gold)}${twinkle(14, 30, 4, C.sky)}`; },
     ball: () => { const cl = uid('ball');
       return `${shadow(50, 90, 30)}<defs><clipPath id="${cl}"><circle cx="50" cy="50" r="36"/></clipPath></defs><circle cx="50" cy="50" r="36" fill="#fff"/>
       <g clip-path="url(#${cl})"><path d="M14 30Q50 10 86 30V14H14Z" fill="${C.pink}"/><path d="M14 46Q50 26 86 46V36Q50 16 14 36Z" fill="${C.gold}"/><path d="M14 64Q50 44 86 64V54Q50 34 14 54Z" fill="${C.sky}"/><path d="M14 82Q50 62 86 82V96H14Z" fill="${C.mint}"/>
@@ -294,27 +300,27 @@
   // the rooms' insides, each in its own box from (0, 0)
   const sky2 = (night, x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${night ? '#2F3474' : '#C4E8FF'}"/>` + (night ? twinkle(x + w * 0.3, y + h * 0.35, 2.4) + twinkle(x + w * 0.7, y + h * 0.65, 1.8, C.gold) : `<circle cx="${x + w * 0.35}" cy="${y + h * 0.62}" r="${f(w * 0.16)}" fill="#fff"/><circle cx="${x + w * 0.55}" cy="${y + h * 0.58}" r="${f(w * 0.2)}" fill="#fff"/>`);
   const ROOM = {
-    bedroom: (w, h, night) => `<rect width="${w}" height="${h}" fill="#E6DCFF"/>${[[50, 10], [78, 24], [62, 36], [8, 56], [44, 50]].map(([x, y], i) => i % 2 ? `<circle cx="${x}" cy="${y}" r="1.6" fill="#fff"/>` : star(x, y, 3, C.gold)).join('')}
+    bedroom: (w, h, night) => { const cl = uid('bw'); return `<rect width="${w}" height="${h}" fill="#E6DCFF"/>${[[50, 10], [78, 24], [62, 36], [8, 56], [44, 50]].map(([x, y], i) => i % 2 ? `<circle cx="${x}" cy="${y}" r="1.6" fill="#fff"/>` : star(x, y, 3, C.gold)).join('')}
       <rect y="66" width="${w}" height="${h - 66}" fill="#F6D9B6"/><path d="M0 72H${w}" stroke="#E4B98C" stroke-width="1.2"/>
-      <path d="M10 46V26A12 12 0 0 1 34 26V46Z" fill="${C.cream}" ${H}/>${`<clipPath id="BWIN"><path d="M13 44V26A9 9 0 0 1 31 26V44Z"/></clipPath>`}<g clip-path="url(#BWIN)">${sky2(night, 10, 14, 24, 32)}</g><path d="M22 17V44M13 32H31" stroke="${C.cream}" stroke-width="2"/>
+      <path d="M10 46V26A12 12 0 0 1 34 26V46Z" fill="${C.cream}" ${H}/><clipPath id="${cl}"><path d="M13 44V26A9 9 0 0 1 31 26V44Z"/></clipPath><g clip-path="url(#${cl})">${sky2(night, 10, 14, 24, 32)}</g><path d="M22 17V44M13 32H31" stroke="${C.cream}" stroke-width="2"/>
       <path d="M6 14H18C16 28 14 38 16 46H6Z" fill="${C.pink}" ${sw(1.2)}/><path d="M38 14H26C28 28 30 38 28 46H38Z" fill="${C.pink}" ${sw(1.2)}/><rect x="4" y="12" width="36" height="3" rx="1.5" fill="${C.gold}" ${sw(1)}/>
       <ellipse cx="30" cy="73" rx="22" ry="4.5" fill="${C.lilac}" ${sw(1.2)}/><ellipse cx="30" cy="73" rx="13" ry="2.6" fill="${C.pink}"/>
-      <path d="M72 70V36A8 8 0 0 1 88 36V70Z" fill="${C.pink}" ${H}/>${heart(80, 42, 3.4, '#fff')}
-      <rect x="44" y="52" width="38" height="10" rx="4" fill="#fff" ${H}/><ellipse cx="74" cy="51" rx="7" ry="4" fill="#fff" ${H}/>
-      <path d="M44 56H68Q70 56 70 58V66H46Q44 66 44 64Z" fill="${C.pink}" ${H}/>${heart(56, 61, 2.4, '#fff')}
-      <path d="M40 72V50A4 4 0 0 1 48 50V72Z" fill="${C.pink}" ${H}/>`,
-    library: (w, h, night) => `<rect width="${w}" height="${h}" fill="#FFF6E9"/>${Array.from({ length: 9 }, (_, i) => `<rect x="${i * 14}" width="7" height="${h}" fill="#C9F1E5"/>`).join('')}
+      <path d="M70 72V38A7 7 0 0 1 84 38V72Z" fill="${C.pink}" ${H}/>${heart(77, 44, 3.2, '#fff')}
+      <rect x="44" y="54" width="28" height="12" rx="3" fill="#fff" ${H}/><ellipse cx="64" cy="52.5" rx="6.5" ry="3.6" fill="#fff" ${H}/>
+      <path d="M44 55H58Q60 55 60 57V67H44Z" fill="${C.pink}" ${H}/>${heart(52, 61, 2.4, '#fff')}
+      <path d="M40 72V52A3.5 3.5 0 0 1 47 52V72Z" fill="${C.pink}" ${H}/>`; },
+    library: (w, h, night) => { const cl = uid('lw'); return `<rect width="${w}" height="${h}" fill="#FFF6E9"/>${Array.from({ length: 9 }, (_, i) => `<rect x="${i * 14}" width="7" height="${h}" fill="#C9F1E5"/>`).join('')}
       <rect y="70" width="${w}" height="${h - 70}" fill="${C.wood}"/><path d="M0 76H${w}M30 70V76M80 76V84" stroke="${C.woodD}" stroke-width="1.2"/>
       <rect x="6" y="8" width="46" height="66" rx="3" fill="${C.woodD}" ${H}/><rect x="10" y="12" width="38" height="58" fill="#B87A50"/>
       ${[26, 44, 62].map(y => `<rect x="8" y="${y}" width="42" height="3" fill="${C.wood}" ${sw(1)}/>`).join('')}
       ${[12, 30, 48].map((y, r) => Array.from({ length: 7 }, (_, i) => { const hh = 11 + ((i * 5 + r * 3) % 4), c = [C.rose, C.sky, C.gold, C.mint, C.lilac, C.coral, C.pink][(i + r * 2) % 7];
         return `<rect x="${11 + i * 5.2}" y="${y + 14 - hh}" width="4.4" height="${hh}" rx="1" fill="${c}" ${sw(0.8)}/>`; }).join('')).join('')}
-      <circle cx="80" cy="24" r="13" fill="${C.cream}" ${H}/><clipPath id="LWIN"><circle cx="80" cy="24" r="10"/></clipPath><g clip-path="url(#LWIN)">${sky2(night, 70, 14, 20, 20)}</g><path d="M80 14V34M70 24H90" stroke="${C.cream}" stroke-width="2"/>
+      <circle cx="80" cy="24" r="13" fill="${C.cream}" ${H}/><clipPath id="${cl}"><circle cx="80" cy="24" r="10"/></clipPath><g clip-path="url(#${cl})">${sky2(night, 70, 14, 20, 20)}</g><path d="M80 14V34M70 24H90" stroke="${C.cream}" stroke-width="2"/>
       <ellipse cx="86" cy="78" rx="24" ry="4" fill="${C.mint}" ${sw(1.2)}/>
       <rect x="68" y="42" width="36" height="26" rx="8" fill="${C.pink}" ${H}/>${heart(86, 52, 3, '#fff')}
       <rect x="70" y="60" width="32" height="10" rx="3" fill="${C.blush}" ${H}/>
       <rect x="62" y="54" width="10" height="20" rx="4" fill="${C.pink}" ${H}/><rect x="100" y="54" width="10" height="20" rx="4" fill="${C.pink}" ${H}/>
-      <path d="M68 74V78M104 74V78" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`,
+      <path d="M68 74V78M104 74V78" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`; },
     wardrobe: (w, h, night) => `<rect width="${w}" height="${h}" fill="#FFD4E9"/>${[[86, 12], [104, 30], [12, 68], [104, 58], [84, 40]].map(([x, y], i) => i % 2 ? `<circle cx="${x}" cy="${y}" r="1.6" fill="#fff"/>` : heart(x, y, 2.6, '#fff')).join('')}
       <rect y="70" width="${w}" height="${h - 70}" fill="#F6D9B6"/><path d="M0 76H${w}" stroke="#E4B98C" stroke-width="1.2"/>
       <ellipse cx="42" cy="78" rx="30" ry="4" fill="${C.lav}" ${sw(1.2)}/>
@@ -363,7 +369,7 @@
       <path d="M48 70V24H78V70" fill="#3E2A66" ${H}/><g>${sky2(night, 51, 27, 24, 20)}</g>
       <rect x="50" y="47" width="26" height="23" fill="${C.wood}" ${sw(1.2)}/><path d="M50 47L76 70M76 47L50 70" stroke="${C.woodD}" stroke-width="2.4"/><rect x="50" y="47" width="26" height="23" fill="none" ${sw(1.2)}/>
       <path d="M76 24L83 21V44L76 47Z" fill="${C.woodL}" ${sw(1.2)}/><path d="M46 24H80" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M46 24H80" stroke="${C.woodD}" stroke-width="2.6" stroke-linecap="round"/>
-      ${horseshoe(63, 8, 0.36, 1.4)}
+      ${horseshoe(63, 15, 0.32, 1.3)}
       <rect y="68" width="${w}" height="${h - 68}" fill="${C.hay}"/>${straw(2, 70, w - 4, h - 72, 18, 5, [C.hayD, C.hayL], 1.4)}
       ${bale(4, 50, 34, 20, 9, 1.4)}<path d="M2 70Q12 64 22 70Q30 66 40 70Z" fill="${C.hay}" ${sw(1.2)}/>
       <path d="M18 0V10" stroke="${INK}" stroke-width="1.2" stroke-dasharray="2 2"/>${lantern(18, 10, 0.5, night, 1.4)}`,
@@ -380,8 +386,10 @@
       <linearGradient id="${shine}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${INK}" stop-opacity=".18"/><stop offset="1" stop-color="${INK}" stop-opacity="0"/></linearGradient>`;
     for (const r of CASTLE_ROOMS) { const [, , w, h] = INSIDE[r.id], id = uid('cr'); clipIds[r.id] = id; s += `<clipPath id="${id}"><rect width="${w}" height="${h}"/></clipPath>`; }
     s += `</defs><rect width="400" height="560" fill="url(#${sky})"/>`;
-    if (night) s += `${moon(50, 56, 22, '#FFF3D1')}` + [[110, 30], [350, 40], [330, 120], [26, 140], [372, 210], [240, 24], [92, 96], [380, 300], [14, 260], [300, 80]].map(([x, y], i) => `<g class="tw" style="animation-delay:${(i % 5) * 0.4}s">${twinkle(x, y, i % 3 ? 4 : 7, i % 2 ? C.gold : '#fff')}</g>`).join('');
-    else s += cloudShape(44, 62, 1, '#fff', 'opacity=".95"') + cloudShape(340, 108, 0.85, '#fff', 'opacity=".95"') + cloudShape(370, 250, 0.6, '#fff', 'opacity=".9"') + twinkle(300, 40, 7) + twinkle(30, 170, 6, C.gold) + twinkle(250, 14, 5);
+    if (night) s += `<circle cx="352" cy="238" r="44" fill="#FFF3D1" opacity=".12"/>${moon(352, 238, 26, '#FFF3D1')}` + [[110, 30], [350, 40], [330, 130], [26, 140], [384, 170], [240, 24], [92, 96], [310, 300], [14, 260], [300, 80], [60, 40]].map(([x, y], i) => `<g class="tw" style="animation-delay:${(i % 5) * 0.4}s">${twinkle(x, y, i % 3 ? 4 : 7, i % 2 ? C.gold : '#fff')}</g>`).join('');
+    else s += cloudShape(44, 62, 1, '#fff', 'opacity=".95"') + cloudShape(340, 108, 0.85, '#fff', 'opacity=".95"') + twinkle(300, 40, 7) + twinkle(30, 170, 6, C.gold) + twinkle(250, 14, 5)
+      + ['#FF7AA8', '#FFB257', '#FFE066', '#7FE0A0', '#7FC8FF', '#B79BFF'].map((c, i) => { const r = 54 - i * 4.4; return `<path d="M${f(350 - r)} 286A${f(r)} ${f(r)} 0 0 1 ${f(350 + r)} 286" fill="none" stroke="${c}" stroke-width="4.6"/>`; }).join('')
+      + cloudShape(304, 290, 0.5) + cloudShape(394, 290, 0.5) + twinkle(350, 214, 6, '#fff');
     s += `<path d="M-10 500C40 450 110 470 150 488C210 452 300 450 410 478V560H-10Z" fill="${night ? '#5B5196' : '#D2C4F7'}" opacity=".8"/>`;
     // towers in the map's colours: blush walls, lilac cone roofs, rose flags, sky (night: lit) windows
     const winC = night ? '#FFE58A' : C.sky;
@@ -403,7 +411,7 @@
     // each room: its inside, an inner shadow at the top, its outline, and a hit rect
     for (const r of CASTLE_ROOMS) {
       const [x, y, w, h] = INSIDE[r.id];
-      s += `<g data-go="${r.id}" class="croom"><g transform="translate(${x} ${y})"><g clip-path="url(#${clipIds[r.id]})">${ROOM[r.id](w, h, night).replace(/BWIN|LWIN/g, m => clipIds[r.id] + m)}
+      s += `<g data-go="${r.id}" class="croom"><g transform="translate(${x} ${y})"><g clip-path="url(#${clipIds[r.id]})">${ROOM[r.id](w, h, night)}
         <rect width="${w}" height="16" fill="url(#${shine})"/>${night ? `<rect width="${w}" height="${h}" fill="#FFC94A" opacity=".08"/>` : ''}</g>
         <rect width="${w}" height="${h}" fill="none" ${T}/></g>
         <rect class="hit" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="transparent"/></g>`;

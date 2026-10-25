@@ -126,12 +126,13 @@
   // stage 0 foal, 1 young, 2 unicorn, 3 winged, 4 rainbow. wear: { mane, saddle, horn }.
   // opt (all optional, for the stable):
   //   mood   'happy' | 'calm' (the default: big open eye) | 'sleepy' | 'sad' (droopy half-closed eye
-  //          looking down, a small frown, the ear tipped back) | 'sleep' (eye closed in a content
-  //          curve, lashes) | 'eat' (happy eye, mouth open chewing)
-  //   dirt   0..1 mud splotches on her legs and lower body, more and bigger as it rises (0: none)
+  //          looking down, a small frown, an ear flopped back over her mane) | 'sleep' (eye closed
+  //          in a content curve, lashes) | 'eat' (happy eye, mouth open chewing)
+  //   dirt   0..1 mud: a wavy band up each leg that rises with it, and splotches on her tummy that
+  //          grow in number and size (0: none)
   //   foam   0..1 soap foam on her body and mane, more as it rises (0: none)
   //   shine  true: twinkles all around her (clean and happy)
-  // In her viewBox (0 -6 250 210, at stage 2 and up): the mouth is at about (214, 106), the muzzle
+  // In her viewBox (0 -6 250 210, at stage 2 and up): the mouth is at about (220, 106), the muzzle
   // (222, 98), the eye (198, 76), the mane down the neck from (172, 40) to (150, 96), the middle of
   // her back (112, 92), the hooves' bottoms at y 195. A foal or young one is drawn smaller about the
   // point (125, 200): x' = 125 + (x - 125) * s, y' = 200 + (y - 200) * s, s 0.82 (stage 0) or 0.9 (1).
@@ -150,26 +151,33 @@
     if (stage >= 3) parts.push(`<path d="M104 96C92 54 120 30 150 40C138 50 160 52 148 64C162 68 152 82 138 82C142 92 124 100 104 96Z" fill="#fff" ${OUT}/><path d="M118 70C126 60 136 56 146 56M120 84C128 78 138 76 144 76" fill="none" stroke="${C.lav}" stroke-width="3" stroke-linecap="round"/>`);
     // legs (back pair a little darker)
     const leg = (x, back) => `<path d="M${x} 150V188" stroke="${INK}" stroke-width="20" stroke-linecap="round"/><path d="M${x} 150V188" stroke="${back ? bodyS : body}" stroke-width="13" stroke-linecap="round"/><rect x="${x - 9}" y="184" width="18" height="11" rx="5" fill="${hoof}" ${THIN}/>`;
-    // mud (opt.dirt): splotches kept inside the legs and body they sit on
-    const mud = (spots, shape) => {
+    // mud (opt.dirt): a wavy band of mud up each leg that rises with it, and soft splotches on her
+    // tummy; all kept inside the legs and body they sit on
+    const MUD = '#A87A5A', MUDL = '#C79D7B', mc = (x, y, r, fill) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}"/>`;
+    const clipped = (shape, body) => { const cl = uid('um'); return `<defs><clipPath id="${cl}">${shape}</clipPath></defs><g clip-path="url(#${cl})">${body}</g>`; };
+    const legMud = xs => {
       if (!dirt) return '';
-      const k = 0.7 + 0.55 * dirt, on = spots.slice(0, Math.ceil(dirt * spots.length)), cl = uid('um');
-      const splat = ([x, y, r], i) => { r *= k; const bits = [[x, y, r], [x + r * 0.7, y - r * 0.35, r * 0.62], [x - r * 0.6, y + r * 0.3, r * 0.55]];
-        if (dirt > 0.45) bits.push([x + r * (i % 2 ? -1.25 : 1.3), y + r * 0.9, r * 0.32]);
-        return bits; };
-      const all = on.map(splat);
-      return `<defs><clipPath id="${cl}">${shape}</clipPath></defs><g clip-path="url(#${cl})">`
-        + all.map(b => b.map(([x, y, r]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 1.4).toFixed(1)}" fill="${INK}"/>`).join('') + b.map(([x, y, r]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="#A87A5A"/>`).join('')
-          + `<circle cx="${(b[0][0] - b[0][2] * 0.3).toFixed(1)}" cy="${(b[0][1] - b[0][2] * 0.3).toFixed(1)}" r="${(b[0][2] * 0.28).toFixed(1)}" fill="#C79D7B"/>`).join('') + '</g>';
+      const top = 188 - 26 * dirt;
+      const band = (x, i) => { const t = top + (i % 2 ? 3 : 0);
+        return `M${x - 12} ${t + 2}Q${x - 6} ${t - 3} ${x - 1} ${t + 1.5}Q${x + 5} ${t + 5} ${x + 12} ${t}V200H${x - 12}Z`; };
+      const d = xs.map(band).join(''), drips = dirt > 0.4 ? xs.map((x, i) => { const dx = x + (i % 2 ? 4 : -3), dy = top - 4 - 8 * dirt * (i % 2 ? 0.6 : 1), r = 1.8 + 1.4 * dirt; return mc(dx, dy, r + 1.3, INK) + mc(dx, dy, r, MUD); }).join('') : '';
+      return clipped(xs.map(x => `<rect x="${x - 10}" y="140" width="20" height="57" rx="9"/>`).join(''),
+        `<path d="${d}" fill="${MUD}" stroke="${INK}" stroke-width="2.8" stroke-linejoin="round"/>${drips}` + xs.map((x, i) => mc(x - 3, top + 7 + (i % 2 ? 3 : 0), 1.8, MUDL)).join(''));
     };
-    const legsShape = xs => xs.map(x => `<rect x="${x - 10}" y="140" width="20" height="57" rx="9"/>`).join('');
+    const bodyMud = () => {
+      if (!dirt) return '';
+      const k = 0.75 + 0.4 * dirt, spots = [[120, 160, 8], [78, 154, 7], [154, 152, 6.5], [100, 146, 5], [62, 138, 5.5]].slice(0, Math.ceil(dirt * 5));
+      const dots = spots.flatMap(([x, y, r]) => { r *= k; return [[x, y, r], [x + r * 0.75, y - r * 0.3, r * 0.6], [x - r * 0.65, y + r * 0.35, r * 0.55]]; });
+      return clipped('<ellipse cx="112" cy="130" rx="62" ry="38"/>', dots.map(([x, y, r]) => mc(x, y, r + 1.4, INK)).join('') + dots.map(([x, y, r]) => mc(x, y, r, MUD)).join('')
+        + spots.map(([x, y, r]) => mc(x - r * k * 0.3, y - r * k * 0.3, r * k * 0.28, MUDL)).join(''));
+    };
     parts.push(leg(76, true) + leg(150, true));
-    parts.push(mud([[150, 180, 6], [76, 184, 6], [150, 168, 4.5], [76, 170, 4.5]], legsShape([76, 150])));
+    parts.push(legMud([76, 150]));
     // body
     parts.push(`<ellipse cx="112" cy="130" rx="64" ry="40" fill="url(#${g})" ${OUT}/>`);
-    parts.push(mud([[118, 160, 8], [76, 152, 6.5], [154, 150, 7], [98, 144, 5], [60, 136, 5.5], [140, 164, 5], [170, 132, 4.5]], '<ellipse cx="112" cy="130" rx="62" ry="38"/>'));
+    parts.push(bodyMud());
     parts.push(leg(92, false) + leg(166, false));
-    parts.push(mud([[92, 178, 7], [166, 174, 7], [92, 162, 5], [166, 188, 5.5], [92, 191, 4.5], [166, 158, 4]], legsShape([92, 166])));
+    parts.push(legMud([92, 166]));
     // saddle
     if (wear.saddle && ITEMS[wear.saddle]) parts.push(ITEMS[wear.saddle].draw());
     // neck and head
@@ -188,19 +196,19 @@
     parts.push(mood === 'happy' || mood === 'eat' ? `<path d="M190 78Q198 68 206 78" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`
       : mood === 'sleepy' ? `<path d="M190 76Q198 84 206 76" fill="none" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>`
       : mood === 'sleep' ? `<path d="M189 75Q198 85 207 75" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M191 80l-3 4M197 82.5l-1 4.5M203 81l2 4" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>`
-      : mood === 'sad' ? `<ellipse cx="197" cy="79" rx="7.5" ry="8.5" fill="${INK}"/><ellipse cx="195" cy="83" rx="2.6" ry="2.4" fill="#fff"/><circle cx="200.5" cy="85" r="1.3" fill="#fff"/>
-        <path d="M185 83L211 72V58H185Z" fill="${body}"/><path d="M188.5 81.5Q198 79 207.5 72.5" fill="none" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/><path d="M190 70Q198 69 204 61" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`
+      : mood === 'sad' ? `<ellipse cx="198" cy="79" rx="8" ry="9.5" fill="${INK}"/><circle cx="200" cy="81" r="3" fill="#fff"/><circle cx="195" cy="85.5" r="1.5" fill="#fff"/>
+        <path d="M186 78.5L211 72V58H186Z" fill="${body}"/><path d="M189 78Q199 76.5 207.5 72" fill="none" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/><path d="M193 66Q199 65 203 60" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>`
       : `<ellipse cx="198" cy="76" rx="8" ry="10" fill="${INK}"/><ellipse cx="200.5" cy="72" rx="3.3" ry="3.8" fill="#fff"/><circle cx="195.5" cy="80" r="1.6" fill="#fff"/><path d="M190 66l-5 -4M196 63l-2 -6" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>`);
     parts.push(`<ellipse cx="206" cy="92" rx="8" ry="5" fill="${C.pink}" opacity="${mood === 'sad' ? '.35' : '.6'}"/>`);
     // the mouth, for the stable's moods (the others have none, as always)
-    if (mood === 'sad') parts.push(`<path d="M205 109Q210 104.5 215 108" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`);
-    if (mood === 'eat') parts.push(`<path d="M203 104Q210 103 216 106Q214 114 208 114Q203 112 203 104Z" fill="${INK}"/><path d="M205 110Q209 108 213 111Q210 114 207 113Z" fill="${C.coral}"/>`);
+    if (mood === 'sad') parts.push(`<path d="M216 105Q221 101 226 105" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`);
+    if (mood === 'eat') parts.push(`<path d="M213 103Q221 101 228 104Q226 112 219 112.5Q213 111 213 103Z" fill="${INK}"/><path d="M215.5 109Q220 106.5 225 108.5Q222 112 218 111.5Z" fill="${C.coral}"/>`);
     // mane: puffs of colour down the neck
     const puffs = [[170, 44, 15], [160, 60, 15], [154, 78, 14], [150, 96, 13], [176, 34, 11]];
     parts.push(puffs.map(([x, y, r], i) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${cols[i % cols.length]}" ${OUT}/>`).join(''));
     parts.push(`<path d="M182 40C190 36 194 44 188 52C184 58 176 54 178 48" fill="${cols[1 % cols.length]}" ${OUT}/>`);
     // a sad ear lies back flat over her mane
-    if (mood === 'sad') parts.push(`<g transform="rotate(-62 184 52)">${ear}</g>`);
+    if (mood === 'sad') parts.push(`<path d="M190 51C180 46 168 50 161 62C171 64 181 61 190 57Z" fill="${body}" ${OUT}/><path d="M185 53.5C178 52 172 55 168 59.5C175 60.5 180 59 185 56.5Z" fill="${C.pink}"/>`);
     if (stage >= 4 || (ITEMS[wear.mane] && ITEMS[wear.mane].sparkle)) parts.push(twinkle(150, 50, 6) + twinkle(140, 100, 5) + twinkle(60, 170, 6));
     // soap foam (opt.foam): little clouds of bubbles on her back and mane
     if (foam) {
