@@ -14,11 +14,13 @@
 //     Home's Customization tones are Standard's.
 // Weather isn't here: in Vintage it draws its own sky from the forecast (weather/scripts/app-test.mjs).
 // The text-off-the-disc check holds on the widest fallback font too (the phone has Futura; CI's Linux and Android do not):
-// SKY_FONT="DejaVu Sans" node aOS/scripts/sky-test.mjs tries one.
+// SKY_FONT="DejaVu Sans" node aOS/scripts/sky-test.mjs tries one. CI runs it in three shards side by side:
+// node aOS/scripts/sky-test.mjs . 1/3 checks every third app's skies, from the second, and the last shard
+// the sun, the time zones and Standard too.
 // Works on any day: the clock is pinned (September 30, the longest month name, which makes the widest headers).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node aOS/scripts/sky-test.mjs [repo root] [one app]
+//   node aOS/scripts/sky-test.mjs [repo root] [one app, or a shard: i/n]
 import { createRequire } from 'module'; import { execSync } from 'child_process'; import http from 'http'; import fs from 'fs'; import path from 'path';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/'); const { chromium } = require('playwright');
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
@@ -131,7 +133,9 @@ const reads = (s, tag) => { const o = [];
   for (const t of s.bad) o.push(tag + ': text straight on the disc, light on light or hard to read: ' + t);
   return o; };
 
-for (const app of APPS.filter(a => !process.argv[3] || a === process.argv[3])) {
+const [SHARD, SHARDS] = /^\d+\/\d+$/.test(process.argv[3] || '') ? process.argv[3].split('/').map(Number) : [0, 1];
+const ONE = SHARDS === 1 ? process.argv[3] : null, REST = !ONE && SHARD === SHARDS - 1;   // REST: this one checks the sun and Standard too
+for (const app of APPS.filter((a, k) => ONE ? a === ONE : k % SHARDS === SHARD)) {
   const pr = [];
   // the four skies: Light or Dark, by day or night
   for (const [scheme, at, want] of [['light', NOON, 'day light'], ['dark', NOON, 'day dark'], ['light', NIGHT, 'night light'], ['dark', NIGHT, 'night dark']]) {
@@ -151,7 +155,7 @@ for (const app of APPS.filter(a => !process.argv[3] || a === process.argv[3])) {
   report(app + ': the four skies (day and night, Light and Dark), Weather Vintage\'s colours, rays and stars that move, reduced motion', pr);
 }
 
-if (!process.argv[3]) {
+if (REST) {
   { // the sun: the changeover is at sunrise and sunset for the place, and moves on by itself
     const pr = [];
     for (const [t, want] of [['06:15', 'night'], ['07:45', 'day'], ['18:15', 'day'], ['19:45', 'night'], ['02:00', 'night']]) {
@@ -236,7 +240,7 @@ if (!process.argv[3]) {
   }
 }
 
-{ // every app in its Standard (Sea glass) design: no sky (home/design.js sets data-look="glass"), and Vintage brings it back
+if (SHARDS === 1 || REST) { // every app in its Standard (Sea glass) design: no sky (home/design.js sets data-look="glass"), and Vintage brings it back
   const pr = [];
   for (const app of APPS.filter(a => a !== 'aOS' && a !== 'clock')) {
     const o = await open(app, { seed: { ['design.' + app]: 'glass' } });

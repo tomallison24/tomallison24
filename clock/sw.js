@@ -2,7 +2,7 @@
 // deploy shows up on the next open and the cache is only the fallback. Clock has no
 // server: everything it keeps is in this phone's storage.
 const CACHE = 'clock-v2';
-const SHELL = ['./', 'index.html', 'design.js', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/sky.js', '../home/welcome.js'];
+const SHELL = ['./', 'index.html', 'design.js', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/sky.js', '../home/welcome.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/clock.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

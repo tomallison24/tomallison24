@@ -442,12 +442,12 @@ const AUTOS = family({
   // One that isn't in Home Assistant has nothing to switch: the name and a chevron.
   rowHTML(r) {
     const key = esc(this.key(r)), label = esc(r.name);
-    if (r.state === 'missing') return `<button type="button" class="rowi dvc au-row" data-dv="${key}" aria-label="${label}: status and devices"><span class="k">${label}</span>${svg('chevR', 18)}</button>`;
+    if (r.state === 'missing') return `<button type="button" class="rowi dvc au-row" data-dv="${key}" aria-label="${label}: status and devices"><span class="k" translate="no">${label}</span>${svg('chevR', 18)}</button>`;
     const on = r.state === 'on' || r.state === 'running';
     const sub = r.state === 'off' ? 'Off' : r.state === 'running' ? 'Running now' : r.can ? '' : this.status(r);
     return `<div class="rowi dvc au-row au-swrow${on ? '' : ' off'}" data-dv="${key}">
-      <button type="button" class="au-open" data-a="open" aria-label="${label}: status and devices"><span class="k">${label}${sub ? `<small>${esc(sub)}</small>` : ''}</span></button>
-      <button type="button" class="au-sw${r.wait ? ' wait' : ''}" data-a="ausw" role="switch" aria-checked="${on}" aria-label="${label}"${r.can ? '' : ' disabled'}>${accentSw(on, AU_ACC[r.group])}</button></div>`;
+      <button type="button" class="au-open" data-a="open" aria-label="${label}: status and devices"><span class="k"><span translate="no">${label}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</span></button>
+      <button type="button" class="au-sw${r.wait ? ' wait' : ''}" data-a="ausw" translate="no" role="switch" aria-checked="${on}" aria-label="${label}"${r.can ? '' : ' disabled'}>${accentSw(on, AU_ACC[r.group])}</button></div>`;
   },
 
   // The view: the names, by group, each with its switch. Status, devices and the rest are in each one's popup.
@@ -475,7 +475,7 @@ const AUTOS = family({
     const row = (ic, k, v = '') => `<div class="rowi">${icon(ic)}<span class="k">${k}</span>${v ? `<span class="v">${v}</span>` : ''}</div>`;
     // A device: its name with its state now under it, and on the right what this automation does to it.
     const devRows = (ids, does = {}) => grp(ids.map(id => { const now = this.devState(id);
-      return row(AU_ICON[auDomain(id)] || 'home', `${esc(auName(id))}${now ? `<small>Now ${esc(now.charAt(0).toLowerCase() + now.slice(1))}</small>` : ''}`, esc(does[id] || '')); }).join(''), true);
+      return row(AU_ICON[auDomain(id)] || 'home', `<span translate="no">${esc(auName(id))}</span>${now ? `<small>Now ${esc(now.charAt(0).toLowerCase() + now.slice(1))}</small>` : ''}`, esc(does[id] || '')); }).join(''), true);
     const when = r.last ? new Date(r.last).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Never';
     const tellName = id => id.startsWith('notify:') ? auCap(id.slice(7).replace(/^mobile_app_/, '')) : auName(id);
     const paras = r.desc.split(/\n+/).map(p => p.trim()).filter(Boolean);
@@ -491,13 +491,13 @@ const AUTOS = family({
         r.controls.length ? ['does', lbl('CONTROLS') + devRows(r.controls, r.does)] : null,
         r.watches.length ? ['watch', lbl('WATCHES') + devRows(r.watches)] : null,
         !r.controls.length && !r.watches.length ? ['none', `<p class="tnote">${r.tells.length ? 'Works no device: it sends a notification.' : 'Works no device: only the dashboard\'s helpers.'}</p>`] : null,
-        ['what', lbl('WHAT IT DOES') + `<div class="au-desc"><p>${esc(r.what || (r.a.cfg ? 'No description.' : 'Not in Home\'s copy of the automations yet.'))}</p></div>`],
+        ['what', lbl('WHAT IT DOES') + `<div class="au-desc"><p${r.what ? ' translate="no"' : ''}>${esc(r.what || (r.a.cfg ? 'No description.' : 'Not in Home\'s copy of the automations yet.'))}</p></div>`],
         r.when.length ? ['when', lbl('RUNS') + grp(r.when.map(w => row('clock', esc(w))).join(''), true)] : null,
         r.cond.length ? ['if', lbl('ONLY IF') + grp(r.cond.map(c => row('check', esc(auCondition(c)))).join(''), true)] : null,
-        r.tells.length ? ['tell', lbl('NOTIFIES') + grp(r.tells.map(id => row('bell', esc(tellName(id)))).join(''), true)] : null,
-        r.scripts.length ? ['scripts', lbl('STARTS SCRIPTS') + grp(r.scripts.map(id => row('play', esc((auScript(id) || {}).alias || auName(id)))).join(''), true)] : null,
-        r.helpers.length ? ['helpers', lbl('HELPERS') + `<p class="tnote au-helpers">${esc(r.helpers.map(auName).join(' · '))}</p>`] : null,
-        more ? ['full', lbl('IN FULL') + `<div class="au-desc au-full">${paras.map(p => `<p>${esc(p)}</p>`).join('')}</div>`] : null,
+        r.tells.length ? ['tell', lbl('NOTIFIES') + grp(r.tells.map(id => row('bell', `<span translate="no">${esc(tellName(id))}</span>`)).join(''), true)] : null,
+        r.scripts.length ? ['scripts', lbl('STARTS SCRIPTS') + grp(r.scripts.map(id => row('play', `<span translate="no">${esc((auScript(id) || {}).alias || auName(id))}</span>`)).join(''), true)] : null,
+        r.helpers.length ? ['helpers', lbl('HELPERS') + `<p class="tnote au-helpers" translate="no">${esc(r.helpers.map(auName).join(' · '))}</p>`] : null,
+        more ? ['full', lbl('IN FULL') + `<div class="au-desc au-full" translate="no">${paras.map(p => `<p>${esc(p)}</p>`).join('')}</div>`] : null,
         src ? ['src', `<p class="tnote">${src}</p>`] : null,
       ],
     };

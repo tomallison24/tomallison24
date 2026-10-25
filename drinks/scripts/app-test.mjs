@@ -20,9 +20,11 @@
 // (served from drinks/, as the deploy does) moves that app's data on the phone over
 // to Drinks' names, and syncs with Drinks' Sheet.
 // Screenshots go to the folder given as the second argument.
+// CI runs it in two parts side by side (i/2): the first, the day-to-day and the Sheet (which follows
+// on from it); the second, Analysis's views, the screen sizes and the two designs.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
-//   node drinks/scripts/app-test.mjs [repo root] [screenshot dir]
+//   node drinks/scripts/app-test.mjs [repo root] [screenshot dir] [part: i/n]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import http from 'http';
@@ -36,8 +38,9 @@ import { fakeSheet } from './fake-sheet.mjs';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
-const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
-const SHOTS = process.argv[3] || '';
+const PART = process.argv.slice(2).find(a => /^\d+\/\d+$/.test(a)), ARGS = process.argv.slice(2).filter(a => a !== PART);
+const ROOT = path.resolve(ARGS[0] || new URL('../..', import.meta.url).pathname);
+const SHOTS = ARGS[1] || '';
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 
 // ---- a static server for the repo ----
@@ -147,7 +150,12 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
 const local = page => page.evaluate(() => JSON.parse(localStorage.getItem('allison-drinks-v1')));
 const syncNow = page => page.evaluate(() => window.__drinks.sync());
 let n = 0;
-const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
+// section: which part a test is in (-1: every part)
+let section = 0;
+const inPart = () => !PART || section < 0 || section % +PART.split('/')[1] === +PART.split('/')[0];
+const test = async (name, fn) => { if (!inPart()) return; await fn(); n++; console.log('ok -', name); };
+// several pages at once (each mostly waits for the page): every item, at most four at a time
+const each = async (items, fn) => { let i = 0; await Promise.all(Array.from({ length: Math.min(4, items.length) }, async () => { while (i < items.length) await fn(items[i++]); })); };
 
 const { ctx, page } = await newPage('light', { 'aos.session': SESSION });
 await page.goto(BASE + '/drinks/');
@@ -439,6 +447,7 @@ await test('delete all data: tap twice; gone here and from the Sheet, the older 
 });
 
 // ---- Trends: twelve weeks, one view at a time, from the pill at the bottom ----
+section = 1;
 // Eleven weeks back each have one drinking day (the same weekday as today, so the
 // test is the same on every day of the week and at the end of a month): 2 IPAs,
 // except the one 4 weeks back, 9; today has a glass of wine. Three days are alcohol-free.
@@ -585,7 +594,7 @@ await test('Analysis: Escape closes it; nothing logged says so', async () => {
 });
 
 await test('Analysis is never wider than the phone, in every view, light and dark; the menu stays on the screen', async () => {
-  for (const scheme of ['light', 'dark']) for (const [w, h] of [[320, 500], [320, 568], [390, 844], [440, 956]]) {
+  await each(['light', 'dark'].flatMap(scheme => [[320, 500], [320, 568], [390, 844], [440, 956]].map(s => [scheme, ...s])), async ([scheme, w, h]) => {
     const p = await newPage(scheme, { 'allison-drinks-v1': seedLog() });
     await p.page.setViewportSize({ width: w, height: h });
     await p.page.goto(BASE + '/drinks/'); await p.page.waitForFunction(() => window.__drinks); await p.page.waitForTimeout(400);
@@ -603,7 +612,7 @@ await test('Analysis is never wider than the phone, in every view, light and dar
     if (scheme === 'dark' && w === 390) await shot(p.page, '16-trends-menu-dark');
     assert.deepEqual(await p.page.evaluate(() => window.__csp || []), []);
     await p.ctx.close();
-  }
+  });
 });
 
 await test('Analysis: no errors and no Content Security Policy violations', async () => {
@@ -612,7 +621,7 @@ await test('Analysis: no errors and no Content Security Policy violations', asyn
 await T.ctx.close();
 
 await test('never wider than the phone, from the smallest iPhone up; the title is never cut off', async () => {
-  for (const [w, h] of [[320, 568], [375, 667], [393, 852], [440, 956]]) {
+  await each([[320, 568], [375, 667], [393, 852], [440, 956]], async ([w, h]) => {
     const p = await newPage('light', { 'aos.session': SESSION });
     await p.page.setViewportSize({ width: w, height: h });
     await p.page.goto(BASE + '/drinks/'); await p.page.waitForFunction(() => window.__drinks); await p.page.waitForTimeout(600);
@@ -627,11 +636,12 @@ await test('never wider than the phone, from the smallest iPhone up; the title i
       assert.ok(m.title >= 14, w + 'px, ' + where + ': the title starts at ' + m.title + 'px');
     }
     await p.ctx.close();
-  }
+  });
 });
 
 
-// ---- the family's Google Sheet, more closely ----
+// ---- the family's Google Sheet, more closely (it follows on from the first part) ----
+section = 0;
 const sheetDrink = (id, extra) => Object.assign({ id, date: TODAY, time: '19:00', name: 'IPA', cat: 'beer', vol: 16, unit: 'oz', abv: 6.8, qty: 1, note: '', updated: Date.now() }, extra);   // now: the Sheet, shared by every test here, has Tom's graves from Delete all data
 const COL = Object.fromEntries(['Who', 'Timestamp', 'Date', 'Time', 'Name', 'Category', 'Volume', 'Unit', 'ABV', 'Qty', 'StandardDrinks', 'GramsAlcohol', 'Note', 'EntryID', 'Check'].map((h, i) => [h, i]));
 const logRow = id => sheet.tab('Log').slice(1).find(r => r[COL.EntryID] === id);
@@ -745,6 +755,7 @@ await test('someone else signing in on this phone: the last person’s log goes 
 });
 
 // ---- the two designs (../home/design.js) ----
+section = 1;
 const ORANGE = scheme => scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
 await test('Vintage, the default: drawn in the Retro look, light and dark: Futura, flat cream or walnut, mustard, teal, orange, atomic shapes', async () => {
   for (const scheme of ['light', 'dark']) {
@@ -910,6 +921,7 @@ await test('from the old address, signed in: every key is Drinks’ own, the syn
   await D.ctx.close(); await P.ctx.close();
 });
 
+section = -1;
 await test('no errors and no Content Security Policy violations; no phone talked to Google', async () => {
   assert.deepEqual(await page.evaluate(() => window.__csp || []), []);
   assert.deepEqual(errors, []);

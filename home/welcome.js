@@ -85,27 +85,105 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
-    { v: '2', date: '2026-10-22', title: 'Every app, one home', look: 'vintage',
-      highlights: ['Every app now opens inside aOS', 'Ask Ipsy across all your apps', 'aOS in your design, Vintage or Sea glass'],
-      notes: ['aOS: Home is where it opens (in place of Apps): Ipsy at the top, your Favorites, then every app in four groups (Family, Every day, Out and about, You). A row\'s i opens the app\'s page, with What\'s New, Open and Get',
-        'No dock: four everyday apps float at the bottom of aOS for a quick open, always the same ones: Mail, Home, Calendar and Fitness (with Home, on Today and Search); Today and Search sit beside your account on Home',
-        'The apps at the bottom of aOS stay at the bottom as you scroll (on iOS 26 they could drift up to the middle of the screen), with more room around each icon',
-        'Mail\'s unread count shows on Mail\'s icon at the bottom of aOS, not on aOS\'s own Home Screen icon (Mail, Settings > Unread count on the app icon)',
-        'Ipsy\'s chat on Home opens below Ask Ipsy, with fewer words in it. Under your account, Owner tools (notifications, the Home Assistant address, invites) fold away until tapped',
+    { v: '2.1', date: '2026-10-24', title: 'New looks, new language', look: 'vintage',
+      highlights: ['Two new looks: Night Drive and Folk',
+        'aOS in Russian: Appearance, Language',
+        'Ask Ipsy to change a setting, or show you where it is'],
+      notes: ['Night Drive: 80s neon, a striped sunset over a grid, magenta and cyan, heavy italic type. Folk: Gzhel by day, cobalt on porcelain, and Khokhloma by night, cinnabar and gold on black lacquer. Each has its own app icons, and Ipsy dresses for it (mirror shades, a matryoshka\'s headscarf)',
+        'The look you pick in Account > Appearance is every app\'s look now; an app\'s own Settings > Design can still be different',
+        'Language, in Account > Appearance: English or Русский, for aOS and every app at once, with Russian dates and times. What the family wrote, emails, news and device names stay as they are. Lost in a language? Type "English" (or «Русский») to Ipsy',
+        'Ipsy can change how things look and read for you, with Undo: light or dark, the look, the language, Favorites, Calendar, Clock, Weather\'s units, Podcasts, Fitness goals and what Orders counts. It asks first before a new event\'s defaults or turning its own access down, never touches sign-ins, the plan, privacy or the family\'s allergies, and opens the right screen for those',
+        'Clock is 24-hour in Russian until you pick 24-Hour Time in its Settings',
+        'Night Drive and Folk: the top of every app runs into the status bar, the shapes fading in under it as they do in Vintage, and the bar is the page\'s own colour',
+        'aOS: now and then Ipsy rolls across the bar at the top of Home and back (never with Reduce Motion; a tap sends it straight home)',
+        'aOS: removing someone from the family takes them out completely: signed out of every app, and their account and everything aOS keeps for them deleted (no more Invite back: inviting them again makes a new account)',
+        'aOS: Home is where it opens (in place of Apps): the Ipsy bar at the top, your Favorites with a Weather and a Calendar widget (today\'s weather, what\'s next), then every app as an icon in four groups (Family, Every day, Out and about, You): one tap opens any app',
+        'The Ipsy bar finds things as you type: the app first (Return opens it), then what\'s in your apps (events, notes and reminders, bookings, orders, dinners, places and shows), read on your phone and sent nowhere; Ask Ipsy is under them. Hidden orders stay hidden. An app found there has its i, for its page with What\'s New, Open and Get',
+        'No dock, and nothing floats over Home; on Today, Home floats at the bottom to take you back. Today sits beside your account on Home',
+        'Home\'s Weather widget is up to date when you open aOS: a forecast over 10 minutes old is fetched again (Weather opens with it too). A tap on a widget or an icon opens its app every time, even as Home updates',
+        'Ipsy, in every app: closed for a minute once it has answered, it opens with a new chat; the clock in its corner brings back any of your last five',
+        'Your settings follow you between your devices, signed in to your family account: Weather\'s places and units, Clock\'s world clocks, alarms, Bedtime and settings, Calendar\'s settings, each app\'s design, and aOS\'s look, light or dark and Favorites; and your Gmail: Mail on a new device signs in to the same Google account by itself (with one tap if Google doesn\'t know that device yet), which covers Travel and Orders too. Set them up on your iPhone and your iPad has them the next time it opens aOS (a new device takes them, rather than sending its own empty ones). The sign-ins themselves (Gmail\'s too), Home Assistant, where you are now and Clock\'s running timers stay on each device',
+        'Mail\'s unread count shows on Mail\'s icon on Home, not on aOS\'s own Home Screen icon (Mail, Settings > Unread count on the app icon)',
+        'Ipsy\'s chat on Home opens below the Ipsy bar, with fewer words in it',
+        'aOS\'s Account is tidier: your name and Sign out, then every section folded under its heading until you tap it (Lost a phone?, Replacing this phone?, Notifications, Owner tools, Appearance, Subscription, Updates), each saying what\'s in it. A notification about an update opens Updates',
         'The top of every Vintage page fades into the status bar, rather than stopping in a band under it',
         'Moving to another aOS icon (one you added before, a new one to rename it, or a new phone): Get ready to move, under your account, leaves everything aOS keeps for two days in your family account; the next aOS icon of yours to open, signed in, takes it all',
-        'Every app opens inside aOS: it slides in over Home and fills the screen, its own design and background up to the top, with ‹ aOS in its corner. Tap ‹ aOS, or swipe in from the left edge, to go back; hold it to jump to another open app. Up to four stay open, each where you left it',
-        'Favorites, mixed: pin up to four (Edit, then the stars); the rest fill in with the apps you open most, over the last two weeks, on this phone',
-        'Ipsy on aOS\'s Home works across Calendar, Notes, Meals, Orders, Travel and News at once, with each app\'s own tools, rules and Undo, on Claude Sonnet 5.5. Fitness stays out: aOS\'s Ipsy can search the web, and your health data never goes near a web search (ask Ipsy in Fitness)',
-        'Inside aOS every app shares one sign-in: Face ID once, for all of them. One Gmail sign-in in Mail covers Travel and Orders too; Google\'s sign-in page opens over aOS and brings you back',
         'Moving in: open each app from its old icon once more, and what it kept only on your phone (Clock\'s alarms, Weather\'s cities, Home\'s Home Assistant sign-in, settings) moves into aOS, in whichever order you open them; not signed in there, Move my data with Face ID does it. What came from the old icon wins over what aOS had for the app. It waits in your family account two weeks at most, and is deleted once aOS has it',
-        'The old app icons still work, and say the app lives in aOS now; remove them when you\'re ready (press and hold, Remove App). Get on an app\'s page in aOS still adds one',
-        'aOS\'s update screens and welcome are mid-century now: cream, mustard, teal and orange',
-        'Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too',
-        'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders',
+        'Meals: the plan on Dinners has a bar of its own: tap it to fold the dinners away into it (it stays folded on your phone, and says what\'s for dinner tonight), or × to clear the plan for the family. A cleared plan stays in Past plans, and Undo puts it back',
         'Home: Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name',
         'Every app: a popup\'s way out (Back, Close, or Done) floats at the bottom left too, within reach of your thumb',
         'Travel: Have Ipsy check this trip, on a trip\'s page: Ipsy reads the newest email for each booking still to come (a schedule change too) and updates what changed, or marks it cancelled; each change is marked Check, with Undo. Bookings you edited stay as you typed them'],
+      apps: {
+        aos: { highlights: ['Two new designs: Night Drive and Folk, for aOS and every app',
+          'Read aOS in Russian: Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          tour: [{ sel: '[data-acct]', t: 'Looks and language', d: 'Your name, then Appearance: four looks for aOS and every app, and English or Русский.', g: 'tap' }] },
+        calendar: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        clock: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'In Russian, the clock is 24-hour'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        drinks: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language'],
+          tour: [{ sel: '#moreBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        fitness: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        house: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language'],
+          notes: ['Favorites: a speaker playing music is in Running Now with the other devices that are on, every speaker that plays (grouped ones too), in place of its own big card',
+          'Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name'],
+          tour: [{ sel: '#gear', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        mail: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language'],
+          notes: ['Inside aOS, the unread count goes on Mail\'s icon at the bottom of aOS rather than on aOS\'s Home Screen icon'],
+          tour: [{ sel: '#gear', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        meals: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        news: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        notes: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        orders: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        places: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        podcasts: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        travel: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language',
+          'Ask Ipsy to change a setting, or show you where it is'],
+          notes: ['Have Ipsy check this trip, on a trip\'s page: Ipsy reads the newest email for each booking still to come (a schedule change too) and updates what changed, or marks it cancelled; each change is marked Check, with Undo. Bookings you edited stay as you typed them',
+          'Have Ipsy check these, at the top of To check: the same check for the bookings waiting there'],
+          tour: [{ sel: '#setBtn', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+        weather: { highlights: ['Two new designs: Night Drive and Folk',
+          'Now in Russian too: aOS, Appearance, Language'],
+          tour: [{ sel: '[data-action="location"]', t: 'New designs', d: 'Settings, then Design: Night Drive and Folk are new beside Vintage and Standard.', g: 'tap' }] },
+      } },
+    { v: '2', date: '2026-10-22', title: 'Every app, one home', look: 'vintage',
+      highlights: ['Every app now opens inside aOS', 'Ask Ipsy across all your apps', 'aOS in your design, Vintage or Sea glass'],
+      notes: ['Every app opens inside aOS: it slides in over Home and fills the screen, its own design and background up to the top, with ‹ aOS in its corner. Tap ‹ aOS, or swipe in from the left edge, to go back; hold it to jump to another open app. Up to four stay open, each where you left it',
+        'Favorites, mixed: pin up to four (Edit, then the stars); the rest fill in with the apps you open most, over the last two weeks, on this phone',
+        'Ipsy on aOS\'s Home works across Calendar, Notes, Meals, Orders, Travel and News at once, with each app\'s own tools, rules and Undo, on Claude Sonnet 5.5. Fitness stays out: aOS\'s Ipsy can search the web, and your health data never goes near a web search (ask Ipsy in Fitness)',
+        'Inside aOS every app shares one sign-in: Face ID once, for all of them. One Gmail sign-in in Mail covers Travel and Orders too; Google\'s sign-in page opens over aOS and brings you back',
+        'The old app icons still work, and say the app lives in aOS now; remove them when you\'re ready (press and hold, Remove App). Get on an app\'s page in aOS still adds one',
+        'aOS\'s update screens and welcome are mid-century now: cream, mustard, teal and orange',
+        'Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too',
+        'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders'],
       cards: [
         { i: 'house', t: 'The new aOS', d: 'Every app now opens inside aOS. Tap one on Home; ‹ aOS, or a swipe from the left edge, brings you back, and it stays where you left it.' },
         { i: 'sparkle', t: 'Ask Ipsy, across your apps', d: 'Ipsy sits at the top of Home and works across Calendar, Notes, Meals, Orders, Travel and News at once.' },
@@ -116,10 +194,7 @@
       ],
       apps: {
         orders: { notes: ['Orders: returns. Return and refund emails (Amazon\'s and other stores\') are read into the order: a Returns tab with what to send back (and by when, and where), what\'s on its way back and what\'s been refunded; a return due within the week leads On the way. An order\'s page shows the return\'s steps, the drop-off day and place, the reason and the refund, with Mark as sent back and Mark as refunded; Start a return on any delivered order. Ipsy can find, start and update returns too', 'Orders: Hidden, for gifts: an order\'s page has a Hidden switch that takes it off every list, search and count, and away from Ipsy; Settings > Show hidden orders brings them back after Face ID, until you leave Orders'] },
-        mail: { notes: ['Inside aOS, Connect Gmail opens Google\'s sign-in over aOS and comes straight back; Travel and Orders use the same sign-in',
-          'Inside aOS, the unread count goes on Mail\'s icon at the bottom of aOS rather than on aOS\'s Home Screen icon'] },
-        travel: { notes: ['Have Ipsy check this trip, on a trip\'s page: Ipsy reads the newest email for each booking still to come (a schedule change too) and updates what changed, or marks it cancelled; each change is marked Check, with Undo. Bookings you edited stay as you typed them'] },
-        house: { notes: ['Automations has a switch on each one, to turn it on or off (on its row, and in its popup); one that is off says so under its name'] },
+        mail: { notes: ['Inside aOS, Connect Gmail opens Google\'s sign-in over aOS and comes straight back; Travel and Orders use the same sign-in'] },
       } },
     { v: '1.8', date: '2026-10-21', title: 'Health, with Ipsy',
       highlights: ['Fitness: your Apple Health stats, every day',
@@ -375,7 +450,7 @@
       notes: ['Light or dark in every app', 'Sea glass, the AllisonOS colors, in every app: one look, and one family of icons',
         'US English and US dates everywhere (Friday, October 9)', 'Home and Places follow the Light or Dark you pick, even when your iPhone is set the other way', 'Podcasts: the first tab is Listen Now',
         'Calendar and Travel only answer your family',
-        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app, and Invite back brings them back with everything they had',
+        'The owner invites family from aOS, with a link good once for 24 hours; removing someone signs them out of every app',
         'Lost a phone? Sign out everywhere else, in your aOS account, ends every other sign-in at once',
         'Every app works on its own: add only the ones you want; what they share with each other is extra',
         'AllisonOS lives at tomallison24-news.pages.dev; the old GitHub Pages address sends you there',
@@ -976,6 +1051,8 @@
     dispatchEvent(new CustomEvent('aos:theme', { detail: t }));   // for any page showing its own switch
   }
   applyTheme(readTheme());   // every app, every time
+  // changed on another page (aOS's Appearance, Ipsy in another app): this one follows at once
+  addEventListener('storage', e => { if (e.key === 'home.settings') { applyTheme(readTheme()); dispatchEvent(new CustomEvent('aos:theme', { detail: readTheme() })); } });
 
   // ---- installing ----
   // Opened inside aOS's all-in-one test (labs/home: the apps framed in one window, on this
@@ -1283,7 +1360,9 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   const lineSvg = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LINE[k] || LINE.sparkle}</svg>`;
   const url = p => new URL(p, BASE).href;
   const DIR = id => id === 'aos' ? 'aOS' : id;   // aOS lives at /aOS/
-  const icon = id => url(`../${DIR(id)}/icon-512.png`);
+  // an app's icon in its design here (design.<id>, Clock's set.design; aOS: aos.look): icon-512.png is Vintage
+  const lookOf = id => { try { return id === 'aos' ? localStorage.getItem('aos.look') : id === 'clock' ? ((JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {}).design : localStorage.getItem('design.' + id); } catch { return null; } };
+  const icon = id => { const l = lookOf(id); return url(`../${DIR(id)}/icon-${/^(glass|neon|folk)$/.test(l || '') ? l + '-' : ''}512.png`); };
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
 
   const CSS = `
@@ -1412,6 +1491,9 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .v-mark.grow .v-halo { animation: v-halo 1.6s cubic-bezier(.2,.8,.2,1) .45s forwards; }
 @keyframes v-halo { 0% { opacity: 0; transform: scale(.2); } 35% { opacity: 1; transform: scale(1.35); } 100% { opacity: .55; transform: scale(1); } }
 #aos-welcome .c-body h2 sup { white-space: nowrap; }
+/* the new .x's characters are clipped text: they need a line box of their own, or a page's sup { line-height: 0 }
+   (aOS's) leaves them nothing to paint */
+#aos-welcome .v-new i, #aos-welcome .h-new { line-height: 1.15; }
 #aos-welcome .h-new { display: inline-block; background: var(--w-hot); -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent; animation: h-new .8s cubic-bezier(.34,1.7,.5,1) .35s both; }
 @keyframes h-new { 0% { opacity: 0; transform: translateY(.5em) scale(.4); } 100% { opacity: 1; transform: none; } }
@@ -1464,6 +1546,8 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-sw { position: relative; flex: 0 0 44px; height: 56px; border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--w-edge); }
 #aos-welcome .c-sw.vintage { background: #F4ECDD; } #aos-welcome .c-sw.vintage::after { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
 #aos-welcome .c-sw.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.95), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.95), transparent 70%), #EEF2F0; }
+#aos-welcome .c-sw.neon { background: #120B1F; } #aos-welcome .c-sw.neon::after { content: ''; position: absolute; right: -12px; top: -12px; width: 32px; height: 32px; border-radius: 50%; background: repeating-linear-gradient(to bottom, transparent 0 4px, #120B1F 4px 6px) 0 100%/100% 45% no-repeat, linear-gradient(#FFC75A, #FF8A4C 45%, #FF3D9A); }
+#aos-welcome .c-sw.folk { background: #F5F7FB; } #aos-welcome .c-sw.folk::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #F5F7FB 0 18%, #C7261C 19% 34%, #1C3F94 35%); }
 #aos-welcome .c-seg button[aria-pressed="true"] { background: var(--w-bg); box-shadow: 0 2px 8px rgba(0,0,0,.18), inset 0 0 0 .5px var(--w-edge); }
 #aos-welcome .c-via { margin: 10px 0 8px; font-size: 13px; line-height: 1.4; color: var(--w-muted); }
 #aos-welcome .c-link { display: block; margin-top: 16px; height: 48px; line-height: 48px; border-radius: 999px; font-size: 16px; font-weight: 600; text-decoration: none; color: var(--w-text); background: var(--w-dot); }
@@ -1536,6 +1620,31 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
 #aos-welcome.mc::after { left: -30px; bottom: 90px; width: 130px; height: 36px; border-radius: 18px; background: #D8572A; transform: rotate(-18deg); opacity: .85; }
 #aos-welcome.mc .c-panel { box-shadow: inset 0 0 0 1.5px var(--w-edge); -webkit-backdrop-filter: none; backdrop-filter: none; }
 #aos-welcome.mc .w-btn { background: #D8572A !important; color: #FFF8EC !important; box-shadow: none; }
+/* Night Drive and Folk (data-look on <html>, home/design.js): the same screens in their colours */
+html[data-look="neon"] #aos-welcome.mc.mc { --w-bg: #F6F0FF; --w-text: #22123A; --w-muted: #5A4A78; --w-glass: #FFFFFF; --w-edge: rgba(34,18,58,.14); --w-dot: rgba(34,18,58,.2);
+  --w-pastel: linear-gradient(100deg, #C21E78, #C21E78); --w-glow: rgba(255,180,67,.45); --w-hot: linear-gradient(120deg, #0A8AA6 0%, #0A8AA6 45%, #C21E78 100%); --w-hot-glow: rgba(255,61,154,.6); --w-hot-glow2: rgba(34,211,238,.5);
+  --w-tube: #C21E78; font-family: "Avenir Next", "Avenir", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="neon"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #120B1F; --w-text: #F5ECFF; --w-muted: #B9A9D6; --w-glass: #1B1230; --w-edge: rgba(255,61,154,.32); --w-dot: rgba(245,236,255,.24);
+  --w-pastel: linear-gradient(100deg, #FF3D9A, #FF3D9A); --w-hot: linear-gradient(120deg, #22D3EE 0%, #22D3EE 45%, #FF3D9A 100%); --w-tube: #FF3D9A; } }
+html[data-look="neon"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #120B1F; --w-text: #F5ECFF; --w-muted: #B9A9D6; --w-glass: #1B1230; --w-edge: rgba(255,61,154,.32); --w-dot: rgba(245,236,255,.24);
+  --w-pastel: linear-gradient(100deg, #FF3D9A, #FF3D9A); --w-hot: linear-gradient(120deg, #22D3EE 0%, #22D3EE 45%, #FF3D9A 100%); --w-tube: #FF3D9A; }
+html[data-look="neon"] #aos-welcome.mc::before { opacity: 1; background: repeating-linear-gradient(to bottom, transparent 0 10px, var(--w-bg) 10px 15px) 0 100%/100% 46% no-repeat, linear-gradient(#FFC75A, #FF8A4C 42%, #FF3D9A 78%); }
+html[data-look="neon"] #aos-welcome.mc::after { background: var(--w-tube); box-shadow: 0 0 18px var(--w-tube); opacity: 1; }
+html[data-look="neon"] #aos-welcome.mc .w-btn { background: var(--w-tube) !important; color: #FFFFFF !important; }
+html[data-look="folk"] #aos-welcome.mc.mc { --w-bg: #F5F7FB; --w-text: #0F1D44; --w-muted: #3F4F7A; --w-glass: #FFFFFF; --w-edge: rgba(28,63,148,.2); --w-dot: rgba(15,29,68,.2);
+  --w-pastel: linear-gradient(100deg, #1C3F94, #1C3F94); --w-glow: rgba(78,116,199,.4); --w-hot: linear-gradient(120deg, #1C3F94 0%, #1C3F94 45%, #C7261C 100%); --w-hot-glow: rgba(78,116,199,.6); --w-hot-glow2: rgba(199,38,28,.45);
+  --w-flower: #1C3F94; --w-leaf: #8FA8DE; --w-btn: #1C3F94; font-family: "PT Sans", "Avenir Next", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="folk"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #0D0B0A; --w-text: #F6E7C6; --w-muted: #C9B48A; --w-glass: #191412; --w-edge: rgba(217,166,48,.35); --w-dot: rgba(246,231,198,.24);
+  --w-pastel: linear-gradient(100deg, #D9A630, #D9A630); --w-hot: linear-gradient(120deg, #D9A630 0%, #D9A630 45%, #E0412F 100%); --w-flower: #C7261C; --w-leaf: #B88A24; --w-btn: #C7261C; } }
+html[data-look="folk"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #0D0B0A; --w-text: #F6E7C6; --w-muted: #C9B48A; --w-glass: #191412; --w-edge: rgba(217,166,48,.35); --w-dot: rgba(246,231,198,.24);
+  --w-pastel: linear-gradient(100deg, #D9A630, #D9A630); --w-hot: linear-gradient(120deg, #D9A630 0%, #D9A630 45%, #E0412F 100%); --w-flower: #C7261C; --w-leaf: #B88A24; --w-btn: #C7261C; }
+html[data-look="folk"] #aos-welcome.mc::before { opacity: 1; border-radius: 0; background: var(--w-flower);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat; }
+html[data-look="folk"] #aos-welcome.mc::after { background: var(--w-leaf); border-radius: 100% 0; opacity: 1; }
+html[data-look="folk"] #aos-welcome.mc .w-btn { background: var(--w-btn) !important; color: #FFFFFF !important; }
+html[data-look="folk"] #aos-welcome.mc :is(h1, h2) { font-family: "Yeseva One", Georgia, serif; font-weight: 400; }
+html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next Condensed", "Avenir Next", system-ui, sans-serif; font-style: italic; font-weight: 800; }
 `;
 
   // ---- the overlay ----
@@ -1546,7 +1655,7 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
     }
     const el = document.createElement('div');
     el.id = 'aos-welcome'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label);
-    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage') el.classList.add('mc');   // aOS2's screens: mid-century
+    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage' || /^(neon|folk)$/.test(document.documentElement.dataset.look || '')) el.classList.add('mc');   // aOS2's screens: mid-century (in Night Drive and Folk, theirs)
     el.innerHTML = `<button class="w-skip" type="button">Skip</button>${inner}
       <div class="c-fly"></div>
       <div class="c-panel"><div class="c-body"></div><div class="w-dots"></div>
@@ -2093,8 +2202,8 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look']];
-  const lookIcon = look => url(`../aOS/icon-${look === 'glass' ? 'glass-' : ''}512.png`);
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel and Khokhloma']];
+  const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now
     try { if (!stay && sessionStorage.getItem(k)) return Promise.resolve(); } catch {}
@@ -2116,7 +2225,7 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
     const T = TOURS[id]; if (!T) return Promise.resolve();
     const v = shown(), name = NAMES[id];
     const head = `<div class="w-stage"><div class="a-head"><img class="a-icon" src="${icon(id)}" alt="">
-      <div class="c-word">${letters(name)}</div><div class="a-by">aOS<sup>${esc(v)}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
+      <div class="c-word">${letters(window.aosLang ? aosLang.t(name) : name)}</div><div class="a-by">aOS<sup>${esc(v)}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
     // no install card: Safari showed how, and this plays once it's on the Home Screen. Light or dark
     // last: each app on the Home Screen keeps its own settings, so each one asks.
     const cards = [...T.cards, ...(DARK_ONLY.includes(id) ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: `Follow your iPhone, or keep ${name} always light or always dark.` }])];
@@ -2439,13 +2548,13 @@ html[data-theme="light"] #aos-off { --o-bg: #EEF2F0; --o-text: #10181A; --o-mute
 .aos-fback svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 html[data-theme="dark"] .aos-fback{color:#fff;background:rgba(44,44,48,.8);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.18)}
 @media (prefers-color-scheme: dark){html:not([data-theme="light"]) .aos-fback{color:#fff;background:rgba(44,44,48,.8);box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.18)}}
-html[data-look="vintage"] .aos-fback{color:var(--text,#2B2522);background:var(--mc-card,#FBF3E2);-webkit-backdrop-filter:none;backdrop-filter:none;
+html[data-look]:not([data-look="glass"]) .aos-fback{color:var(--text,#2B2522);background:var(--mc-card,#FBF3E2);-webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:inset 0 0 0 1.5px var(--mc-edge,rgba(43,37,34,.22)),0 4px 14px rgba(43,37,34,.18)}
 @keyframes aos-fb-in{from{transform:scale(.6);opacity:0}}
 @media (prefers-reduced-motion: reduce){.aos-fback{animation:none;transition:none}}`;
   function floatBack() {
     const SHARED = '#aos-welcome, #aos-off, #aos-moved, #aos-signin, .ipsy-bubble';
-    const RANK = [['back', /^back\b/i], ['close', /^close\b/i], ['done', /^done$/i]];
+    const RANK = [['back', /^(back\b|назад)/i], ['close', /^(close\b|закрыть)/i], ['done', /^(done|готово)$/i]];   // in Russian too (../home/lang.js)
     let fb = null, src = null, queued = false;
     const label = b => (b.getAttribute('aria-label') || b.textContent || '').trim();
     // on screen: not hidden, and not slid away below or above it
@@ -2459,7 +2568,7 @@ html[data-look="vintage"] .aos-fback{color:var(--text,#2B2522);background:var(--
     function wayOut(dlg) {
       const top = dlg.getBoundingClientRect().top + 140;
       const btns = [...dlg.querySelectorAll('button')].filter(b => !b.disabled && b.getClientRects().length && b.getBoundingClientRect().top < top);
-      const cancel = btns.some(b => /^cancel\b/i.test(label(b)));
+      const cancel = btns.some(b => /^(cancel\b|отмена)/i.test(label(b)));
       for (const [kind, re] of RANK) {
         if (kind === 'done' && cancel) continue;
         const b = btns.find(x => re.test(label(x)));

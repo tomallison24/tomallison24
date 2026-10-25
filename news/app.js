@@ -288,7 +288,7 @@
     const pick = s.topic === SPORT && pickList.length ? firstMatch(s, pickList) : null;
     if (showTopic) parts.push(`<span class="dot" style="background:${TOPIC_COLOURS[s.topic] || 'var(--muted)'}"></span><span>${esc(pick ? pick.label : topicLabel(s.topic))}</span>`);
     else if (pick) parts.push(`<span class="pickname">${esc(pick.label)}</span>`);
-    parts.push(`<span>${esc(s.source)}</span>`);
+    parts.push(`<span translate="no">${esc(s.source)}</span>`);
     const when = ago(s.published);
     if (when) parts.push(`<span>${esc(when)}</span>`);
     // No dot between the tag and what follows.
@@ -417,13 +417,13 @@
     if (lead) {
       html += `<a class="lead" href="${esc(safeUrl(lead.url))}" target="_blank" rel="noopener">
         <div class="img">${img(lead.image, '', true)}</div>
-        <div class="body">${meta(lead, isLatest)}<h2>${esc(lead.title)}</h2>${lead.summary ? `<p>${esc(lead.summary)}</p>` : ''}</div>
+        <div class="body">${meta(lead, isLatest)}<h2 translate="no">${esc(lead.title)}</h2>${lead.summary ? `<p translate="no">${esc(lead.summary)}</p>` : ''}</div>
       </a>`;
     }
     if (rest.length) {
       html += `<div class="list">${rest.map(s => `
         <a class="row" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">
-          <div class="text">${meta(s, isLatest)}<h3>${esc(s.title)}</h3></div>
+          <div class="text">${meta(s, isLatest)}<h3 translate="no">${esc(s.title)}</h3></div>
           ${safeUrl(s.image) ? `<div class="thumb">${img(s.image, '', false)}</div>` : ''}
         </a>`).join('')}</div>`;
     }
@@ -510,7 +510,7 @@
     const chip = sources.length
       ? `<button class="chip" data-action="edit-sources" aria-label="Sources, ${sources.length} chosen">${ICON.sliders}Sources<span class="n">${sources.length}</span></button>
          <button class="chip icon" data-action="reset-sources" aria-label="Show all sources">${ICON.x}</button>
-         <span class="fb-summary">${esc(names.join(', '))}</span>`
+         <span class="fb-summary" translate="no">${esc(names.join(', '))}</span>`
       : `<button class="chip" data-action="edit-sources">${ICON.sliders}All sources</button>`;
     filterEl.innerHTML = windows + `<div class="fb-row">${chip}</div>`;
     slideBar();
@@ -565,7 +565,7 @@
     const q = srcSearch.value.trim().toLowerCase();
     const rows = sourceList(topic).filter(e => !q || e.label.toLowerCase().includes(q)).map(e =>
       `<button class="opt" data-source="${esc(e.key)}" aria-pressed="${sources.includes(e.key)}">
-        <span class="label">${esc(e.label)}<span class="sub"> · ${e.n}</span></span>${ICON.tick}</button>`);
+        <span class="label" translate="no">${esc(e.label)}<span class="sub"> · ${e.n}</span></span>${ICON.tick}</button>`);
     const range = (WINDOWS.find(([d]) => d === days) || WINDOWS[0])[1];
     const title = days ? `Stories: ${range.toLowerCase() === 'today' ? 'today' : `last ${range}`}` : 'Stories on this tab';
     const scroll = srcBody.scrollTop;
@@ -637,7 +637,7 @@
 
   function renderAi(scrollToEnd) {
     if (!ai) return;
-    let h = `<div class="ai-story"><h3>${esc(ai.title)}</h3><p class="src">${esc(ai.source)}</p></div>`;
+    let h = `<div class="ai-story" translate="no"><h3>${esc(ai.title)}</h3><p class="src">${esc(ai.source)}</p></div>`;
     if (ai.phase === 'loading') {
       h += `<div class="ai-card" aria-busy="true"><div class="sk" style="width:94%;height:14px"></div><div class="sk" style="width:80%;height:14px;margin-top:8px"></div>
         <div class="sk" style="width:55%;height:14px;margin-top:8px"></div></div>
@@ -646,13 +646,13 @@
       h += `<div class="ai-card ai-err"><p>${esc(aiSay(ai.error))}</p><div class="actions">${ai.error === 'signin' ? '<button class="text-btn" data-action="ai-signin">Sign in with Face ID</button>' : '<button class="text-btn" data-action="ai-retry">Try again</button>'}</div></div>`;
     } else {
       const x = ai.sum;
-      h += `<div class="ai-card"><h4>Summary</h4><p>${esc(x.summary)}</p></div>
-        <div class="ai-card"><h4>Key takeaways</h4><ul>${x.takeaways.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
+      h += `<div class="ai-card"><h4>Summary</h4><p translate="no">${esc(x.summary)}</p></div>
+        <div class="ai-card"><h4>Key takeaways</h4><ul translate="no">${x.takeaways.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
       if (x.basis === 'snippet') h += '<p class="ai-note">From the headline and description only.</p>';
       else if (x.truncated) h += '<p class="ai-note">From the first part of a long article.</p>';
       if (safeUrl(ai.url)) h += `<a class="ai-open" href="${esc(safeUrl(ai.url))}" target="_blank" rel="noopener">Read the full article</a>`;
       if (!ai.qa.length) h += `<div class="ai-chips">${QUESTIONS.map(q => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join('')}</div>`;
-      h += ai.qa.map(t => `<div class="ai-q">${esc(t.q)}</div><div class="ai-a${t.wait ? ' wait' : ''}${t.error ? ' err' : ''}">${t.wait ? 'Thinking…' : esc(t.error ? aiSay(t.error) : t.a)}</div>`).join('');
+      h += ai.qa.map(t => `<div class="ai-q">${esc(t.q)}</div><div class="ai-a${t.wait ? ' wait' : ''}${t.error ? ' err' : ''}"${t.wait || t.error ? '' : ' translate="no"'}>${t.wait ? 'Thinking…' : esc(t.error ? aiSay(t.error) : t.a)}</div>`).join('');
     }
     aiBody.innerHTML = h;
     aiAsk.hidden = ai.phase !== 'done';

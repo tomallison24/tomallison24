@@ -40,7 +40,8 @@ const hhmm = s => String(s || '').split(' - ').map(schTime).join('–');
 function schWhen(iso) {
   const d = new Date(iso); if (isNaN(d)) return '';
   // Short: "10 PM", "6:30 AM"; another day by its name ("Tue 6 PM").
-  const now = new Date(), t = d.toLocaleTimeString([], d.getMinutes() ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' });
+  // (in Russian the hour alone would read "18": it keeps its minutes, "18:00")
+  const now = new Date(), t = d.toLocaleTimeString([], d.getMinutes() || document.documentElement.lang === 'ru' ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' });
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
   return days === 0 ? t : days < 7 ? d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + t;
 }
@@ -92,7 +93,7 @@ function tSchedHTML(t) {
         <span class="st-tag">${s.on && i === s.cur ? 'Now' : s.on && i === s.next ? (s.when ? esc(s.when) : 'Next') : ''}</span></div>`).join('');
     return `<div class="group sgroup">
       <button class="rowi${tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="tsched" data-v="${esc(id)}" role="switch" aria-checked="${s.on}">${icon('timer')}
-        <span class="k">${esc(s.name)}<small>${esc(s.days || '')}${s.on ? '' : ' · paused'}</small></span><span class="sw${s.on ? ' on' : ''}" style="--tint:110,170,130"></span></button>
+        <span class="k"><span translate="no">${esc(s.name)}</span><small>${esc(s.days || '')}${s.on ? '' : ' · paused'}</small></span><span class="sw${s.on ? ' on' : ''}" style="--tint:110,170,130"></span></button>
       <div class="ssteps">${steps}</div></div>`;
   }).join('');
 }

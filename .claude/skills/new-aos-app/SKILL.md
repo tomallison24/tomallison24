@@ -71,9 +71,12 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
-**Every app has two designs**, as one app: **Vintage** (mid-century modern in the Retro
-colours, the default) and **Standard** (Sea glass), picked in the app's own **Settings → Design**
-(Meals, `meals/`, is the pattern; Clock started it with its own `clock/design.js`):
+**Every app has four designs**, as one app: **Vintage** (mid-century modern in the Retro
+colours, the default), **Standard** (Sea glass), **Night Drive** and **Folk**, picked in aOS for
+every app at once or in the app's own **Settings → Design** (Meals, `meals/`, is the pattern; Clock
+started it with its own `clock/design.js`). You write two of them: Night Drive and Folk are
+generated from Vintage by `node aOS/scripts/make-looks.mjs` (their `<style id="neon">` and
+`<style id="folk">` blocks after the Vintage one, and `icon-neon*` / `icon-folk*` from `icon.svg`):
 - The Sea glass styles are the page's main `<style>`; the Vintage look is a second
   `<style id="vintage">` right after it (cream and walnut, mustard, teal, burnt orange, flat
   cards, atomic shapes in `.ambient`, Futura).
@@ -88,6 +91,11 @@ colours, the default) and **Standard** (Sea glass), picked in the app's own **Se
   Sea glass one (`scripts/make-icons.mjs` draws both); link the Vintage ones in the page and the
   manifest (colours `#241E1A`); design.js swaps them. aOS shows the one for its own look.
 - Server calls go to `../<id>/api/`, not `api/`.
+- **Russian**: in `<head>`, right after design.js, `<script src="../home/lang.js"></script>`,
+  `<script src="../home/lang/ru/shared.js"></script>` and `<script src="../home/lang/ru/<id>.js"></script>`
+  (all three in `sw.js` SHELL), and write `home/lang/ru/<id>.js` (`home/lang/README.md`: whole texts,
+  patterns, the glossary); `translate="no"` on what the family wrote. `node aOS/scripts/lang-scan.mjs <id>`
+  must list nothing (aOS/scripts/lang-test.mjs checks every app).
 - Tests: the app's browser test covers both designs and Settings → Design (seed
   `localStorage['design.<id>']` and hold the sky still with `aos.sky = 'day'`), and
   `aOS/scripts/sky-test.mjs` lists the app. `check-apps.mjs` checks the wiring.
@@ -162,7 +170,7 @@ node <id>/scripts/<tests>.mjs          # the app's own tests
 
 `.github/workflows/apps-check.yml` runs all of this on every pull request (and on
 pushes to the default branch): add each new test to it (plain Node tests to the
-`check` job, browser tests to one of the `browser` job's groups, whichever runs shortest: each is about four minutes, and they run side by side). `check-apps.mjs` fails on any `<folder>/scripts/*test*.mjs`
+`check` job, browser tests to one of the `browser` job's groups, whichever runs shortest: each is about three minutes, and they run side by side). `check-apps.mjs` fails on any `<folder>/scripts/*test*.mjs`
 that no workflow runs. Fix every error; say in the PR which warnings remain and why.
 
 Then open a PR. It merges once every check passes (`CLAUDE.md`, "Merging"),

@@ -109,12 +109,12 @@
   }
   function row(p) {
     const d = distOf(p);
-    const sub = [p.category, p.city || (p.address || '').split(',')[0], fmtDist(d)].filter(Boolean).join(' · ') || (p.notes || '').split('\n')[0];
+    const bits = [p.category, p.city || (p.address || '').split(',')[0], fmtDist(d)].filter(Boolean).join(' · '), sub = bits || (p.notes || '').split('\n')[0];
     const right = p.status === 'been'
       ? (p.rating ? starsHtml(p.rating) : '') + (p.price ? '<span class="price">' + priceTxt(p.price) + '</span>' : '') + (p.visited ? '<span>' + esc(fmtDate(p.visited)) + (p.visits.length > 1 ? ' · ' + p.visits.length + '×' : '') + '</span>' : '')
       : (p.planned ? '<span class="when">' + esc(fmtDate(p.planned)) + '</span>' : '') + (p.price ? '<span class="price">' + priceTxt(p.price) + '</span>' : '');
     return '<button class="row" type="button" data-id="' + esc(p.id) + '"><span class="em" aria-hidden="true">' + esc(p.emoji) + '</span>'
-      + '<span class="t"><b>' + esc(p.name || 'Untitled') + '</b><small>' + esc(sub) + '</small></span><span class="r">' + right + '</span></button>';
+      + '<span class="t"><b' + (p.name ? ' translate="no"' : '') + '>' + esc(p.name || 'Untitled') + '</b><small' + (bits ? '' : ' translate="no"') + '>' + esc(sub) + '</small></span><span class="r">' + right + '</span></button>';   // the family's (a name, a note) left as it is in Russian
   }
   function render() {
     const want = places.filter(p => p.status === 'want').length, been = places.length - want;
@@ -125,7 +125,7 @@
     const tags = [...new Set(places.filter(p => p.status === st.tab).flatMap(p => p.tags))].sort();
     if (st.tag && !tags.includes(st.tag)) st.tag = null;
     $('chips').innerHTML = st.view === 'map' ? LAYERS.map(([k, n]) => '<button class="chip glass" type="button" data-layer="' + k + '" aria-pressed="' + !!st.layers[k] + '">' + n + '</button>').join('') : SORTS[st.tab].map(([k, n]) => '<button class="chip glass" type="button" data-sort="' + k + '" aria-pressed="' + (st.sort[st.tab] === k) + '">' + n + '</button>').join('')
-      + tags.map(t => '<button class="chip glass" type="button" data-tag="' + esc(t) + '" aria-pressed="' + (st.tag === t) + '">#' + esc(t) + '</button>').join('');
+      + tags.map(t => '<button class="chip glass" type="button" data-tag="' + esc(t) + '" aria-pressed="' + (st.tag === t) + '" translate="no">#' + esc(t) + '</button>').join('');
     $('viewBtn').innerHTML = st.view === 'map' ? ICON.list : ICON.map;
     $('viewBtn').setAttribute('aria-label', st.view === 'map' ? 'Show the list' : 'Show the map');
     $('viewBtn').setAttribute('aria-pressed', st.view === 'map');
@@ -193,7 +193,7 @@
     render();
   }
   const foundRow = (p, i) => '<button class="row" type="button" data-found="' + i + '"><span class="em" aria-hidden="true">' + esc(p.emoji) + '</span>'
-    + '<span class="t"><b>' + esc(p.name) + '</b><small>' + esc([p.category, p.address, fmtDist(st.view === 'map' ? null : distOf(p))].filter(Boolean).join(' · ')) + '</small></span>'
+    + '<span class="t"><b translate="no">' + esc(p.name) + '</b><small>' + esc([p.category, p.address, fmtDist(st.view === 'map' ? null : distOf(p))].filter(Boolean).join(' · ')) + '</small></span>'
     + '<span class="r"><span class="when">Add</span></span></button>';
   function openFound(i) {
     const f = st.found[i]; if (!f) return;
@@ -267,7 +267,7 @@
   // What came back is kept for the visit, so panning back costs nothing.
   // The groups' colours follow the design: Sea glass coral, violet and teal; Vintage's Retro burnt
   // orange, olive and walnut (its dark mode lightens the olive and walnut in index.html, #vintage).
-  const BIZ_ZOOM = 15, BIZ_COLOR = { glass: { food: '#FF6B57', fun: '#8E6CFF', shops: '#15A3A3' }, vintage: { food: '#D8572A', fun: '#7E8C34', shops: '#8A5A3A' } };
+  const BIZ_ZOOM = 15, BIZ_COLOR = { glass: { food: '#FF6B57', fun: '#8E6CFF', shops: '#15A3A3' }, vintage: { food: '#D8572A', fun: '#7E8C34', shops: '#8A5A3A' }, neon: { food: '#DF388E', fun: '#876DD9', shops: '#906134' }, folk: { food: '#DD3E31', fun: '#618C47', shops: '#775826' } };   // neon and folk: Vintage's, repainted (aOS/scripts/looks.mjs)
   const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
   const bizColor = g => { const c = BIZ_COLOR[look()] || BIZ_COLOR.vintage; return c[g] || c.fun; };
   const taller = () => look() === 'glass' ? 0 : 26;   // Vintage's header (the 44px title and its bars) is 26px taller: the map keeps that much more clear
@@ -319,9 +319,9 @@
   }
   function bizCard(o, key) {
     const i = o.info || {}, hours = i.hours ? P.hoursText(i.hours).split('\n')[0] : '';
-    return '<div class="bizcard" data-biz="' + esc(key || bizKey(o)) + '"><b>' + esc(o.emoji) + ' ' + esc(o.name) + '</b>'
+    return '<div class="bizcard" data-biz="' + esc(key || bizKey(o)) + '"><b translate="no">' + esc(o.emoji) + ' ' + esc(o.name) + '</b>'
       + '<small>' + esc([o.category, i.cuisine].filter(Boolean).join(' · ')) + '</small>'
-      + (o.address ? '<small>' + esc(o.address) + '</small>' : '') + (hours ? '<small>🕒 ' + esc(hours) + '</small>' : '')
+      + (o.address ? '<small translate="no">' + esc(o.address) + '</small>' : '') + (hours ? '<small>🕒 ' + esc(hours) + '</small>' : '')
       + '<div class="bizacts"><button type="button" data-bizadd="want">Want to go</button><button type="button" data-bizadd="been">Been</button><button type="button" data-bizdir>Directions</button></div></div>';
   }
   document.addEventListener('click', e => {
@@ -342,7 +342,8 @@
     for (const p of list) {
       if (p.lat == null) continue;
       const icon = L.divIcon({ className: '', html: '<div class="pin ' + p.status + '"><span>' + esc(p.emoji) + '</span></div>', iconSize: [30, 30], iconAnchor: [15, 30] });
-      L.marker([p.lat, p.lon], { icon, title: p.name, keyboard: true }).on('click', () => openPlace(p)).addTo(pins);
+      const mk = L.marker([p.lat, p.lon], { icon, title: p.name, keyboard: true }).on('click', () => openPlace(p)).addTo(pins);
+      if (mk.getElement()) mk.getElement().setAttribute('translate', 'no');   // its title is the place's name: left as it is in Russian
       pts.push([p.lat, p.lon]);
     }
     if (!fitted && pts.length) { fitted = true; fit(pts); }
@@ -411,7 +412,7 @@
       const r = await fetch(PHOTON + '/api/?q=' + encodeURIComponent(q) + '&limit=10&lang=en' + near, { signal: findCtl.signal });
       const j = await r.json();
       found = (j.features || []).map(P.fromPhoton).filter(p => p.lat != null);
-      $('results').innerHTML = found.length ? found.map((p, i) => '<button class="result" type="button" data-i="' + i + '"><span class="em">' + esc(p.emoji) + '</span><span><b>' + esc(p.name) + '</b><small>'
+      $('results').innerHTML = found.length ? found.map((p, i) => '<button class="result" type="button" data-i="' + i + '"><span class="em">' + esc(p.emoji) + '</span><span><b translate="no">' + esc(p.name) + '</b><small>'
         + esc([p.category, p.address, fmtDist(distOf(p))].filter(Boolean).join(' · ')) + '</small></span></button>').join('')
         : '<p class="hint" style="padding:14px 6px">No matches on OpenStreetMap. Try fewer words, or add it by hand.</p>';
       $('results').hidden = false;
@@ -518,8 +519,8 @@
     const i = p.info, rows = [];
     if (i && i.hours) rows.push(['🕒', esc(P.hoursText(i.hours))]);
     if (i && i.phone) rows.push(['📞', '<a href="tel:' + esc(i.phone.replace(/[^\d+]/g, '')) + '">' + esc(i.phone) + '</a>']);
-    if (i && webOnly(i.website)) { let host = i.website; try { host = new URL(i.website).hostname.replace(/^www\./, ''); } catch {} rows.push(['🌐', '<a href="' + esc(i.website) + '" target="_blank" rel="noopener noreferrer">' + esc(host) + '</a>']); }
-    if (i && i.cuisine) rows.push(['🍴', esc(i.cuisine)]);
+    if (i && webOnly(i.website)) { let host = i.website; try { host = new URL(i.website).hostname.replace(/^www\./, ''); } catch {} rows.push(['🌐', '<a href="' + esc(i.website) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(host) + '</a>']); }
+    if (i && i.cuisine) rows.push(['🍴', '<span translate="no">' + esc(i.cuisine) + '</span>']);
     $('plInfoField').hidden = !p.osm;
     $('plInfo').innerHTML = rows.length ? rows.map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + v + '</span></div>').join('')
       : '<div><span class="v" style="color:var(--muted)">' + (p.infoLoading ? 'Looking it up…' : 'No hours, phone or website.') + '</span></div>';

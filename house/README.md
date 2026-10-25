@@ -230,9 +230,9 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
   Favorites meanwhile. Nothing in the app decides who is home: change the
   automations in Home Assistant (`away_everyone_out`, `thermostat_someone_home`)
   and the pill follows.
-- **Now Playing**: a Sonos that is playing, one card per group.
 - **Running Now**: every device that is doing something (heating, cooling,
-  a fan, drying, cleaning), as chips; tap one to go to it with its popup open.
+  a fan, drying, cleaning, a speaker playing music: every speaker that plays,
+  grouped ones too, the Arc playing the TV not), as chips; tap one to go to it with its popup open.
   A green dot with a faint ring easing out from it every 2.4 s marks one that
   is working; a dehumidifier only holding (or with a full tank) has a still
   grey dot. Still with Reduce Motion.

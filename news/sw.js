@@ -5,7 +5,7 @@
 // Vintage address too (the deploy copies news/ there), so the sport lists are
 // named from News' side, as app.js asks for them.
 const CACHE = 'news-v57';
-const SHELL = ['./', 'index.html', 'app.js', '../news/sport-catalog.json', '../news/leagues.json', 'manifest.webmanifest?v=3', 'icon.svg?v=4', 'icon-glass.svg?v=1', 'icon-180.png?v=5', 'icon-512.png?v=5', 'icon-glass-180.png?v=5', 'icon-glass-512.png?v=5', '../home/slide.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js'];
+const SHELL = ['./', 'index.html', 'app.js', '../news/sport-catalog.json', '../news/leagues.json', 'manifest.webmanifest?v=3', 'icon.svg?v=4', 'icon-glass.svg?v=1', 'icon-180.png?v=5', 'icon-512.png?v=5', 'icon-glass-180.png?v=5', 'icon-glass-512.png?v=5', '../home/slide.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/news.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

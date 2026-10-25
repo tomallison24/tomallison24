@@ -25,6 +25,11 @@
 //                      with (so its shopping list stays as it was), and added
 //                      to the log, as Fitness keeps each workout
 //   POST discard    { at? } -> {} the draft goes (with at: only if it is still that draft)
+//   POST clear      { id } -> { plan: null } the family's plan is cleared (Dinners' ×), only if it is still
+//                      plan id ({ error: 'changed' } if someone replaced it since). It stays in the log
+//                      (Past plans, the Sheet) and in the history new plans differ from.
+//   POST current    { id, over? } -> { plan } plan id from the log is the family's plan again (Undo of
+//                      clear), only while the plan now is over (none: only while there is no plan)
 //   POST settings   { stores, cards, avoid } -> { settings }   (avoid: the owner only; { error: 'owner-only' } for anyone else)
 //
 // For Ipsy, the helper you chat with (its changes, and their Undo, go through these and the
@@ -437,6 +442,20 @@ export async function onRequest({ request, params, env }, f = fetch) {
       if (b.at) { const d = await getJSON(db, 'meals:draft'); if (d && d.at !== b.at) return reply({ error: 'changed' }, 409); }
       await db.delete('meals:draft');
       return reply({});
+    }
+    if (route === 'clear' && method === 'POST') {
+      const b = await body(request), plan = await getJSON(db, 'meals:plan');
+      if (plan && plan.id !== b.id) return reply({ error: 'changed' }, 409);
+      await db.delete('meals:plan');
+      return reply({ plan: null });
+    }
+    if (route === 'current' && method === 'POST') {
+      const b = await body(request), now = await getJSON(db, 'meals:plan');
+      if ((now ? now.id : null) !== (b.over || null)) return reply({ error: 'changed' }, 409);
+      const plan = /^p[a-z0-9]{1,16}$/.test(String(b.id || '')) ? await getJSON(db, 'meals:log:' + b.id) : null;
+      if (!plan) return reply({ error: 'not-found' }, 404);
+      await putJSON(db, 'meals:plan', plan);
+      return reply({ plan });
     }
     // ---- for Ipsy: one night's dinner, a draft put back, an accept taken back (see the top) ----
     if (route === 'night' && method === 'POST') {

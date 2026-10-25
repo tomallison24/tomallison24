@@ -2,13 +2,14 @@
 // stays where you left it while you go back and forth (aOS1 sent you off to each app's own Home
 // Screen icon; those still work, and Get on an app's page still adds one).
 //
-//   - Ipsy at the top, across the apps that have it (below, "Ipsy in aOS"); Today and Search by
-//     your account.
-//   - Favorites, mixed: the ones you pin (Edit, up to four), then the apps you open most (the last
-//     14 days, kept on this phone: aos.home.used), then a starting four.
-//   - Every app, in a few groups. A row opens the app; its ⓘ opens its page (Get, What's New).
-//   - No dock: four everyday apps float at the bottom, always the same ones, for a quick open (and
-//     Home, when you're on Today or Search); Mail's shows its unread count.
+//   - The Ipsy bar at the top: type and it finds the app (Return opens the one it most likely is),
+//     and what's in the apps (aOS/home-find.js, read from this phone, nothing sent anywhere); or
+//     ask Ipsy, across the apps that have it (below, "Ipsy in aOS"). Today by your account.
+//   - Favorites: Weather and Calendar as widgets (today's weather, what's next), with four apps:
+//     the ones you pin (Edit, up to four), then the apps you open most (the last 14 days, kept on
+//     this phone: aos.home.used), then a starting four.
+//   - Every app, as icons in a few groups: one tap opens any app. Mail's shows its unread count.
+//   - No dock, and nothing floats over Home; on Today (or Search), Home floats at the bottom.
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
 //
@@ -29,20 +30,24 @@
   const get = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
   const put = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
-  // Home takes the Apps tab's place and opens first. The dock gives way to your most used apps
-  // (paintQuick, below); Today and Search move up by your account, on Home.
+  // Home takes the Apps tab's place and opens first. The dock gives way to a Home button off Home
+  // (paintQuick, below); Today moves up by your account, on Home, and the Ipsy bar does Search's job.
   const HOME_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>';
+  // the word for this tab (in Russian, not the same as the Home app's: ../home/lang/ru/aos.js)
+  const word = (k, en) => { const r = window.aosLang ? aosLang.t(k) : k; return r === k ? en : r; };
+  const HOME = word('Home (the aOS tab)', 'Home');
   const appsTab = document.querySelector('[data-tab="apps"]');
   appsTab.dataset.tab = 'home';
-  appsTab.innerHTML = HOME_SVG + 'Home';
+  appsTab.innerHTML = HOME_SVG + HOME;
+  if (HOME !== 'Home') $('home').querySelector('h1').firstChild.data = HOME;
+  $('hqx').setAttribute('aria-label', word('Clear (the search bar)', 'Clear'));   // not the weather's Clear
   appsTab.parentNode.insertBefore(appsTab, appsTab.parentNode.querySelector('[data-tab]'));
   const bar = document.querySelector('nav.bar'), quick = document.createElement('div');
-  quick.className = 'quick'; quick.setAttribute('aria-label', 'Your most used apps');
+  quick.className = 'quick'; quick.setAttribute('aria-label', 'Back to Home');
   bar.classList.add('quickbar'); bar.append(quick);
   const head = $('home').querySelector('.head'), acct = head.querySelector('[data-acct]'), acts = document.createElement('div');
   acts.className = 'hacts';
-  acts.innerHTML = `<button type="button" class="hbtn" data-tab="today" aria-label="Today">${document.querySelector('.tabs [data-tab="today"] svg').outerHTML}</button>`
-    + `<button type="button" class="hbtn" data-tab="search" aria-label="Search">${document.querySelector('.tabs [data-tab="search"] svg').outerHTML}</button>`;
+  acts.innerHTML = `<button type="button" class="hbtn" data-tab="today" aria-label="Today">${document.querySelector('.tabs [data-tab="today"] svg').outerHTML}</button>`;
   head.append(acts); acts.append(acct);
   let tab = 'home';
   const showTab = window.aosTabs.show;
@@ -63,10 +68,13 @@
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
-  const icon = id => { let g = false; try { g = localStorage.getItem('design.' + id) === 'glass'; } catch {} return `../${id}/icon${g ? '-glass' : ''}-180.png`; };
+  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} return `../${id}/icon${/^(glass|neon|folk)$/.test(d || '') ? '-' + d : ''}-180.png`; };
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
-  const STARTERS = ['calendar', 'meals', 'notes', 'weather'];
+  // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
+  const WIDGETS = ['weather', 'calendar'];
+  const pinnable = id => known(id) && !WIDGETS.includes(id);
+  const STARTERS = ['meals', 'notes', 'mail', 'travel'];
 
   // ---- how much each app is used: the days it was opened, on this phone ----
   const dayNo = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 6e4) / 864e5);
@@ -77,16 +85,16 @@
   }
   function mostUsed() {
     const u = get(USED, {}), d = dayNo();
-    return Object.entries(u).filter(([id]) => known(id))
+    return Object.entries(u).filter(([id]) => pinnable(id))
       .map(([id, a]) => [id, a.filter(x => d - x < 14).length, Math.max(...a)])
       .filter(x => x[1]).sort((a, b) => b[1] - a[1] || b[2] - a[2]).map(x => x[0]);
   }
   // Favorites, mixed: pinned first, then the most used, then the starting four
-  let pins = get(PINS, []).filter(known).slice(0, MAX_PINS);
+  let pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
   function favorites() {
     const out = pins.map(id => ({ id, why: 'pin' }));
     for (const id of mostUsed()) if (out.length < 4 && !out.some(f => f.id === id)) out.push({ id, why: 'used' });
-    for (const id of STARTERS) if (out.length < 4 && known(id) && !out.some(f => f.id === id)) out.push({ id, why: 'start' });
+    for (const id of [...STARTERS, ...ALL]) if (out.length < 4 && pinnable(id) && !out.some(f => f.id === id)) out.push({ id, why: 'start' });
     return out;
   }
 
@@ -97,55 +105,114 @@
   const frames = {};                                            // id -> its .frame, while it's open
   const editing = () => body.classList.contains('editing');
   const STAR = on => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
-  // four everyday apps, always these, at the bottom of every aOS page; Home with them, off Home
-  const QUICK = ['mail', 'house', 'calendar', 'fitness'];
-  // Mail's unread count, on its icon here rather than on aOS's Home Screen icon: Mail inside aOS
+  // Mail's unread count, on its icon on Home rather than on aOS's Home Screen icon: Mail inside aOS
   // hands it over (window.aosHome.unread) and keeps it in the "unread" cache, which Mail's sw.js
   // also writes when a push brings a new count
   const unread = {};
-  window.aosHome.unread = (id, n) => { unread[id] = n > 0 ? n : 0; paintQuick(); };
+  window.aosHome.unread = (id, n) => { const was = unread[id] || 0; unread[id] = n > 0 ? n : 0; if (unread[id] !== was) paintHome(); };
   const readUnread = () => { try { caches.open('unread').then(c => c.match('/unread/mail')).then(r => r ? r.text() : '0').then(n => window.aosHome.unread('mail', +n || 0)).catch(() => {}); } catch {} };
   addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') readUnread(); });
-  function paintQuick() {
-    quick.innerHTML = `<button type="button" class="qhome" aria-label="Home"${tab === 'home' ? ' hidden' : ''}>${HOME_SVG}</button>`
-      + QUICK.filter(known).map(id => { const n = unread[id] || 0;
-        return `<button type="button" data-open="${id}" aria-label="${esc(name(id))}${n ? `, ${n} unread` : ''}"><img src="${icon(id)}" alt="">${n ? `<em class="unread" aria-hidden="true">${n > 99 ? '99+' : n}</em>` : ''}</button>`; }).join('');
-    quick.querySelector('.qhome').onclick = () => window.aosTabs.show('home');
+  // the widgets keep up: on opening aOS, back on the phone, and every minute while Home is showing.
+  // The forecast is fetched again when Weather's last one is over 10 minutes old (aOS/home-find.js).
+  const onHome = () => !current && tab === 'home' && document.visibilityState === 'visible';
+  const freshen = () => { if (window.aosFind && aosFind.refreshWeather) aosFind.refreshWeather().then(got => { if (got) paintHome(); }, () => {}); };
+  addEventListener('visibilitychange', () => { if (onHome()) { paintHome(); freshen(); } syncPrefs(); });
+  setInterval(() => { if (onHome() && !editing()) { paintHome(); freshen(); } }, 60e3);
+  // Settings that follow you between your devices (aOS/prefs-sync.js): on opening aOS, coming back to it
+  // or leaving it, and back on Home from an app (where most of them change). What came from another
+  // device: aOS's own look, light or dark and Favorites at once; an app open out of sight starts again
+  // with its settings; the app on screen gets them once you leave it.
+  const syncPrefs = () => { if (window.aosPrefs && AllisonOS.account) aosPrefs.sync({ apps: D.APPS, account: AllisonOS.account, wait: id => id === current, ready: prefsReady, applied: prefsCame }).catch(() => {}); };
+  // an app open out of sight closes first (it may save what it has as it goes), then opens again with them
+  const prefsReady = apps => Promise.all(apps.filter(id => frames[id] && id !== current).map(id => new Promise(ok => {
+    const f = frames[id].firstChild; f.moving = true;
+    f.addEventListener('load', ok, { once: true }); setTimeout(ok, 3000); point(f, 'about:blank');
+  })));
+  function prefsCame(apps) {
+    for (const id of apps) {
+      if (id === 'aos') {
+        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|folk)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
+        if (W.theme) W.theme.set(W.theme.read());
+        try { const lg = localStorage.getItem('aos.lang'); if (window.aosLang && lg && lg !== aosLang.get()) aosLang.set(lg); } catch {}   // the language came from another device: drawn again in it
+        pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
+      } else if (frames[id]) { const f = frames[id].firstChild; if (f.moving) { f.moving = false; point(f, `../${id}/`); } }
+    }
+    paintHome(true);   // an app's design changes its icon
   }
-  function paintHome() {
+  addEventListener('aos:account', e => { if (e.detail) syncPrefs(); });
+  // a look picked in Appearance is every app's: an app open out of sight closes first (so it can't save its old design
+  // over the new one), every app's design is written (aOS/look.js), then they open again in it
+  const everyLook = look => {
+    const done = () => { aosLook.set(look, { apps: D.APPS }); prefsCame(D.APPS); syncPrefs(); };
+    if (!D.APPS.some(id => frames[id] && id !== current)) return done();   // none open: at once
+    return prefsReady(D.APPS).then(done);
+  };
+  // Home is drawn again often (back on the phone, every minute, a new unread count, a new forecast).
+  // Only what changed is replaced, and never under a finger: iOS drops a tap whose button is swapped
+  // out between touching and lifting (the Weather widget, tapped as aOS came back, didn't open).
+  let down = false, upAt = 0, later = null;
+  addEventListener('pointerdown', () => { down = true; }, true);
+  for (const t of ['pointerup', 'pointercancel']) addEventListener(t, () => { down = false; upAt = Date.now(); }, true);
+  const tpl = document.createElement('template');
+  function setHTML(el, html) {
+    if (el._html === html) return;
+    tpl.innerHTML = html;
+    const now = [...el.children], next = [...tpl.content.children];
+    if (now.length === next.length) next.forEach((n, i) => { if (!now[i].isEqualNode(n)) now[i].replaceWith(n); });
+    else el.replaceChildren(...next);
+    el._html = html;
+  }
+  // off Home (Today, Search), Home floats at the bottom; on Home, nothing does
+  function paintQuick() {
+    quick.hidden = tab === 'home';
+    if (!quick.firstChild) { quick.innerHTML = `<button type="button" class="qhome" aria-label="${HOME}">${HOME_SVG}</button>`; quick.firstChild.onclick = () => window.aosTabs.show('home'); }
+  }
+  // an app's icon, with Mail's unread count on it
+  const ic = id => { const n = unread[id] || 0;
+    return `<span class="ic"><img src="${icon(id)}" alt="">${n ? `<em class="unread" aria-hidden="true">${n > 99 ? '99+' : n}</em>` : ''}</span>`; };
+  const label = id => esc(name(id)) + (unread[id] ? `, ${unread[id]} unread` : '');
+  function paintHome(now = false) {   // now: a change you just made (a pin, back on Home), drawn at once
+    if (!now && (down || Date.now() - upAt < 450)) { clearTimeout(later); later = setTimeout(paintHome, 500); return; }   // a finger on the screen: once it's lifted
     $('hdate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     paintQuick();
-    const WHY = { pin: 'Pinned', used: 'You use it a lot', start: tag };
-    $('favs').innerHTML = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" style="--c:${appHue(f.id)}">
-        <img src="${icon(f.id)}" alt=""><b>${esc(name(f.id))}</b><small>${esc(typeof WHY[f.why] === 'function' ? WHY[f.why](f.id) : WHY[f.why])}</small><i class="pin">${STAR(f.why === 'pin')}</i></button>`).join('');
-    $('spaces').innerHTML = SPACES.map(([title, ids]) => `<div class="sec"><h2>${esc(title)}</h2></div><div class="hgroup">${ids.map(id =>
-      `<div class="hrow" role="button" tabindex="0" data-open="${id}"><img src="${icon(id)}" alt=""><span><b>${esc(name(id))}</b><i>${esc(tag(id))}</i></span>
-        <button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>
-        <button type="button" class="hinfo" data-app="${id}" aria-label="About ${esc(name(id))}">i</button></div>`).join('')}</div>`).join('');
+    const F = window.aosFind || {}, wx = F.weather ? F.weather() : null, next = F.next ? F.next() : null;
+    const tiles = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" aria-label="${label(f.id)}">${ic(f.id)}<i class="pin" aria-hidden="true">${STAR(f.why === 'pin')}</i><b>${esc(name(f.id))}</b></button>`).join('');
+    setHTML($('favs'), (known('weather') ? `<button type="button" class="wid wx" data-open="weather" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
+        <span class="wh"><img src="${icon('weather')}" alt="">${wx && wx.place ? esc(wx.place) : 'Weather'}</span>
+        <span class="big">${wx ? esc(wx.temp) : '–'}</span><small>${wx ? esc(wx.text) : 'Open for the forecast'}</small>${wx && wx.hilo ? `<small>${esc(wx.hilo)}</small>` : ''}</button>` : '')
+      + tiles
+      + (known('calendar') ? `<button type="button" class="wid cal" data-open="calendar" style="--c:${appHue('calendar')}" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">
+        <img src="${icon('calendar')}" alt=""><span>${next
+          ? `<em>Next · ${esc(next.when)}</em><b translate="no">${esc(next.title)}</b><small>${next.then ? 'Then ' + esc(next.then) : next.where ? `<span translate="no">${esc(next.where)}</span>` : 'Nothing after it today'}</small>`
+          : `<em>Calendar</em><b>Nothing else today</b><small>Open for the week ahead</small>`}</span></button>` : ''));
+    setHTML($('spaces'), SPACES.filter(s => s[1].length).map(([title, ids]) => `<div class="hcat${ids.length <= 2 ? ' half' : ''}"><h3>${esc(title)}</h3><div class="hg" style="--n:${ids.length <= 2 ? 2 : 5}">${ids.map(id =>
+      `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join('')}</div></div>`).join(''));
   }
   const appHue = id => (window.aosAppHue && aosAppHue(id)) || '129,147,188';
   function togglePin(id) {
     if (pins.includes(id)) pins = pins.filter(x => x !== id);
     else if (pins.length >= MAX_PINS) return toast('Four at most: unpin one first');
     else pins = [...pins, id];
-    put(PINS, pins); paintHome();
+    put(PINS, pins); paintHome(true); syncPrefs();
   }
   $('favEdit').onclick = () => { const on = body.classList.toggle('editing'); $('favEdit').textContent = on ? 'Done' : 'Edit'; $('favHint').hidden = !on; };
   $('home').addEventListener('click', e => {
     const p = e.target.closest('[data-pin]'); if (p) { e.stopPropagation(); return togglePin(p.dataset.pin); }
     if (e.target.closest('[data-app]')) return;   // ⓘ: the app's page (aOS/app.js)
     const f = e.target.closest('[data-fav]'); if (f && editing()) return togglePin(f.dataset.fav);
-    if (e.target.closest('#askIpsy') && !e.target.closest('.ipsy-btn')) { const b = $('ipsySlot').querySelector('.ipsy-btn'); if (b) b.click(); }
   });
+  // the icons that aren't buttons themselves (their pin is): Return or Space opens the app
+  $('home').addEventListener('keydown', e => { const o = e.target.closest('.happ'); if (o && e.target === o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(o.dataset.open); } });
   // anywhere in aOS (Home, an app's page): data-open opens that app inside aOS
   document.addEventListener('click', e => {
     const o = e.target.closest('[data-open]');
     if (!o || e.target.closest('[data-pin], [data-app]') || (editing() && o.closest('#favs'))) return;
-    e.preventDefault(); show(o.dataset.open);
+    e.preventDefault();
+    if (o.closest('#hfound')) { const at = o.dataset.at; clearFind(); show(o.dataset.open, at); } else show(o.dataset.open);
   });
 
   // ---- the apps, each in a frame of its own ----
-  function load(id) {
+  function load(id, at = '') {
     if (!open.includes(id)) {
       if (open.length >= MAX_OPEN) drop(used.find(x => x !== id && x !== current && !working.has(x)));   // put away the one used longest ago
       open.push(id);
@@ -163,7 +230,7 @@
     box.append(f); frames[id] = box; $('stage').append(box);
     put(OPEN, open);
     // what it kept on the phone comes first (a few seconds at most); later than that, it opens again with it
-    const go = () => { if (started || frames[id] !== box) return; started = true; point(f, `../${id}/`); };
+    const go = () => { if (started || frames[id] !== box) return; started = true; point(f, `../${id}/` + at); };
     const moving = carryIn(id).then(data => { if (data) movedIn(id, started ? f : null, data); }, () => {});
     Promise.race([moving, new Promise(r => setTimeout(r, 4000))]).then(go, go);
     return box;
@@ -227,11 +294,14 @@
   }
   const reveal = id => { for (const [k, f] of Object.entries(frames)) f.hidden = k !== id; };
   let hideT = null;
-  function show(id) {
+  // at: where in the app to open it (what the Ipsy bar found in it, aOS/home-find.js), as '#…' or '?…'
+  function show(id, at = '') {
     closeMenu();
     id = known(id) ? id : null;
+    at = /^[#?][\w=&%.:-]*$/.test(at || '') ? at : '';
     const prev = current;
-    if (id && !frames[id]) load(id); else if (id && id !== prev) recheck(id);
+    if (id && !frames[id]) load(id, at);
+    else { if (id && id !== prev) recheck(id); if (id && at) point(frames[id].firstChild, `../${id}/` + at); }
     current = id;
     if (current) { used = used.filter(x => x !== current); used.push(current); if (current !== prev) noteUse(current); }
     clearTimeout(hideT);
@@ -239,7 +309,7 @@
     else reveal(current);
     body.classList.toggle('in-app', !!current);
     $('appwin').setAttribute('aria-hidden', String(!current));
-    if (!current) paintHome();   // an app's design may have changed its icon
+    if (!current) { paintHome(true); if (prev) syncPrefs(); }   // an app's design may have changed its icon; and its settings follow you
     remember();
     tint();
   }
@@ -351,6 +421,74 @@
   edge.addEventListener('pointerup', endEdge);
   edge.addEventListener('pointercancel', endEdge);
 
+  // ---- the Ipsy bar: find an app, or what's in one, or ask Ipsy ----
+  // An app matches on its name first (the start of it best), then on what it does and its group.
+  // What's in the apps comes from aOS/home-find.js, read from this phone. Return opens the top hit;
+  // with no app to open, it asks Ipsy.
+  const q = $('hq');
+  const words = id => [name(id), tag(id), (SPACES.find(s => s[1].includes(id)) || [''])[0]].join(' ').toLowerCase();
+  function findApps(t) {
+    t = t.trim().toLowerCase(); if (!t) return [];
+    const rank = id => { const n = name(id).toLowerCase();
+      return n.startsWith(t) ? 0 : n.split(/\s+/).some(w => w.startsWith(t)) ? 1 : n.includes(t) ? 2 : words(id).split(/[^a-z0-9]+/).some(w => w.startsWith(t)) ? 3 : 9; };
+    return ALL.map(id => [id, rank(id)]).filter(x => x[1] < 9).sort((a, b) => a[1] - b[1] || ALL.indexOf(a[0]) - ALL.indexOf(b[0])).map(x => x[0]);
+  }
+  const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+  let found = [];
+  function paintFind() {
+    const t = q.value.trim();
+    $('askIpsy').classList.toggle('typing', !!t);
+    $('hqx').hidden = !t; $('hfound').hidden = !t; $('hmain').hidden = !!t;
+    if (!t) { found = []; $('hfound').innerHTML = ''; return; }
+    found = findApps(t);
+    let inside = [];
+    try { inside = t.length >= 2 && window.aosFind && aosFind.search ? aosFind.search(t, { known }).slice(0, 8) : []; } catch {}
+    const [top, ...rest] = found;
+    $('hfound').innerHTML = (top ? `<h3>Top hit</h3><div class="htop" role="button" tabindex="0" data-open="${top}" aria-label="Open ${label(top)}">${ic(top)}<span><b>${esc(name(top))}</b><i>${esc(tag(top))}</i></span><span class="hgo" aria-hidden="true">Open</span><button type="button" class="hinfo" data-app="${top}" aria-label="About ${esc(name(top))}">i</button></div>` : '')
+      + (rest.length ? `<h3>Apps</h3><div class="hgroup">${rest.map(id => `<div class="hrow" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}"><img src="${icon(id)}" alt=""><span><b>${esc(name(id))}</b><i>${esc(tag(id))}</i></span><button type="button" class="hinfo" data-app="${id}" aria-label="About ${esc(name(id))}">i</button></div>`).join('')}</div>` : '')
+      + (inside.length ? `<h3>In your apps</h3><div class="hgroup">${inside.map(r => `<div class="hrow hit" role="button" tabindex="0" data-open="${r.app}"${r.at ? ` data-at="${esc(r.at)}"` : ''}><img src="${icon(r.app)}" alt=""><span><b translate="no">${esc(r.title)}</b><i>${esc([name(r.app), r.sub].filter(Boolean).join(' · '))}</i></span></div>`).join('')}</div>` : '')
+      + (!top && !inside.length ? `<p class="hnone">Nothing on this phone matches “${esc(t)}”.</p>` : '')
+      + (ipsy ? `<button type="button" class="hask" id="hask"><span>Ask Ipsy: “${esc(t)}”</span>${ARROW}</button>` : '');
+  }
+  function clearFind() { q.value = ''; paintFind(); q.blur(); }
+  q.addEventListener('input', paintFind);
+  q.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); clearFind(); }
+    else if (e.key === 'Enter') { e.preventDefault(); const t = q.value.trim(); if (!t) return; if (found[0]) { const id = found[0]; clearFind(); show(id); } else if (ipsy) askIpsy(t); }
+  });
+  $('hqx').addEventListener('click', () => { q.value = ''; paintFind(); q.focus(); });
+  $('hfound').addEventListener('click', e => { if (e.target.closest('#hask')) askIpsy(q.value.trim()); });
+  $('hfound').addEventListener('keydown', e => { const o = e.target.closest('[data-open]'); if (o && e.target === o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); o.click(); } });
+  function askIpsy(t) { if (!ipsy || !t) return; clearFind(); ipsy.prompt(t); }
+
+  // Ipsy rolls across the bar now and then: to the far end and back, turning as a ball would (its
+  // body is about 15px from the middle at this size). Only on Home with the bar empty and untouched,
+  // the chat shut and no finger down; never with Reduce Motion. The first soon after aOS opens, then
+  // a minute or two apart. Any tap (Ipsy itself, the bar) sends it straight home.
+  const slot = $('ipsySlot'), rollBar = $('askIpsy');
+  let rolling = null, rollT = null;
+  const rollIn = ms => { clearTimeout(rollT); rollT = setTimeout(roll, ms); };
+  function roll() {
+    const cell = slot.querySelector('.i-bob');
+    if (rolling || !cell || !onHome() || down || editing() || q.value || document.activeElement === q || document.querySelector('.ipsy-wrap:not([hidden])')
+      || matchMedia('(prefers-reduced-motion: reduce)').matches) { rollIn(20e3); return false; }
+    rollIn(60e3 + Math.random() * 90e3);
+    const d = rollBar.clientWidth - slot.offsetWidth - 2 * slot.offsetLeft;
+    if (d < 80) return false;
+    const turn = d / 15.4 * 180 / Math.PI, ease = 'cubic-bezier(.45,0,.3,1)', duration = 2 * (900 + d * 2) / 0.84;
+    const there = (from, to) => [{ transform: from, easing: ease }, { transform: to, offset: 0.42 }, { transform: to, offset: 0.58, easing: ease }, { transform: from }];
+    cell.style.transformBox = 'view-box'; cell.style.transformOrigin = '100px 108px';
+    rollBar.classList.add('rolling');
+    rolling = [slot.animate(there('translateX(0)', `translateX(${d}px)`), { duration }), cell.animate(there('rotate(0deg)', `rotate(${turn}deg)`), { duration })];
+    rolling[0].finished.catch(() => {}).then(() => { rolling = null; rollBar.classList.remove('rolling'); });
+    return true;
+  }
+  const rollHome = () => { if (rolling) rolling.forEach(a => a.finish()); };
+  addEventListener('pointerdown', rollHome, true);
+  slot.addEventListener('click', rollHome, true);   // the chat opens from Ipsy at home, not mid-roll
+  q.addEventListener('focus', rollHome);
+  rollIn(8e3 + Math.random() * 6e3);
+
   let toastT = null;
   function toast(t) { const el = $('htoast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1800); }
 
@@ -382,10 +520,9 @@
       return await fn(input, ctx);
     } finally { working.delete(id); }
   };
+  let ipsy = null;   // the Ipsy bar (above) asks it, once it's mounted
   if (AllisonOS.ipsy && IPSY_APPS.length) {
-    const list = IPSY_APPS.map(name).join(', ').replace(/, ([^,]*)$/, ' and $1');
-    $('ipsySub').textContent = `Across ${list}`;
-    AllisonOS.ipsy.mount({
+    ipsy = AllisonOS.ipsy.mount({
       app: 'aos', name: 'aOS', endpoint: 'api/ipsy', headers: { 'X-Aos': '1' }, slot: $('ipsySlot'),
       intro: '', subtitle: '', placeholder: 'Ask Ipsy',
       suggestions: ['This week’s calendar', 'Orders on the way', 'Catch me up on the news'],
@@ -400,9 +537,19 @@
     });
   }
 
-  window.aosHomeTab = { show, open: () => open.slice(), favorites, insets, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
+  // Ipsy changed an app's setting (../home/ipsy.js): open out of sight, it closes first (so it can't save its old one
+  // over it), the setting is written, and it opens again with it; 'aos' reads aOS's own again (Favorites)
+  const around = (apps, write) => prefsReady(apps).then(() => { write(); prefsCame(apps); });
+  // Ipsy's open_setting: the app, then its Settings, once it has started
+  const openSettings = (id, sel) => {
+    if (!known(id)) return;
+    show(id);
+    let n = 0; const tap = () => { try { const b = frames[id].firstChild.contentDocument.querySelector(sel); if (b && frames[id].firstChild.contentWindow.AllisonOS) return b.click(); } catch {} if (n++ < 120) setTimeout(tap, 250); };   // up to 30 seconds for the app to start
+    setTimeout(tap, 300);
+  };
+  window.aosHomeTab = { everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
-  paintHome(); readUnread();
+  paintHome(); readUnread(); freshen(); syncPrefs();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];
   if (known(start)) {
     // opened straight into an app (back from Google, or a link): Home goes in under it first

@@ -2,8 +2,8 @@
 // server/auth.js, in plain Node on an in-memory stand-in for Workers KV, with real
 // sessions and real (software) passkeys: the owner code comes only from the
 // OWNER_CODE secret, the lock on Calendar and Travel's routes is closed until the
-// owner exists, removing someone keeps everything of theirs and an invite back
-// returns it, "installed" never rewrites the user record (so it can't bring a removed
+// owner exists, removing someone deletes them and everything kept for them (an invite
+// makes someone new), "installed" never rewrites the user record (so it can't bring a removed
 // person back), a sign-up can't take over a passkey that's already someone's, and
 // Calendar's layers are each person's own; signing in writes nothing until a real
 // passkey signs, once per challenge; "Sign out other devices" ends the others; and
@@ -104,6 +104,30 @@ await test('"installed" is kept apart (apps:<id>) and never rewrites the user re
   assert.deepEqual(Object.keys((await call('state', undefined, sam)).body.user.apps).sort(), ['news', 'weather']);
 });
 
+await test('prefs: your settings follow you between devices; the newer wins, only the settings named, only yours', async () => {
+  assert.deepEqual((await call('prefs', undefined, sam)).body.prefs, {});
+  assert.equal((await call('prefs', undefined)).status, 401, 'signed in only');
+  const at = Date.now() - 5000;
+  let r = await call('prefs', { set: { 'wx.places': { v: '[{"name":"Denver","lat":39.7,"lon":-105}]', at }, 'aos.session': { v: 'x', at }, 'mail.token': { v: 'x', at },
+    'allison-clock-v1#alarms': { v: '[]', at }, 'allison-clock-v1#timers': { v: '[]', at }, 'design.weather': { v: 'glass', at },
+    'mail.hint': { v: 'tom@gmail.com', at }, 'mail.token.ever': { v: '1', at }, 'mail.token': { v: '{"t":"ya29.secret"}', at }, 'allison-calendar-v1-settings': { v: '{"weekStart":1}', at } } }, sam);
+  assert.equal(r.status, 200);
+  assert.deepEqual(Object.keys(r.body.prefs).sort(), ['allison-calendar-v1-settings', 'allison-clock-v1#alarms', 'design.weather', 'mail.hint', 'mail.token.ever', 'wx.places'],
+    'never a sign-in or a token (Gmail\'s included), or Clock\'s running timers; Mail\'s Google account and that Gmail is connected, yes');
+  r = await call('prefs', { set: { 'wx.places': { v: '[]', at: at - 1000 } } }, sam);
+  assert.equal(r.body.prefs['wx.places'].v, '[{"name":"Denver","lat":39.7,"lon":-105}]', 'an older change loses');
+  const w0 = db.m.get('prefs:' + samId);
+  await call('prefs', { set: { 'wx.places': { v: '[]', at } } }, sam);
+  assert.equal(db.m.get('prefs:' + samId), w0, 'nothing newer: nothing written');
+  r = await call('prefs', { set: { 'wx.places': { v: '[]', at: at + 1000 }, 'design.weather': { v: null, at: at + 1000 } } }, sam);
+  assert.equal(r.body.prefs['wx.places'].v, '[]'); assert.equal(r.body.prefs['design.weather'].v, null, 'taken away travels too');
+  r = await call('prefs', { set: { 'aos.look': { v: 'glass', at: Date.now() + 864e5 } } }, sam);
+  assert.ok(r.body.prefs['aos.look'].at <= Date.now(), 'never from the future');
+  assert.equal((await call('prefs', { set: { 'wx.units': { v: 'x'.repeat(70 * 1024), at: Date.now() } } }, sam)).body.prefs['wx.units'], undefined, 'too big: left out');
+  assert.equal((await call('prefs', { set: 'no' }, sam)).status, 400);
+  assert.deepEqual((await call('prefs', undefined, tom)).body.prefs, {}, 'only yours');
+});
+
 await test('"Removed it?" in aOS shows Get at once; the next report from the Home Screen shows Installed again', async () => {
   const at = JSON.parse(db.m.get('apps:' + samId)).weather;
   await call('installed', { app: 'weather' }, sam);
@@ -116,39 +140,54 @@ await test('"Removed it?" in aOS shows Get at once; the next report from the Hom
   assert.equal((await call('installed', { app: 'nope', removed: true }, sam)).status, 400);
 });
 
-await test('removing someone signs them out and forgets their passkey, but deletes nothing of theirs', async () => {
-  const drinks = db.m.get('drinks:' + samId), apps = db.m.get('apps:' + samId);
+await test('removing someone takes them out completely: signed out, their account and everything kept for them deleted', async () => {
+  await putJSON(db, 'layer:notes:' + samId, { at: 1, data: {} }); await db.put('move:' + samId, '{}'); await db.put('handoff:' + samId + ':notes', '{}');
+  await db.put('steps:' + samId, 'sensor.sam_steps'); await db.put('steps:by:sensor.sam_steps', samId);
+  await putJSON(db, 'user:keep', { id: 'keep', name: 'Kay', role: 'member', creds: [] }); await db.put('apps:keep', '{}');
+  assert.ok(db.m.has('prefs:' + samId) && db.m.has('apps:' + samId) && db.m.has('drinks:' + samId));
+  assert.equal((await call('remove', { id: samId }, sam)).status, 403, 'only the owner');
+  assert.equal((await call('remove', { id: owner }, tom)).status, 400, 'never the owner');
   assert.equal((await call('remove', { id: samId }, tom)).status, 200);
-  assert.equal(db.m.get('drinks:' + samId), drinks); assert.equal(db.m.get('apps:' + samId), apps);
-  assert.ok(JSON.parse(db.m.get('user:' + samId)).removed);
+  assert.deepEqual([...db.m.keys()].filter(k => k.includes(samId) || k.includes('sam_steps')), [], 'nothing of theirs is left');
   assert.ok(!db.m.has('cred:' + b64u(new TextEncoder().encode('SAMKEY'))));
+  assert.ok(db.m.has('user:keep') && db.m.has('apps:keep'), 'nobody else\'s');
   assert.equal((await call('members', undefined, sam)).status, 401);
   assert.equal(await lockReq(sam), 'signin');
   assert.equal((await call('state', undefined, sam)).body.user, null);
-  const fam = (await call('family', undefined, tom)).body.family;
-  assert.ok(fam.find(u => u.id === samId).removed, 'the owner sees them as removed');
+  assert.ok(!(await call('family', undefined, tom)).body.family.some(u => u.id === samId), 'gone from the owner\'s list');
   assert.ok(!(await call('members', undefined, tom)).body.members.some(m => m.name === 'Sam'), 'not on the family card');
+  assert.equal((await call('remove', { id: samId }, tom)).status, 404);
+  db.m.delete('user:keep'); db.m.delete('apps:keep');
 });
 
 await test('a stale read can no longer write a removed person back', async () => {
-  const live = db.m.get('user:' + samId);
   db.setStale('user:' + samId, JSON.stringify({ id: samId, name: 'Sam', role: 'member', creds: [] }));   // another location still has the old copy
   await call('installed', { app: 'mail' }, sam);
-  assert.equal(db.m.get('user:' + samId), live, 'the record is untouched');
+  assert.ok(!db.m.has('user:' + samId), 'no record made');
   assert.equal(await lockReq(sam), 'signin');
 });
 
-await test('Invite back: only for someone removed; it brings them back with their own id and data', async () => {
-  assert.equal((await call('invite', { id: owner }, tom)).status, 404);
-  assert.equal((await call('invite', { id: 'nobody' }, tom)).status, 404);
-  assert.equal((await call('invite', { id: samId }, sam)).status, 401);
-  const inv = (await call('invite', { id: samId }, tom)).body.token;
-  const r = await join({ invite: inv, name: 'Someone Else' }, 'SAMKEY2');
-  assert.equal(r.status, 200); assert.equal(r.body.user.id, samId); assert.equal(r.body.user.name, 'Sam');
-  const u = await getJSON(db, 'user:' + samId);
-  assert.equal(u.removed, undefined); assert.deepEqual(u.creds, [b64u(new TextEncoder().encode('SAMKEY2'))]);
-  assert.ok(db.m.get('drinks:' + samId).includes('Beer'), 'their Drinks log is theirs again');
-  assert.equal(await lockReq(r.body.token), 'through');
+await test('someone removed before (signed out, data kept) is listed, and Remove deletes them for good', async () => {
+  await putJSON(db, 'user:old', { id: 'old', name: 'Olly', role: 'member', creds: [], created: 1, removed: 2 }); await db.put('prefs:old', '{}');
+  assert.ok((await call('family', undefined, tom)).body.family.find(u => u.id === 'old').removed);
+  assert.equal((await call('remove', { id: 'old' }, tom)).status, 200);
+  assert.ok(!db.m.has('user:old') && !db.m.has('prefs:old'));
+});
+
+await test('no invite back: an invite is always for someone new, and Sam joins again as a new account', async () => {
+  const old = samId;
+  const leftover = (await call('invite', { id: old }, tom));
+  assert.equal(leftover.status, 400, 'an id is no invite: it needs a name');
+  db.m.set('invite:oldback', JSON.stringify({ name: 'Sam', by: owner, user: old }));   // an invite back made before this release
+  const r0 = await join({ invite: 'oldback' }, 'SAMKEY3');
+  assert.equal(r0.status, 200); assert.notEqual(r0.body.user.id, old, 'a new account, nothing of the old one');
+  await call('remove', { id: r0.body.user.id }, tom);
+  const inv = (await call('invite', { name: 'Sam' }, tom)).body.token;
+  const r = await join({ invite: inv }, 'SAMKEY2');
+  assert.equal(r.status, 200); assert.notEqual(r.body.user.id, old); assert.equal(r.body.user.name, 'Sam');
+  assert.ok(!db.m.has('drinks:' + r.body.user.id), 'nothing comes back');
+  samId = r.body.user.id; sam = r.body.token;
+  assert.equal(await lockReq(sam), 'through');
 });
 
 await test('a sign-up can\'t take over a passkey that is already someone\'s', async () => {

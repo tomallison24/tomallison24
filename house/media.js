@@ -38,6 +38,8 @@ const MF_KIND = { sonos: 1 | 2 | 4 | 8 | 16 | 32 | 32768 | 262144 | 524288, nest
 const SLEEP = 'input_text.signal_media_sleep';
 const mmss = s => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 // A muted sky in the player's own colour: the accent laid over the card's base.
+// What a player reports (a title, an artist, a source): shown as it is, in any language.
+const asIs = s => `<span translate="no">${esc(s)}</span>`;
 const tone = (acc, k) => '#' + acc.split(',').map((v, i) => Math.round([0x16, 0x17, 0x1B][i] + (Number(v) - [0x16, 0x17, 0x1B][i]) * k).toString(16).padStart(2, '0')).join('');
 
 function mediaFamily(cfg) {
@@ -72,10 +74,10 @@ function mediaFamily(cfg) {
     words(p, r) {
       const A = r.A;
       if (r.offline) return { title: offWord(p.ent), sub: p.id === 'mv' ? 'Asleep or out of range' : 'Not reachable' };
-      if (p.kind === 'tv') return { title: r.on ? esc(A.media_title || A.source || 'On') : 'Off', sub: r.on ? [A.source, r.playing ? 'Playing' : ''].filter(Boolean).map(esc).join(' · ') : 'Standby' };
-      if (r.tv) return { title: 'TV', sub: 'Sound from the TV' + (val('sensor.' + p.pre + '_audio_input_format') ? ' · ' + esc(val('sensor.' + p.pre + '_audio_input_format')) : '') };
-      if (r.playing || r.mood === 'paused') return { title: esc(A.media_title || A.media_channel || 'Playing'), sub: [A.media_artist, A.app_name && p.kind !== 'sonos' ? A.app_name : A.source].filter(Boolean).map(esc).join(' · ') || (r.playing ? 'Playing' : 'Paused') };
-      return { title: r.state === 'off' ? 'Off' : 'Not playing', sub: [A.source, A.app_name].filter(Boolean).map(esc).join(' · ') || 'Idle' };
+      if (p.kind === 'tv') return { title: r.on ? (A.media_title || A.source ? asIs(A.media_title || A.source) : 'On') : 'Off', sub: r.on ? [A.source ? asIs(A.source) : '', r.playing ? 'Playing' : ''].filter(Boolean).join(' · ') : 'Standby' };
+      if (r.tv) return { title: 'TV', sub: 'Sound from the TV' + (val('sensor.' + p.pre + '_audio_input_format') ? ' · ' + asIs(val('sensor.' + p.pre + '_audio_input_format')) : '') };
+      if (r.playing || r.mood === 'paused') return { title: A.media_title || A.media_channel ? asIs(A.media_title || A.media_channel) : 'Playing', sub: [A.media_artist, A.app_name && p.kind !== 'sonos' ? A.app_name : A.source].filter(Boolean).map(asIs).join(' · ') || (r.playing ? 'Playing' : 'Paused') };
+      return { title: r.state === 'off' ? 'Off' : 'Not playing', sub: [A.source, A.app_name].filter(Boolean).map(asIs).join(' · ') || 'Idle' };
     },
     withWho(p, r) {
       if (r.group.length < 2) return '';
@@ -96,7 +98,7 @@ function mediaFamily(cfg) {
     controls(p, r) {
       const a = this.acc(p, r);
       if (p.kind === 'tv') return pwrBtn(r.on, a, (r.on ? 'Turn off ' : 'Turn on ') + p.name, { a: 'tvpower', dis: r.offline, wait: tWaiting(r.d, 'state') })
-        + `<div class="srcline">${r.on && r.A.source ? esc(r.A.source) : r.on ? 'On' : 'Off'}</div>`;
+        + `<div class="srcline">${r.on && r.A.source ? asIs(r.A.source) : r.on ? 'On' : 'Off'}</div>`;
       const dis = r.offline || r.tv;
       return pwrBtn(r.playing, a, r.playing ? 'Pause' : 'Play', { a: 'pp', icon: r.playing ? 'pause' : 'play', dis: dis || !r.can('pause'), wait: tWaiting(r.d, 'state') })
         + `<button class="disc sm" data-a="next" aria-label="Next"${dis || !r.can('next') ? ' disabled' : ''}>${svg('next', 20)}</button><i class="hair"></i>`
@@ -117,7 +119,7 @@ function mediaFamily(cfg) {
       }
       this.sum = cfg.summary(n);
     },
-    // One card, wherever it is (its own view, or Now Playing on Favorites).
+    // One card, wherever it is (its own view; on Favorites a speaker playing is a Running Now chip).
     shell(p) { return cardHTML(cfg.id + ':' + p.id, `
         <div class="dg-top"><div data-r="hero"></div><div class="dg-info" data-r="info"></div></div>
         <div class="dg-ctl mctl" data-r="ctl"></div>`, 'mcard'); },
@@ -148,7 +150,7 @@ function mediaFamily(cfg) {
         return sliderHTML('num', isNaN(v) ? 0 : v, mn, mx, stp, { v: k, label, tint: a, cls: 'inrow', dis: gone(id2), unit: attr(id2, 'unit_of_measurement') ? ' ' + attr(id2, 'unit_of_measurement') : '', zf: mn < 0 && mx > 0 ? -mn / (mx - mn) : null });
       };
       const status = [
-        A.source && p.kind !== 'tv' ? readRow('input', 'Source', esc(A.source)) : '',
+        A.source && p.kind !== 'tv' ? readRow('input', 'Source', asIs(A.source)) : '',
         p.mic && st(p.mic) ? readRow('mic', 'Microphone', isOn(p.mic) ? 'On' : 'Off') : '',
         p.battery && st(p.battery) ? readRow('battery', 'Battery', gone(p.battery) ? '—' : Math.round(num(p.battery)) + '%' + (isOn(p.charging) ? ' · Charging' : '')) : '',
         A.queue_size != null ? readRow('music', 'In the queue', A.queue_size) : '',
@@ -168,12 +170,12 @@ function mediaFamily(cfg) {
           r.can('vol') ? ['vol', `<div class="volrow">${sliderHTML('vol', r.vol == null ? 0 : Math.round(r.vol * 100), 0, 100, 1, { label: 'VOLUME', shown: r.vol == null ? '--' : Math.round(r.vol * 100) + '%', unit: '%', tint: a, dis })}
             ${r.can('mute') ? `<button class="disc${r.muted ? ' lit' : ''}${tWaiting(r.d, 'mute') ? ' wait' : ''}" data-a="mute" aria-pressed="${r.muted}" aria-label="${r.muted ? 'Unmute' : 'Mute'}"${dis ? ' disabled' : ''}>${svg(r.muted ? 'mute' : 'vol', 20)}</button>` : ''}</div>`
             + (sonos ? chipsHTML('vpre', [[15, '15'], [25, '25'], [50, '50'], [75, '75'], [100, '100']], r.vol == null ? null : r.vol * 100, { near: 3, dis }) : '')] : null,
-          p.kind === 'atv' ? ['apps', lbl('APPS') + `<div class="tiles nodrag">${p.apps.map(x => `<button class="tile${A.source === x || A.app_name === x ? ' on' : ''}" data-a="app" data-v="${esc(x)}"${dis ? ' disabled' : ''}>${esc(x)}</button>`).join('')}</div>`] : null,
-          p.kind === 'tv' && Array.isArray(A.source_list) && r.on ? ['src', lbl('SOURCE') + `<div class="tiles nodrag">${A.source_list.slice(0, 9).map(x => `<button class="tile${A.source === x ? ' on' : ''}" data-a="app" data-v="${esc(x)}"${dis ? ' disabled' : ''}>${esc(x)}</button>`).join('')}</div>`] : null,
+          p.kind === 'atv' ? ['apps', lbl('APPS') + `<div class="tiles nodrag">${p.apps.map(x => `<button class="tile${A.source === x || A.app_name === x ? ' on' : ''}" data-a="app" data-v="${esc(x)}"${dis ? ' disabled' : ''}>${asIs(x)}</button>`).join('')}</div>`] : null,
+          p.kind === 'tv' && Array.isArray(A.source_list) && r.on ? ['src', lbl('SOURCE') + `<div class="tiles nodrag">${A.source_list.slice(0, 9).map(x => `<button class="tile${A.source === x ? ' on' : ''}" data-a="app" data-v="${esc(x)}"${dis ? ' disabled' : ''}>${asIs(x)}</button>`).join('')}</div>`] : null,
           p.kind !== 'sonos' ? ['power', grp(p.kind === 'nest'
             ? actRow('turnoff', 'Turn off', 'power', { dis: dis || r.state === 'off' })
             : swRow('tvpower', 'Power', 'power', r.on, PAL.on, { dis, wait: tWaiting(r.d, 'state') }), true)] : null,
-          sonos && favs.length ? ['favs', lbl('FAVORITES') + `<div class="tiles nodrag">${favs.map(([fid, t]) => `<button class="tile${[A.media_title, A.media_album_name, A.media_playlist, A.media_channel].includes(t) ? ' on' : ''}" data-a="fav" data-v="${esc(fid)}"${dis ? ' disabled' : ''}>${esc(t)}</button>`).join('')}</div>`] : null,
+          sonos && favs.length ? ['favs', lbl('FAVORITES') + `<div class="tiles nodrag">${favs.map(([fid, t]) => `<button class="tile${[A.media_title, A.media_album_name, A.media_playlist, A.media_channel].includes(t) ? ' on' : ''}" data-a="fav" data-v="${esc(fid)}"${dis ? ' disabled' : ''}>${asIs(t)}</button>`).join('')}</div>`] : null,
           sonos ? ['play', lbl('PLAYBACK') + grp(
             (r.can('shuffle') ? swRow('shuffle', 'Shuffle', 'shuffle', r.shuffle, a, { dis, wait: tWaiting(r.d, 'shuffle') }) : '')
             + sw('crossfade', 'Crossfade', 'crossfade') + sw('loudness', 'Loudness', 'loud'))
@@ -181,11 +183,11 @@ function mediaFamily(cfg) {
           sonos ? ['sleep', lbl('SLEEP TIMER' + (sl ? ' · ' + sl.left + ' MIN LEFT' : '')) + chipsHTML('sleep', [[15, '15 min'], [30, '30 min'], [60, '1 hour'], [0, 'Off']], sl ? sl.mins : 0, { dis })] : null,
           sonos && r.can('group') ? ['group', lbl('GROUP') + `<div class="chips nodrag">${peers.map(x => {
               const inG = r.group.includes(x.ent), off = gone(x.ent);
-              return `<button class="chip2" data-a="grp" data-v="${x.ent}" aria-pressed="${inG}"${dis || off ? ' disabled' : ''}>${esc(x.name)}</button>`;
+              return `<button class="chip2" data-a="grp" data-v="${x.ent}" aria-pressed="${inG}"${dis || off ? ' disabled' : ''}>${asIs(x.name)}</button>`;
             }).join('')}<button class="chip2 party" data-a="party"${dis ? ' disabled' : ''}>${svg('party', 15)}House party</button></div>`] : null,
           sonos && r.mood !== 'idle' && !r.offline ? ['hand', lbl('HAND OFF TO') + `<div class="chips nodrag">${peers.map(x => {
               const k = 'ho' + p.id + x.id, arm = isArmed(k);
-              return `<button class="chip2${arm ? ' armed' : ''}" data-a="handoff" data-v="${x.ent}"${gone(x.ent) ? ' disabled' : ''}>${arm ? 'Tap to move to ' : ''}${esc(x.name)}</button>`;
+              return `<button class="chip2${arm ? ' armed' : ''}" data-a="handoff" data-v="${x.ent}"${gone(x.ent) ? ' disabled' : ''}>${arm ? 'Tap to move to ' : ''}${asIs(x.name)}</button>`;
             }).join('')}</div>`] : null,
           sonos ? ['tone', lbl('TONE') + `<div class="group tsl">${numSl('bass', 'Bass')}${numSl('treble', 'Treble')}${numSl('balance', 'Balance')}</div>`] : null,
           p.ht ? ['ht', lbl('HOME THEATER') + grp(sw('night_sound', 'Night sound', 'night') + sw('speech_enhancement', 'Speech enhancement', 'speech')
@@ -193,7 +195,7 @@ function mediaFamily(cfg) {
             + sw('surround_music_full_volume', 'Surround music at full volume', 'music', { sub: held(r.d, 'surround_music_full_volume', val('switch.' + p.pre + '_surround_music_full_volume')) === 'on' ? 'Full' : 'Ambient' }))
             + `<div class="group tsl">${numSl('sub_gain', 'Sub level')}${numSl('surround_level', 'Surround level')}${numSl('music_surround_level', 'Music surround level')}${numSl('audio_delay', 'Audio delay')}</div>`
             + grp(actRow('tvsrc', 'Switch to TV', 'tv', { dis: dis || A.source === 'TV', right: A.source === 'TV' ? 'On TV' : null })
-              + readRow('input', 'Input format', esc(val('sensor.' + p.pre + '_audio_input_format') || '—')))] : null,
+              + readRow('input', 'Input format', asIs(val('sensor.' + p.pre + '_audio_input_format') || '—')))] : null,
           status ? ['status', lbl('STATUS') + grp(status)] : null,
           p.ent === TV_ENT ? energyPart([['NOW', fmtW(tvW())], ['TODAY', fmtKwh(num('sensor.tv_daily_energy'))], ['MONTH', fmtKwh(num('sensor.tv_monthly_energy'), 1)]], true) : null,
         ],

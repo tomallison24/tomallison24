@@ -281,7 +281,7 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsy’s instructions and Mea
   assert.equal(q.body.output_config.effort, 'medium'); assert.equal(q.body.max_tokens, 16000);
   assert.equal(q.body.fallbacks, 'default'); assert.deepEqual(q.body.cache_control, { type: 'ephemeral' });
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
-  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'web_search', 'web_fetch']);
+  assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
   assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['get_meals', 'get_dinners', 'get_deals', 'get_past_plans', 'get_shopping_list', 'tick_items',
     'set_dinner', 'make_plan', 'accept_plan', 'discard_draft', 'show_dinner']);
@@ -419,6 +419,24 @@ await test('unaccept (Undo of Accept): the plan goes back to waiting, and the pl
   assert.equal(r3.body.plan, null); assert.deepEqual(r3.body.log, []);
   assert.equal(db3.m.get('meals:plan'), undefined); assert.equal(JSON.parse(db3.m.get('meals:draft')).meals.length, 4);
   assert.deepEqual(JSON.parse(db3.m.get('meals:history')), []);
+});
+await test('clear (Dinners\' ×): the family\'s plan goes, but stays in Past plans and the history; current puts it back', async () => {
+  const cur = JSON.parse(db2.m.get('meals:plan')), log0 = db2.m.get('meals:log'), hist0 = db2.m.get('meals:history');
+  assert.equal((await call2('clear', { id: 'pnotit' })).body.error, 'changed', 'only the plan that is the family\'s now');
+  assert.ok(db2.m.get('meals:plan'));
+  const r = await call2('clear', { id: cur.id });
+  assert.equal(r.status, 200); assert.equal(r.body.plan, null);
+  assert.equal(db2.m.get('meals:plan'), undefined);
+  assert.equal(db2.m.get('meals:log'), log0, 'still in Past plans'); assert.ok(db2.m.get('meals:log:' + cur.id));
+  assert.equal(db2.m.get('meals:history'), hist0, 'new plans still differ from it');
+  assert.equal((await call('state', { token: tok2, env: E2 })).body.plan, null);
+  assert.equal((await call2('clear', { id: cur.id })).status, 200, 'clearing nothing is fine');
+  // Undo: back as the family's plan, only while there is none (or the one named)
+  assert.equal((await call2('current', { id: 'pnothere' })).status, 404);
+  assert.equal((await call2('current', { id: cur.id, over: 'psomeother' })).body.error, 'changed');
+  const u = await call2('current', { id: cur.id });
+  assert.equal(u.status, 200); assert.deepEqual(u.body.plan, cur); assert.deepEqual(JSON.parse(db2.m.get('meals:plan')), cur);
+  assert.equal((await call2('current', { id: cur.id })).body.error, 'changed', 'not over a plan that is there');
 });
 await test('settings: only the owner changes what the family avoids; a member\'s stores and cards still save', async () => {
   const db4 = fakeKV(); await db4.put('owner', 'u1'); await putJSON(db4, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });

@@ -112,7 +112,7 @@ family({
           <span class="es-st"><b>${fmtKwh(day, 1)}</b><small>today</small></span>
           <span class="es-st"><b>${fmtKwh(month, 0)}</b><small>${month != null ? '$' + (month * KW).toFixed(2) + ' month' : 'month'}</small></span>
           <span class="es-chev${open ? ' open' : ''}">${svg('chev', 16)}</span></button>
-        ${open ? `<div class="es-list">${list.map(x => `<div class="es-item${x.w ? '' : ' idle'}"><span>${esc(x.name)}${x.tag ? `<em>${esc(x.tag)}</em>` : ''}</span><b>${fmtW(x.w)}</b></div>`).join('')}</div>` : ''}`);
+        ${open ? `<div class="es-list">${list.map(x => `<div class="es-item${x.w ? '' : ' idle'}"><span>${x.tag ? `<span translate="no">${esc(x.name)}</span><em>${esc(x.tag)}</em>` : esc(x.name)}</span><b>${fmtW(x.w)}</b></div>`).join('')}</div>` : ''}`);
     }
   },
   act(id, a) { if (a === 'toggle') { stripOpen[id] = !stripOpen[id]; render(); } },

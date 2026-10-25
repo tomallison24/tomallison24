@@ -6,7 +6,8 @@
 // the accounts API (/aOS/api/), Drinks' summary for signed-in Fitness/Calendar
 // (/drinks/api/), Calendar's iCloud bridge for Travel (/calendar/api/: a server
 // function, not the Calendar app; Travel switches it off when the site has none),
-// Weather's forecast code for Home (/weather/data.js), and the app icons aOS shows.
+// Weather's forecast code for Home (/weather/data.js), Calendar's .ics reader for aOS Home's
+// Calendar widget (/calendar/ical.js: code, not Calendar's data), and the app icons aOS shows.
 //   node aOS/scripts/standalone-test.mjs [repo root]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -38,10 +39,14 @@ await db.put('owner', 'O1'); await putJSON(db, 'user:O1', { id: 'O1', name: 'Tom
 const tok = await issue(db, 'O1');
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'house', 'sparkle', 'mailvintage', 'housevintage', 'ordersvintage', 'drinksvintage', 'fitnessvintage', 'newsvintage', 'weathervintage', 'travelvintage', 'calendarvintage', 'notesvintage', 'podcastsvintage', 'placesvintage', 'mealsvintage', 'aOS'];   // and the old Vintage apps' addresses, which open the app itself
 const b = await chromium.launch();
-const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/sheet\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
+const SHARED = p => /^\/aOS\/api\//.test(p) || /^\/drinks\/api\//.test(p) || /^\/sheet\/api\//.test(p) || /^\/calendar\/api\//.test(p) || p === '/weather/data.js' || p === '/calendar/ical.js' || /^\/[a-z]+\/icon-(180|512)\.png$/.test(p);
 const DESIGN_OF = Object.fromEntries(APPS.filter(a => /vintage$/.test(a)).map(a => [a, a.replace(/vintage$/, '')]));   // newsvintage -> news
-const out = [];
-for (const app of APPS) for (const signed of [false, true]) {
+// six apps open at once (each mostly waits its 2.5 seconds), each run kept in its place in the list
+const RUNS = APPS.flatMap(app => [false, true].map(signed => ({ app, signed })));
+const out = new Array(RUNS.length);
+let next = 0;
+async function one(k) {
+  const { app, signed } = RUNS[k];
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, serviceWorkers: 'block', geolocation: { latitude: 39.74, longitude: -104.99 }, permissions: ['geolocation'] });
   const reqs = [], errs = [];
   await ctx.route('**/aOS/api/**', async route => { const rq = route.request(), u = new URL(rq.url());
@@ -60,9 +65,10 @@ for (const app of APPS) for (const signed of [false, true]) {
   pg.on('console', msg => { if (msg.type() === 'error' && !/Failed to load resource|net::ERR/.test(msg.text())) errs.push('console: ' + msg.text().slice(0, 140)); });
   pg.on('response', r => { const u = new URL(r.url()); if (u.hostname === 'localhost') { const first = u.pathname.split('/')[1]; if (first !== app && first !== 'home' && !(app === 'aOS' && first === 'aOS')) reqs.push(r.status() + ' ' + u.pathname); } });
   await pg.goto(BASE + '/' + app + '/'); await pg.waitForTimeout(2500);
-  out.push({ app, signed, errs, reqs: [...new Set(reqs)] });
+  out[k] = { app, signed, errs, reqs: [...new Set(reqs)] };
   await ctx.close();
 }
+await Promise.all(Array.from({ length: 6 }, async () => { while (next < RUNS.length) await one(next++); }));
 await b.close();
 server.close();
 let bad = 0;

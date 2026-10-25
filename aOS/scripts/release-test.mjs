@@ -67,6 +67,12 @@ for (const id of ['aos', ...APPS]) {
   if (want) {
     const ok = await page.waitForFunction(w => { const el = document.getElementById('aos-welcome'); if (!el) return false; const t = el.innerText.replace(/[’‘]/g, "'").replace(/\s+/g, ' '); return w.every(x => t.includes(x)); }, want.map(norm), { timeout: kind === 'major' && id === 'aos' ? 30000 : 12000 }).then(() => true).catch(() => false);
     if (!ok) { const t = await page.evaluate(() => (document.getElementById('aos-welcome') || {}).innerText || '(no screen)'); problems.push('should say: ' + want.map(norm).join(' | ') + '\n    says: ' + norm(t).slice(0, 300)); }
+    // the new .x is drawn, not just there: its characters (clipped text) need a height of their own (aOS's sup has line-height 0)
+    if (ok && kind === 'minor') {
+      await page.waitForTimeout(2200);
+      const flat = await page.evaluate(() => [...document.querySelectorAll('#aos-welcome .v-new i:not(.v-halo), #aos-welcome .h-new')].filter(e => e.getBoundingClientRect().height < 2).map(e => e.className || e.textContent));
+      if (flat.length) problems.push('the new version number has no height, so it is not drawn: ' + flat.join(', '));
+    }
     // The walkthrough: "Show me", then each stop that's on screen, by its own title, to Done.
     const shown = [];
     await page.waitForSelector('#aos-welcome .c-panel.on', { timeout: 5000 }).catch(() => {});   // its buttons work once the panel is in

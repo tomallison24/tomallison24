@@ -361,7 +361,7 @@ family({
     const low = t.filter(x => !x.na && x.v <= 20).sort((a, b) => a.v - b.v);
     put(card.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}));
     put(card.querySelector('[data-r="body"]'), `<div class="dg-top"><span class="shield" style="--a:${low.length ? low[0].c : '190,194,204'}">${svg('printer', 28)}</span>
-      <div class="dg-info"><div class="dg-name">Office Printer</div><div class="dg-title">${off ? offWord(PRN) : esc(String(s).replace(/^\w/, c => c.toUpperCase()))}</div>
+      <div class="dg-info"><div class="dg-name" translate="no">Office Printer</div><div class="dg-title">${off ? offWord(PRN) : esc(String(s).replace(/^\w/, c => c.toUpperCase()))}</div>
       <div class="dg-sub">${low.length ? low.map(x => x.n).join(', ') + ' toner low' : 'Toner OK'}</div></div></div>
       <div class="toners">${t.map(x => `<div class="toner${x.na ? ' na' : ''}${!x.na && x.v <= 20 ? ' low' : ''}" style="--c:${x.c}"><span>${x.n}</span><i><b style="width:${x.na ? 0 : Math.max(2, Math.min(100, x.v))}%"></b></i><em>${x.na ? '—' : Math.round(x.v) + '%'}</em></div>`).join('')}</div>`);
     shadow(card, low.length ? low[0].c : '190,194,204');

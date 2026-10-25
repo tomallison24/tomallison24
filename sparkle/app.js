@@ -103,11 +103,12 @@
   const rankOf = p => Math.max(p.rank || 0, RANK_AT.filter(n => levelSum(p) >= n).length - 1);
   const rankChip = p => `<span class="rank">${A.icon('tiara', 26)}<span>${RANKS[rankOf(p)]}</span></span>`;
   const cap = t => t[0].toUpperCase() + t.slice(1);
+  const tr = s => window.aosLang ? aosLang.t(s) : s;   // a dialog's words, in Russian when aOS is (home/lang.js)
   const giftChapter = id => Ch.LANDS.flatMap(l => Ch.CHAPTERS[l]).find(c => c.gift === id);
   function paintPicker() {
     const ps = players();
     $('players').innerHTML = ps.map(p => `<button type="button" class="pcard" data-player="${esc(p.id)}" aria-label="Play as ${esc(p.name)}">
-        <span class="face">${A.princess(p.look, wearing(p), { head: true })}</span><span class="nm">${ltr(p.name, 40, { color: 'currentColor' })}</span></button>`).join('')
+        <span class="face">${A.princess(p.look, wearing(p), { head: true })}</span><span class="nm" translate="no">${ltr(p.name, 40, { color: 'currentColor' })}</span></button>`).join('')
       + `<button type="button" class="pcard add" data-add aria-label="Add a player"><span class="plus" aria-hidden="true">+</span><b>${ps.length ? 'Add a player' : 'Make your princess'}</b></button>`;
   }
   $('players').addEventListener('click', e => {
@@ -900,7 +901,7 @@
       persist(true); paintPicker(); s.close(); sync();
     };
     if (editing) s.querySelector('#cDel').onclick = () => {
-      if (!confirm(`Remove ${p.name}? Their progress, coins and treasures are deleted on every phone.`)) return;
+      if (!confirm(tr(`Remove ${p.name}? Their progress, coins and treasures are deleted on every phone.`))) return;
       delete save.players[p.id]; save.gone[p.id] = Date.now(); persist(true); paintPicker(); s.close(); sync();
     };
     paint();

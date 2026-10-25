@@ -122,6 +122,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const shortDay = s => fmt(noon(s), { weekday: 'short' });
   const longDate = s => fmt(noon(s), { weekday: 'long', day: 'numeric', month: 'long', year: partsOf(s).y === partsOf(today()).y ? undefined : 'numeric' });
   const medDate = s => fmt(noon(s), { weekday: 'short', day: 'numeric', month: 'short', year: partsOf(s).y === partsOf(today()).y ? undefined : 'numeric' });
+  // A day's letter over the month grid and the week strip: S M T W T F S; in Russian two (Пн, Вт), as iOS has them
+  const dayLetter = s => { const d = shortDay(s); return /^[A-Za-z]/.test(d) ? d.slice(0, 1) : d.slice(0, 1).toUpperCase() + d.slice(1, 2); };
+  // What the family wrote (titles, places, notes, names) and what came from elsewhere (bookings) stays as it is
+  // in Russian (../home/lang.js): translate="no", but not on the words the app writes itself.
+  const KEEP_KINDS = { family: 1, note: 1, travel: 1 }, APP_WORDS = new Set(['Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking']);
+  const keep = (x, s) => KEEP_KINDS[x.kind] && !APP_WORDS.has(s) && !(x.kind === 'travel' && /^(Pick up|Return) · /.test(s)) ? ' translate="no"' : '';
+  // the line under a title: a done reminder's list name stays as it is, " · done" is the app's
+  const subSpan = x => keep(x, x.sub) && x.kind === 'note' && / · done$/.test(x.sub) ? '<span><span translate="no">' + esc(x.sub.slice(0, -7)) + '</span> · done</span>' : '<span' + keep(x, x.sub) + '>' + esc(x.sub) + '</span>';
 
   // ---------------------------------------------------------------------
   // State
@@ -619,7 +627,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const shown = evs.slice(0, evs.length > max ? max - 1 : max);
       cells += '<button class="mday' + (out ? ' out' : '') + (day === tod ? ' today' : '') + (day === st.sel ? ' sel' : '') + '" type="button" data-day="' + day + '" aria-label="' + esc(longDate(day)) + (evs.length ? ', ' + plural(evs.length, 'event') : '') + '">'
         + '<span class="n">' + +day.slice(8) + '</span>'
-        + shown.map(x => '<span class="mev' + (x.allDay ? '' : ' timed') + (x.done ? ' done' : '') + '" ' + kindColor(x) + '>' + esc(x.title) + '</span>').join('')
+        + shown.map(x => '<span class="mev' + (x.allDay ? '' : ' timed') + (x.done ? ' done' : '') + '" ' + kindColor(x) + keep(x, x.title) + '>' + esc(x.title) + '</span>').join('')
         + (evs.length > max ? '<span class="mev more">+' + (evs.length - shown.length) + '</span>' : '')
         + '</button>';
     }
@@ -631,7 +639,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function weekHead() {
     const ws = weekStartOf(today());
     let h = '';
-    for (let i = 0; i < 7; i++) { const d = addDays(ws, i), wd = wdMon(d); h += '<span' + (wd >= 5 ? ' class="we"' : '') + '>' + esc(shortDay(d).slice(0, 1)) + '</span>'; }
+    for (let i = 0; i < 7; i++) { const d = addDays(ws, i), wd = wdMon(d); h += '<span' + (wd >= 5 ? ' class="we"' : '') + '>' + esc(dayLetter(d)) + '</span>'; }
     return h;
   }
   function dayList(day) {
@@ -644,8 +652,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const now = Date.now();
     const tm = x.allDay ? 'all-day' + (x.endDate > addDays(x.startDate, 1) ? '<small>' + esc(fmt(noon(x.startDate), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(addDays(x.endDate, -1)), { day: 'numeric', month: 'short' })) + '</small>' : '')
       : esc(fmtTime(x.start)) + '<small>' + esc(x.end > x.start ? fmtTime(x.end) : '') + '</small>';
-    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : x.kind === 'drinks' ? ICON.glass : ICON.flag) + '<span>' + esc(x.sub) + '</span></span>' : '';
-    return '<button class="evrow' + (x.end < now && !opts.noPast ? ' past' : '') + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + '><span class="tm">' + tm + '</span><span class="bd"><span class="t">' + esc(x.title) + '</span>' + sub + '</span></button>';
+    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : x.kind === 'drinks' ? ICON.glass : ICON.flag) + subSpan(x) + '</span>' : '';
+    return '<button class="evrow' + (x.end < now && !opts.noPast ? ' past' : '') + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + '><span class="tm">' + tm + '</span><span class="bd"><span class="t"' + keep(x, x.title) + '>' + esc(x.title) + '</span>' + sub + '</span></button>';
   }
 
   // ---- Week and Day: the time grid ----
@@ -660,7 +668,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let strip = '';
     for (let i = 0; i < 7; i++) {
       const d = addDays(ws, i), has = eventsOn(d).length > 0;
-      strip += '<button type="button" data-day="' + d + '" class="' + (d === today() ? 'today' : '') + '" aria-selected="' + (d === st.sel) + '" aria-label="' + esc(longDate(d)) + '"><span>' + esc(shortDay(d).slice(0, 1)) + '</span><b>' + +d.slice(8) + '</b><i class="' + (has ? '' : 'none') + '"></i></button>';
+      strip += '<button type="button" data-day="' + d + '" class="' + (d === today() ? 'today' : '') + '" aria-selected="' + (d === st.sel) + '" aria-label="' + esc(longDate(d)) + '"><span>' + esc(dayLetter(d)) + '</span><b>' + +d.slice(8) + '</b><i class="' + (has ? '' : 'none') + '"></i></button>';
     }
     return '<div class="strip glass" data-swipe="week" data-week="' + ws + '">' + strip + '</div>' + timeGrid([st.sel]);
   }
@@ -674,14 +682,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       head += '<div class="dh' + (d === tod ? ' today' : '') + (d === st.sel ? ' sel' : '') + '" data-day="' + d + '"><span>' + esc(one ? fmt(noon(d), { weekday: 'long' }) : shortDay(d)) + '</span>' + (one ? '' : '<b>' + +d.slice(8) + '</b>') + (w ? '<span class="wx" title="' + esc(w.words) + '">' + ICON[w.icon] + esc(one ? w.words + ' ' + w.hi + ' / ' + w.lo : w.hi) + '</span>' : '') + '</div>';
       const evs = eventsOn(d), ad = evs.filter(x => x.allDay), timed = evs.filter(x => !x.allDay);
       if (ad.length) anyAllDay = true;
-      allday += '<div class="ad">' + ad.map(x => '<button class="mev' + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + '>' + esc(x.title) + '</button>').join('') + '</div>';
+      allday += '<div class="ad">' + ad.map(x => '<button class="mev' + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + keep(x, x.title) + '>' + esc(x.title) + '</button>').join('') + '</div>';
       // Overlapping events share the width.
       const laid = layout(timed.map(x => ({ x, s: Math.max(x.start, dayMs(d)), e: Math.min(Math.max(x.end, x.start + 15 * MIN), dayMs(addDays(d, 1))) })));
       let col = '';
       for (const l of laid) {
         const top = (l.s - dayMs(d)) / H, hgt = Math.max(0.25, (l.e - l.s) / H);
         const width = 100 / l.n, left = l.c * width;
-        col += '<button class="tev' + (hgt < 0.6 ? ' short' : '') + (l.x.end < Date.now() ? ' past' : '') + '" type="button" data-ev="' + esc(l.x.id) + '" ' + 'style="--c:' + esc(l.x.color) + ';top:calc(var(--hour) * ' + top.toFixed(4) + ');height:calc(var(--hour) * ' + hgt.toFixed(4) + ' - 2px);left:calc(' + left.toFixed(2) + '% + 1px);width:calc(' + width.toFixed(2) + '% - 3px)" aria-label="' + esc(l.x.title + ', ' + fmtTime(l.x.start)) + '"><b>' + esc(l.x.title) + '</b><span>' + esc(l.x.sub || (fmtTime(l.x.start) + ' – ' + fmtTime(l.x.end))) + '</span>' + (l.x.kind === 'family' ? '<span class="rs" aria-hidden="true"></span>' : '') + '</button>';
+        col += '<button class="tev' + (hgt < 0.6 ? ' short' : '') + (l.x.end < Date.now() ? ' past' : '') + '" type="button" data-ev="' + esc(l.x.id) + '" ' + 'style="--c:' + esc(l.x.color) + ';top:calc(var(--hour) * ' + top.toFixed(4) + ');height:calc(var(--hour) * ' + hgt.toFixed(4) + ' - 2px);left:calc(' + left.toFixed(2) + '% + 1px);width:calc(' + width.toFixed(2) + '% - 3px)" aria-label="' + esc(l.x.title + ', ' + fmtTime(l.x.start)) + '"><b' + keep(l.x, l.x.title) + '>' + esc(l.x.title) + '</b><span' + (l.x.sub ? keep(l.x, l.x.sub) : '') + '>' + esc(l.x.sub || (fmtTime(l.x.start) + ' – ' + fmtTime(l.x.end))) + '</span>' + (l.x.kind === 'family' ? '<span class="rs" aria-hidden="true"></span>' : '') + '</button>';
       }
       cols += '<div class="col' + (d === tod ? ' today' : '') + '" data-day="' + d + '">' + col + '</div>';
     }
@@ -1037,20 +1045,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const kv = (icon, body, extra) => '<div class="kvrow"><span class="ic">' + ICON[icon] + '</span><span class="v">' + body + '</span>' + (extra || '') + '</div>';
     if (fam) {
       if (o.recurring) { const rr = I.prop(o.master, 'RRULE'); rows.push(kv('repeat', esc(rr ? I.ruleText(rr.value, I.dateProp(o.master, 'DTSTART'), u => medDate(ymdOf(u))) : 'Repeats on set dates') + (x.o.comp !== x.o.master ? '<small>This occurrence was changed on its own</small>' : ''))); }
-      if (o.location) rows.push('<a class="kvrow" href="https://maps.apple.com/?q=' + encodeURIComponent(o.location) + '" target="_blank" rel="noopener"><span class="ic">' + ICON.map + '</span><span class="v">' + esc(o.location) + '<small>Open in Maps</small></span><span class="go">' + ICON.ext + '</span></a>');
+      if (o.location) rows.push('<a class="kvrow" href="https://maps.apple.com/?q=' + encodeURIComponent(o.location) + '" target="_blank" rel="noopener"><span class="ic">' + ICON.map + '</span><span class="v"><span translate="no">' + esc(o.location) + '</span><small>Open in Maps</small></span><span class="go">' + ICON.ext + '</span></a>');
       if (o.travel) rows.push(kv('car', esc(o.travel >= 60 ? (o.travel / 60) + ' h' : o.travel + ' min') + ' travel time'));
       if (o.alarms.length) rows.push(kv('bell', o.alarms.map(a => esc(alarmWords(a, x.allDay))).join('<br>')));
       if (o.transp === 'TRANSPARENT') rows.push(kv('busy', 'Shown as free'));
       if (isPrivate(x)) rows.push(kv('lock', 'Private<small>Hidden from Ipsy</small>'));
-      if (o.url) rows.push('<a class="kvrow" href="' + esc(/^https?:/i.test(o.url) ? o.url : '#') + '" target="_blank" rel="noopener"><span class="ic">' + ICON.link + '</span><span class="v">' + esc(o.url) + '</span><span class="go">' + ICON.ext + '</span></a>');
-      if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i>' + esc(o.organizer.name || o.organizer.email) + ' <small>organizer</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i>' + esc(a.name || a.email) + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
-      if (o.description) rows.push(kv('notes', esc(o.description)));
+      if (o.url) rows.push('<a class="kvrow" href="' + esc(/^https?:/i.test(o.url) ? o.url : '#') + '" target="_blank" rel="noopener"><span class="ic">' + ICON.link + '</span><span class="v" translate="no">' + esc(o.url) + '</span><span class="go">' + ICON.ext + '</span></a>');
+      if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i><span translate="no">' + esc(o.organizer.name || o.organizer.email) + '</span> <small>organizer</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i><span translate="no">' + esc(a.name || a.email) + '</span>' + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
+      if (o.description) rows.push(kv('notes', '<span translate="no">' + esc(o.description) + '</span>'));
     } else {
-      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : x.kind === 'drinks' ? 'glass' : 'flag', esc(x.sub)));
-      if (x.notes) rows.push(kv('notes', esc(x.notes)));
+      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : x.kind === 'drinks' ? 'glass' : 'flag', subSpan(x)));
+      if (x.notes) rows.push(kv('notes', '<span translate="no">' + esc(x.notes) + '</span>'));
     }
     const cn = fam ? (st.calendar && st.calendar.name || 'Family') : LAYER[x.kind].name;
-    $('evBody').innerHTML = '<div class="evhead" style="--c:' + esc(x.color) + '"><span class="cn"><i></i>' + esc(cn) + '</span><h3' + (x.done ? ' class="done"' : '') + '>' + esc(x.title) + '</h3><p class="when">' + whenWords(x) + '</p></div>'
+    $('evBody').innerHTML = '<div class="evhead" style="--c:' + esc(x.color) + '"><span class="cn"' + (fam ? ' translate="no"' : '') + '><i></i>' + esc(cn) + '</span><h3' + (x.done ? ' class="done"' : '') + keep(x, x.title) + '>' + esc(x.title) + '</h3><p class="when">' + whenWords(x) + '</p></div>'
       + (rows.length ? '<div class="rgroup glass">' + rows.join('') + '</div>' : '')
       + (fam ? '<div class="actrow"><button class="btn quiet danger" type="button" id="evDelete">Delete Event</button></div>'
         : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '</span></a>' : '') + (x.kind !== 'family' && x.kind !== 'drinks' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar</span></button>' : '') + '</div>');
@@ -1121,12 +1129,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<div class="frow"><span class="ic">' + ICON.clock + '</span><label for="edAllDay">All-day</label><button class="switch" id="edAllDay" type="button" role="switch" aria-checked="' + f.allDay + '" aria-label="All-day"></button></div>'
       + '<div class="frow"><label for="edStart">Starts</label><input id="edStart" type="' + (f.allDay ? 'date' : 'datetime-local') + '" value="' + startV + '"></div>'
       + '<div class="frow"><label for="edEnd">Ends</label><input id="edEnd" type="' + (f.allDay ? 'date' : 'datetime-local') + '" value="' + endV + '"></div>'
-      + (f.allDay ? '' : '<div class="frow"><label for="edTz">Time Zone</label><select id="edTz">' + opt(zones.map(z => [z, z]), f.tz, zoneLabel) + '</select></div>')
+      + (f.allDay ? '' : '<div class="frow"><label for="edTz">Time Zone</label><select id="edTz" translate="no">' + opt(zones.map(z => [z, z]), f.tz, zoneLabel) + '</select></div>')
       + '<div class="frow"><span class="ic">' + ICON.repeat + '</span><label for="edRepeat">Repeat</label><select id="edRepeat">' + opt(REPEATS, repeatSel) + '</select></div>'
       + (repeatSel === 'custom' ? ''
         + '<div class="frow sub"><label for="edFreq">Frequency</label><select id="edFreq">' + opt([['DAILY', 'Daily'], ['WEEKLY', 'Weekly'], ['MONTHLY', 'Monthly'], ['YEARLY', 'Yearly']], r ? r.FREQ : 'WEEKLY') + '</select></div>'
         + '<div class="frow sub"><label for="edInterval">Every</label><input id="edInterval" type="number" min="1" max="99" inputmode="numeric" value="' + (r ? r.INTERVAL : 1) + '"><span class="l" style="flex:none;color:var(--muted)" id="edIntervalUnit">' + esc({ DAILY: 'days', WEEKLY: 'weeks', MONTHLY: 'months', YEARLY: 'years' }[r ? r.FREQ : 'WEEKLY']) + '</span></div>'
-        + (r && r.FREQ === 'WEEKLY' ? '<div class="frow sub"><span class="l">On</span><span class="wdays" id="edWdays">' + [0, 1, 2, 3, 4, 5, 6].map(i => settings.weekStart === 0 ? (i + 6) % 7 : i).map(d => '<button type="button" data-wd="' + d + '" aria-pressed="' + ((r.BYDAY && r.BYDAY.length ? r.BYDAY.some(b => b.day === d) : d === swd)) + '" aria-label="' + esc(DAYNAMES[d]) + '">' + esc(DAYNAMES[d].slice(0, 1)) + '</button>').join('') + '</span></div>' : '')
+        + (r && r.FREQ === 'WEEKLY' ? '<div class="frow sub"><span class="l">On</span><span class="wdays" id="edWdays">' + [0, 1, 2, 3, 4, 5, 6].map(i => settings.weekStart === 0 ? (i + 6) % 7 : i).map(d => '<button type="button" data-wd="' + d + '" aria-pressed="' + ((r.BYDAY && r.BYDAY.length ? r.BYDAY.some(b => b.day === d) : d === swd)) + '" aria-label="' + esc(fmt(noon(addDays('2024-01-01', d)), { weekday: 'long' })) + '">' + esc(dayLetter(addDays('2024-01-01', d))) + '</button>').join('') + '</span></div>' : '')
         + (r && r.FREQ === 'MONTHLY' ? '<div class="frow sub"><label for="edMonthly">On</label><select id="edMonthly">' + opt([['day', 'Day ' + sw.d], ['nth', 'The ' + (lastOfKind && nth >= 4 ? 'last' : ['first', 'second', 'third', 'fourth', 'fifth'][nth - 1]) + ' ' + DAYNAMES[swd]]], r.BYDAY && r.BYDAY.length ? 'nth' : 'day') + '</select></div>' : '')
         : '')
       + (f.rule ? '<div class="frow' + (repeatSel === 'custom' ? ' sub' : '') + '"><label for="edRuleEnd">End Repeat</label><select id="edRuleEnd">' + opt([['never', 'Never'], ['date', 'On Date'], ['count', 'After…']], f.ruleEnd.type) + '</select></div>'
@@ -1402,7 +1410,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<button class="rowbtn" type="button" id="stRefresh"><span class="ic">' + ICON.refresh + '</span><span>Check for changes now</span></button>'
       + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
       + '<p class="label">Calendars</p><div class="rgroup glass">'
-      + '<div class="lrow" id="stFamily" style="--c:' + esc(calColor()) + '"><i></i><span class="l">' + esc(st.calendar && st.calendar.name || 'Family') + '<small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
+      + '<div class="lrow" id="stFamily" style="--c:' + esc(calColor()) + '"><i></i><span class="l"><span translate="no">' + esc(st.calendar && st.calendar.name || 'Family') + '</span><small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
       + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
       + '</div>'
       + '<p class="label">Display</p><div class="rgroup glass">'
@@ -1436,7 +1444,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const b = e.target.closest('[data-set]');
     if (b) { const k = b.dataset.set; settings[k] = k === 'weekStart' ? +b.dataset.val : b.dataset.val; if (k === 'weekStart') settings.weekStartPicked = true; saveSettings(); render(); renderSettings(); }
   });
-  const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));
+  // measured a frame later, once ../home/lang.js has put the words in (Russian ones are a different width)
+  const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));   // at once; in Russian, ../home/slide.js places them again once the words are swapped (aos:words)
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideSegs(); };
   if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: Vintage or Standard, at once (../home/design.js)
   // A new design: the Family calendar's and Notes' colours follow it; Futura and the system font are

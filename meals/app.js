@@ -42,13 +42,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     // the family's Google Sheet: when it last synced, the plans it holds, plans taken back here (Undo);
     // sheet and sheetSent are the link, phrase and sent list from before aOS kept them (handed over, then gone)
     sheetAt: 'allison-meals-v1-sheet-synced', sheetHas: 'allison-meals-v1-sheet-has', sheetGraves: 'allison-meals-v1-sheet-graves',
-    sheet: 'allison-meals-v1-sheet', sheetSent: 'allison-meals-v1-sheet-sent', sheetOldAt: 'allison-meals-v1-sheet-at' };
+    sheet: 'allison-meals-v1-sheet', sheetSent: 'allison-meals-v1-sheet-sent', sheetOldAt: 'allison-meals-v1-sheet-at',
+    fold: 'allison-meals-v1-fold' };   // the plan folded away on Dinners (this phone only)
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const cap = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
   const MEATS = [['chicken', 'Chicken'], ['beef', 'Beef'], ['pork', 'Pork'], ['turkey', 'Turkey'], ['lamb', 'Lamb'], ['salmon', 'Salmon'], ['white fish', 'White fish'], ['shrimp', 'Shrimp'], ['on sale', 'Whatever’s on sale']];
   const ICON = {
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     sheet: '<svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg>',
+    chev: '<svg viewBox="0 0 24 24" class="b"><path d="M8.6 10l3.4 3.4 3.4-3.4"/></svg>',
+    clear: '<svg viewBox="0 0 24 24" class="b"><path d="M7 7l10 10M17 7L7 17"/></svg>',
     copy: '<svg viewBox="0 0 24 24"><rect x="8.4" y="8.4" width="11.6" height="11.6" rx="2.4"/><path d="M15.6 8.4V6.2A2.2 2.2 0 0 0 13.4 4H6.2A2.2 2.2 0 0 0 4 6.2v7.2a2.2 2.2 0 0 0 2.2 2.2h2.2"/></svg>',
   };
 
@@ -72,6 +75,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const shopIds = shop => shop === 'all' ? data.settings.stores || [] : [shop];
   const memberTag = x => x.member && x.at && x.at.cardName ? ' <span class="prime">' + esc(x.at.cardName) + '</span>' : '';
   let ticks = ls.json(K.ticks, { at: 0, keys: [] });
+  let folded = ls.json(K.fold, false) === true;
 
   const A = () => window.AllisonOS && window.AllisonOS.account;
   // Meals' route (functions/meals/api), named from the site root's side so it is the same from the old
@@ -100,6 +104,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     'ai-format': 'That didn’t come back right. Try again.',
     'avoid': 'Every plan it made used something the family avoids, so none was kept. Try again, or pick another meat.',
     'owner-only': 'Only the owner can change what the family avoids. Your stores and cards were kept.',
+    'changed': 'Someone in the family changed the plan just now. Here’s the plan as it is.',
   };
   const say = code => SAY[code] || 'Something went wrong. Try again in a minute.';
 
@@ -144,8 +149,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const where = p => p.shop && p.shop !== 'all' && storeById(p.shop) ? storeById(p.shop).name : p.shop === 'all' ? 'Best deals' : p.shopName || '';
   // a plan's nights as cards; src says which plan a tap opens ('draft', 'plan' or 'past')
   const nights = (p, src, from) => p.meals.map((m, i) => '<button class="card rgroup" type="button" data-meal="' + i + '" data-src="' + src + '" style="--i:' + (from + i) + '">'
-    + '<span class="night">Night ' + m.day + (p.dates && p.dates[i] ? ' · ' + esc(dayLabel(p.dates[i])) : '') + '</span><span class="ct">' + esc(m.title) + '</span>'
-    + '<span class="cm">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : ''].filter(Boolean).join(' · ')) + '</span>'
+    + '<span class="night">Night ' + m.day + (p.dates && p.dates[i] ? ' · ' + esc(dayLabel(p.dates[i])) : '') + '</span><span class="ct" translate="no">' + esc(m.title) + '</span>'
+    + '<span class="cm" translate="no">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : ''].filter(Boolean).join(' · ')) + '</span>'
     + (m.uses && m.uses.length ? '<span class="saletag">On sale: ' + esc(m.uses.join(', ')) + '</span>' : '') + '</button>').join('');
   function startOptions() {
     const now = new Date();
@@ -164,12 +169,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + '<div class="frow storepick"><label for="aStart">Starting</label><select id="aStart">' + startOptions() + '</select></div>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="accept">Accept plan</button><button class="btn" type="button" data-act="again"' + (noAI() ? ' disabled' : '') + '>Try again</button></div>'
         + '<div class="btns" style="margin-top:0"><button class="btn quiet" type="button" data-act="discard">Discard</button></div></div>'
-        + nights(d, 'draft', 2) + (d.tip ? '<div class="card"><p><b>Tip:</b> ' + esc(d.tip) + '</p></div>' : '');
+        + nights(d, 'draft', 2) + (d.tip ? '<div class="card"><p><b>Tip:</b> <span translate="no">' + esc(d.tip) + '</span></p></div>' : '');
     } else if (p && p.meals && p.meals.length) {
+      // the plan's bar: tap it to fold the dinners away (a small dropdown, kept folded on this phone),
+      // × to clear the plan (it stays in Past plans, with Undo)
       const when = p.dates && p.dates.length ? span({ start: p.dates[0], end: p.dates[p.dates.length - 1] }) : dayLabel(isoDay(new Date(p.at)));
-      h += '<p class="sechead"><span>' + esc([cap(p.meat), 'for ' + p.people, where(p)].filter(Boolean).join(' · ')) + '</span><span>' + esc(when) + '</span></p>' + nights(p, 'plan', 1);
-      if (p.tip) h += '<div class="card" style="--i:' + (p.meals.length + 1) + '"><p><b>Tip:</b> ' + esc(p.tip) + '</p></div>';
+      const ti = (p.dates || []).indexOf(isoDay(new Date())), tonight = ti >= 0 && p.meals[ti] ? 'Tonight: ' + p.meals[ti].title : '';
+      h += '<div class="planbar card" style="--i:1"><button class="pfold" type="button" data-act="fold" aria-expanded="' + !folded + '" aria-controls="planNights">'
+        + '<span class="chev" aria-hidden="true">' + ICON.chev + '</span><span class="pt">' + esc([cap(p.meat), 'for ' + p.people, where(p)].filter(Boolean).join(' · '))
+        + '<small>' + esc(folded && tonight ? tonight : when + ' · ' + plural(p.meals.length, 'dinner')) + '</small></span></button>'
+        + '<button class="iconbtn pclear" type="button" data-act="clear" aria-label="Clear this plan">' + ICON.clear + '</button></div>'
+        + '<div class="pnights" id="planNights"' + (folded ? ' hidden' : '') + '>' + nights(p, 'plan', 2);
+      if (p.tip) h += '<div class="card" style="--i:' + (p.meals.length + 2) + '"><p><b>Tip:</b> <span translate="no">' + esc(p.tip) + '</span></p></div>';
       if (p.acceptedBy || p.by) h += '<p class="hint">' + esc(p.acceptedBy ? 'Accepted by ' + p.acceptedBy : 'Planned by ' + p.by) + '.</p>';
+      h += '</div>';
     } else {
       h += '<div class="card" style="--i:1"><strong>No dinners planned yet</strong>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="plan"' + (noAI() ? ' disabled' : '') + '>Plan dinners</button></div></div>';
@@ -179,7 +192,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const log = pastList(), olderOn = signedIn() && sheetAt && !older.done;
     if (log.length || (olderOn && sheetHas.size)) h += '<p class="sechead"><span>Past plans</span><span>' + log.length + '</span></p><div class="rgroup">'
       + log.map(e => '<button class="rowbtn" type="button" data-past="' + esc(e.id) + '"><span>' + esc(span(e) + ' · ' + cap(e.meat) + (e.shop && e.shop !== 'all' && storeById(e.shop) ? ' · ' + storeById(e.shop).name : e.shopName ? ' · ' + e.shopName : ''))
-        + (p && p.id === e.id ? ' <span class="prime">Current</span>' : '') + '<span class="sub">' + esc(e.titles.join(' · ')) + '</span></span></button>').join('')
+        + (p && p.id === e.id ? ' <span class="prime">Current</span>' : '') + '<span class="sub" translate="no">' + esc(e.titles.join(' · ')) + '</span></span></button>').join('')
       + (olderOn ? '<button class="rowbtn" type="button" data-act="older"' + (older.busy ? ' disabled' : '') + '><span class="ic">' + ICON.sheet + '</span><span>' + (older.busy ? 'Looking in the Sheet…' : 'Show older plans from the Sheet')
         + '</span></button>' : '') + '</div>';
     return h;
@@ -208,7 +221,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const items = all ? weekItems(data.settings.stores || []).items.sort((a, b) => a.name.localeCompare(b.name, 'en-US')) : d && d.items ? d.items.map(x => ({ ...x, at: store })) : [];
     if (!items.length) return h + '<div class="empty" style="--i:2"><strong>No deals yet</strong></div>';
     h += L.sections(items, x => x.name).map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.length + '</span></p><div class="rgroup" style="--i:' + (i + 2) + '">'
-      + g.items.map(x => '<div class="drow"><span class="dn">' + esc(x.name) + ((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).length ? '<small>' + esc((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).join(' · ')) + '</small>' : '') + '</span>'
+      + g.items.map(x => '<div class="drow"><span class="dn" translate="no">' + esc(x.name) + ((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).length ? '<small>' + esc((all ? [x.at.name] : []).concat(x.note ? [x.note] : []).join(' · ')) + '</small>' : '') + '</span>'
         + '<span class="dp">' + esc(x.price || '') + memberTag(x) + (x.regular ? '<small>usually ' + esc(x.regular) + '</small>' : '') + '</span></div>').join('') + '</div>').join('');
     h += '<button class="btn okbtn" type="button" data-act="plan-deals"' + (noAI() ? ' disabled' : '') + '>Plan dinners with ' + (all ? 'the best of these' : 'these deals') + '</button>';
     const src = all ? [] : (d.sources || []);
@@ -229,7 +242,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (ticks.at !== p.at) ticks = { at: p.at, keys: [] };
     const s = shop(), done = new Set(ticks.keys);
     const row = x => '<button class="irow" type="button" role="checkbox" aria-checked="' + done.has(x.key) + '" data-key="' + esc(x.key) + '"><span class="box">' + ICON.tick + '</span>'
-      + '<span class="it">' + esc(cap(x.item)) + '<small>' + esc([L.total(x.amounts), 'night' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', ')].filter(Boolean).join(' · ')) + '</small>'
+      + '<span class="it"><span translate="no">' + esc(cap(x.item)) + '</span><small>' + esc([L.total(x.amounts), 'night' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', ')].filter(Boolean).join(' · ')) + '</small>'
       + saleTag(x, p) + '</span></button>';
     const groups = L.sections(s.buy, x => x.item);
     let h = groups.map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.filter(x => !done.has(x.key)).length + '</span></p><div class="rgroup" style="--i:' + (i + 1) + '">' + g.items.map(row).join('') + '</div>').join('');
@@ -260,6 +273,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (act === 'accept') return accept();
     if (act === 'again') return again();
     if (act === 'discard') return discard();
+    if (act === 'fold') { folded = !folded; ls.set(K.fold, folded); return render(); }
+    if (act === 'clear') return clearPlan();
     if (act === 'paste') { $('pasteText').value = ''; openSheet('pasteSheet'); setTimeout(() => $('pasteText').focus(), 300); return; }
     if (act === 'signin') return signIn();
     if (act === 'older') return loadOlder();
@@ -378,6 +393,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     catch (e) { toast(say(e.code), null, 6000); }
     render();
   }
+  // × on the plan: the family's plan is cleared for everyone (it stays in Past plans and the Sheet), with Undo
+  async function clearPlan() {
+    const p = data.plan; if (!p) return;
+    try { await api('clear', { id: p.id }); }
+    catch (e) { toast(say(e.code), null, 6000); if (e.code === 'changed') load(); return; }
+    data.plan = null; ls.set(KEY, data); scheduleSheet(); render();
+    toast('Plan cleared. It’s still in Past plans.', async () => {
+      try { const j = await api('current', { id: p.id }); data.plan = j.plan; ls.set(KEY, data); scheduleSheet(); render(); toast('Plan back.'); }
+      catch (e) { toast(say(e.code), null, 6000); if (e.code === 'changed') load(); }
+    }, 7000);
+  }
   // a past plan: its dinners and shopping list, as it was
   const pastCache = {};
   async function openPast(id) {
@@ -389,7 +415,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('pastBody').innerHTML = '<p class="hint" style="margin:0 2px">' + esc([cap(p.meat), 'for ' + p.people, where(p), p.acceptedBy ? 'accepted by ' + p.acceptedBy : ''].filter(Boolean).join(' · ')) + '</p>'
       + nights(p, 'past', 0)
       + '<p class="label">Shopping list</p>' + L.sections(s.buy, x => x.item).map(g => '<div class="rgroup"><p class="sechead" style="margin:10px 14px 2px"><span>' + esc(g.name) + '</span></p><ul class="plain">'
-        + g.items.map(x => '<li>' + esc(cap(x.item)) + ' <small>' + esc(L.total(x.amounts)) + '</small> ' + saleTag(x, p) + '</li>').join('') + '</ul></div>').join('');
+        + g.items.map(x => '<li><span translate="no">' + esc(cap(x.item)) + '</span> <small>' + esc(L.total(x.amounts)) + '</small> ' + saleTag(x, p) + '</li>').join('') + '</ul></div>').join('');
     openSheet('pastSheet');
   }
   $('pastBody').addEventListener('click', e => { const b = e.target.closest('[data-meal]'); if (b) openRecipe(+b.dataset.meal, st.past); });
@@ -399,10 +425,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const m = p && p.meals[i]; if (!m) return;
     $('recipeLbl').textContent = 'Night ' + m.day + (p.dates && p.dates[i] ? ' · ' + dayLabel(p.dates[i]) : '');
     const d = dealsOf(p);
-    $('recipeBody').innerHTML = '<div><h3>' + esc(m.title) + '</h3><p class="cm">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : '', 'serves ' + p.people].filter(Boolean).join(' · ')) + '</p></div>'
-      + (m.why ? '<p class="hint" style="margin:0 2px">' + esc(m.why) + '</p>' : '')
-      + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => { const deal = L.dealFor(x.item, d); return '<li>' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + (deal ? ' ' + saleTag({ deal }, p) : '') + '</li>'; }).join('') + '</ul></div>'
-      + '<p class="label">Steps</p><div class="rgroup"><ol>' + m.steps.map(s => '<li>' + esc(s) + '</li>').join('') + '</ol></div>'
+    $('recipeBody').innerHTML = '<div><h3 translate="no">' + esc(m.title) + '</h3><p class="cm" translate="no">' + esc([m.cuisine, m.method, m.minutes ? m.minutes + ' min' : '', 'serves ' + p.people].filter(Boolean).join(' · ')) + '</p></div>'
+      + (m.why ? '<p class="hint" style="margin:0 2px" translate="no">' + esc(m.why) + '</p>' : '')
+      + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => { const deal = L.dealFor(x.item, d); return '<li><span translate="no">' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + '</span>' + (deal ? ' ' + saleTag({ deal }, p) : '') + '</li>'; }).join('') + '</ul></div>'
+      + '<p class="label">Steps</p><div class="rgroup"><ol>' + m.steps.map(s => '<li translate="no">' + esc(s) + '</li>').join('') + '</ol></div>'
       + '<p class="hint">Made by AI: check times, temperatures and labels.</p>';
     openSheet('recipeSheet');
   }
@@ -414,7 +440,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const model = modelName();
     const ai = data.ai === 'anthropic' ? model + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
     $('setBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<p class="label">Account</p><div class="rgroup acct"><p><strong>' + esc(user ? user.name : 'Not signed in') + '</strong>'
+      + '<p class="label">Account</p><div class="rgroup acct"><p><strong' + (user ? ' translate="no"' : '') + '>' + esc(user ? user.name : 'Not signed in') + '</strong>'
       + (user ? '' : 'Sign in to plan for the family.') + '</p>'
       + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
       + '<p class="label">Your stores</p><div class="opts" id="sStores" role="group" aria-label="Your stores">'
@@ -424,8 +450,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + CARDS.map(([k, n]) => '<button class="opt" type="button" role="checkbox" data-card="' + k + '" aria-checked="' + draft.cards.includes(k) + '">' + esc(n) + '</button>').join('') + '</div>'
       + '<p class="hint">With a card, deals show its member prices.</p>'
       // what the family avoids is a safety list: only the owner changes it (the server refuses anyone else)
-      + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => canAvoid() ? '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '">' + esc(cap(a)) + ' ✕</button>'
-        : '<span class="opt" aria-checked="true">' + esc(cap(a)) + '</span>').join('') + '</div>'
+      + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + (s.avoid || []).map(a => canAvoid() ? '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '"><span translate="no">' + esc(cap(a)) + '</span> ✕</button>'
+        : '<span class="opt" aria-checked="true" translate="no">' + esc(cap(a)) + '</span>').join('') + '</div>'
       + (canAvoid() ? '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
         : '<p class="hint">Only the owner can change what the family avoids.</p>')
       + '<p class="hint">AI: ' + esc(ai) + '.</p>';
@@ -447,7 +473,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (rm) { draftAvoid = draftAvoid.filter(a => a !== rm.dataset.avoid); rm.remove(); return; }
     if (e.target.closest('#sAddGo')) {
       const v = $('sAdd').value.trim().toLowerCase(); if (!v) return;
-      if (!draftAvoid.includes(v)) { draftAvoid.push(v); $('avoid').insertAdjacentHTML('beforeend', '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(v) + '" aria-label="Remove ' + esc(v) + '">' + esc(cap(v)) + ' ✕</button>'); }
+      if (!draftAvoid.includes(v)) { draftAvoid.push(v); $('avoid').insertAdjacentHTML('beforeend', '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(v) + '" aria-label="Remove ' + esc(v) + '"><span translate="no">' + esc(cap(v)) + '</span> ✕</button>'); }
       $('sAdd').value = ''; return;
     }
   });

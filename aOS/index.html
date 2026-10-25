@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.weather.gov https://api.open-meteo.com; frame-src 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -167,8 +167,8 @@
   .tabs button { position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; height: 48px; border-radius: 20px; font-size: 14px; font-weight: 650; color: var(--muted); transition: color .3s; }
   .tabs button svg { width: 20px; height: 20px; }
   .tabs button[aria-selected="true"] { color: #10181A; }
-  /* aOS 2: no dock. Four everyday apps float at the bottom (and Home, off Home); Today and
-     Search sit by your account at the top of Home (aOS/home-tab.js) */
+  /* aOS 2: no dock. Home floats at the bottom on Today and Search (every app is on Home itself);
+     Today sits by your account at the top of Home (aOS/home-tab.js) */
   .bar.quickbar { left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; }
   .bar.quickbar .tabs { display: none; }
   .quick { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 28px; background: var(--glass); -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
@@ -176,10 +176,8 @@
   .quick button { position: relative; display: grid; place-items: center; width: 50px; height: 50px; border-radius: 15px; transition: transform .15s; }
   .quick button:active { transform: scale(.92); }
   .quick img { width: 50px; height: 50px; border-radius: 14px; }
-  .quick .unread { position: absolute; top: -6px; right: -6px; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 11px; background: #E5484D; color: #fff;
-    font: 700 12.5px/21px -apple-system, system-ui, sans-serif; font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--solid); pointer-events: none; }
+  .quick[hidden] { display: none; }
   .quick .qhome { color: var(--text); background: var(--dot); }
-  .quick .qhome[hidden] { display: none; }
   .quick .qhome svg { width: 24px; height: 24px; }
   .hacts { display: flex; align-items: center; gap: 8px; }
   .hbtn { width: 42px; height: 42px; border-radius: 15px; display: grid; place-items: center; color: var(--text); background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
@@ -247,6 +245,7 @@
   .seg { position: relative; display: flex; padding: 4px; border-radius: 15px; background: var(--dot); }
   .seg button { flex: 1; height: 36px; padding: 0 10px; border-radius: 11px; font-size: 14px; font-weight: 650; color: var(--muted); }
   .seg button[aria-pressed="true"] { background: var(--pastel); color: #10181A; box-shadow: 0 4px 12px rgba(111,165,151,.3); }
+  .lnote { margin: 14px 2px 6px; font-size: 13px; font-weight: 650; color: var(--muted); }
   .rel h4 { margin: 0; font-size: 17px; } .rel small { color: var(--muted); font-size: 14px; } .rel ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
   .group .rel { display: block; }
   .glbl { display: flex; align-items: center; gap: 8px; margin: 26px 4px 0; font-size: 13px; font-weight: 650; color: var(--muted); }
@@ -278,6 +277,14 @@
   .acct > .tools span { flex: 1; } .acct > .tools small { display: block; margin-top: 2px; color: var(--muted); font-size: 14px; font-weight: 400; }
   .acct > .tools b { font-size: 17px; } .acct > .tools i { font-style: normal; color: var(--accent); font-size: 20px; transition: transform .25s; }
   .acct > .tools[aria-expanded="true"] i { transform: rotate(90deg); }
+  /* Account: each section folded under its heading (aOS/app.js, fold) */
+  .acct > .fbody { display: block; padding-top: 4px; }
+  .acct > .fbody[hidden] { display: none; }
+  .acct > .fbody > * + * { margin-top: 18px; }
+  .acct > .fbody > .soft:first-child, .acct > .fbody > .seg:first-child { margin-top: 0; }
+  .acct > .fbody > .soft + .soft { margin-top: 10px; }
+  .acct > .fbody .group { margin-top: 0; }
+  .acct > .tools + .tools, .acct > .fbody + .tools { border-top: 0; }
   .acct > .me { display: flex; }
   .acct h3 { margin: 0 0 4px; font-size: 17px; }
   .acct p { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
@@ -345,42 +352,95 @@
   .dth.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.9), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.9), transparent 70%), #EEF2F0; }
   .dth.vintage { background: #F4ECDD; } .dth.vintage i { background: #FBF5E9; }
   .dth.vintage::before { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
+  .dth.neon { background: #120B1F; } .dth.neon i { background: #1B1230; box-shadow: inset 0 0 0 1px rgba(255,61,154,.5); }
+  .dth.neon::before { content: ''; position: absolute; right: -12px; top: -12px; width: 32px; height: 32px; border-radius: 50%; background: repeating-linear-gradient(to bottom, transparent 0 4px, #120B1F 4px 6px) 0 100%/100% 45% no-repeat, linear-gradient(#FFC75A, #FF8A4C 45%, #FF3D9A); }
+  .dth.folk { background: #F5F7FB; } .dth.folk i { background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(28,63,148,.3); }
+  .dth.folk::before { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #F5F7FB 0 18%, #C7261C 19% 34%, #1C3F94 35%); }
   .dsheet h1 { margin: 6px 0 6px; font-size: 28px; letter-spacing: -.5px; } .dsheet p { margin: 0 0 16px; color: var(--muted); font-size: 15.5px; line-height: 1.4; }
   .dlist { display: grid; gap: 8px; } .dlist .dopt { background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); } .dlist .dopt[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
   .dgo { display: flex; margin-top: 20px; } .dgo .get.big { flex: 1; min-width: 0; height: 52px; border-radius: 17px; font-size: 17px; }
 :where(.get, button.avatar){position:relative}
 :where(.get, button.avatar)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
-  /* aOS 2's Home (aOS/home-tab.js): Ipsy, Open now, Favorites, then every app in a few groups */
-  .askipsy { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 6px; border-radius: 26px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); cursor: pointer; overflow: hidden; }
-  .askipsy::before { content: ''; position: absolute; left: -15px; top: 50%; width: 120px; height: 120px; margin-top: -60px; border-radius: 50%; background: radial-gradient(rgba(129,147,188,.35), transparent 65%); pointer-events: none; }
-  .askipsy .ipsy-slot { position: relative; flex: 0 0 78px; height: 78px; }
-  .askipsy > span:nth-child(2) { position: relative; flex: 1; min-width: 0; }
-  .askipsy b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.2px; }
-  .askipsy i { display: block; font-style: normal; font-size: 14px; color: var(--muted); line-height: 1.3; }
-  .askipsy .go { position: relative; color: var(--accent); font-size: 26px; line-height: 1; }
-  .fav:active, .hrow:active, .askipsy:active { transform: scale(.98); }
-  .favs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .fav { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 136px; padding: 14px; border-radius: 24px; text-align: left; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; transition: transform .2s; }
-  .fav::before { content: ''; position: absolute; left: -36px; top: -36px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(rgba(var(--c), .3), transparent 65%); pointer-events: none; }
-  .fav img { position: relative; width: 52px; height: 52px; border-radius: 15px; margin-bottom: 4px; }
-  .fav b { position: relative; font-size: 17px; font-weight: 650; }
-  .fav small { position: relative; font-size: 13px; color: var(--muted); line-height: 1.3; }
-  .fav .pin, .hpin { display: none; color: var(--muted); }
-  .fav .pin { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; }
+  /* aOS 2's Home (aOS/home-tab.js): the Ipsy bar (type to find an app, or what's in one, or ask
+     Ipsy), two widgets with the favorites, then every app as an icon in a few groups: one tap to any app */
+  .askipsy { position: relative; display: flex; align-items: center; gap: 6px; height: 64px; padding: 0 10px 0 4px; border-radius: 32px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; }
+  .askipsy:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+  .askipsy::before { content: ''; position: absolute; left: -20px; top: 50%; width: 100px; height: 100px; margin-top: -50px; border-radius: 50%; background: radial-gradient(rgba(129,147,188,.35), transparent 65%); pointer-events: none; }
+  .askipsy .ipsy-slot { position: relative; flex: 0 0 56px; height: 56px; }
+  .askipsy .ipsy-btn { width: 56px; height: 56px; }
+  .askipsy input { position: relative; flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 17px; outline: none; -webkit-appearance: none; appearance: none; }
+  .askipsy input::placeholder { color: var(--muted); opacity: 1; }
+  .askipsy input::-webkit-search-cancel-button { display: none; }
+  /* Ipsy rolling across the bar (aOS/home-tab.js, roll): in front, the words and the glass out of its way */
+  .askipsy input, .askipsy .hqs { transition: opacity .3s; }
+  .askipsy.rolling .ipsy-slot { z-index: 1; }
+  .askipsy.rolling input, .askipsy.rolling .hqs { opacity: 0; }
+  .hqs { position: relative; flex: none; width: 19px; height: 19px; margin-right: 6px; color: var(--muted); }
+  .hqx { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); background: var(--dot); }
+  .hqx svg { width: 14px; height: 14px; }
+  .askipsy.typing .hqs, .hqx[hidden], #hfound[hidden], #hmain[hidden] { display: none; }
+  .fav:active .ic, .happ:active .ic, .wid:active, .hrow:active, .htop:active, .hask:active { transform: scale(.96); }
+  /* what you typed: the app it most likely is first (Return opens it), the other apps, what's in them, Ipsy */
+  .hres h3 { margin: 22px 4px 8px; font-size: 13px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .htop { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); cursor: pointer; transition: transform .2s; }
+  .htop .ic img { width: 64px; height: 64px; border-radius: 17px; }
+  .htop > span:nth-child(2) { flex: 1; min-width: 0; }
+  .htop b { display: block; font-size: 18px; font-weight: 650; }
+  .htop i { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
+  .hgo { flex: none; display: grid; place-items: center; height: 34px; padding: 0 18px; border-radius: 17px; background: var(--accent); color: var(--on); font-size: 15px; font-weight: 700; }
+  .hrow.hit img { width: 40px; height: 40px; border-radius: 11px; }
+  .hask { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; margin-top: 22px; padding: 8px 18px 8px 14px; border-radius: 20px; background: var(--pastel); color: #10181A; font-size: 16px; font-weight: 650; text-align: left; transition: transform .2s; }
+  .hask span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hask svg { flex: none; width: 18px; height: 18px; }
+  .hnone { margin: 22px 4px 0; color: var(--muted); font-size: 15px; }
+  /* Favorites: Weather and Calendar as widgets, four apps beside them */
+  .favs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 8px; }
+  .wid { position: relative; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 14px; border-radius: 24px; text-align: left; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; transition: transform .2s; }
+  .wid::before { content: ''; position: absolute; right: -40px; top: -40px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(rgba(var(--c), .32), transparent 65%); pointer-events: none; }
+  .wid > * { position: relative; }
+  .wid .wh { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; }
+  .wid .wh img { width: 26px; height: 26px; border-radius: 8px; }
+  .wid.wx { grid-column: span 2; grid-row: span 2; min-height: 172px; }
+  .wid.wx .big { margin-top: auto; font-size: 46px; font-weight: 400; letter-spacing: -.03em; line-height: 1; }
+  .wid.wx small { display: block; margin-top: 6px; font-size: 13px; line-height: 1.3; color: var(--muted); }
+  .wid.wx small + small { margin-top: 1px; white-space: nowrap; }
+  .wid.cal { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 84px; padding: 12px 16px 12px 14px; }
+  .wid.cal > img { flex: none; width: 52px; height: 52px; border-radius: 14px; }
+  .wid.cal > span { flex: 1; min-width: 0; }
+  .wid.cal em { display: block; font-style: normal; font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .wid.cal b { display: block; margin-top: 2px; font-size: 18px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wid.cal small { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* an app's icon, with its name under it: a favorite, or one in Every app */
+  .fav, .happ { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; text-align: center; cursor: pointer; }
+  .fav b, .happ b { display: block; max-width: 100%; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ic { position: relative; display: block; flex: none; transition: transform .15s; }
+  .ic img { display: block; }
+  .fav .ic img { width: 62px; height: 62px; border-radius: 17px; }
+  .happ .ic img { width: 54px; height: 54px; border-radius: 15px; }
+  .ic .unread { position: absolute; top: -6px; right: -6px; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 11px; background: #E5484D; color: #fff;
+    font: 700 12.5px/21px -apple-system, system-ui, sans-serif; font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
+  /* the star (Edit) holds still on the icon's corner while the icon jiggles */
+  .fav .pin, .hpin { display: none; position: absolute; top: -9px; left: calc(50% - 40px); z-index: 1; width: 28px; height: 28px; padding: 4px; border-radius: 50%; color: var(--muted); background: var(--solid); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
   .fav.pinned .pin, .hpin.on { color: var(--accent); }
+  .hpin { left: calc(50% - 36px); }
   body.editing .fav .pin, body.editing .hpin { display: block; }
-  body.editing .fav { animation: jiggle .3s ease-in-out infinite alternate; }
-  @keyframes jiggle { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
+  body.editing .fav .ic, body.editing .happ .ic { animation: jiggle .3s ease-in-out infinite alternate; }
+  @keyframes jiggle { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
   .fav .pin svg, .hpin svg { display: block; width: 100%; height: 100%; }
   .hint { margin: -2px 2px 12px; font-size: 14px; color: var(--muted); }
+  /* Every app: each group a card of icons; a group of two shares its row with another */
+  .hcats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .hcat { grid-column: 1 / -1; min-width: 0; padding: 14px 6px 12px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .hcat.half { grid-column: auto; }
+  .hcat h3 { margin: 0 10px 10px; font-size: 15px; font-weight: 650; }
+  .hg { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 14px 2px; }
   .hgroup { border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; }
   .hrow { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; cursor: pointer; transition: transform .2s; }
   .hrow + .hrow { border-top: 1px solid var(--line); }
   .hrow img { width: 46px; height: 46px; border-radius: 13px; flex: none; }
-  .hrow span { flex: 1; min-width: 0; }
-  .hrow b { display: block; font-size: 16px; font-weight: 650; }
+  .hrow > span { flex: 1; min-width: 0; }
+  .hrow b { display: block; font-size: 16px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hrow i { display: block; font-style: normal; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hpin { flex: none; width: 36px; height: 36px; padding: 6px; }
   .hinfo { flex: none; width: 30px; height: 30px; border-radius: 50%; font: italic 600 15px Georgia, "Times New Roman", serif; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--edge); }
   .get.open { margin-right: 8px; }
 
@@ -415,7 +475,7 @@
   #htoast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 96px); z-index: 50; transform: translate(-50%, 8px); padding: 9px 15px; border-radius: 999px; background: var(--text); color: var(--bg);
     font-size: 14px; font-weight: 650; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
   #htoast.on { opacity: 1; transform: translate(-50%, 0); }
-  @media (prefers-reduced-motion: reduce) { #appwin, #appshade { transition: none; } body.editing .fav { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { #appwin, #appshade { transition: none; } body.editing .ic { animation: none; } }
 
 </style>
 <style id="vintage">
@@ -499,12 +559,23 @@
   .ipsy-say { border-radius: 22px 22px 6px 22px; background: #FFF8EC; color: #2B2522; font-weight: 600; box-shadow: none; }
   .ipsy-forms figure { border-radius: 20px; box-shadow: inset 0 0 0 1.5px var(--edge); }
 
-  /* Home: solid cream cards, flat, Ipsy on a teal disc */
-  .askipsy, .fav, .hgroup { box-shadow: inset 0 0 0 1.5px var(--edge); }
-  .askipsy::before { left: 3px; width: 84px; height: 84px; margin-top: -42px; background: var(--mc-teal); opacity: .16; }
-  .fav::before { left: auto; right: -34px; top: -34px; width: 92px; height: 92px; background: rgb(var(--c)); opacity: .22; }
-  .askipsy b, .fav b, .hrow b { font-weight: 600; }
-  .askipsy b { letter-spacing: -.01em; }
+  /* Home: solid cream cards, flat, Ipsy on a teal disc; Weather on teal under a mustard sun */
+  .askipsy, .wid, .hcat, .hgroup, .htop { box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .askipsy:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+  .askipsy::before { left: 2px; width: 60px; height: 60px; margin-top: -30px; background: var(--mc-teal); opacity: .16; }
+  .wid::before { right: -30px; top: -30px; width: 96px; height: 96px; background: rgb(var(--c)); opacity: .22; }
+  .wid.wx { background: #1F6F6B; color: #FFF8EC; box-shadow: none; }
+  .wid.wx::before { right: -26px; top: -26px; width: 96px; height: 96px; background: var(--mc-mustard); opacity: 1; }
+  .wid.wx::after { content: ''; position: absolute; right: -12px; top: 76px; width: 60px; height: 18px; border-radius: 9px; background: var(--mc-orange); transform: rotate(-18deg); }
+  .wid.wx small { color: #FFF8EC; }
+  .wid.wx .big { font-weight: 500; }
+  .wid.cal::before { display: none; }
+  .wid.cal em { color: var(--ink2); }
+  .hrow b, .htop b, .wid b, .hcat h3, .wid .wh { font-weight: 600; }
+  .ic .unread { background: var(--mc-orange); }
+  .hgo { border-radius: 999px; background: var(--cta); color: var(--cta-ink); }
+  .hask { background: var(--mc-mustard); color: #2B2522; }
+  .hres h3 { font-size: 12.5px; font-weight: 600; letter-spacing: .18em; }
   #appback { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(43,37,34,.12); font-weight: 600; }
 
   /* Apps: solid cream cards, a flat disc of the app's color behind the icon */
@@ -526,9 +597,7 @@
   .tabs button { border-radius: 999px; color: #F4ECDD; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
   .tabs button[aria-selected="true"] { color: #2B2522; }
   .quick { padding: 10px 16px; border-radius: 999px; background: var(--mc-walnut); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(244,236,221,.12), 0 12px 24px -10px rgba(0,0,0,.6); }
-  .quick .qhome { border-radius: 50%; }
-  .quick .qhome { color: #2B2522; background: var(--mc-mustard); }
-  .quick .unread { background: var(--mc-orange); box-shadow: 0 0 0 2px var(--mc-walnut); }
+  .quick .qhome { border-radius: 50%; color: #2B2522; background: var(--mc-mustard); }
   .hbtn { border-radius: 50%; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--text); }
   .find { border-radius: 999px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge); }
   .find:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
@@ -600,7 +669,111 @@
   .dlist .dopt[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
   .dsheet h1 { font-weight: 600; letter-spacing: -.03em; }
 </style>
+<style id="neon" media="not all">
+/* Night Drive: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FBF9FF;--mc-card-2:#EEEAF7;--mc-edge:rgba(33,13,58,.14);--mc-mustard:#FBA24A;--mc-teal:#227189;--mc-orange:#DF388E;--mc-walnut:#33234C;--mc-on-mustard:#210D3A;--bg:#F5F2FD;--card:#FBF9FF;--solid:#FBF9FF;--text:#210D3A;--muted:#46385F;--line:rgba(33,13,58,.12);--dot:rgba(33,13,58,.07);--glass:#FBF9FF;--edge:rgba(33,13,58,.10);--accent:#227189;--sand:#8D510D;--on:#FCFBFF;--pastel:#FBA24A;--cta:#BE2B77;--cta-ink:#FCFBFF;--ink2:#BE2B77;--danger-text:#A32166}
+@media (prefers-color-scheme: dark){
+:root:not([data-theme="light"]){--mc-card:#1E142D;--mc-card-2:#241B35;--mc-edge:rgba(241,238,247,.14);--mc-teal:#32C7DD;--bg:#140A22;--card:#1E142D;--solid:#1E142D;--text:#F1EEF7;--muted:#C9C5D2;--line:rgba(241,238,247,.12);--dot:rgba(241,238,247,.07);--glass:#1E142D;--edge:rgba(241,238,247,.12);--accent:#46D2E7;--sand:#FCD0AA;--on:#11071F;--ink2:#FCD0AA;--danger-text:#FDA0C6}
+}
+:root[data-theme="dark"]{--mc-card:#1E142D;--mc-card-2:#241B35;--mc-edge:rgba(241,238,247,.14);--mc-teal:#32C7DD;--bg:#140A22;--card:#1E142D;--solid:#1E142D;--text:#F1EEF7;--muted:#C9C5D2;--line:rgba(241,238,247,.12);--dot:rgba(241,238,247,.07);--glass:#1E142D;--edge:rgba(241,238,247,.12);--accent:#46D2E7;--sand:#FCD0AA;--on:#11071F;--ink2:#FCD0AA;--danger-text:#FDA0C6}
+body{font-family:"Avenir Next","Avenir","Saira",system-ui,sans-serif}
+.head h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23227189'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FBA24A'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23DF388E'/%3E%3C/svg%3E") no-repeat}
+.s0{--bgc:#227189;--ink:#FCFBFF;--a1:#FBA24A;--a2:#DF388E}
+.s1{--bgc:#FBA24A;--ink:#210D3A;--a1:#227189;--a2:#DF388E}
+.s2{--a1:#FBA24A;--a2:#227189}
+.s3{--bgc:#BE2B77;--ink:#FCFBFF;--a1:#FBA24A;--a2:#33234C}
+.s4{--bgc:#33234C;--ink:#FCFBFF;--a1:#FBA24A;--a2:#227189}
+.story .art img,.story.half .art img,.story.wide .art img{box-shadow:0 0 0 7px rgba(252,251,255,.9)}
+.story .art svg{color:rgba(252,251,255,.2)}
+.s1 .art svg{color:rgba(33,13,58,.14)}
+.chip{background:#FCFBFF;color:#210D3A}
+.ipsy-say{background:#FCFBFF;color:#210D3A}
+.wid.wx{background:#227189;color:#FCFBFF}
+.wid.wx small{color:#FCFBFF}
+.hask{color:#210D3A}
+#appback{box-shadow:inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(33,13,58,.12)}
+.tabs{box-shadow:inset 0 0 0 1px rgba(245,242,253,.12), 0 12px 24px -10px rgba(1,0,8,.6)}
+.tabs button{color:#F5F2FD}
+.tabs button[aria-selected="true"]{color:#210D3A}
+.quick{box-shadow:inset 0 0 0 1px rgba(245,242,253,.12), 0 12px 24px -10px rgba(1,0,8,.6)}
+.quick .qhome{color:#210D3A}
+.shot:nth-child(4n+1){--bgc:#227189;--ink:#FCFBFF;--a1:#FBA24A}
+.shot:nth-child(4n+2){--bgc:#FBA24A;--ink:#210D3A;--a1:#227189}
+.shot:nth-child(4n+3){--bgc:#BE2B77;--ink:#FCFBFF;--a1:#FBA24A}
+.shot:nth-child(4n){--bgc:#33234C;--ink:#FCFBFF;--a1:#DF388E}
+.hero .art img{box-shadow:0 0 0 8px rgba(252,251,255,.9)}
+.ptitle::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23227189'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FBA24A'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23DF388E'/%3E%3C/svg%3E") no-repeat}
+.dmenu{box-shadow:inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px rgba(33,13,58,.4)}
+/* Night Drive: heavy italic condensed headings, a striped sunset for the disc, a neon ring and tube, a grid under them */
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Avenir Next Condensed","Avenir Next","Arial Narrow",system-ui,sans-serif;font-style:italic;font-weight:800;letter-spacing:-.01em}
+:root{--nd-sun:linear-gradient(#FFC75A,#FF8A4C 42%,#FF3D9A 78%);--nd-ring:#0A8AA6;--nd-tube:#C21E78;--nd-glow:0;--nd-grid:rgba(194,30,120,.22)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}}
+:root[data-theme="dark"]{--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:repeating-linear-gradient(to bottom,transparent 0 9px,var(--bg) 9px 13px) 0 100%/100% 46% no-repeat,var(--nd-sun);opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:transparent;box-shadow:inset 0 0 0 4px var(--nd-ring),0 0 calc(var(--nd-glow) * 16px) var(--nd-ring)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--nd-tube);box-shadow:0 0 calc(var(--nd-glow) * 18px) var(--nd-tube)}
+:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
+  background:linear-gradient(90deg,var(--nd-grid) 1px,transparent 1px) 50% 0/28px 100%,linear-gradient(var(--nd-grid) 1px,transparent 1px) 0 0/100% 16px;
+  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--nd-glow) * 18px) color-mix(in srgb,var(--nd-tube) 70%,transparent)}
+</style>
+<style id="folk" media="not all">
+/* Folk: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FBFCFF;--mc-card-2:#ECEFF6;--mc-edge:rgba(16,30,70,.14);--mc-mustard:#DB9C22;--mc-teal:#2A4590;--mc-orange:#DD3E31;--mc-walnut:#202E53;--mc-on-mustard:#101E46;--bg:#F4F7FD;--card:#FBFCFF;--solid:#FBFCFF;--text:#101E46;--muted:#313F60;--line:rgba(16,30,70,.12);--dot:rgba(16,30,70,.07);--glass:#FBFCFF;--edge:rgba(16,30,70,.10);--accent:#2A4590;--sand:#6F4C04;--on:#FCFDFF;--pastel:#DB9C22;--cta:#BB2F25;--cta-ink:#FCFDFF;--ink2:#BB2F25;--danger-text:#A0241C}
+@media (prefers-color-scheme: dark){
+:root:not([data-theme="light"]){--mc-card:#19140F;--mc-card-2:#201B16;--mc-edge:rgba(244,231,216,.14);--mc-teal:#D1A13E;--bg:#0F0B07;--card:#19140F;--solid:#19140F;--text:#F4E7D8;--muted:#D6C5B2;--line:rgba(244,231,216,.12);--dot:rgba(244,231,216,.07);--glass:#19140F;--edge:rgba(244,231,216,.12);--accent:#DBAB4C;--sand:#FDCA72;--on:#0C0805;--ink2:#FDCA72;--danger-text:#F27866}
+}
+:root[data-theme="dark"]{--mc-card:#19140F;--mc-card-2:#201B16;--mc-edge:rgba(244,231,216,.14);--mc-teal:#D1A13E;--bg:#0F0B07;--card:#19140F;--solid:#19140F;--text:#F4E7D8;--muted:#D6C5B2;--line:rgba(244,231,216,.12);--dot:rgba(244,231,216,.07);--glass:#19140F;--edge:rgba(244,231,216,.12);--accent:#DBAB4C;--sand:#FDCA72;--on:#0C0805;--ink2:#FDCA72;--danger-text:#F27866}
+body{font-family:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+.head h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%232A4590'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23DB9C22'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23DD3E31'/%3E%3C/svg%3E") no-repeat}
+.s0{--bgc:#2A4590;--ink:#FCFDFF;--a1:#DB9C22;--a2:#DD3E31}
+.s1{--bgc:#DB9C22;--ink:#101E46;--a1:#2A4590;--a2:#DD3E31}
+.s2{--a1:#DB9C22;--a2:#2A4590}
+.s3{--bgc:#BB2F25;--ink:#FCFDFF;--a1:#DB9C22;--a2:#202E53}
+.s4{--bgc:#202E53;--ink:#FCFDFF;--a1:#DB9C22;--a2:#2A4590}
+.story .art img,.story.half .art img,.story.wide .art img{box-shadow:0 0 0 7px rgba(252,253,255,.9)}
+.story .art svg{color:rgba(252,253,255,.2)}
+.s1 .art svg{color:rgba(16,30,70,.14)}
+.chip{background:#FCFDFF;color:#101E46}
+.ipsy-say{background:#FCFDFF;color:#101E46}
+.wid.wx{background:#2A4590;color:#FCFDFF}
+.wid.wx small{color:#FCFDFF}
+.hask{color:#101E46}
+#appback{box-shadow:inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(16,30,70,.12)}
+.tabs{box-shadow:inset 0 0 0 1px rgba(244,247,253,.12), 0 12px 24px -10px rgba(1,0,7,.6)}
+.tabs button{color:#F4F7FD}
+.tabs button[aria-selected="true"]{color:#101E46}
+.quick{box-shadow:inset 0 0 0 1px rgba(244,247,253,.12), 0 12px 24px -10px rgba(1,0,7,.6)}
+.quick .qhome{color:#101E46}
+.shot:nth-child(4n+1){--bgc:#2A4590;--ink:#FCFDFF;--a1:#DB9C22}
+.shot:nth-child(4n+2){--bgc:#DB9C22;--ink:#101E46;--a1:#2A4590}
+.shot:nth-child(4n+3){--bgc:#BB2F25;--ink:#FCFDFF;--a1:#DB9C22}
+.shot:nth-child(4n){--bgc:#202E53;--ink:#FCFDFF;--a1:#DD3E31}
+.hero .art img{box-shadow:0 0 0 8px rgba(252,253,255,.9)}
+.ptitle::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%232A4590'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23DB9C22'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23DD3E31'/%3E%3C/svg%3E") no-repeat}
+.dmenu{box-shadow:inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px rgba(16,30,70,.4)}
+/* Folk: Gzhel by day (cobalt on porcelain), Khokhloma by night (cinnabar and gold on black lacquer).
+   PT Sans and Yeseva One, both made for Cyrillic (SIL Open Font License, ../home/fonts). */
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Yeseva One","Georgia","Times New Roman",serif;font-weight:400;letter-spacing:0}
+:root{--fk-flower:#1C3F94;--fk-berry:#4E74C7;--fk-leaf:#8FA8DE;--fk-heart:#F5F7FB;--fk-scarf:#1C3F94;--fk-dot:#FFFFFF;--fk-petal:#8FA8DE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630;--fk-scarf:#C7261C;--fk-dot:#F6E7C6;--fk-petal:#D9A630}}
+:root[data-theme="dark"]{--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630;--fk-scarf:#C7261C;--fk-dot:#F6E7C6;--fk-petal:#D9A630}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;border-radius:0;opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
+</style>
 <script src="look.js"></script>   <!-- the picked look, before the first paint -->
+<script src="../home/lang.js"></script>   <!-- English or Russian, from aOS's Appearance: before the page is drawn -->
+<script src="../home/lang/ru/shared.js"></script>
+<script src="../home/lang/ru/aos.js"></script>
 <script src="../home/sky.js"></script>   <!-- the Vintage sky (day and night backgrounds), when the look is Vintage -->
 </head>
 <body>
@@ -625,14 +798,20 @@
   <div id="found"></div>
 </section>
 
-<!-- aOS 2's Home (aOS/home-tab.js): Ipsy, Open now, Favorites, every app; each opens inside aOS -->
+<!-- aOS 2's Home (aOS/home-tab.js): the Ipsy bar, Favorites with two widgets, every app; each opens inside aOS -->
 <section class="tab" id="home" hidden>
   <div class="head"><div><span class="mark ink">aOS</span><h1>Home<small id="hdate"></small></h1></div><button class="avatar" type="button" data-acct aria-label="Your account"></button></div>
-  <div class="askipsy" id="askIpsy" role="button" tabindex="0"><span class="ipsy-slot" id="ipsySlot"></span><span><b>Ask Ipsy</b><i id="ipsySub">Across your apps</i></span><span class="go" aria-hidden="true">›</span></div>
-  <div class="sec"><h2>Favorites</h2><button type="button" id="favEdit">Edit</button></div>
-  <p class="hint" id="favHint" hidden>Tap a star to pin an app, up to four. The rest fill in with the apps you use most.</p>
-  <div class="favs" id="favs"></div>
-  <div id="spaces"></div>
+  <div class="askipsy" id="askIpsy"><span class="ipsy-slot" id="ipsySlot"></span><input id="hq" type="search" placeholder="Find an app, or ask Ipsy" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="Find an app, or ask Ipsy" aria-controls="hfound">
+    <svg class="hqs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+    <button type="button" class="hqx" id="hqx" aria-label="Clear" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="hfound" class="hres" aria-live="polite" hidden></div>
+  <div id="hmain">
+    <div class="sec"><h2>Favorites</h2><button type="button" id="favEdit">Edit</button></div>
+    <p class="hint" id="favHint" hidden>Tap a star to pin an app, up to four. The rest fill in with the apps you use most.</p>
+    <div class="favs" id="favs"></div>
+    <div class="sec"><h2>Every app</h2></div>
+    <div class="hcats" id="spaces"></div>
+  </div>
 </section>
 </main>
 
@@ -658,6 +837,10 @@
 <script src="../home/welcome.js" data-app="aos" data-auto></script>
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, drawn on the Meet Ipsy card and page -->
 <script src="app.js"></script>
+<script src="../calendar/ical.js"></script>   <!-- Calendar's .ics reader, for what's next on Home -->
+<script src="../weather/data.js"></script>   <!-- Weather's forecast code, so Home's Weather widget is fresh when aOS opens -->
+<script src="home-find.js"></script>
+<script src="prefs-sync.js"></script>   <!-- settings that follow you between your devices -->   <!-- what Home reads from the apps: the widgets, and what's in them -->
 <script src="home-tab.js"></script>   <!-- aOS 2's Home: every app inside aOS -->
 </body>
 </html>

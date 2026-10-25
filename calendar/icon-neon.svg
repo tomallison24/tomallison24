@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Night Drive: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs><linearGradient id="nds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC75A"/><stop offset=".45" stop-color="#FF8A4C"/><stop offset=".85" stop-color="#FF3D9A"/></linearGradient><clipPath id="ndc"><circle cx="404" cy="108" r="140"/></clipPath>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect x="100" y="124" width="312" height="292" rx="52" fill="#fff"/>
+      <rect x="100" y="200" width="312" height="12" fill="#000"/>
+      <rect x="156" y="78" width="46" height="88" rx="23" fill="#000"/><rect x="310" y="78" width="46" height="88" rx="23" fill="#000"/>
+      <g fill="#000">
+        <circle cx="160" cy="262" r="16"/><circle cx="224" cy="262" r="16"/><circle cx="288" cy="262" r="16"/><circle cx="352" cy="262" r="16"/>
+        <circle cx="160" cy="320" r="16"/><circle cx="288" cy="320" r="16"/><circle cx="352" cy="320" r="16"/>
+        <circle cx="160" cy="378" r="16"/><circle cx="224" cy="378" r="16"/>
+        <circle cx="224" cy="320" r="25"/>
+      </g>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#2C2B45"/>
+  <g clip-path="url(#ndc)"><circle cx="404" cy="108" r="140" fill="url(#nds)"/><rect x="264" y="124.8" width="280" height="5.6" fill="#2C2B45"/><rect x="264" y="150.0" width="280" height="7.3" fill="#2C2B45"/><rect x="264" y="172.4" width="280" height="9.0" fill="#2C2B45"/><rect x="264" y="192.0" width="280" height="10.6" fill="#2C2B45"/><rect x="264" y="208.8" width="280" height="12.3" fill="#2C2B45"/><rect x="264" y="225.6" width="280" height="14.0" fill="#2C2B45"/></g>
+  <rect x="34" y="424" width="190" height="50" rx="25" fill="#FF3D9A" transform="rotate(-18 129 449)"/>
+  <rect width="512" height="512" fill="#FBF9FF" mask="url(#cut)"/>
+  <rect x="166" y="88" width="26" height="68" rx="13" fill="#FBF9FF"/><rect x="320" y="88" width="26" height="68" rx="13" fill="#FBF9FF"/>
+</svg>

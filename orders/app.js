@@ -238,6 +238,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur || 'USD' }).format(n); } catch { return '$' + Number(n).toFixed(2); }
   };
   const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+  // In Russian (../home/lang.js) what came from a store or an email (stores, items, tracking numbers, notes) stays
+  // as written: translate="no" (raw); tr gives a placeholder the page can't translate by itself (a textarea's).
+  const raw = s => '<span translate="no">' + esc(s) + '</span>';
+  const tr = s => window.aosLang ? aosLang.t(s) : s;
 
   // ---------------------------------------------------------------------
   // What an order is, for the screens
@@ -260,6 +264,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!it.length) return o.orderNo ? 'Order ' + o.orderNo : '';
     const first = it[0].name + (it[0].qty > 1 ? ' ×' + it[0].qty : '');
     return it.length > 1 ? first + ' and ' + (it.length - 1) + ' more' : first;
+  }
+  // The same, with the item's name kept as written in Russian.
+  function whatHtml(o) {
+    const it = o.items || [];
+    if (!it.length) return esc(whatOf(o));
+    return raw(it[0].name) + esc((it[0].qty > 1 ? ' ×' + it[0].qty : '') + (it.length > 1 ? ' and ' + (it.length - 1) + ' more' : ''));
   }
   // The line under the store: where it is, and when to expect it.
   function stateOf(o) {
@@ -433,7 +443,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function carrierRow(o) {
     if (needsCheck(o)) return '<div class="ocarrier"><span class="t">' + esc(checkReason(o)) + '</span></div>';
-    if (o.carrier || o.tracking) return '<div class="ocarrier">' + (o.carrier ? '<span class="cpill">' + esc(o.carrier) + '</span>' : '') + (o.tracking ? '<span class="t">' + esc(o.tracking) + '</span>' : '') + '</div>';
+    if (o.carrier || o.tracking) return '<div class="ocarrier">' + (o.carrier ? '<span class="cpill" translate="no">' + esc(o.carrier) + '</span>' : '') + (o.tracking ? '<span class="t" translate="no">' + esc(o.tracking) + '</span>' : '') + '</div>';
     if (o.status === 'ordered' && o.kind !== 'pickup') return '<div class="ocarrier"><span class="t">Waiting for a shipping email</span></div>';
     return '';
   }
@@ -443,15 +453,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function retRow(o) {
     const r = o.ret;
-    if (r.status === 'started' && r.where) return '<div class="ocarrier"><span class="t">' + esc(r.where) + '</span></div>';
-    if (r.tracking) return '<div class="ocarrier">' + (r.carrier ? '<span class="cpill">' + esc(r.carrier) + '</span>' : '') + '<span class="t">' + esc(r.tracking) + '</span></div>';
-    if (r.reason) return '<div class="ocarrier"><span class="t">' + esc(r.reason) + '</span></div>';
+    if (r.status === 'started' && r.where) return '<div class="ocarrier"><span class="t" translate="no">' + esc(r.where) + '</span></div>';
+    if (r.tracking) return '<div class="ocarrier">' + (r.carrier ? '<span class="cpill" translate="no">' + esc(r.carrier) + '</span>' : '') + '<span class="t" translate="no">' + esc(r.tracking) + '</span></div>';
+    if (r.reason) return '<div class="ocarrier"><span class="t" translate="no">' + esc(r.reason) + '</span></div>';
     return '';
   }
   function card(o, i) {
     const ret = hasRet(o), s = ret ? retState(o) : stateOf(o), warn = !ret && needsCheck(o);
     return '<button class="ocard' + (isOpen(o) ? '' : ' done') + '" type="button" data-o="' + esc(o.id) + '" style="--i:' + i + '">'
-      + '<div class="otop">' + mono(o) + '<div class="omid"><div class="ostore">' + esc(o.store || 'Order') + (o.private ? '<span class="olock" title="Private: hidden from Ipsy">' + I.lock + '</span>' : '') + '</div><div class="owhat">' + esc(whatOf(o)) + '</div></div>'
+      + '<div class="otop">' + mono(o) + '<div class="omid"><div class="ostore"' + (o.store ? ' translate="no"' : '') + '>' + esc(o.store || 'Order') + (o.private ? '<span class="olock" title="' + esc(tr('Private: hidden from Ipsy')) + '">' + I.lock + '</span>' : '') + '</div><div class="owhat">' + whatHtml(o) + '</div></div>'
       + (o.total != null ? '<span class="oprice">' + esc(money(o.total, o.cur)) + '</span>' : '') + '</div>'
       + '<div class="ostate"><b class="' + (warn ? 's-warn' : s.cls) + '">' + esc(warn ? 'Check details' : s.label) + '</b><span class="when">' + esc(s.when) + '</span></div>'
       + (ret ? retBar(o) + retRow(o) : stepBar(o) + carrierRow(o)) + '</button>';
@@ -612,12 +622,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }).join('') + '</ul>';
     const rows = [];
     if (r.by && r.status === 'started') rows.push('<div><dt>Drop off by</dt><dd>' + esc(fmtDay(r.by)) + '</dd></div>');
-    if (r.where && r.status === 'started') rows.push('<div><dt>Drop off at</dt><dd>' + esc(r.where) + '</dd></div>');
-    if ((r.items || []).length) rows.push('<div><dt>Returning</dt><dd>' + r.items.map(esc).join('<br>') + '</dd></div>');
-    if (r.reason) rows.push('<div><dt>Reason</dt><dd>' + esc(r.reason) + '</dd></div>');
-    if (r.rma) rows.push('<div><dt>Return number</dt><dd>' + esc(r.rma) + '</dd></div>');
-    if (r.tracking) rows.push('<div><dt>Return tracking</dt><dd>' + esc(r.tracking) + ' <button class="copy" type="button" data-copy="' + esc(r.tracking) + '">Copy</button></dd></div>');
-    if (r.refundTo) rows.push('<div><dt>Refund to</dt><dd>' + esc(r.refundTo.replace(/^your /i, 'Your ')) + '</dd></div>');
+    if (r.where && r.status === 'started') rows.push('<div><dt>Drop off at</dt><dd translate="no">' + esc(r.where) + '</dd></div>');
+    if ((r.items || []).length) rows.push('<div><dt>Returning</dt><dd translate="no">' + r.items.map(esc).join('<br>') + '</dd></div>');
+    if (r.reason) rows.push('<div><dt>Reason</dt><dd translate="no">' + esc(r.reason) + '</dd></div>');
+    if (r.rma) rows.push('<div><dt>Return number</dt><dd translate="no">' + esc(r.rma) + '</dd></div>');
+    if (r.tracking) rows.push('<div><dt>Return tracking</dt><dd>' + raw(r.tracking) + ' <button class="copy" type="button" data-copy="' + esc(r.tracking) + '">Copy</button></dd></div>');
+    if (r.refundTo) rows.push('<div><dt>Refund to</dt><dd translate="no">' + esc(r.refundTo.replace(/^your /i, 'Your ')) + '</dd></div>');
     if (amt) rows.push('<div class="total"><dt>' + (r.status === 'refunded' ? 'Refunded' : 'Refund (estimated)') + '</dt><dd>' + esc(amt) + '</dd></div>');
     if (rows.length || (r.trackUrl && r.carrier)) {
       h += '<div class="obox">' + (rows.length ? '<dl class="okv">' + rows.join('') + '</dl>' : '');
@@ -629,7 +639,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function renderOrder() {
     const o = st.order; if (!o) return;
     const hd = headline(o), steps = stepsOf(o), r = P.rank(o.status), s = o.steps || {};
-    let h = '<div class="ohero"><div class="who">' + mono(o) + '<span>' + esc(o.store || 'Order') + '</span></div><h3>' + esc(hd.h) + '</h3>' + (hd.p ? '<p>' + esc(hd.p) + '</p>' : '') + '</div>';
+    let h = '<div class="ohero"><div class="who">' + mono(o) + '<span' + (o.store ? ' translate="no"' : '') + '>' + esc(o.store || 'Order') + '</span></div><h3>' + esc(hd.h) + '</h3>' + (hd.p ? '<p>' + esc(hd.p) + '</p>' : '') + '</div>';
     if (needsCheck(o)) h += '<div class="verify"><span>' + esc(checkReason(o)) + ' Check the details, then tap Looks right.</span><button class="textbtn" type="button" id="opOk">Looks right</button></div>';
     // An order known only from its return has no steps of its own to show.
     if (o.status !== 'cancelled' && !(hasRet(o) && !Object.keys(s).length)) {
@@ -640,10 +650,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     const rows = [];
     if (o.carrier || o.tracking || (o.status !== 'ordered' && !(hasRet(o) && !s.shipped && !s.delivered))) {
-      rows.push('<div><dt>Carrier</dt><dd>' + esc(o.carrier || (o.kind === 'pickup' ? 'Store pickup' : '—')) + '</dd></div>');
-      if (o.kind !== 'pickup') rows.push('<div><dt>Tracking number</dt><dd>' + (o.tracking ? esc(o.tracking) + ' <button class="copy" type="button" data-copy="' + esc(o.tracking) + '">Copy</button>' : '—') + '</dd></div>');
+      rows.push('<div><dt>Carrier</dt><dd' + (o.carrier ? ' translate="no"' : '') + '>' + esc(o.carrier || (o.kind === 'pickup' ? 'Store pickup' : '—')) + '</dd></div>');
+      if (o.kind !== 'pickup') rows.push('<div><dt>Tracking number</dt><dd>' + (o.tracking ? raw(o.tracking) + ' <button class="copy" type="button" data-copy="' + esc(o.tracking) + '">Copy</button>' : '—') + '</dd></div>');
     }
-    if (o.orderNo) rows.push('<div><dt>Order number</dt><dd>' + esc(o.orderNo) + '</dd></div>');
+    if (o.orderNo) rows.push('<div><dt>Order number</dt><dd translate="no">' + esc(o.orderNo) + '</dd></div>');
     if (o.orderDate) rows.push('<div><dt>Ordered</dt><dd>' + esc(fmtDay(o.orderDate)) + '</dd></div>');
     if (o.eta && isOpen(o)) rows.push('<div><dt>' + (o.kind === 'pickup' ? 'Pickup' : 'Expected') + '</dt><dd>' + esc(o.etaEnd ? fmtRange(o.eta, o.etaEnd) : fmtDay(o.eta)) + '</dd></div>');
     if (o.pickupBy && o.status === 'pickup') rows.push('<div><dt>Pick up by</dt><dd>' + esc(fmtDay(o.pickupBy)) + '</dd></div>');
@@ -653,21 +663,21 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       h += '</div>';
     }
     if ((o.items || []).length || o.total != null) {
-      h += '<div class="obox">' + (o.items || []).map(it => '<div class="oitem"><span>' + esc(it.name) + (it.qty > 1 ? '<small>Qty ' + it.qty + '</small>' : '') + '</span>' + (it.price ? '<b>' + esc(money(it.price, o.cur)) + '</b>' : '') + '</div>').join('');
+      h += '<div class="obox">' + (o.items || []).map(it => '<div class="oitem"><span>' + raw(it.name) + (it.qty > 1 ? '<small>Qty ' + it.qty + '</small>' : '') + '</span>' + (it.price ? '<b>' + esc(money(it.price, o.cur)) + '</b>' : '') + '</div>').join('');
       if (o.total != null) h += '<dl class="okv"><div class="total"><dt>Total</dt><dd>' + esc(money(o.total, o.cur)) + '</dd></div></dl>';
       h += '</div>';
     }
     if (hasRet(o)) h += retBox(o);
-    if (o.notes) h += '<div class="obox"><p style="margin:8px 0;white-space:pre-line;overflow-wrap:anywhere">' + esc(o.notes) + '</p></div>';
+    if (o.notes) h += '<div class="obox"><p translate="no" style="margin:8px 0;white-space:pre-line;overflow-wrap:anywhere">' + esc(o.notes) + '</p></div>';
     const acts = [];
     if (hasRet(o)) {
       const r = o.ret;
       if (r.status === 'started' && !r.undelivered) acts.push('<button class="rowbtn" type="button" id="opRetSent"><span class="ic">' + I.ret + '</span><span>Mark as sent back<span class="sub">Dropped off or posted</span></span></button>');
       if (r.status !== 'refunded') acts.push('<button class="rowbtn" type="button" id="opRetPaid"><span class="ic">' + I.check + '</span><span>Mark as refunded</span></button>');
-      if (r.source && r.source.threadId) acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(r.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the return email in Mail<span class="sub">' + esc(r.source.subject || '') + '</span></span></a>');
+      if (r.source && r.source.threadId) acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(r.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the return email in Mail<span class="sub" translate="no">' + esc(r.source.subject || '') + '</span></span></a>');
     }
     if (o.source && o.source.threadId) {
-      acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub">' + esc(o.source.subject || '') + '</span></span></a>');
+      acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(o.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the email in Mail<span class="sub" translate="no">' + esc(o.source.subject || '') + '</span></span></a>');
       acts.push(linkRow(LINKS.gmailWeb(o.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
     if (o.source && o.source.msgId && !o.private) acts.push('<button class="rowbtn" type="button" id="opAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>' + (st.aiBusy ? 'Ipsy is reading it…' : 'Have Ipsy check this order') + '</span></button>');
@@ -945,14 +955,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!statuses.includes(o.status)) statuses.push(o.status);
     let h = '<div class="box glass"><div class="kv">' + FIELDS.map(([k, label, ph, type, wide]) => {
       let ctl;
-      if (type === 'textarea') ctl = '<textarea id="ef_' + k + '" data-k="' + k + '" placeholder="' + esc(ph) + '" style="min-height:84px">' + esc(itemsText(o.items)) + '</textarea>';
+      if (type === 'textarea') ctl = '<textarea id="ef_' + k + '" data-k="' + k + '" placeholder="' + esc(tr(ph)) + '" style="min-height:84px">' + esc(itemsText(o.items)) + '</textarea>';
       else if (k === 'carrier') ctl = '<select id="ef_carrier" data-k="carrier"><option value=""></option>' + CARRIERS.concat(o.carrier && !CARRIERS.includes(o.carrier) ? [o.carrier] : []).map(c => '<option' + (o.carrier === c ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>';
       else if (k === 'status') ctl = '<select id="ef_status" data-k="status">' + statuses.map(s => '<option value="' + s + '"' + (o.status === s ? ' selected' : '') + '>' + esc(P.STATUS_NAMES[s] || s) + '</option>').join('') + '</select>';
       else if (k === 'kind') ctl = '<select id="ef_kind" data-k="kind">' + KIND_ROWS.map(([v, t]) => '<option value="' + v + '"' + ((o.kind || 'package') === v ? ' selected' : '') + '>' + esc(t) + '</option>').join('') + '</select>';
       else if (k === 'pickupBy' && o.kind !== 'pickup') return '';
       else ctl = '<input id="ef_' + k + '" data-k="' + k + '" type="' + (type === 'number' ? 'text' : type) + '"' + (type === 'number' ? ' inputmode="decimal"' : '') + ' value="' + esc(k === 'total' ? (o.total != null ? o.total : '') : o[k] || '') + '" placeholder="' + esc(ph) + '" autocomplete="off">';
       return '<div class="f' + (wide ? ' w' : '') + '"><label for="ef_' + k + '">' + esc(label) + '</label>' + ctl + '</div>';
-    }).join('') + '<div class="f w"><label for="ef_notes">Notes</label><textarea id="ef_notes" data-k="notes" placeholder="Anything to remember">' + esc(o.notes || '') + '</textarea></div></div></div>';
+    }).join('') + '<div class="f w"><label for="ef_notes">Notes</label><textarea id="ef_notes" data-k="notes" placeholder="' + esc(tr('Anything to remember')) + '">' + esc(o.notes || '') + '</textarea></div></div></div>';
     if (o.ret && o.ret.status) {
       const r = o.ret, val = k => k === 'refund' ? (r.refund != null ? r.refund : '') : r[k] || '';
       h += '<p class="sechead"><span>Return</span></p><div class="box glass"><div class="kv">'
@@ -1041,6 +1051,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (r.orders.length === 1) { const o = orders.find(x => x.id === r.orders[0].id) || orders[orders.length - 1]; if (o) openOrder(o.id); }
   }
   $('pasteBtn').onclick = pasteIn;
+  $('psText').placeholder = tr($('psText').placeholder);
   $('psAdd').onclick = () => { const t = $('psText').value; if (!t.trim()) return; closeSheet('pasteSheet'); readPasted(t); };
 
   let revive = new Set();   // ids "Read the last year again" cleared, which may come back
@@ -1249,7 +1260,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new orders now<span class="sub">'
         + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) : 'Not checked yet') + '</span></span></button>';
       rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Orders you edited, checked or deleted stay as they are</span></span></button>';
-      if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
+      if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub"' + (me ? ' translate="no"' : '') + '>' + esc(me || 'Signed in') + '</span></span></button>';
     } else {
       rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only</span></span></button>';
     }

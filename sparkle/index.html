@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sparkle Kingdom</title>
 <meta name="description" content="A princess and unicorn adventure for young children, where every coin is earned by learning: reading first, then math and memory, each getting harder as she grows.">
@@ -524,8 +524,60 @@ svg{display:block}
 .seg button[aria-pressed="true"]{background:var(--mc-teal);color:#FFF8EC}
 .bar .bt i,.chart i{background:var(--mc-teal)}
 </style>
+<style id="neon" media="not all">
+/* Night Drive: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FBF9FF;--mc-teal:#227189;--mc-orange:#DF388E;--mc-mustard:#FBA24A;--bg:#F5F2FD;--text:#210D3A;--muted:#46385F;--faint:#5E5276;--accent:#227189;--on-accent:#FCFBFF;--accent-text:#227189;--cta:#D03384;--cta-ink:#FCFBFF;--danger-text:#A32166;--sheet:#FBF9FF;--hair:rgba(33,13,58,.14);--hair-2:rgba(33,13,58,.08);--fill:rgba(33,13,58,.06);--scrim:rgba(33,13,58,.35);--tile:#FBF9FF;--tile-edge:rgba(33,13,58,.05);--font:"Avenir Next","Avenir","Saira",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){--mc-card:#1E142D;--mc-teal:#32C7DD;--bg:#140A22;--text:#F1EEF7;--muted:#C9C5D2;--faint:#A5A0B0;--accent:#46D2E7;--on-accent:#11071F;--accent-text:#46D2E7;--cta:#FE3CA2;--cta-ink:#FBF9FF;--danger-text:#FDA0C6;--sheet:#1E142D;--hair:rgba(241,238,247,.14);--hair-2:rgba(241,238,247,.09);--fill:rgba(241,238,247,.07);--scrim:rgba(4,0,14,.55);--tile:#1E142D;--tile-edge:rgba(241,238,247,.05)}
+}
+:root[data-theme="dark"]{--mc-card:#1E142D;--mc-teal:#32C7DD;--bg:#140A22;--text:#F1EEF7;--muted:#C9C5D2;--faint:#A5A0B0;--accent:#46D2E7;--on-accent:#11071F;--accent-text:#46D2E7;--cta:#FE3CA2;--cta-ink:#FBF9FF;--danger-text:#FDA0C6;--sheet:#1E142D;--hair:rgba(241,238,247,.14);--hair-2:rgba(241,238,247,.09);--fill:rgba(241,238,247,.07);--scrim:rgba(4,0,14,.55);--tile:#1E142D;--tile-edge:rgba(241,238,247,.05)}
+.pcard.add .plus{color:#210D3A}
+.seg button[aria-pressed="true"]{color:#FCFBFF}
+/* Night Drive: heavy italic condensed headings, a striped sunset for the disc, a neon ring and tube, a grid under them */
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Avenir Next Condensed","Avenir Next","Arial Narrow",system-ui,sans-serif;font-style:italic;font-weight:800;letter-spacing:-.01em}
+:root{--nd-sun:linear-gradient(#FFC75A,#FF8A4C 42%,#FF3D9A 78%);--nd-ring:#0A8AA6;--nd-tube:#C21E78;--nd-glow:0;--nd-grid:rgba(194,30,120,.22)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}}
+:root[data-theme="dark"]{--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:repeating-linear-gradient(to bottom,transparent 0 9px,var(--bg) 9px 13px) 0 100%/100% 46% no-repeat,var(--nd-sun);opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:transparent;box-shadow:inset 0 0 0 4px var(--nd-ring),0 0 calc(var(--nd-glow) * 16px) var(--nd-ring)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--nd-tube);box-shadow:0 0 calc(var(--nd-glow) * 18px) var(--nd-tube)}
+:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
+  background:linear-gradient(90deg,var(--nd-grid) 1px,transparent 1px) 50% 0/28px 100%,linear-gradient(var(--nd-grid) 1px,transparent 1px) 0 0/100% 16px;
+  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--nd-glow) * 18px) color-mix(in srgb,var(--nd-tube) 70%,transparent)}
+</style>
+<style id="folk" media="not all">
+/* Folk: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FBFCFF;--mc-teal:#2A4590;--mc-orange:#DD3E31;--mc-mustard:#DB9C22;--bg:#F4F7FD;--text:#101E46;--muted:#313F60;--faint:#465370;--accent:#2A4590;--on-accent:#FCFDFF;--accent-text:#2A4590;--cta:#CD392D;--cta-ink:#FCFDFF;--danger-text:#A0241C;--sheet:#FBFCFF;--hair:rgba(16,30,70,.14);--hair-2:rgba(16,30,70,.08);--fill:rgba(16,30,70,.06);--scrim:rgba(16,30,70,.35);--tile:#FBFCFF;--tile-edge:rgba(16,30,70,.05);--font:"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){--mc-card:#19140F;--mc-teal:#D1A13E;--bg:#0F0B07;--text:#F4E7D8;--muted:#D6C5B2;--faint:#BAA691;--accent:#DBAB4C;--on-accent:#0C0805;--accent-text:#DBAB4C;--cta:#D93020;--cta-ink:#FDF1E3;--danger-text:#F27866;--sheet:#19140F;--hair:rgba(244,231,216,.14);--hair-2:rgba(244,231,216,.09);--fill:rgba(244,231,216,.07);--scrim:rgba(2,1,0,.55);--tile:#19140F;--tile-edge:rgba(244,231,216,.05)}
+}
+:root[data-theme="dark"]{--mc-card:#19140F;--mc-teal:#D1A13E;--bg:#0F0B07;--text:#F4E7D8;--muted:#D6C5B2;--faint:#BAA691;--accent:#DBAB4C;--on-accent:#0C0805;--accent-text:#DBAB4C;--cta:#D93020;--cta-ink:#FDF1E3;--danger-text:#F27866;--sheet:#19140F;--hair:rgba(244,231,216,.14);--hair-2:rgba(244,231,216,.09);--fill:rgba(244,231,216,.07);--scrim:rgba(2,1,0,.55);--tile:#19140F;--tile-edge:rgba(244,231,216,.05)}
+.pcard.add .plus{color:#101E46}
+.seg button[aria-pressed="true"]{color:#FCFDFF}
+/* Folk: Gzhel by day (cobalt on porcelain), Khokhloma by night (cinnabar and gold on black lacquer).
+   PT Sans and Yeseva One, both made for Cyrillic (SIL Open Font License, ../home/fonts). */
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/pt-sans-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"PT Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/pt-sans-700-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Yeseva One";font-style:normal;font-weight:400;font-display:swap;src:url("../home/fonts/yeseva-one-400-cyrillic.woff2") format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Yeseva One","Georgia","Times New Roman",serif;font-weight:400;letter-spacing:0}
+:root{--fk-flower:#1C3F94;--fk-berry:#4E74C7;--fk-leaf:#8FA8DE;--fk-heart:#F5F7FB;--fk-scarf:#1C3F94;--fk-dot:#FFFFFF;--fk-petal:#8FA8DE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630;--fk-scarf:#C7261C;--fk-dot:#F6E7C6;--fk-petal:#D9A630}}
+:root[data-theme="dark"]{--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630;--fk-scarf:#C7261C;--fk-dot:#F6E7C6;--fk-petal:#D9A630}
+
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Cg%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(0)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(60)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(120)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(180)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(240)'/%3E%3Cellipse rx='12' ry='21' cy='-26' transform='rotate(300)'/%3E%3C/g%3E%3Ccircle r='11'/%3E%3C/svg%3E") center/contain no-repeat;border-radius:0;opacity:1}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--fk-leaf);border-radius:100% 0}
+</style>
 <script src="../home/design.js" data-app="sparkle"></script>
 <script src="../home/sky.js"></script>
+<script src="../home/lang.js"></script>   <!-- English or Russian, from aOS's Appearance: before the page is drawn -->
+<script src="../home/lang/ru/shared.js"></script>
+<script src="../home/lang/ru/sparkle.js"></script>
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -539,7 +591,7 @@ svg{display:block}
   </section>
 
   <!-- the kingdom -->
-  <section id="world" class="game" hidden aria-label="The kingdom">
+  <section id="world" class="game" translate="no" hidden aria-label="The kingdom">
     <div id="map"><div id="mapIn"></div></div>
     <div class="hud">
       <button type="button" class="rbtn me" id="meBtn" aria-label="Change player"></button>
@@ -552,26 +604,26 @@ svg{display:block}
   </section>
 
   <!-- a round in a land -->
-  <section id="round" class="game" hidden aria-label="A round">
+  <section id="round" class="game" translate="no" hidden aria-label="A round">
     <div class="bd" id="roundBd"></div>
     <div class="hud"><button type="button" class="rbtn" id="roundBack" aria-label="Back to the kingdom"></button><span class="sp"></span><button type="button" class="rbtn" id="howBtn" aria-label="How to play"></button><div class="pill" id="roundCoins"></div></div>
     <div class="stage" id="stage"></div>
   </section>
 
   <!-- the end of a round -->
-  <section id="reward" class="game" hidden aria-label="Well done">
+  <section id="reward" class="game" translate="no" hidden aria-label="Well done">
     <div class="bd" id="rewardBd"></div>
     <div class="center" id="rewardIn"></div>
   </section>
 
   <!-- a chapter of the story -->
-  <section id="chapter" class="game" hidden aria-label="A new chapter">
+  <section id="chapter" class="game" translate="no" hidden aria-label="A new chapter">
     <div class="bd" id="chapterBd"></div>
     <div class="center" id="chapterIn"></div>
   </section>
 
   <!-- the castle: dress up and the Royal Boutique -->
-  <section id="castle" class="game" hidden aria-label="Your castle">
+  <section id="castle" class="game" translate="no" hidden aria-label="Your castle">
     <div class="room"></div>
     <div class="hud"><button type="button" class="rbtn" id="castleBack" aria-label="Back to the kingdom"></button><span class="sp" id="castleRank"></span><div class="pill" id="castleCoins"></div></div>
     <div class="dress" id="dress"></div>
@@ -579,7 +631,7 @@ svg{display:block}
   </section>
 
   <!-- the story, the first time -->
-  <section id="intro" class="game" hidden aria-label="The story"><div class="center" id="introIn"></div></section>
+  <section id="intro" class="game" translate="no" hidden aria-label="The story"><div class="center" id="introIn"></div></section>
 
   <script src="letters.js"></script>
   <script src="engine.js"></script>

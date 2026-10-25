@@ -663,6 +663,30 @@ const pick = (page, f) => page.evaluate(f);
     await page.waitForSelector('#tripPage', { state: 'hidden' });
     await floats(null);
   });
+  await step('Have Ipsy check these, in To check: the same check for what\'s waiting there, with Undo', async () => {
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); b.edited = false; b.guess = true; delete b.filled; window.__travel.save(); window.__travel.render(); });
+    await page.click('[data-when="check"]');
+    await page.waitForSelector('#ckAi');
+    assert.match(await page.textContent('#ckAi'), /Have Ipsy check these/);
+    if (SHOTS) { await page.waitForTimeout(800); await page.screenshot({ path: path.join(SHOTS, APP + '-tocheck-ipsy.png') }); }
+    const n = seen.extract.length;
+    await page.click('#ckAi');
+    await page.waitForFunction(() => /Ipsy updated 1 booking/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    const sent = seen.extract.slice(n).filter(x => x.check);
+    assert.ok(sent.length >= 1 && sent.some(x => x.known.depTime === '20:15'), JSON.stringify(sent.map(x => x.known)));
+    const b = await ua();
+    assert.equal(b.dep, iso(BACK) + 'T21:05'); assert.equal(b.filled.time, 'ai'); assert.equal(b.guess, true, 'still waiting in To check for you');
+    assert.match(await page.textContent('#ckAi'), /Have Ipsy check these/, 'the button is back once Ipsy is done');
+    await page.click('#toastAct');
+    await page.waitForFunction(() => window.__travel.bookings.find(x => x.conf === 'KQ7T2M').dep.endsWith('T20:15'), null, { timeout: 5000 });
+  });
+  await step('Have Ipsy check these: a private booking isn\'t sent', async () => {
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); b.private = true; b.guess = true; window.__travel.save(); window.__travel.render(); });
+    const n = seen.extract.length;
+    if (await page.$('#ckAi')) { await page.click('#ckAi'); await page.waitForTimeout(1500); }
+    assert.ok(!seen.extract.slice(n).some(x => /KQ7T2M/.test(x.text || '')), 'nothing about the private booking');
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); delete b.private; window.__travel.save(); window.__travel.render(); });
+  });
   await step('Have Ipsy check this trip: no script errors', async () => { assert.deepEqual(problems, []); });
   await ctx.close();
 }

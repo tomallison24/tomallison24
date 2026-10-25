@@ -23,7 +23,12 @@ The owner has asked that Claude's pull requests merge without asking, once
 they're ready: every check on the latest commit passed (the News build and the
 Apps check), no merge conflict, and no review left unanswered. Merge then (or
 turn on GitHub's auto-merge for the PR), with a merge commit. The merge
-releases it (above).
+releases it (above). Auto-merge works only while the default branch's protection
+rule requires checks (the owner sets it in Settings > Branches): every job's name
+is its own (`apps`, `changes`, the twelve groups, `tours-0` to `tours-2`,
+`calendar-gmail`, `ipsy-clearance`, `ipsy-presence`), and each reports on every
+pull request, so any can be required. A new job that might not run on some pull
+requests skips its steps rather than itself.
 
 ## The release log
 
@@ -31,7 +36,7 @@ releases it (above).
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- By default, add to the top entry (aOS2 now): each merge releases it again,
+- By default, add to the top entry (aOS2.1 now): each merge releases it again,
   moving its tag; phones get the change with no update screen. A change worth
   announcing with update screens gets a new entry above it, when the owner
   wants one; the merge that adds it releases it:
@@ -67,7 +72,7 @@ end with 0 errors.
 ## Tests
 
 Every test runs in CI (`.github/workflows/apps-check.yml`): plain Node tests
-in the `check` job, browser tests in the `browser` groups that run side by side (about four minutes each: put a new one in the group that runs shortest), and the tours in three shards, `tours`. On a pull request the browser groups and the tours run only what it needs (`.github/scripts/ci-select.mjs`): everything when it changes shared code (`home/`, `server/`, `aOS/`, `functions/` outside an app's folder, the workflows), an app's own tests and every test that opens that app when it changes only some apps, none when it changes only `labs/` or documentation. A test that opens an app should name its folder (`'/notes/'`), so it runs when that app changes. The merge (a push to the default branch) runs only the quick `check` job. `check-apps.mjs` fails on any
+in the `check` job (named `apps`), browser tests in the `browser` groups that run side by side (twelve of them, about three minutes of tests each, three at a time within a group by `.github/scripts/ci-run.mjs`: put a new one in the group that runs shortest), and the tours in nine shards over three jobs, `tours`. On a pull request the browser groups and the tours run only what it needs (`.github/scripts/ci-select.mjs`): everything when it changes shared code (`home/`, `server/`, `aOS/`, `functions/` outside an app's folder, the workflows), an app's own tests and every test that opens that app when it changes only some apps, none when it changes only `labs/` or documentation. A test that opens an app should name its folder (`'/notes/'`), so it runs when that app changes. The merge (a push to the default branch) runs only the quick `check` job, and `warm`, which keeps the browser caches filled for pull requests. `check-apps.mjs` fails on any
 `<folder>/scripts/*test*.mjs` that no workflow runs, so a new test goes into
 the workflow in the same PR. Browser tests seed `localStorage['aos.seen']`
 with `'999'` for every app they open, so no walkthrough or update screen
@@ -96,11 +101,11 @@ from.
   opened from there, the app hands its data to aOS and says it lives in aOS now.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
-  steps, release log, theme), `slide.js`, `design.js` (Vintage or Sea glass), `sky.js` (the Vintage designs' day and night
-  sky), `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the
-  AI helper you chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
-  `server/ipsy.js`) - plus the Welcome Lab. Its
-  `index.html` is a "moved to aOS" notice.
+  steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Night Drive or
+  Folk), `lang.js` (English or Russian), `sky.js` (the Vintage designs' day and night sky),
+  `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the AI helper you
+  chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
+  `server/ipsy.js`) - plus the Welcome Lab. Its `index.html` is a "moved to aOS" notice.
 - `home/back.js` (swipe up to the launcher) is **gone**: don't add
   `../home/back.js` back to a page or to a `sw.js` SHELL list (a missing file
   in SHELL breaks the service worker's install).
@@ -119,15 +124,25 @@ from.
 - Light or dark: `home.settings.theme` (`auto`/`light`/`dark`), applied as
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
-- **Two designs in every app**: Vintage (mid-century modern, the default) and Standard (Sea
-  glass), picked in the app's own Settings > Design and kept on the phone (`design.<app>`).
+- **Four designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
+  glass), Night Drive (80s neon) and Folk (Gzhel by day, Khokhloma by night), picked for every
+  app at once in aOS (Account > Appearance > Look: `aOS/look.js` writes each app's design) or in
+  the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
   id="vintage">` block on or off, `data-look` on `<html>`, the icon (`icon-*.png` Vintage,
-  `icon-glass-*.png` Sea glass), status bar and bar colours. A change to how an app looks is
-  made in both designs. The Vintage designs used to be apps of their own (`<app>vintage/`):
-  those folders are gone, and the deploy copies each app to its old Vintage address so phones
+  `icon-glass-*.png` Sea glass, `icon-neon-*.png`, `icon-folk-*.png`), status bar and bar colours.
+  A change to how an app looks is made in Vintage and Sea glass; **Night Drive and Folk are
+  generated from Vintage** (`<style id="neon">`, `<style id="folk">` and the icons, by
+  `node aOS/scripts/make-looks.mjs`, palettes in `aOS/scripts/looks.mjs`): run it after changing a
+  Vintage block or an `icon.svg` (check-apps fails until you do), never edit those blocks by hand.
+  The Vintage designs used to be apps of their own (`<app>vintage/`): those folders are gone, and the deploy copies each app to its old Vintage address so phones
   that added one keep it (`design.js` moves that app's data over once). Server calls go to
   `../<app>/api/`, never a bare `api/`, so they work from that address too.
+- **English or Russian**: Account > Appearance > Language in aOS, for aOS and every app
+  (`aos.lang`). `home/lang.js` swaps the words on the page for Russian from `home/lang/ru/`
+  (`shared.js` and one file per app): a change to an app's words needs its Russian too, and what
+  the family wrote or outside content gets `translate="no"`. How, and the glossary:
+  `home/lang/README.md`; `node aOS/scripts/lang-scan.mjs <app>` lists English left in Russian.
 - The AllisonOS colours are **Sea glass** (sea glass, mist, shell, sand):
   `--w-pastel` / `--w-hot` in `welcome.js`, `--pastel` in `aOS/index.html`.
   Use these rather than new pastel gradients. "aOS" is always written with a
