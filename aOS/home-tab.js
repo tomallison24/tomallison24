@@ -10,6 +10,10 @@
 //     this phone: aos.home.used), then a starting four.
 //   - Every app, as icons in a few groups: one tap opens any app. Mail's shows its unread count.
 //   - No dock, and nothing floats over Home; on Today (or Search), Home floats at the bottom.
+//   - Or Thumb arc (Account > Appearance > Home layout, aos.home.layout): Home, Mail, Weather and
+//     Calendar on an inner ring and four favorites on an outer one, in the bottom corner your thumb
+//     rests on (the left one for the left hand), with what's next and every other app above them, so
+//     every app is on the first screen. Tried first in labs/layouts/.
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
 //
@@ -51,7 +55,7 @@
   head.append(acts); acts.append(acct);
   let tab = 'home';
   const showTab = window.aosTabs.show;
-  window.aosTabs.show = t => { showTab(t); tab = t; paintQuick(); };
+  window.aosTabs.show = t => { showTab(t); tab = t; paintQuick(); if (t === 'home') fitArc(); };
   acts.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) window.aosTabs.show(b.dataset.tab); });
   showTab('home');   // (the apps along the bottom are drawn with Home, below)
 
@@ -73,7 +77,13 @@
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
   // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
   const WIDGETS = ['weather', 'calendar'];
-  const pinnable = id => known(id) && !WIDGETS.includes(id);
+  // Thumb arc: these four on its inner ring, so they're never among the outer ring's four either
+  const RING = ['house', 'mail', 'weather', 'calendar'];
+  const LAYOUT = 'aos.home.layout', LAYOUTS = ['classic', 'arc', 'arc-left'];
+  const readLayout = () => { try { const v = localStorage.getItem(LAYOUT); return LAYOUTS.includes(v) ? v : 'classic'; } catch { return 'classic'; } };
+  let layout = readLayout();
+  const arc = () => layout !== 'classic';
+  const pinnable = id => known(id) && !(arc() ? RING : WIDGETS).includes(id);
   const STARTERS = ['meals', 'notes', 'mail', 'travel'];
 
   // ---- how much each app is used: the days it was opened, on this phone ----
@@ -90,9 +100,11 @@
       .filter(x => x[1]).sort((a, b) => b[1] - a[1] || b[2] - a[2]).map(x => x[0]);
   }
   // Favorites, mixed: pinned first, then the most used, then the starting four
-  let pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
+  // (pins are kept whichever the layout: each uses the ones it can, so Mail pinned in Classic is back there after Thumb arc)
+  const readPins = () => get(PINS, []).filter(known).slice(0, MAX_PINS + RING.length);
+  let pins = readPins();
   function favorites() {
-    const out = pins.map(id => ({ id, why: 'pin' }));
+    const out = pins.filter(pinnable).slice(0, MAX_PINS).map(id => ({ id, why: 'pin' }));
     for (const id of mostUsed()) if (out.length < 4 && !out.some(f => f.id === id)) out.push({ id, why: 'used' });
     for (const id of [...STARTERS, ...ALL]) if (out.length < 4 && pinnable(id) && !out.some(f => f.id === id)) out.push({ id, why: 'start' });
     return out;
@@ -134,7 +146,8 @@
         try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|folk|grid)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
         if (W.theme) W.theme.set(W.theme.read());
         try { const lg = localStorage.getItem('aos.lang'); if (window.aosLang && lg && lg !== aosLang.get()) aosLang.set(lg); } catch {}   // the language came from another device: drawn again in it
-        pins = get(PINS, []).filter(pinnable).slice(0, MAX_PINS);
+        pins = readPins();
+        setLayout(readLayout(), false);
       } else if (frames[id]) { const f = frames[id].firstChild; if (f.moving) { f.moving = false; point(f, `../${id}/`); } }
     }
     paintHome(true);   // an app's design changes its icon
@@ -176,6 +189,7 @@
     $('hdate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     paintQuick();
     const F = window.aosFind || {}, wx = F.weather ? F.weather() : null, next = F.next ? F.next() : null;
+    if (arc()) return paintArc(wx, next);
     const tiles = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" aria-label="${label(f.id)}">${ic(f.id)}<i class="pin" aria-hidden="true">${STAR(f.why === 'pin')}</i><b>${esc(name(f.id))}</b></button>`).join('');
     setHTML($('favs'), (known('weather') ? `<button type="button" class="wid wx" data-open="weather" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
         <span class="wh"><img src="${icon('weather')}" alt="">${wx && wx.place ? esc(wx.place) : 'Weather'}</span>
@@ -188,14 +202,64 @@
     setHTML($('spaces'), SPACES.filter(s => s[1].length).map(([title, ids]) => `<div class="hcat${ids.length <= 2 ? ' half' : ''}"><h3>${esc(title)}</h3><div class="hg" style="--n:${ids.length <= 2 ? 2 : 5}">${ids.map(id =>
       `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join('')}</div></div>`).join(''));
   }
+  // ---- Thumb arc ----
+  // Drawn at an iPhone's 390 x 844 and scaled to the screen (--arck): the ring's centre in the corner, a
+  // little above the home indicator; the inner ring the fixed four, the outer one the four favorites,
+  // from the bottom up. The rings themselves are behind the apps above them (#harcbg).
+  const SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>';
+  const ARC = { w: 390, h: 400, cx: 346, cy: 350, inner: 160, outer: 258, r1: 210, r2: 310, at: [5, 29, 53, 77] };
+  function paintArc(wx, next) {
+    const favs = favorites(), rest = ALL.filter(id => !RING.includes(id) && !favs.some(f => f.id === id));
+    // the time of what's next, for its badge: 4:30 (not 4:30 PM), Now while it's on, none for tomorrow or all day
+    const soon = w => /^\d/.test(w || '') ? w.replace(/\s?[AP]M$/i, '') : /^Now\b/.test(w || '') ? 'Now' : '';
+    setHTML($('hglance'), (known('weather') ? `<button type="button" data-open="weather" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}"><img src="${icon('weather')}" alt=""><span>${wx ? `<b>${esc(wx.temp)}</b> <i>${esc(wx.text)}</i>` : 'Open for the forecast'}</span></button>` : '')
+      + (known('calendar') ? `<button type="button" data-open="calendar" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}"><img src="${icon('calendar')}" alt="">${next ? `<span><i>${esc(next.when)}</i> <b translate="no">${esc(next.title)}</b></span>` : '<span>Nothing else today</span>'}</button>` : ''));
+    setHTML($('hrest'), rest.map(id => `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button><b>${esc(name(id))}</b></div>`).join(''));
+    const flip = x => layout === 'arc-left' ? ARC.w - x : x;
+    const at = (r, i) => { const a = ARC.at[i] * Math.PI / 180; return `left:${Math.round(flip(ARC.cx - r * Math.cos(a)))}px;top:${Math.round(ARC.cy - r * Math.sin(a))}px`; };
+    const ring = (c, r) => `<i class="ring ${c}" style="left:${flip(ARC.cx) - r}px;top:${ARC.cy - r}px;width:${2 * r}px;height:${2 * r}px"></i>`;
+    // what's live on each of the fixed four: the temperature, the time of what's next, Mail's unread count (on its icon)
+    const live = { weather: wx && wx.temp, calendar: next && soon(next.when) };
+    const inner = RING.filter(known).map((id, i) => `<button type="button" class="fav in" data-open="${id}" aria-label="${label(id)}" style="${at(ARC.inner, i)}">${ic(id)}${live[id] ? `<em class="live" aria-hidden="true">${esc(live[id])}</em>` : ''}</button>`).join('');
+    const outer = favs.map((f, i) => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" aria-label="${label(f.id)}" style="${at(ARC.outer, i)}">${ic(f.id)}<i class="pin" aria-hidden="true">${STAR(f.why === 'pin')}</i><b>${esc(name(f.id))}</b></button>`).join('');
+    setHTML($('harcbg'), ring('r2', ARC.r2) + ring('r1', ARC.r1));
+    setHTML($('harc'), outer + inner + `<button type="button" class="orb" data-find aria-label="Find an app, or ask Ipsy" style="left:${flip(ARC.cx)}px;top:${ARC.cy}px">${SEARCH}</button>`);
+    fitArc();
+  }
+  // scaled to the room under every other app (a smaller phone, a bigger text size), never bigger than drawn
+  // and never so small its icons are hard to tap; the arc's foot stays put as it scales. Short of room, what's
+  // next gives way first: the ring still has the temperature and the time on its icons.
+  const REACH = ARC.h - (ARC.cy - ARC.outer * Math.sin(ARC.at[3] * Math.PI / 180) - 36);   // how far up it reaches, at full size
+  function fitArc() {
+    const rest = $('hrest'), d = document.documentElement; if (!arc() || !rest.getClientRects().length) return;
+    const room = () => { const top = rest.getBoundingClientRect().bottom + $('scroller').scrollTop + 10, foot = $('harc').getBoundingClientRect().bottom; return Math.min(1, innerWidth / ARC.w, (foot - top) / REACH); };
+    $('hglance').hidden = false;
+    let k = room(); if (k < .8) { $('hglance').hidden = true; k = room(); }
+    d.style.setProperty('--arck', Math.max(.7, k).toFixed(3));
+  }
+  function setLayout(v, keep = true) {
+    layout = LAYOUTS.includes(v) ? v : 'classic';
+    if (keep) try { localStorage.setItem(LAYOUT, layout); } catch {}
+    const d = document.documentElement;
+    if (arc()) d.dataset.home = 'arc'; else delete d.dataset.home;
+    if (layout === 'arc-left') d.dataset.hand = 'left'; else delete d.dataset.hand;
+    if (editing()) $('favEdit').click();
+    paintHome(true);
+    if (keep) syncPrefs();
+  }
+  addEventListener('resize', fitArc); addEventListener('load', fitArc);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitArc);
+  // the orb: the Ipsy bar, from down where your thumb is
+  $('harc').addEventListener('click', e => { if (!e.target.closest('[data-find]')) return; $('scroller').scrollTop = 0; q.focus(); });
   const appHue = id => (window.aosAppHue && aosAppHue(id)) || '129,147,188';
   function togglePin(id) {
     if (pins.includes(id)) pins = pins.filter(x => x !== id);
-    else if (pins.length >= MAX_PINS) return toast('Four at most: unpin one first');
+    else if (pins.filter(pinnable).length >= MAX_PINS) return toast('Four at most: unpin one first');
     else pins = [...pins, id];
     put(PINS, pins); paintHome(true); syncPrefs();
   }
-  $('favEdit').onclick = () => { const on = body.classList.toggle('editing'); $('favEdit').textContent = on ? 'Done' : 'Edit'; $('favHint').hidden = !on; };
+  $('favEdit').onclick = () => { const on = body.classList.toggle('editing'); $('favEdit').textContent = $('arcEdit').textContent = on ? 'Done' : 'Edit'; $('favHint').hidden = $('arcHint').hidden = !on; };
+  $('arcEdit').onclick = () => $('favEdit').click();
   $('home').addEventListener('click', e => {
     const p = e.target.closest('[data-pin]'); if (p) { e.stopPropagation(); return togglePin(p.dataset.pin); }
     if (e.target.closest('[data-app]')) return;   // ⓘ: the app's page (aOS/app.js)
@@ -206,7 +270,7 @@
   // anywhere in aOS (Home, an app's page): data-open opens that app inside aOS
   document.addEventListener('click', e => {
     const o = e.target.closest('[data-open]');
-    if (!o || e.target.closest('[data-pin], [data-app]') || (editing() && o.closest('#favs'))) return;
+    if (!o || e.target.closest('[data-pin], [data-app]') || (editing() && o.closest('#favs, #harc'))) return;
     e.preventDefault();
     if (o.closest('#hfound')) { const at = o.dataset.at; clearFind(); show(o.dataset.open, at); } else show(o.dataset.open);
   });
@@ -562,9 +626,9 @@
     let n = 0; const tap = () => { try { const b = frames[id].firstChild.contentDocument.querySelector(sel); if (b && frames[id].firstChild.contentWindow.AllisonOS) return b.click(); } catch {} if (n++ < 120) setTimeout(tap, 250); };   // up to 30 seconds for the app to start
     setTimeout(tap, 300);
   };
-  window.aosHomeTab = { everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
+  window.aosHomeTab = { layout: v => v === undefined ? layout : setLayout(v), everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
-  paintHome(); readUnread(); freshen(); syncPrefs();
+  setLayout(layout, false); readUnread(); freshen(); syncPrefs();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];
   if (known(start)) {
     // opened straight into an app (back from Google, or a link): Home goes in under it first

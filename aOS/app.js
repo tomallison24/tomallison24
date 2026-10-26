@@ -320,6 +320,9 @@
   const LANGS = window.aosLang ? aosLang.list : [['en', 'English']];
   const langNow = () => (window.aosLang ? aosLang.get() : 'en');
   // Tron's intro as aOS opens (tron-intro.js): with its sound, silent, or off
+  // Home's layout (aOS/home-tab.js): Classic, or Thumb arc for the right hand or the left
+  const HOME_LAYOUTS = [['classic', 'Classic'], ['arc', 'Thumb arc'], ['arc-left', 'Left-handed arc']];
+  const homeLayout = () => (window.aosHomeTab && aosHomeTab.layout ? aosHomeTab.layout() : 'classic');
   const TRON_INTRO = [['sound', 'Sound'], ['silent', 'Silent'], ['off', 'Off']];
   const tronIntro = () => { try { const m = localStorage.getItem('aos.tron.intro'); return m === 'silent' || m === 'off' ? m : 'sound'; } catch { return 'sound'; } };
   const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
@@ -334,7 +337,10 @@
         ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p><p class="lnote tronnote">Tron intro, as aOS opens</p><div class="seg tronnote" id="tronIntroPick" role="group" aria-label="Tron intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-ti="${m}" aria-pressed="${m === tronIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft tronnote" data-tiplay>Play the intro</button>
           <p class="lnote">Language</p>
           <div class="seg" id="lang" translate="no">${LANGS.map(([l, n]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${n}</button>`).join('')}</div>
-          <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>`, 'lookSub')}
+          <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>
+          <p class="lnote">Home layout</p>
+          <div class="seg" id="homeLayout">${HOME_LAYOUTS.map(([v, n]) => `<button type="button" data-hl="${v}" aria-pressed="${v === homeLayout()}">${n}</button>`).join('')}</div>
+          <p class="note">Thumb arc puts Home, Mail, Weather and Calendar and your four favorites in the corner your thumb rests on, and every app on one screen.</p>`, 'lookSub')}
         ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
@@ -344,6 +350,7 @@
     el.addEventListener('click', ev => {
       const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
+      const hl = ev.target.closest('[data-hl]'); if (hl && window.aosHomeTab) { aosHomeTab.layout(hl.dataset.hl); el.querySelectorAll('[data-hl]').forEach(b => b.setAttribute('aria-pressed', String(b === hl))); }
       const ti = ev.target.closest('[data-ti]'); if (ti) { try { localStorage.setItem('aos.tron.intro', ti.dataset.ti); } catch {} el.querySelectorAll('[data-ti]').forEach(b => b.setAttribute('aria-pressed', String(b === ti))); }
       if (ev.target.closest('[data-tiplay]') && window.aosTronIntro) aosTronIntro.show({ force: true });
       const lk = ev.target.closest('[data-look]');

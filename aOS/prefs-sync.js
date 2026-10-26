@@ -44,6 +44,7 @@
     { id: 'aos.look', key: 'aos.look', app: 'aos' },
     { id: 'aos.lang', key: 'aos.lang', app: 'aos', blank: v => v === 'en' },
     { id: 'aos.home.picks', key: 'aos.home.picks', app: 'aos' },
+    { id: 'aos.home.layout', key: 'aos.home.layout', app: 'aos', blank: v => v === 'classic' },   // Classic or Thumb arc (aOS/home-tab.js)
     { id: 'aos.helper', key: 'aos.helper', app: 'aos' },   // your helper and its name (home/ipsy.js)
     { id: 'home.settings#theme', key: 'home.settings', field: 'theme', app: 'aos', blank: v => v === '"auto"' },
   ];
