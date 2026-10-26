@@ -8,9 +8,10 @@
 // instructions and tools, the conversation passed on as sent and the answer back
 // untouched, behind the same guards), and the routes its changes and their Undo go
 // through (night, draft, unaccept, discard with at), each with the same allergy check.
+// Cooking again (POST again): past meals back for two weeks, checked against what the family avoids now.
 //   node meals/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
+import { onRequest, AGAIN_DAYS, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 
 function fakeKV() {
@@ -313,7 +314,7 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsy’s instructions and Mea
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
   assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'set_language', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
-  assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['get_meals', 'get_recipes', 'get_past_plans', 'get_shopping_list', 'tick_items',
+  assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['get_meals', 'get_recipes', 'get_past_plans', 'get_shopping_list', 'add_past_meals', 'remove_past_meals', 'tick_items',
     'set_meal', 'make_plan', 'accept_plan', 'discard_draft', 'show_meal']);
   for (const t of IPSY_CLIENT_TOOLS) { assert.equal(t.input_schema.type, 'object'); assert.ok(t.description.length > 20, t.name); }
   assert.deepEqual(q.body.messages, Q, 'the conversation as the phone sent it');
@@ -485,5 +486,30 @@ await test('plans count toward the day (meals:ai:<user>:<day>); past AI_DAILY th
   const n0 = asked.length, r = await call('plan', { token: t5, env: E5, body: DIN() });
   assert.equal(r.status, 429); assert.equal(r.body.error, 'limit'); assert.equal(asked.length, n0, 'the model is not asked');
   assert.equal(db5.m.get('meals:draft') !== undefined, true, 'the first plan was kept');
+});
+await test('cooking again: past meals added for the family (with who and from which plan), not twice; checked against what the family avoids now; removed, put back, gone after two weeks', async () => {
+  const db6 = fakeKV(); await db6.put('owner', 'u1'); await putJSON(db6, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
+  const t6 = await issue(db6, 'u1'), E6 = { ACCOUNTS: db6, ...A }, c6 = (path, body) => call(path, { token: t6, env: E6, body });
+  assert.deepEqual((await c6('state')).body.again, [], 'none to begin with');
+  const tacos = dish('d1-dinner', { title: 'Chicken tacos' }), soup = dish('d2-dinner', { title: 'Lentil soup' }), left = { day: 2, slot: 'lunch', leftover: 1, title: 'Leftovers: Chicken tacos', ingredients: [], steps: [] };
+  let r = await c6('again', { add: [tacos, left, soup], from: 'pold1', people: 3 });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.again.map(m => [m.title, m.from, m.people, m.by]), [['Chicken tacos', 'pold1', 3, 'Sam'], ['Lentil soup', 'pold1', 3, 'Sam']], 'leftover lunches left out');
+  assert.ok(r.body.again.every(m => /^a[a-z0-9]+$/.test(m.id) && m.ingredients.length && m.steps.length), 'whole recipes, each with an id');
+  assert.equal((await c6('again', { add: [tacos] })).body.again.length, 2, 'the same meal isn\'t added twice');
+  assert.deepEqual((await c6('state')).body.again.map(m => m.title), ['Chicken tacos', 'Lentil soup'], 'in the state, for everyone');
+  r = await c6('again', { add: [dish('d3-dinner', { title: 'Thai curry', ingredients: [{ item: 'coconut milk', qty: '1 can' }] })] });
+  assert.equal(r.status, 422); assert.equal(r.body.error, 'avoid'); assert.deepEqual(r.body.hits, ['coconut']);
+  assert.equal(JSON.parse(db6.m.get('meals:again')).length, 2, 'nothing added');
+  assert.equal((await c6('again', { add: [] })).body.error, 'meal');
+  const before = r = JSON.parse(db6.m.get('meals:again'));
+  r = await c6('again', { remove: [before[0].id] });
+  assert.deepEqual(r.body.again.map(m => m.title), ['Lentil soup']);
+  r = await c6('again', { put: before });
+  assert.deepEqual(r.body.again, before, 'Undo puts it back as it was');
+  assert.equal((await c6('again', { put: [{ ...before[0], ingredients: [{ item: 'almond flour', qty: '1 cup' }] }] })).body.error, 'avoid', 'what Undo puts back is checked too');
+  const old = { ...before[0], at: Date.now() - (AGAIN_DAYS + 1) * 864e5 };
+  await putJSON(db6, 'meals:again', [old, before[1]]);
+  assert.deepEqual((await c6('state')).body.again.map(m => m.title), ['Lentil soup'], 'gone two weeks after it was added');
 });
 console.log(`\n${n} passed`);

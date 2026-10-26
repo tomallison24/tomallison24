@@ -53,6 +53,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     sheet: '<svg viewBox="0 0 24 24"><rect x="3.4" y="3.8" width="17.2" height="16.4" rx="3"/><path d="M3.4 9.4h17.2M3.4 14.8h17.2M9.4 9.4v10.8"/></svg>',
     chev: '<svg viewBox="0 0 24 24" class="b"><path d="M8.6 10l3.4 3.4 3.4-3.4"/></svg>',
     clear: '<svg viewBox="0 0 24 24" class="b"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+    again: '<svg viewBox="0 0 24 24" class="b"><path d="M19.2 12a7.2 7.2 0 1 1-2.1-5.1M19.2 4.6v3.8h-3.8"/></svg>',
     copy: '<svg viewBox="0 0 24 24"><rect x="8.4" y="8.4" width="11.6" height="11.6" rx="2.4"/><path d="M15.6 8.4V6.2A2.2 2.2 0 0 0 13.4 4H6.2A2.2 2.2 0 0 0 4 6.2v7.2a2.2 2.2 0 0 0 2.2 2.2h2.2"/></svg>',
     up: '<svg viewBox="0 0 24 24"><path d="M7.5 10.5V20H4.8a.8.8 0 0 1-.8-.8v-7.9a.8.8 0 0 1 .8-.8zM7.5 10.5l3.8-6.2a1.6 1.6 0 0 1 2.9 1.2l-.8 3.9h5a1.8 1.8 0 0 1 1.8 2.1l-1.2 6.9A1.8 1.8 0 0 1 17.2 20H7.5"/></svg>',
     down: '<svg viewBox="0 0 24 24"><path d="M7.5 13.5V4H4.8a.8.8 0 0 0-.8.8v7.9a.8.8 0 0 0 .8.8zM7.5 13.5l3.8 6.2a1.6 1.6 0 0 0 2.9-1.2l-.8-3.9h5a1.8 1.8 0 0 0 1.8-2.1l-1.2-6.9A1.8 1.8 0 0 0 17.2 4H7.5"/></svg>',
@@ -60,10 +61,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const DEFAULT_SETTINGS = { avoid: ['tree nuts', 'coconut'], veg: 2, protein: 'good', people: 4, weeknight: 40 };
 
   // ---------------------------------------------------------------------
-  // The family's Meals: { ai, model, settings, taste, draft, plan, log } from the server,
+  // The family's Meals: { ai, model, settings, taste, draft, plan, log, again } from the server,
   // the last copy kept here for when there's no signal.
   // ---------------------------------------------------------------------
-  const blank = { ai: null, model: null, settings: DEFAULT_SETTINGS, taste: { loved: [], nope: [] }, draft: null, plan: null, log: [] };
+  const blank = { ai: null, model: null, settings: DEFAULT_SETTINGS, taste: { loved: [], nope: [] }, draft: null, plan: null, log: [], again: [] };
   let data = Object.assign({}, blank, ls.json(KEY, null) || {});
   data.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings || {});
   data.taste = data.taste || { loved: [], nope: [] };
@@ -109,7 +110,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const j = await api('state');
       // got: when this was read from the family server (the Sheet keeps the newest copy read)
       data = { ai: j.ai, model: j.model, settings: Object.assign({}, DEFAULT_SETTINGS, j.settings || {}), taste: j.taste || { loved: [], nope: [] },
-        draft: j.draft || null, plan: j.plan, log: j.log || [], got: Date.now() };
+        draft: j.draft || null, plan: j.plan, log: j.log || [], again: j.again || [], got: Date.now() };
       ls.set(KEY, data); st.state = 'ok'; st.error = '';
       scheduleSheet();   // the family's Google Sheet hears what the family changed
     } catch (e) { st.state = e.code; st.error = e.code; }
@@ -269,6 +270,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       h += '<div class="card" style="--i:1"><strong>Nothing planned yet</strong><p>Tell Ipsy what you fancy, and it plans the meals.</p>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="new"' + (noAI() ? ' disabled' : '') + '>Plan with Ipsy</button></div></div>';
     }
+    // meals brought back from past plans: their recipes here, their ingredients in the list (each for two weeks)
+    if (againList().length) h += '<p class="sechead"><span>Cooking again</span><span>' + againList().length + '</span></p><div class="card dayc">'
+      + againList().map((m, i) => '<div class="arow"><button class="mrow" type="button" data-meal="' + i + '" data-src="again"><span class="slot">' + esc(slotName(m)) + '</span>'
+        + '<span class="ct" translate="no">' + esc(m.title) + '</span>' + tags(m) + '</button><button class="iconbtn" type="button" data-unagain="' + esc(m.id) + '" aria-label="' + esc('Take ' + m.title + ' off the list') + '">' + ICON.clear + '</button></div>').join('')
+      + '<p class="hint">' + (againList().length > 1 ? 'Their ingredients are in the List. Each comes off after two weeks.' : 'Its ingredients are in the List. It comes off after two weeks.') + '</p></div>';
     // every accepted plan, as Fitness keeps every workout: the family server's last 52, then older ones
     // read back from the family's Google Sheet
     const log = pastList(), olderOn = signedIn() && sheetAt && !older.done;
@@ -282,13 +288,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // ---- the List tab ----
   const shopOf = p => L.shopping((p && p.meals) || []);
-  function shop() { return shopOf(data.plan); }
-  // which days an item is for: "Mon, Wed" from the plan's dates, else "days 1, 3"
-  const whenWords = (x, p) => { const d = x.nights.map(n => dateOf(p, n)); return d.every(Boolean) ? d.map(iso => dayLabel(iso, { weekday: 'short' })).join(', ') : 'day' + (x.nights.length > 1 ? 's ' : ' ') + x.nights.join(', '); };
+  // meals cooked again (from Past plans): a plan of their own, for their recipes, and in the list beside the plan's
+  const againList = () => (data.again || []).filter(m => m && m.title);
+  const AGAIN = () => ({ again: true, meals: againList(), people: (data.plan && data.plan.people) || rules().people });
+  const againDay = i => 'a' + i;   // the "day" an again meal's items are for, in the list
+  const planMeals = () => (data.plan && data.plan.meals) || [];
+  function shop() { return L.shopping([...planMeals(), ...againList().map((m, i) => ({ ...m, day: againDay(i) }))]); }
+  // which days an item is for: "Mon, Wed" from the plan's dates, else "days 1, 3"; a meal cooked again by its name
+  const whenWords = (x, p) => {
+    const ag = x.nights.filter(n => /^a\d+$/.test(n)).map(n => (againList()[+n.slice(1)] || {}).title).filter(Boolean), ns = x.nights.filter(n => !/^a\d+$/.test(n));
+    const d = p ? ns.map(n => dateOf(p, n)) : [];
+    return [ns.length ? (d.every(Boolean) ? d.map(iso => dayLabel(iso, { weekday: 'short' })).join(', ') : 'day' + (ns.length > 1 ? 's ' : ' ') + ns.join(', ')) : '', ...ag].filter(Boolean).join(', ');
+  };
   function list() {
-    const p = data.plan;
-    if (!p || !p.meals || !p.meals.length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>' + (data.draft ? 'Accept the new plan first.' : 'Plan your meals with Ipsy first.') + '</div>';
-    if (ticks.at !== p.at) ticks = { at: p.at, keys: [] };
+    const p = planMeals().length ? data.plan : null;
+    if (!p && !againList().length) return '<div class="empty" style="--i:1"><strong>Nothing to buy yet</strong>' + (data.draft ? 'Accept the new plan first.' : 'Plan your meals with Ipsy first, or cook a past one again (Plan, Past plans).') + '</div>';
+    if (p && ticks.at !== p.at) ticks = { at: p.at, keys: [] };
     const s = shop(), done = new Set(ticks.keys);
     const row = x => '<button class="irow" type="button" role="checkbox" aria-checked="' + done.has(x.key) + '" data-key="' + esc(x.key) + '"><span class="box">' + ICON.tick + '</span>'
       + '<span class="it"><span translate="no">' + esc(cap(x.item)) + '</span><small>' + esc([L.total(x.amounts), whenWords(x, p)].filter(Boolean).join(' · ')) + '</small></span></button>';
@@ -305,8 +320,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const toggle = (a, v) => { const i = a.indexOf(v); if (i < 0) a.push(v); else a.splice(i, 1); };
   main.addEventListener('click', async e => {
-    const b = e.target.closest('[data-act], [data-meal], [data-key], [data-past], [data-slot], [data-food], [data-days], [data-people], [data-lunches]'); if (!b) return;
-    if (b.dataset.meal) return openRecipe(+b.dataset.meal, b.dataset.src === 'draft' ? data.draft : data.plan);
+    const b = e.target.closest('[data-act], [data-meal], [data-unagain], [data-key], [data-past], [data-slot], [data-food], [data-days], [data-people], [data-lunches]'); if (!b) return;
+    if (b.dataset.meal) return openRecipe(+b.dataset.meal, b.dataset.src === 'draft' ? data.draft : b.dataset.src === 'again' ? AGAIN() : data.plan);
+    if (b.dataset.unagain) return unAgain([b.dataset.unagain]);
     if (b.dataset.past) return openPast(b.dataset.past);
     if (b.dataset.key) {
       const k = b.dataset.key, i = ticks.keys.indexOf(k);
@@ -408,13 +424,43 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     st.past = p;
     const s = shopOf(p);
     $('pastLbl').textContent = span({ start: p.start, end: p.dates[p.dates.length - 1] || p.start });
+    const cookable = p === data.plan ? [] : p.meals.filter(m => !m.leftover && (m.ingredients || []).length);   // (the plan now is on the list already)
     $('pastBody').innerHTML = '<p class="hint" style="margin:0 2px">' + esc([about(p), p.acceptedBy ? 'accepted by ' + p.acceptedBy : ''].filter(Boolean).join(' · ')) + '</p>'
+      + (cookable.length ? '<div class="btns" style="margin-top:0"><button class="btn okbtn" type="button" data-againall>' + ICON.again + esc(cookable.length > 1 ? 'Cook them all again' : 'Cook it again') + '</button></div>'
+        + '<p class="hint" style="margin:0 2px">Adds the ' + (cookable.length > 1 ? 'meals and their ingredients' : 'meal and its ingredients') + ' to Plan and List. Or tap one meal to cook just that.</p>' : '')
       + days(p, 'past', 0)
       + '<p class="label">Shopping list</p>' + L.sections(s.buy, x => x.item).map(g => '<div class="rgroup"><p class="sechead" style="margin:10px 14px 2px"><span>' + esc(g.name) + '</span></p><ul class="plain">'
         + g.items.map(x => '<li><span translate="no">' + esc(cap(x.item)) + '</span> <small>' + esc(L.total(x.amounts)) + '</small></li>').join('') + '</ul></div>').join('');
     openSheet('pastSheet');
   }
-  $('pastBody').addEventListener('click', e => { const b = e.target.closest('[data-meal]'); if (b) openRecipe(+b.dataset.meal, st.past); });
+  $('pastBody').addEventListener('click', e => {
+    if (e.target.closest('[data-againall]')) return cookAgain(st.past.meals.filter(m => !m.leftover && (m.ingredients || []).length), st.past);
+    const b = e.target.closest('[data-meal]'); if (b) openRecipe(+b.dataset.meal, st.past);
+  });
+
+  // Cooking again: a past plan's meals (or one) back on the Plan tab with their recipes, and their ingredients
+  // in the List, for the whole family (POST again: checked against what the family avoids now), with Undo
+  const isAgain = m => againList().some(x => x.title.toLowerCase() === m.title.toLowerCase());
+  async function cookAgain(meals, p) {
+    const add = meals.filter(m => !isAgain(m));
+    if (!add.length) { toast(meals.length > 1 ? 'They’re all on the list already.' : 'It’s on the list already.'); return; }
+    const before = againList();
+    try { const j = await api('again', { add, from: p && p.id || '', people: p && p.people }); data.again = j.again; ls.set(KEY, data); }
+    catch (e) { toast(e.code === 'avoid' ? 'That uses something the family avoids now (' + join((e.body && e.body.hits) || []) + '), so it wasn’t added.' : say(e.code), null, 8000); return; }
+    closeSheet('pastSheet'); closeSheet('recipeSheet'); scheduleSheet(); render();
+    toast(add.length > 1 ? plural(add.length, 'meal') + ' are on the list. The recipes are on the Plan tab.' : add[0].title + ' is on the list. Its recipe is on the Plan tab.', () => putAgain(before), 6000);
+  }
+  async function unAgain(ids) {
+    const before = againList(), gone = before.filter(m => ids.includes(m.id));
+    try { const j = await api('again', { remove: ids }); data.again = j.again; ls.set(KEY, data); }
+    catch (e) { toast(say(e.code), null, 6000); return; }
+    closeSheet('recipeSheet'); scheduleSheet(); render();
+    toast((gone.length === 1 ? gone[0].title + ' is' : 'They’re') + ' off the list.', () => putAgain(before), 6000);
+  }
+  async function putAgain(list) {
+    try { const j = await api('again', { put: list }); data.again = j.again; ls.set(KEY, data); scheduleSheet(); render(); toast('Put back.'); }
+    catch (e) { toast(say(e.code), null, 6000); }
+  }
   $('fab').onclick = () => goTab('ipsy');
 
   // One meal's recipe: what it's like, the ingredients (what's from the fridge marked), the steps, the
@@ -432,7 +478,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return openSheet('recipeSheet');
     }
     const up = lovedNow(m.title);
-    $('recipeBody').innerHTML = '<div><h3 translate="no">' + esc(m.title) + '</h3><p class="cm">' + ([m.cuisine, m.method].filter(Boolean).length ? '<span translate="no">' + esc([m.cuisine, m.method].filter(Boolean).join(' · ')) + '</span> · ' : '') + '<span>' + esc('serves ' + p.people) + '</span></p>' + tags(m) + '</div>'
+    $('recipeBody').innerHTML = '<div><h3 translate="no">' + esc(m.title) + '</h3><p class="cm">' + ([m.cuisine, m.method].filter(Boolean).length ? '<span translate="no">' + esc([m.cuisine, m.method].filter(Boolean).join(' · ')) + '</span> · ' : '') + '<span>' + esc('serves ' + (m.people || p.people)) + '</span></p>' + tags(m) + '</div>'
       + (m.veg && m.veg.length ? '<p class="hint" style="margin:0 2px">' + esc('Vegetables: ' + join(m.veg) + '. The vegetables and protein are Ipsy’s estimates.') + '</p>' : '')
       + (m.why ? '<p class="hint" style="margin:0 2px" translate="no">' + esc(m.why) + '</p>' : '')
       + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => '<li><span translate="no">' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + '</span>'
@@ -441,7 +487,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<div class="opts rate" role="group" aria-label="What the family thought">'
       + '<button class="opt" type="button" role="checkbox" data-rate="up" aria-checked="' + (up === true) + '">' + ICON.up + 'Loved it</button>'
       + '<button class="opt" type="button" role="checkbox" data-rate="down" aria-checked="' + (up === false) + '">' + ICON.down + 'Not again</button></div>'
-      + (p === data.plan || p === data.draft ? '<div class="btns two"><button class="btn" type="button" data-act="swap">Swap this meal</button><button class="btn okbtn" type="button" data-act="askmeal">Ask Ipsy about it</button></div>' : '')
+      + (p === data.plan || p === data.draft ? '<div class="btns two"><button class="btn" type="button" data-act="swap">Swap this meal</button><button class="btn okbtn" type="button" data-act="askmeal">Ask Ipsy about it</button></div>'
+        : p.again ? '<div class="btns"><button class="btn" type="button" data-unagain="' + esc(m.id) + '">' + ICON.clear + 'Take it off the list</button></div>'
+        : isAgain(m) ? '<p class="hint" style="margin:0 2px">On the list to cook again: its ingredients are in the List.</p>'
+        : '<div class="btns"><button class="btn okbtn" type="button" data-againone>' + ICON.again + 'Cook it again</button></div><p class="hint" style="margin:0 2px">Adds it to Plan, with its ingredients in the List.</p>')
       + '<p class="hint">Made by AI: check times, temperatures and labels.</p>';
     openSheet('recipeSheet');
   }
@@ -456,6 +505,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       toast(want === true ? 'Noted: Ipsy will make more like it.' : want === false ? 'Noted: Ipsy won’t make it again.' : 'Forgotten.');
       return;
     }
+    if (e.target.closest('[data-againone]') && m) return cookAgain([m], cur.p);
+    const un = e.target.closest('[data-unagain]'); if (un) return unAgain([un.dataset.unagain]);
     const a = e.target.closest('[data-act]'); if (!a || !m) return;
     const which = (cur.p === data.draft ? 'the new plan’s ' : '') + mealName(cur.p, m);
     // Swap asks Ipsy straight away; Ask Ipsy opens the chat over the recipe (Ipsy sees which one is open)
@@ -557,7 +608,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const focusStack = [];
   const lockPage = () => document.documentElement.classList.toggle('locked', [...document.querySelectorAll('.sheetwrap')].some(w => !w.hidden));
-  function openSheet(id) { focusStack.push(document.activeElement); $(id).hidden = false; lockPage(); }
+  // the sheet opened last is on top (a recipe from a past plan opens over that plan)
+  function openSheet(id) { focusStack.push(document.activeElement); const w = $(id); if (w.nextElementSibling) w.parentNode.append(w); w.hidden = false; lockPage(); }
   function closeSheet(id) { if ($(id).hidden) return; $(id).hidden = true; lockPage(); const f = focusStack.pop(); if (f && f.focus && document.contains(f)) f.focus(); }
   document.querySelectorAll('.sheetwrap').forEach(w => w.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(w.id); }));
   if (window.visualViewport) {
@@ -842,7 +894,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ipsy = window.AllisonOS.ipsy.mount({
       app: 'meals', name: 'Meals', endpoint: '../meals/api/ipsy', headers: { 'X-Meals': '1' }, slot: document.querySelector('.dock > span'),
       ...window.MealsIpsy({
-        L, api, say, toast, shopOf, dayLabel, dateOf, slotName, about, past: wholePlan,
+        L, api, say, toast, shopOf, shop, whenWords, dayLabel, dateOf, slotName, about, past: wholePlan,
         get data() { return data; }, state: () => st.state,
         keep,
         today: () => isoDay(new Date()),

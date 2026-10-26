@@ -252,7 +252,45 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('a past plan opens with its meals and its shopping list', (await page.locator('#pastBody [data-meal]').count()) === 3 && t.includes('Shopping list') && t.includes('Ground beef'));
   await page.click('#pastBody [data-meal="0"]'); await page.waitForTimeout(400);
   ok('and its recipes', (await page.textContent('#recipeBody')).includes(JSON.parse(m.get('meals:plan')).meals[0].title));
+  ok('the recipe opens over the past plan, not under it', await page.evaluate(() => { const r = document.querySelector('#recipeBody').getBoundingClientRect(), el = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!(el && el.closest('#recipeSheet')); }));
   await shot(page, 'past');
+  await ctx.close();
+}
+{ // cooking again: a past plan's meals (all, or one) on the Plan tab with their recipes and in the List, for the family, with Undo
+  const cur = JSON.parse(m.get('meals:plan')), log = JSON.parse(m.get('meals:log'));
+  const old = { ...cur, id: 'pold9', start: '2026-01-05', dates: ['2026-01-05', '2026-01-06', '2026-01-07'], acceptedBy: 'Kim',
+    meals: cur.meals.map((x, i) => ({ ...x, title: 'Old ' + x.title, ingredients: [...x.ingredients, { item: i ? 'Cumin seeds' : 'Ricotta', qty: '1 tbsp' }] })) };
+  m.set('meals:log:pold9', JSON.stringify(old)); m.set('meals:log', JSON.stringify([...log, { id: 'pold9', start: old.start, end: '2026-01-07', foods: old.foods, slots: old.slots, people: old.people, titles: old.meals.map(x => x.title) }]));
+  const { ctx, page, errs } = await phone();
+  await toPlan(page);
+  await page.click('[data-past="' + cur.id + '"]'); await page.waitForSelector('#pastSheet:not([hidden])');
+  ok('the plan now has no Cook again (it is on the list already)', (await page.locator('#pastBody [data-againall]').count()) === 0);
+  await page.click('#pastSheet .iconbtn[data-close]'); await page.waitForTimeout(300);
+  await page.click('[data-past="pold9"]'); await page.waitForSelector('#pastSheet:not([hidden])');
+  await page.click('#pastBody [data-againall]'); await page.waitForTimeout(500);
+  const again = JSON.parse(m.get('meals:again') || '[]');
+  ok('Cook them all again: its meals are the family\'s to cook again, on the server', again.length === 3 && again.every(x => x.from === 'pold9' && x.by === 'Tom'), JSON.stringify(again.map(x => [x.from, x.by])));
+  ok('on the Plan tab, under Cooking again', (await page.locator('[data-src="again"]').count()) === 3 && /Cooking again/.test(await page.textContent('#main')));
+  ok('with Undo', /on the list/.test(await page.textContent('#toastMsg')) && await page.locator('#toastAct').isVisible());
+  await page.click('#tabs [data-tab="list"]'); await page.waitForTimeout(300);
+  let t = await page.textContent('#main');
+  ok('their ingredients are in the List beside the plan\'s, each saying which meal it is for', t.includes('Ricotta') && t.includes('Cumin seeds') && t.includes(old.meals[0].title), t.slice(0, 300));
+  await toPlan(page);
+  await page.click('[data-src="again"][data-meal="0"]'); await page.waitForSelector('#recipeSheet:not([hidden])');
+  ok('a meal cooked again opens with its recipe, and Take it off the list', (await page.textContent('#recipeBody')).includes(old.meals[0].steps[0]) && await page.isVisible('#recipeBody [data-unagain]'));
+  await page.click('#recipeBody [data-unagain]'); await page.waitForTimeout(500);
+  ok('taken off: for the family too', JSON.parse(m.get('meals:again')).length === 2 && (await page.locator('[data-src="again"]').count()) === 2);
+  await page.click('#toastAct'); await page.waitForTimeout(500);
+  ok('Undo puts it back', JSON.parse(m.get('meals:again')).length === 3 && (await page.locator('[data-src="again"]').count()) === 3);
+  for (const id of JSON.parse(m.get('meals:again')).map(x => x.id)) { await page.click('[data-unagain="' + id + '"]'); await page.waitForTimeout(400); }
+  ok('× takes each off', JSON.parse(m.get('meals:again')).length === 0 && (await page.locator('[data-src="again"]').count()) === 0);
+  await page.click('[data-past="pold9"]'); await page.waitForSelector('#pastSheet:not([hidden])');
+  await page.click('#pastBody [data-meal="1"]'); await page.waitForSelector('#recipeSheet:not([hidden])');
+  await page.click('#recipeBody [data-againone]'); await page.waitForTimeout(500);
+  ok('Cook it again on one meal adds just that one', JSON.parse(m.get('meals:again')).map(x => x.title).join() === old.meals[1].title);
+  await shot(page, 'again');
+  ok('nothing wider than the phone; no script errors', !(await wide(page)) && !errs.length, errs.join(' | '));
+  m.delete('meals:again'); m.delete('meals:log:pold9'); m.set('meals:log', JSON.stringify(log));
   await ctx.close();
 }
 { // the plan's bar: it folds the days away (kept folded on this phone), and × clears the plan for the family, with Undo
