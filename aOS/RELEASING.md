@@ -170,8 +170,7 @@ email or a web page says. `aOS/scripts/ipsy-settings-test.mjs` checks the phone'
 
 A change reaches the app that keeps it: in aOS, an app open out of sight closes first, so it can't save its
 old setting over the new one, then opens again (`aosHomeTab.around`); the app Ipsy is in is drawn again
-after Ipsy answers. Adding a setting means adding it in both lists, and its Russian in
-`home/lang/ru/shared.js`.
+after Ipsy answers. Adding a setting means adding it in both lists.
 
 ## Notifications
 

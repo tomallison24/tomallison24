@@ -269,7 +269,7 @@
   // What came back is kept for the visit, so panning back costs nothing.
   // The groups' colours follow the design: Sea glass coral, violet and teal; Vintage's Retro burnt
   // orange, olive and walnut (its dark mode lightens the olive and walnut in index.html, #vintage).
-  const BIZ_ZOOM = 15, BIZ_COLOR = { glass: { food: '#FF6B57', fun: '#8E6CFF', shops: '#15A3A3' }, vintage: { food: '#D8572A', fun: '#7E8C34', shops: '#8A5A3A' }, neon: { food: '#DF388E', fun: '#876DD9', shops: '#906134' }, folk: { food: '#DD3E31', fun: '#618C47', shops: '#775826' }, grid: { food: '#E41F24', fun: '#707F92', shops: '#843327' } };   // neon, folk and grid: Vintage's, repainted (aOS/scripts/looks.mjs)
+  const BIZ_ZOOM = 15, BIZ_COLOR = { glass: { food: '#FF6B57', fun: '#8E6CFF', shops: '#15A3A3' }, vintage: { food: '#D8572A', fun: '#7E8C34', shops: '#8A5A3A' }, neon: { food: '#DF388E', fun: '#876DD9', shops: '#906134' }, grid: { food: '#E41F24', fun: '#707F92', shops: '#843327' } };   // neon and grid: Vintage's, repainted (aOS/scripts/looks.mjs)
   const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
   const bizColor = g => { const c = BIZ_COLOR[look()] || BIZ_COLOR.vintage; return c[g] || c.fun; };
   const taller = () => look() === 'glass' ? 0 : 26;   // Vintage's header (the 44px title and its bars) is 26px taller: the map keeps that much more clear

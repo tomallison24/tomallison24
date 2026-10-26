@@ -14,8 +14,8 @@
   const okId = v => typeof v === 'string' && v.length > 0 && v.length <= 100;
   const okHex = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
   const hexOr = c => okHex(c) ? c : LIST_COLORS[0];
-  // The design (../home/design.js): Vintage, the default, or Standard (Sea glass); vintage() is true for Night Drive,
-  // Folk and Tron too, which repaint Vintage (their blocks repaint the --lc and --tc tokens).
+  // The design (../home/design.js): Vintage, the default, or Standard (Sea glass); vintage() is true for Night Drive
+  // and Tron too, which repaint Vintage (their blocks repaint the --lc and --tc tokens).
   const vintage = () => (window.aosDesign ? aosDesign.get() : 'vintage') !== 'glass';
   // A list's colour. Stored as one of the seven hex values whatever the design (so a list means the same
   // everywhere, and in the Sheet). Standard draws it as it is; Vintage draws the seven as their Retro colours:
@@ -76,18 +76,14 @@
   const nextMonday = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return ymd(d); };
 
   // ---------- sample data ----------
-  // Written in the phone's language (aOS's Language, ../home/lang.js), as a first note and lists would be:
-  // once saved they are the family's, kept as they are. A Groceries list named in another language keeps
-  // its store sections (grocery: true).
-  const tr = s => window.aosLang ? aosLang.t(s) : s;
   const SAMPLE_NOTES = [
-    {id:'n1',title:tr('Welcome to Notes'),body:tr('Tap the pencil (bottom right) to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to the pencil to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.'),tags:['start'],color:'blue',pinned:true,reminder:null,created:now,updated:1}
+    {id:'n1',title:'Welcome to Notes',body:'Tap the pencil (bottom right) to write a note.\nAdd tags with #, like #home or #ideas, then tap a tag to filter.\nSearch finds words and #tags.\nReminders live in the Reminders tab.\nCopied something from Claude? Tap the clipboard button next to the pencil to turn it into a note, or into reminders on the Reminders tab.\n\nEverything stays on this phone. Use the download button at the top to back up.',tags:['start'],color:'blue',pinned:true,reminder:null,created:now,updated:1}
   ];
   const SAMPLE_LISTS = [
-    {id:'l1',updated:1,name:tr('Personal'),color:'#3B82F6'},
-    {id:'l2',updated:1,name:tr('Home'),color:'#F59E0B'},
-    {id:'l3',updated:1,name:tr('Groceries'),color:'#10B981',...(tr('Groceries') !== 'Groceries' ? {grocery:true} : {})},
-    {id:'l4',updated:1,name:tr('Family'),color:'#8B5CF6'}
+    {id:'l1',updated:1,name:'Personal',color:'#3B82F6'},
+    {id:'l2',updated:1,name:'Home',color:'#F59E0B'},
+    {id:'l3',updated:1,name:'Groceries',color:'#10B981'},
+    {id:'l4',updated:1,name:'Family',color:'#8B5CF6'}
   ];
   let _c = 0;
   const T = (list, title, o={}) => ({id:'t'+(++_c), list, title, notes:'', date:null, time:null, prio:0, flagged:false, done:false, doneAt:null, tags:[], created:now-_c*H, ...o});
@@ -181,7 +177,7 @@
   const tagN = t => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % HUES.length; };
   const hue = t => HUES[tagN(t)];
   const tcv = t => '--h:' + hue(t) + ';--tc:var(--tc' + tagN(t) + ')';
-  const tchip = (t, q) => '<span class="tchip" translate="no" style="'+tcv(t)+'">'+hl(t, q)+'</span>';   // what the family wrote stays as it is (../home/lang.js)
+  const tchip = (t, q) => '<span class="tchip" translate="no" style="'+tcv(t)+'">'+hl(t, q)+'</span>';
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); return v && Array.isArray(v.notes) ? v : null; } catch(e){ return null; } }
@@ -1855,7 +1851,7 @@
       const addN = saneAll(data.notes, saneNote).filter(n => Array.isArray(n.tags) && !haveN.has(n.id));
       const addT = saneAll(data.todos, saneTodo).filter(t => !haveT.has(t.id));
       if (!addL.length && !addN.length && !addT.length) { toast('Nothing new in that file.'); return; }
-      if (!confirm((window.aosLang ? aosLang.t : String)('Add ' + plural(addN.length, 'note') + ', ' + plural(addT.length, 'reminder') + ' and ' + plural(addL.length, 'list') + ' from this file? Only restore files you made yourself.'))) return;   // the browser's own box: its words looked up here
+      if (!confirm('Add ' + plural(addN.length, 'note') + ', ' + plural(addT.length, 'reminder') + ' and ' + plural(addL.length, 'list') + ' from this file? Only restore files you made yourself.')) return;
       lists.push(...addL); notes.push(...addN); todos.push(...addT); fixNotes();
       const known = new Set(lists.map(l => l.id)); todos.forEach(t => { if (!known.has(t.list)) t.list = lists[0].id; });
       save(); render();

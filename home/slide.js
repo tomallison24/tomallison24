@@ -23,7 +23,7 @@
   const slid = {}, MS = 560;
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const calls = new Map();   // key -> the last call, to place again when the words change size (Russian: ../home/lang.js)
+  const calls = new Map();   // key -> the last call, to place again when the words change size (your helper's name: ../home/names.js)
   function slide(box, chosen, key, { group = '', target, jump } = {}) {
     if (box) calls.set(key, [box, chosen, { group, target }]);
     if (!box || !box.offsetWidth) return;   // hidden: nothing to measure yet

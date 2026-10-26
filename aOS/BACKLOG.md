@@ -60,7 +60,7 @@ an item through (or delete it) when it ships, and say which release.
 A pass over every app, the shared scripts, the server routes and the workflows
 (not Sparkle Kingdom, still in development). What it fixed shipped in aOS2.2's
 log; what it found and left alone is here, by value. "Needs words" means new
-English and its Russian.
+English.
 
 ### Bugs to fix
 
@@ -91,7 +91,7 @@ date parameters' round-trip check.
   backup whitelist (`saneOrder`); Money's CSV formula cells; Home's `#join=` link
   shows the address and asks for a second tap; `safariDemo` escapes its icon
   address; erase clears the `aos_look` cookie; own-key lookups in aOS's error
-  words and the shared Russian.
+  words.
 
 ### Condensing worth a PR of its own
 

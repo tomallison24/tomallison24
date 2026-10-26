@@ -128,9 +128,9 @@ const store = (p, k) => p.evaluate(k => localStorage.getItem(k), k);
   await p.waitForEvent('load', { timeout: 8000 }).catch(() => pr.push('Orders was not drawn again'));
   await p.waitForTimeout(400);
   if (!(JSON.parse(await store(p, 'allison-orders-v1') || '{}').kinds || {}).food) pr.push('food orders were not kept: ' + r.text);
-  r = await ask(p, claude, 'change_setting', { setting: 'look', value: 'folk' }); await p.waitForTimeout(400);   // the look from inside an app: every app's design, Money's and Sparkle's too
+  r = await ask(p, claude, 'change_setting', { setting: 'look', value: 'neon' }); await p.waitForTimeout(400);   // the look from inside an app: every app's design, Money's and Sparkle's too
   const took = await Promise.all(['aos.look', 'design.orders', 'design.money', 'design.sparkle'].map(k => store(p, k)));
-  if (r.error || took.some(v => v !== 'folk')) pr.push('the look from an app did not reach every app: ' + took.join() + ' ' + r.text);
+  if (r.error || took.some(v => v !== 'neon')) pr.push('the look from an app did not reach every app: ' + took.join() + ' ' + r.text);
   report('in an app, Ipsy turns dark mode on at once, and the app\'s own setting is kept after it\'s drawn again', pr); await ctx.close();
 }
 

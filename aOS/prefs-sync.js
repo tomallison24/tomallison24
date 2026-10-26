@@ -48,7 +48,6 @@
     { id: 'mail.hint', key: 'mail.hint', app: 'mail', quiet: true },
     { id: 'mail.token.ever', key: 'mail.token.ever', app: 'mail', quiet: true },
     { id: 'aos.look', key: 'aos.look', app: 'aos' },
-    { id: 'aos.lang', key: 'aos.lang', app: 'aos', blank: v => v === 'en' },
     { id: 'aos.home.picks', key: 'aos.home.picks', app: 'aos' },
     { id: 'aos.home.layout', key: 'aos.home.layout', app: 'aos', blank: v => v === 'classic' },   // Classic or Thumb arc (aOS/home-tab.js)
     { id: 'aos.helper', key: 'aos.helper', app: 'aos' },   // your helper and its name (home/ipsy.js)

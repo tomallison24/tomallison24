@@ -55,11 +55,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
   const sizeOf = x => (+x.vol).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + x.unit;
   const catName = c => (C.CAT[c] || C.CAT.other).name;
-  // In Russian (../home/lang.js): the kinds and the preset drinks are translated; a name you typed stays as written (translate="no").
-  const trWord = s => window.aosLang ? aosLang.t(s) : s;
   const KNOWN = new Set(C.CATS.map(c => c.name).concat(C.PRESETS.map(p => p.name)));
   const nameHtml = n => KNOWN.has(n) ? esc(n) : '<span translate="no">' + esc(n) + '</span>';
-  const nameTxt = n => KNOWN.has(n) ? trWord(n) : n;
+  const nameTxt = n => KNOWN.has(n) ? n : n;
 
   const ICON = {
     chevL: '<svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg>',

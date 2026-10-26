@@ -73,18 +73,10 @@ Replies: short and friendly, in plain US English, dates like "Oct 9" and times l
 Each of the person's messages starts with a note from the app in [brackets]: today's date and what's on their screen. The app adds it; the person didn't type it.`;
 }
 
-// Every Ipsy (each app's, and aOS's) can switch aOS's language (home/ipsy.js runs it, home/lang.js): for someone who
-// picked a language they can't read and can't find the setting again.
-export const LANG_TOOL = {
-  name: 'set_language',
-  description: 'Switch aOS and every app between English and Russian (the Language setting in aOS: Account > Appearance). Use it when the person asks for the other language, or plainly can\'t read the one aOS is in (they write in English while aOS is in Russian and seem lost, or the reverse). aOS is drawn again in it right after your reply, so reply in the new language, in a line.',
-  input_schema: { type: 'object', properties: { lang: { type: 'string', enum: ['en', 'ru'], description: 'en: English, ru: Russian' } }, required: ['lang'], additionalProperties: false },
-};
-
 // Every Ipsy can also read, change and show the person's settings (home/ipsy.js runs these and keeps the list:
 // only the settings named here, each checked again on the phone; aOS/RELEASING.md, "Ipsy and settings").
 const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
-export const SETTING_IDS = ['theme', 'look', 'language', 'favorites', 'calendar.week_start', 'calendar.time', 'calendar.temperature', 'calendar.day_view_opens_at',
+export const SETTING_IDS = ['theme', 'look', 'favorites', 'calendar.week_start', 'calendar.time', 'calendar.temperature', 'calendar.day_view_opens_at',
   ...['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather', 'meals', 'orders', 'news'].map(l => 'calendar.show_' + l), 'calendar.new_event_length', 'calendar.new_event_alert',
   'clock.24_hour', 'clock.seconds', 'clock.face', 'weather.units', 'podcasts.skip_back', 'podcasts.skip_forward', 'podcasts.when_episode_ends', 'fitness.step_goal', 'fitness.move_goal',
   ...['pickup', 'food', 'digital', 'other'].map(k => 'orders.count_' + k), ...['orders', 'travel', 'calendar'].map(a => 'ipsy.gmail_' + a),
@@ -99,12 +91,12 @@ export const SETTINGS_TOOLS = [
     input_schema: { type: 'object', properties: { place: { type: 'string', enum: SETTING_PLACES } }, required: ['place'], additionalProperties: false } },
 ];
 
-// web: false sends the app's own tools only, no web search or web pages (Fitness); every Ipsy has LANG_TOOL and SETTINGS_TOOLS.
+// web: false sends the app's own tools only, no web search or web pages (Fitness); every Ipsy has SETTINGS_TOOLS.
 export function requestHead({ model, system, tools, web = true }) {
   return {
     model, max_tokens: 16000,
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-    tools: web ? [...tools, LANG_TOOL, ...SETTINGS_TOOLS, ...webTools(model)] : [...tools, LANG_TOOL, ...SETTINGS_TOOLS],
+    tools: web ? [...tools, ...SETTINGS_TOOLS, ...webTools(model)] : [...tools, ...SETTINGS_TOOLS],
     output_config: { effort: 'medium' },
     cache_control: { type: 'ephemeral' },                 // and the conversation so far, as it grows
     ...(FALLBACK_OK.test(model) ? { fallbacks: 'default' } : {}),

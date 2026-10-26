@@ -11,7 +11,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   throw new Error('Weather refuses to run inside a frame');
 }
 // Which design is on (design.js), read at each draw, and the screen and any open sheet redrawn on a change
-// (aos:design, at the bottom). vintage(): a flat design - Vintage, or Night Drive and Folk, which repaint it.
+// (aos:design, at the bottom). vintage(): a flat design - Vintage, or Night Drive and Tron, which repaint it.
 const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
 const vintage = () => look() !== 'glass';
 // The data (NWS, Open-Meteo) is in data.js, shared with Home's weather pill.
@@ -929,7 +929,6 @@ function rampOf(m) {
   const stops = {
     vintage: [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]],
     neon: [[0, [51, 132, 157]], [10, [58, 154, 183]], [18, [147, 116, 241]], [25, [251, 162, 74]], [32, [223, 56, 142]]],   // Vintage's, repainted (aOS/scripts/looks.mjs)
-    folk: [[0, [57, 87, 166]], [10, [69, 104, 198]], [18, [103, 152, 74]], [25, [219, 156, 34]], [32, [221, 62, 49]]],
     grid: [[0, [96, 125, 160]], [10, [140, 160, 185]], [18, [168, 174, 184]], [25, [251, 96, 73]], [32, [228, 31, 36]]],   // cold steel to hot red
     glass: [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]],
   }[look()] || [];
@@ -1155,7 +1154,7 @@ function placesRows() {
     const icon = here ? svg('navigation-variant', 24, 'color:var(--accent);') : trip ? svg('airplane', 24, 'color:var(--accent);')
       : svg(face ? face.icon : 'weather-partly-cloudy', 26, face ? `color:${face.tint};` : 'color:var(--muted);');
     const words = face && !trip ? face.words : '';   // the trip row keeps its dates
-    const keep = s => s && s !== 'My Location' ? ' translate="no"' : '';   // a city stays as it is in Russian (../home/lang.js)
+    const keep = s => s && s !== 'My Location' ? ' translate="no"' : '';   // a city stays as it is
     return `<div class="prow${cur === id ? ' on' : ''}"><button class="pmain" data-pick-place="${id}">${icon}<span class="pn"><b${here ? '' : keep(title)}>${esc(title)}</b><small${words || trip || (here && (!S.here || S.locError)) ? '' : keep(sub)}>${esc(words || sub || '')}</small></span><span class="pr-t">${t}</span></button>${removable ? `<button class="prm" data-remove="${id.slice(1)}" aria-label="Remove ${esc(title)}">${svg('close', 18)}</button>` : ''}</div>`;
   };
   return row('here', S.here && keyOf(S.here), 'My Location', S.locError ? 'Location unavailable · tap to retry' : (S.here ? S.here.name : 'Tap to find where you are'), true, false)

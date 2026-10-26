@@ -127,10 +127,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const shortDay = s => fmt(noon(s), { weekday: 'short' });
   const longDate = s => fmt(noon(s), { weekday: 'long', day: 'numeric', month: 'long', year: partsOf(s).y === partsOf(today()).y ? undefined : 'numeric' });
   const medDate = s => fmt(noon(s), { weekday: 'short', day: 'numeric', month: 'short', year: partsOf(s).y === partsOf(today()).y ? undefined : 'numeric' });
-  // A day's letter over the month grid and the week strip: S M T W T F S; in Russian two (Пн, Вт), as iOS has them
+  // A day's letter over the month grid and the week strip: S M T W T F S
   const dayLetter = s => { const d = shortDay(s); return /^[A-Za-z]/.test(d) ? d.slice(0, 1) : d.slice(0, 1).toUpperCase() + d.slice(1, 2); };
   // What the family wrote (titles, places, notes, names) and what came from elsewhere (bookings) stays as it is
-  // in Russian (../home/lang.js): translate="no", but not on the words the app writes itself.
+  // (translate="no"), but not the words the app writes itself.
   const KEEP_KINDS = { family: 1, note: 1, travel: 1, meals: 1, orders: 1, news: 1 }, APP_WORDS = new Set(['Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking', 'Meals', 'Orders', 'News']);
   // a title the app starts ("Pick up · Hertz", "Dinner: Lasagna", "Arrives: Target") is translated up to the colon; the rest stays
   const APP_START = { travel: /^(Pick up|Return) · /, meals: /^(Breakfast|Lunch|Dinner): /, orders: /^(Arrives|Delivery window ends|Pick up by|Return by): / };
@@ -1510,7 +1510,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const b = e.target.closest('[data-set]');
     if (b) { const k = b.dataset.set; settings[k] = k === 'weekStart' ? +b.dataset.val : b.dataset.val; if (k === 'weekStart') settings.weekStartPicked = true; saveSettings(); render(); renderSettings(); }
   });
-  // measured a frame later, once ../home/lang.js has put the words in (Russian ones are a different width)
+  // measured a frame later, once the page's words are in
   const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));   // at once; in Russian, ../home/slide.js places them again once the words are swapped (aos:words)
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideSegs(); };
   if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: Vintage or Standard, at once (../home/design.js)

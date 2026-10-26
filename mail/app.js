@@ -46,7 +46,7 @@ const PAGE = 40;                  // conversations shown per list
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-// What the mail itself says (subjects, senders, text) stays as written in Russian too (../home/lang.js);
+// What the mail itself says (subjects, senders, text) stays as written (translate="no");
 // the app's own "(no subject)" is translated.
 const ownText = s => s === '(no subject)' ? '' : ' translate="no"';
 const ls = {
@@ -2494,7 +2494,7 @@ function htmlToText(html) {
   return doc.body?.textContent || '';
 }
 const plainOf = m => m.text ? tidy(m.text) : m.html ? tidy(htmlToText(m.html)) : m.snippet || '';
-const longDate = ms => new Date(ms).toLocaleString('en-US-x-keep', { dateStyle: 'medium', timeStyle: 'short' });   // in the email itself: English even when aOS is in Russian (../home/lang.js leaves -x-keep alone)
+const longDate = ms => new Date(ms).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });   // in the email itself
 
 // The whole message, as Gmail's upload endpoint takes it. Text is UTF-8 in
 // base64; files (when there are any) make it multipart/mixed.
@@ -3692,7 +3692,7 @@ function clearSearch(reload = true) {
 // The large title steps down a size or two when it wouldn't fit beside the
 // buttons (a long tag name, Marketing on a small phone), before it is cut off.
 function fitTitle() {
-  const h1 = $('header h1'), t = $('#title'), FITS = ['fit1', 'fit2', 'fit3'];   // fit3: a long title in Russian («Входящие» beside Select)
+  const h1 = $('header h1'), t = $('#title'), FITS = ['fit1', 'fit2', 'fit3'];   // fit3: a long title beside Select
   const was = FITS.find(c => h1.classList.contains(c)) || '';
   h1.style.transition = 'none';                    // measure the sizes themselves, not a step of the animation
   h1.classList.remove(...FITS);
@@ -4343,7 +4343,7 @@ document.addEventListener('pointerdown', e => {
 addEventListener('resize', () => { closeBoxMenu(true); slideSeg(true); slideNotify(true); slideTags(true); });
 // Futura (Vintage) and the system font (Standard) are different widths: fit the title and place the sliding thumbs again
 addEventListener('aos:design', () => requestAnimationFrame(() => { fitTitle(); slideSeg(true); slideNotify(true); slideTags(true); }));
-addEventListener('aos:words', fitTitle);   // Russian (../home/lang.js): the title is measured again in its own words
+addEventListener('aos:words', fitTitle);   // your helper's name went into the page (../home/names.js): the title is measured again
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (clientId() && !getToken()) return renew();         // back after the hour ran out

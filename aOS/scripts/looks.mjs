@@ -1,5 +1,4 @@
-// The looks that are drawn from Vintage: Night Drive (neon), Folk (Gzhel by day, Khokhloma by
-// night) and Tron (light cycles, as in the car's Tron mode: red light on a black grid). Each keeps Vintage's flat shapes and repaints them: every colour in a page's Vintage block
+// The looks that are drawn from Vintage: Night Drive (neon) and Tron (light cycles, as in the car's Tron mode: red light on a black grid). Each keeps Vintage's flat shapes and repaints them: every colour in a page's Vintage block
 // is moved to the same role in the look's palette (the cream ground to the look's ground, the walnut
 // ink to its ink, mustard, teal, burnt orange and olive to its four accents), in the OKLCH colour
 // space so lightness, and with it contrast, stays as Vintage had it. Used by make-looks.mjs (the
@@ -65,22 +64,6 @@ export const LOOKS = {
     font: '"Avenir Next","Avenir","Saira",system-ui,sans-serif',
     display: '"Avenir Next Condensed","Avenir Next","Arial Narrow",system-ui,sans-serif',
     ground: ['#F6F0FF', '#120B1F'],
-  },
-  folk: {
-    name: 'Folk',
-    light: {   // Gzhel: cobalt on porcelain
-      neutral: { L: [[0.2, 0.2], [0.27, 0.25], [0.55, 0.47], [0.94, 0.972], [0.97, 0.99], [1, 1]], h: 266, C: L => 0.008 + 0.11 * (1 - L) ** 1.6 },
-      orange: { h: 29, C: 1.15, dL: -0.02 }, mustard: { h: 78, C: 1.0, dL: -0.03 }, olive: { h: 135, C: 0.95, dL: -0.02 },
-      teal: { h: 266, C: 1.7, dL: -0.08 }, blue: { h: 266, C: 1.2, dL: -0.03 }, pink: { h: 15, C: 1.1, dL: 0 },
-    },
-    dark: {    // Khokhloma: cinnabar and gold on black lacquer
-      neutral: { L: [[0.2, 0.13], [0.245, 0.155], [0.29, 0.195], [0.36, 0.25], [0.6, 0.66], [0.94, 0.93], [1, 0.98]], h: 70, C: L => (L < 0.5 ? 0.012 : 0.02 + 0.07 * (1 - L)) },
-      orange: { h: 30, C: 1.2, dL: -0.04 }, mustard: { h: 80, C: 1.05, dL: 0.02 }, olive: { h: 128, C: 0.9, dL: 0 },
-      teal: { h: 82, C: 1.35, dL: 0.03 }, blue: { h: 82, C: 1.0, dL: 0.04 }, pink: { h: 25, C: 1.1, dL: 0 },
-    },
-    font: '"PT Sans","Avenir Next","Helvetica Neue",system-ui,sans-serif',
-    display: '"Yeseva One","Georgia","Times New Roman",serif',
-    ground: ['#F5F7FB', '#0D0B0A'],
   },
   grid: {
     name: 'Tron',
@@ -211,14 +194,12 @@ export function lookBlock(look, css) {
 
 // ---- Each look's own touches, the same in every page (after the repainted Vintage rules) ----
 // The headings, the shapes behind the title (Vintage's disc, dot and pill: .ambient i, .aurora b,
-// .atoms b) and, for Folk, its fonts (in ../home/fonts, so they work offline once seen).
+// .atoms b) and, for Tron, its fonts (in ../home/fonts, so they work offline once seen).
 const HEADS = ':is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle)';
 const SHAPE = n => `:root :is(.ambient i,.aurora b,.atoms b):nth-child(${n})`;
 const BAND = ':is(.ambient,.aurora,.atoms)';
 const darkBoth = body => `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${body}}}\n:root[data-theme="dark"]{${body}}\n`;
 const svgUrl = svg => `url("data:image/svg+xml,${encodeURIComponent(svg).replace(/%20/g, ' ').replace(/%3D/g, '=').replace(/%3A/g, ':').replace(/%2F/g, '/')}")`;
-// six petals and a heart: the Gzhel and Khokhloma flower, as a mask (the colour comes from the background)
-const ROSETTE = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'><g>${[0, 60, 120, 180, 240, 300].map(a => `<ellipse rx='12' ry='21' cy='-26' transform='rotate(${a})'/>`).join('')}</g><circle r='11'/></svg>`;
 
 export function signature(look) {
   if (look === 'neon') return `/* Night Drive: heavy italic condensed headings, a striped sunset for the disc, a neon ring and tube, a grid under them */
@@ -233,33 +214,16 @@ ${BAND}::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:
   transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
 :is(.fab,.okbtn){box-shadow:0 0 calc(var(--nd-glow) * 18px) color-mix(in srgb,var(--nd-tube) 70%,transparent)}
 `;
-  if (look === 'folk') {
-    const face = (fam, w, sub, range) => `@font-face{font-family:"${fam}";font-style:normal;font-weight:${w};font-display:swap;src:url("../home/fonts/${fam.toLowerCase().replace(/ /g, '-')}-${w}-${sub}.woff2") format("woff2");unicode-range:${range}}`;
-    const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
-    const CYR = 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116';
-    return `/* Folk: Gzhel by day (cobalt on porcelain), Khokhloma by night (cinnabar and gold on black lacquer).
-   PT Sans and Yeseva One, both made for Cyrillic (SIL Open Font License, ../home/fonts). */
-${['PT Sans:400', 'PT Sans:700', 'Yeseva One:400'].map(f => { const [fam, w] = f.split(':'); return face(fam, w, 'latin', LAT) + '\n' + face(fam, w, 'cyrillic', CYR); }).join('\n')}
-${HEADS}{font-family:${LOOKS.folk.display};font-weight:400;letter-spacing:0}
-:root{--fk-flower:#1C3F94;--fk-berry:#4E74C7;--fk-leaf:#8FA8DE;--fk-heart:#F5F7FB;--fk-scarf:#1C3F94;--fk-dot:#FFFFFF;--fk-petal:#8FA8DE}
-${darkBoth('--fk-flower:#C7261C;--fk-berry:#D9A630;--fk-leaf:#B88A24;--fk-heart:#D9A630;--fk-scarf:#C7261C;--fk-dot:#F6E7C6;--fk-petal:#D9A630')}
-${SHAPE(1)}{background:radial-gradient(circle,var(--fk-heart) 0 9%,var(--fk-flower) 9.5%);-webkit-mask:${svgUrl(ROSETTE)} center/contain no-repeat;mask:${svgUrl(ROSETTE)} center/contain no-repeat;border-radius:0;opacity:1}
-${SHAPE(2)}{background:radial-gradient(circle at 34% 32%,rgba(255,255,255,.55) 0 12%,transparent 13%),var(--fk-berry)}
-${SHAPE(3)}{background:var(--fk-leaf);border-radius:100% 0}
-`;
-  }
   if (look === 'grid') {
     const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
-    const CYR = 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116';
     const face = (fam, w, file, range) => `@font-face{font-family:"${fam}";font-style:normal;font-weight:${w};font-display:swap;src:url("../home/fonts/${file}.woff2") format("woff2");unicode-range:${range}}`;
     return `/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
    only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
    over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.
-   Orbitron headings (Exo 2 for Cyrillic), Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
+   Orbitron headings, Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
    dot and pill behind the title go: the car's screen is calm. */
 ${face('Orbitron', 700, 'orbitron-700-latin', LAT)}
 ${face('Exo 2', '400 700', 'exo-2-latin', LAT)}
-${face('Exo 2', '400 700', 'exo-2-cyrillic', CYR)}
 @property --tr-a{syntax:'<angle>';inherits:false;initial-value:0deg}
 ${HEADS}{font-family:${LOOKS.grid.display};font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
 :root{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.16);color-scheme:dark}

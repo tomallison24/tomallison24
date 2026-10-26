@@ -1,7 +1,7 @@
 # Money
 
 Where the family's money goes, as a home-screen web app in the five aOS designs (Vintage, the
-default; Standard, in Sea glass; Night Drive, Folk and Tron). It reads **Monarch's alert emails**: Monarch
+default; Standard, in Sea glass; Night Drive and Tron). It reads **Monarch's alert emails**: Monarch
 (monarch.com) has no API for its members, but it emails each expense and each deposit over the
 amounts set in its notification settings, and tells you when it can no longer sync a bank. Money
 turns those emails into something to act on.
@@ -174,14 +174,13 @@ needs to, and asks for a tap if Google can't answer quietly.
 
 ## Files
 
-- `index.html`: the page (the Sea glass styles, then the Vintage block; Night Drive, Folk and Tron are
+- `index.html`: the page (the Sea glass styles, then the Vintage block; Night Drive and Tron are
   generated from it by `node aOS/scripts/make-looks.mjs`).
 - `app.js`: drawing, Gmail, the family's copy, Settings.
 - `parse.js`: Monarch's emails → transactions, alerts and recurring merchants.
 - `calc.js`: the sums: folding in, cards and rewards, what repeats, a month against the usual, tips,
   which alerts are still open, five years kept, your own categories (`recat`, `mergeSettings`, `ideasInput`).
 - `functions/money/api/[[route]].js`: the family's copy; `_middleware.js` locks it to signed-in family.
-- Russian: `home/lang/ru/money.js`.
 
 ## Tests
 
