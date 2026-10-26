@@ -74,7 +74,8 @@
   // a helper picked but not named goes by what it is: "Ask the fox" (Mia is Mia). In Russian, where a word like
   // лиса would need its case ("скажите лисе"), it stays Ипси, which never changes.
   const KINDS = { fox: 'the fox', owl: 'the owl', robot: 'the robot', octopus: 'the octopus', hedgehog: 'the hedgehog', otter: 'the otter' };
-  const nameNow = () => {   // '' while it's Ipsy (not picked, or a name that is Ipsy)
+  const nameNow = () => {   // '' while it's Ipsy (not picked, or a name that is Ipsy); in Tron, Ares (Tron: Ares's rider)
+    if (root.getAttribute('data-look') === 'grid') return ru ? 'Арес' : 'Ares';
     try {
       const h = JSON.parse(localStorage.getItem(HELPER)) || {}, n = String(h.name || '').replace(/\s+/g, ' ').trim().slice(0, 16);
       if (n) return /\bipsy\b|ипси/i.test(n) ? '' : n;
@@ -100,6 +101,7 @@
     sweep(root);
   };
   addEventListener('storage', e => { if (e.key === HELPER) window.aosLang.helper(); });   // named in another app or frame
+  new MutationObserver(() => window.aosLang.helper()).observe(root, { attributes: true, attributeFilter: ['data-look'] });   // Tron's Ares, or back
   if (ru) root.lang = 'ru';
 
   // ---- dates and numbers in Russian ----

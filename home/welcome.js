@@ -104,7 +104,7 @@
         'Meals: cook a past plan again, or one meal from it: its meals come back on the Plan tab with their recipes, and their ingredients go on the shopping list, for the whole family (two weeks, or until you take them off)',
         'Meals: a recipe from a past plan opens on top of the plan, where before it opened hidden behind it',
         'Tron, Tesla style: always dark, as the car\'s screen goes, red only for what\'s lit, and a red light trail that runs around every screen behind everything, a light racing along it',
-        'In Tron, your helper suits up as the Tron rider: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar',
+        'In Tron, your helper is Ares, the rider from Tron: Ares: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar',
         'aOS opens with a short Tron intro and its own sound, nothing to tap (Account > Appearance > Tron intro: Sound, Silent or Off)',
         'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name',
         'Fixes from a review of every app: Places no longer re-syncs a place that came back unchanged (it sent it again every second while open); Calendar\'s Year view steps from Feb 29 to Feb 28; Travel says "tomorrow" by your own day, not UTC, and drops a Gmail sign-in Google refused instead of failing for an hour; Podcasts\' mini player shows the right show for an episode with a repeated title; Weather\'s My Location no longer waits out another place\'s forecast; Mail\'s Add tag keeps its name after a failed add',

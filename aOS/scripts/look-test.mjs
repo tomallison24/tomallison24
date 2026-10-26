@@ -243,7 +243,7 @@ for (const scheme of ['light', 'dark']) {
 
 // 9. Tron, as in the car: dark only (a phone in light mode with Appearance set to Light: aOS and an app are dark, and Light is
 // back with another look); the trail behind everything; aOS opens with its intro once a launch, its sound with nothing to
-// tap, Skip ending it, Off in Account stopping it; the helper is the Tron rider
+// tap, Skip ending it, Off in Account stopping it; the helper is the Tron rider, called Ares (your own name back after)
 {
   const seed = { 'aos.look': 'grid', 'design.notes': 'grid', 'home.settings': JSON.stringify({ theme: 'light' }), 'aos.helper': '{"who":"fox","name":"Biscuit"}' };
   const { ctx, p, errs } = await open('light', seed, { watch: true }); const pr = [...errs];
@@ -257,6 +257,8 @@ for (const scheme of ['light', 'dark']) {
   if (st.theme !== 'dark' || !/^rgb\((\d), (\d), (\d)\)$/.test(st.bg)) pr.push('Tron is not dark on a phone in light mode with Light picked: ' + JSON.stringify(st));
   if (st.before !== '-1' || st.after === 'none' || !/, 0\)$|transparent/.test(st.body)) pr.push('the light trail is not behind everything: ' + JSON.stringify(st));
   if (st.who !== 'rider') pr.push('the helper is not the Tron rider in Tron: ' + st.who);
+  const ph = await p.evaluate(() => document.getElementById('hq').placeholder);
+  if (!/ask Ares$/.test(ph)) pr.push('in Tron the helper is not called Ares: ' + ph);
   // once a launch: a reload doesn't play it again
   await p.reload(); await p.waitForTimeout(300);
   if (await p.evaluate(() => !!document.getElementById('tronIntro'))) pr.push('the intro played again on a reload');
@@ -284,6 +286,9 @@ for (const scheme of ['light', 'dark']) {
   await p.click('#looks [data-look="vintage"]'); await p.waitForTimeout(300);
   st = await p.evaluate(() => ({ theme: document.documentElement.dataset.theme, who: (document.querySelector('#ipsySlot .ipsy-char') || {}).dataset?.who }));
   if (st.theme !== 'light' || st.who !== 'fox') pr.push('back in Vintage, Light and the fox did not come back: ' + JSON.stringify(st));
+  await p.waitForTimeout(100);
+  const ph2 = await p.evaluate(() => document.getElementById('hq').placeholder);
+  if (!/ask Biscuit$/.test(ph2)) pr.push('back in Vintage, the helper is not Biscuit again: ' + ph2);
   report('Tron, as in the car: dark only, the trail behind everything, the rider, and aOS\'s intro with its sound (once a launch, Skip, Off)', pr); await ctx.close();
 }
 
