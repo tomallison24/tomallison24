@@ -138,7 +138,7 @@ jobs:
               aOS/scripts/standalone-test.mjs
               aOS/scripts/today-test.mjs
               aOS/scripts/names-test.mjs
-          # the newest release's update screens; every app opens, light and dark; Calendar's layers, an invite, notifications, designs
+          # the newest release's update screens; every app opens, light and dark, and in Night Drive and Tron; Calendar's layers, an invite, notifications, designs
           - group: release-smoke
             tests: |
               aOS/scripts/release-test.mjs

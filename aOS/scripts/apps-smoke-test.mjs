@@ -5,7 +5,8 @@
 // services behind it. Run after changing an app's page, its scripts or its
 // policy (the new-aos-app skill says when). Also: no app pans sideways (home/welcome.js,
 // "Never sideways"), so a stray swipe can't carry its controls off the screen, and a double tap doesn't
-// zoom it in (a zoomed page drifts side to side).
+// zoom it in (a zoomed page drifts side to side). Also in Night Drive and Tron, whose generated styles draw
+// things of their own (Tron's grid floor was three phones wide, and the phone widened Home's page to fit it).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node aOS/scripts/apps-smoke-test.mjs [repo root]
@@ -36,8 +37,11 @@ const BASE = 'http://localhost:' + server.address().port;
 
 const browser = await chromium.launch();
 let failed = 0;
+// light and dark in the default design (Vintage), then Night Drive and Tron (dark only)
+const RUNS = [['light', null], ['dark', null], ['light', 'neon'], ['dark', 'grid']];
+const label = (scheme, look) => scheme + (look ? ', ' + { neon: 'Night Drive', grid: 'Tron' }[look] : '');
 for (const id of ids) {
-  for (const scheme of ['light', 'dark']) {
+  for (const [scheme, look] of RUNS) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme });
     // Offline for everything but the site's own files: other hosts fail, server routes say they aren't set up.
     await ctx.route('**/*', route => {
@@ -48,6 +52,12 @@ for (const id of ids) {
     });
     // The walkthroughs as seen, as on a phone in use.
     await ctx.addInitScript(ids => localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(ids.map(i => [i, '999'])))), ids);
+    // the design, as aOS's Appearance writes it (aOS/look.js): aOS's aos.look, design.<id>, Clock's set.design
+    if (look) await ctx.addInitScript(([id, look]) => {
+      if (id === 'aos') localStorage.setItem('aos.look', look);
+      else if (id === 'clock') localStorage.setItem('allison-clock-v1', JSON.stringify({ set: { design: look } }));
+      else localStorage.setItem('design.' + id, look);
+    }, [id, look]);
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push('script error: ' + e.message));
@@ -61,16 +71,18 @@ for (const id of ids) {
     if (!policy) problems.push('no Content-Security-Policy meta');
     if (!text) problems.push('the page drew nothing');
     // never sideways: the page and its body cut off what's wider than the screen, and a sideways scroll goes nowhere
+    // and the page is as wide as the phone (a phone widens it to fit something wider: then it all slides)
     const side = await page.evaluate(() => { scrollTo(300, scrollY); const x = scrollX; scrollTo(0, scrollY);
       const ox = el => getComputedStyle(el).overflowX, ob = el => getComputedStyle(el).overscrollBehaviorX;
-      return { x, html: ox(document.documentElement), body: ox(document.body), bounce: ob(document.documentElement), tap: getComputedStyle(document.documentElement).touchAction }; });
-    if (side.x || !/^(clip|hidden)$/.test(side.html) || !/^(clip|hidden)$/.test(side.body) || side.bounce !== 'none' || side.tap !== 'manipulation') problems.push('it pans sideways, or zooms on a double tap: ' + JSON.stringify(side));
-    if (problems.length) { failed++; console.log('not ok - ' + id + ' (' + scheme + ')\n  ' + problems.join('\n  ')); }
-    else console.log('ok - ' + id + ' (' + scheme + ')');
+      return { x, width: innerWidth, look: document.documentElement.getAttribute('data-look'), html: ox(document.documentElement), body: ox(document.body), bounce: ob(document.documentElement), tap: getComputedStyle(document.documentElement).touchAction }; });
+    if (look && side.look !== look) problems.push('it didn\'t open in ' + label(scheme, look) + ': data-look ' + side.look);
+    if (side.x || side.width !== 390 || !/^(clip|hidden)$/.test(side.html) || !/^(clip|hidden)$/.test(side.body) || side.bounce !== 'none' || side.tap !== 'manipulation') problems.push('it pans sideways, or zooms on a double tap: ' + JSON.stringify(side));
+    if (problems.length) { failed++; console.log('not ok - ' + id + ' (' + label(scheme, look) + ')\n  ' + problems.join('\n  ')); }
+    else console.log('ok - ' + id + ' (' + label(scheme, look) + ')');
     await ctx.close();
   }
 }
 await browser.close();
 server.close();
-console.log(ids.length * 2 - failed + ' of ' + ids.length * 2 + ' passed');
+console.log(ids.length * RUNS.length - failed + ' of ' + ids.length * RUNS.length + ' passed');
 process.exit(failed ? 1 : 0);
