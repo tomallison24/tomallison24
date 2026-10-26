@@ -66,7 +66,7 @@
     'I search Gmail and the web for you.': 'Я ищу для вас в Gmail и в интернете.',
     'Pick your helper': 'Выберите помощника',
     // Run through setup (aOS/app.js setupPage)
-    'Greetings, programs.': 'Приветствую, программы.', 'Tap for sound': 'Нажмите для звука',
+    'Greetings, programs.': 'Приветствую, программы.',
     'Tron intro, as aOS opens': 'Заставка Трона при открытии aOS', 'Sound': 'Звук', 'Silent': 'Без звука', 'Play the intro': 'Показать заставку',
     'Tron is always dark, as in the car. Your choice comes back with another look.': 'Трон всегда тёмный, как в машине. Ваш выбор вернётся с другим стилем.',
     'Run through setup': 'Пройти настройку', 'Set up aOS': 'Настройка aOS',
