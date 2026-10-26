@@ -366,6 +366,18 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   await test('join link: no script errors', async () => { assert.deepEqual(errors, []); });
   await ctx.close();
 }
+{ // never side to side: something a real device draws wider than the phone (a long name in a row that doesn't shrink) can't make the page slide sideways
+  const { ctx, page, errors } = await phone('light');
+  await test('a device drawn wider than the phone: the page still never scrolls sideways', async () => {
+    await page.evaluate(() => { const row = document.createElement('div'); row.id = 'wide'; row.style.cssText = 'display:flex;width:max-content;white-space:nowrap'; row.textContent = 'Living Room Ceiling Lights Group (Hue, all six bulbs, including the reading lamp by the window)'.repeat(3); document.querySelector('main').append(row); });
+    await page.waitForTimeout(100);
+    assert.ok(await page.$eval('#wide', e => e.getBoundingClientRect().right > innerWidth), 'the row is wider than the phone');
+    assert.equal(await page.$eval('main', e => getComputedStyle(e).overflowX), 'clip');
+    assert.deepEqual(await page.evaluate(() => { scrollTo(400, scrollY); const x = scrollX; return [document.documentElement.scrollWidth <= innerWidth, document.body.scrollWidth <= innerWidth, x]; }), [true, true, 0]);
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
 { // a phone with both: Home's own data is kept, the old app's is not copied over it
   const seed = { 'aos.seen': JSON.stringify({ house: '999', housevintage: '999' }), 'house.bg': '"aurora"', 'housev.bg': '"ripples"' };
   const { ctx, page } = await phone('light', { seed });
