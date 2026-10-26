@@ -785,7 +785,7 @@
 
   /* the atomic shapes behind the title (they scroll away with the page) */
   /* a sun (the moon at night: home/sky.js), a quarter of it showing in the corner */
-  .ambient { display: block; position: absolute; z-index: -1; pointer-events: none; top: 0; left: 0; right: 0; height: 110px; }
+  .ambient { display: block; position: absolute; z-index: -1; pointer-events: none; top: 0; left: 0; right: 0; height: 110px; overflow-x: clip; }   /* clip: Night Drive's and Tron's grid floor (::after) is drawn 3 phones wide; unclipped, the phone widens the page to fit it and Home slides sideways */
   .ambient i { position: absolute; display: block; width: 204px; height: 204px; right: -140px; top: -104px; border-radius: 50%; background: var(--sky-disc, var(--mc-mustard)); }
 
 
