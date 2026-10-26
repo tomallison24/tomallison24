@@ -15,6 +15,9 @@
 import assert from 'assert/strict';
 import { onRequest, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS } from '../../functions/calendar/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
+// a forged session: a signature character changed well before the end (the last ones carry spare bits, so a change
+// there can decode to the same signature)
+const forge = t => t.slice(0, -6) + (t.at(-6) === 'A' ? 'B' : 'A') + t.slice(-5);
 import { ANTHROPIC_URL } from '../../server/ipsy.js';
 
 const store = new Map();
@@ -283,7 +286,7 @@ await test('ipsy: needs the app header, a signed-in family member, accounts on a
   assert.equal(off.status, 503); assert.equal(JSON.parse(off.text).error, 'accounts-off');
   const out = await ipsy(body, { tok: null });
   assert.equal(out.status, 401); assert.equal(JSON.parse(out.text).error, 'signin');
-  assert.equal((await ipsy(body, { tok: token.slice(0, -2) + 'xx' })).status, 401, 'a forged session');
+  assert.equal((await ipsy(body, { tok: forge(token) })).status, 401, 'a forged session');
   const nokey = await ipsy(body, { env: { ACCOUNTS: db } });
   assert.equal(nokey.status, 503); assert.equal(JSON.parse(nokey.text).error, 'no-ai');
   assert.equal(asked.length, 0, 'Claude was not asked');
