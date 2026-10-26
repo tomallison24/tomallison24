@@ -3,7 +3,8 @@
 // blocks. Nothing outside the site is reached: other hosts and the server
 // routes answer as if offline, so this checks the page itself, not the
 // services behind it. Run after changing an app's page, its scripts or its
-// policy (the new-aos-app skill says when).
+// policy (the new-aos-app skill says when). Also: no app pans sideways (home/welcome.js,
+// "Never sideways"), so a stray swipe can't carry its controls off the screen.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
 //   node aOS/scripts/apps-smoke-test.mjs [repo root]
@@ -58,6 +59,11 @@ for (const id of ids) {
     const problems = [...errors, ...csp.map(c => 'blocked by its policy: ' + c)];
     if (!policy) problems.push('no Content-Security-Policy meta');
     if (!text) problems.push('the page drew nothing');
+    // never sideways: the page and its body cut off what's wider than the screen, and a sideways scroll goes nowhere
+    const side = await page.evaluate(() => { scrollTo(300, scrollY); const x = scrollX; scrollTo(0, scrollY);
+      const ox = el => getComputedStyle(el).overflowX, ob = el => getComputedStyle(el).overscrollBehaviorX;
+      return { x, html: ox(document.documentElement), body: ox(document.body), bounce: ob(document.documentElement) }; });
+    if (side.x || !/^(clip|hidden)$/.test(side.html) || !/^(clip|hidden)$/.test(side.body) || side.bounce !== 'none') problems.push('it pans sideways: ' + JSON.stringify(side));
     if (problems.length) { failed++; console.log('not ok - ' + id + ' (' + scheme + ')\n  ' + problems.join('\n  ')); }
     else console.log('ok - ' + id + ' (' + scheme + ')');
     await ctx.close();

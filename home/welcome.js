@@ -108,6 +108,7 @@
         'aOS opens with a short Tron intro and its own sound, nothing to tap (Account > Appearance > Tron intro: Sound, Silent or Off)',
         'Tron\'s intro always ends, even on a phone that refuses to start its sound (before, that could leave aOS stuck on the intro), and the welcome and update screens now wait for it instead of playing underneath; a Tron welcome no longer offers Light or dark',
         'Tron\'s intro no longer freezes aOS on its opening screen on an iPhone: as aOS opens it no longer starts the sound system (an iPhone can\'t play the sound before a tap anyway; Play the intro in Account still plays it), it stays out of the way of the rest of aOS, and it fades away by itself after seven seconds whatever happens',
+        'Every app, and aOS, stays put side to side: a sideways swipe no longer slides an app\'s page over and its controls off the screen',
         'aOS Home: try Thumb arc (Account > Appearance > Home layout): Home, Mail, Weather and Calendar on an inner ring and your four favorites on an outer one, in the corner your thumb rests on, with what\'s next and every other app above them, so every app is on one screen. Left-handed arc puts it in the other corner',
         'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name',
         'Fixes from a review of every app: Places no longer re-syncs a place that came back unchanged (it sent it again every second while open); Calendar\'s Year view steps from Feb 29 to Feb 28; Travel says "tomorrow" by your own day, not UTC, and drops a Gmail sign-in Google refused instead of failing for an hour; Podcasts\' mini player shows the right show for an episode with a repeated title; Weather\'s My Location no longer waits out another place\'s forecast; Mail\'s Add tag keeps its name after a failed add',
@@ -1187,6 +1188,10 @@
       if (again) setInset(insetNow.top, insetNow.bottom);
     }).observe(document.documentElement, { childList: true, subtree: true });
   }
+  // Never sideways: no app (nor aOS) pans left and right, so a stray swipe can't carry its controls off
+  // the screen. Anything wider than the screen (a title's shapes, a long line) is cut off at its edge; a
+  // row meant to scroll sideways (a strip of chips, a map) has its own scroller and still does.
+  addCss('aos-nosideways', 'html,body{overflow-x:clip;overscroll-behavior-x:none}');
   // Under an iPhone's solid status bar (aOS's: data-bar="solid" on it, ../home/sky.js), aOS colours
   // the bar with this app's own background (#barcap, aOS/home-tab.js). The top of the app, where
   // "‹ aOS" floats over nothing of the app's own, fades into that same colour, so the bar and the
