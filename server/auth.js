@@ -22,7 +22,7 @@
 //                    who it's linked to (functions/fitness/api); only they can read its steps
 //   health:<id>      that phone's Apple Health sensors as found (functions/fitness/api), a day's cache
 //   used:<challenge> a sign-in challenge already used, gone after 5 minutes
-//   layer:<app>:<id> { at, data } - what Notes, Travel (travelv: Travel Vintage), Fitness or Mail shows in that
+//   layer:<app>:<id> { at, data } - what Notes, Travel (travelv: Travel Vintage), Fitness, Mail, Meals, Orders or News shows in that
 //                    person's Calendar (functions/aOS/api); only they can read it
 //   cred:<credId>    { user, spki, alg, created } - a passkey's public key
 //   invite:<token>   { name, by } - one use, gone after 24 hours, always for someone new

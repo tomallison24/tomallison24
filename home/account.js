@@ -7,7 +7,8 @@
 // (localStorage aos.session) and sent with calls to the locked server routes
 // (calendar/api, travel/api).
 //
-//   AllisonOS.account.fetch(url, opts)   fetch, signed in; on a 401 it shows the
+//   AllisonOS.account.fetch(url, opts, { quiet })   fetch, signed in; on a 401 it shows the
+//                                        (quiet: hands the 401 back instead, for background jobs)
 //                                        sign-in sheet once and tries again
 //   AllisonOS.account.signIn()           Face ID -> session (needs a tap first)
 //   AllisonOS.account.signUp({ name, code | invite })
@@ -106,14 +107,17 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
     return asking;
   }
 
-  // fetch, signed in: on a 401 from a locked route, ask once and try again
-  async function authFetch(url, opts = {}) {
+  // fetch, signed in: on a 401 from a locked route, ask once and try again. { quiet: true } for a
+  // background job (a feed refresh on open, a timer): the 401 comes back as it is and nobody is asked;
+  // the sign-in sheet is for a tap.
+  async function authFetch(url, opts = {}, { quiet = false } = {}) {
     const go = () => { const s = load(), h = new Headers(opts.headers || {}); if (s && s.token) h.set('Authorization', 'Bearer ' + s.token); return fetch(url, Object.assign({}, opts, { headers: h })); };
     let r = await go();
     if (r.status !== 401) return r;
     let j = {}; try { j = await r.clone().json(); } catch {}
     if (j.error !== 'signin') return r;
     save(null);
+    if (quiet) return r;
     if (await prompt()) r = await go();
     return r;
   }
