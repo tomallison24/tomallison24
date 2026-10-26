@@ -262,10 +262,14 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
   its acknowledgement helper on (3 s). Babysitter is a mode: lit, "Sitter
   armed", while it is on. Hatch Green is the bedtime script with the green
   light, lit while it runs. Report a Bug fills the dashboard's form helpers
-  and runs `script.log_bug`, which adds it to `bug_log.md`.
+  and runs `script.log_bug`, which adds it to `bug_log.md`. The tiles are
+  short (icon over name) since 2026-10-26, to make room for:
+- **Yard camera**: a pill under the tiles with only the Yard Blink's pause
+  (30 min, 1, 2 or 4 hours: `script.pause_yard_camera_motion_detection`, as
+  its Security card), its state beside it. It opens nothing. Signal's
+  Favorites still has its camera cards: this is Home's alone.
 - **Thermostats** (Living Room and Office; the Windmill is left out, as on
-  the dashboard), **Cameras** (the living room Blink and the doorbell),
-  **Lights** (All on / All off, Tom's and Elena's lamps, each with its slider
+  the dashboard), **Lights** (All on / All off, Tom's and Elena's lamps, each with its slider
   and the 1 / 25 / 50 / 75 / 100% presets right on the pill).
 
 These are the same cards as in their own views and change together.

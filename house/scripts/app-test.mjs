@@ -366,6 +366,23 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   await test('join link: no script errors', async () => { assert.deepEqual(errors, []); });
   await ctx.close();
 }
+{ // Favorites: no camera cards; the Yard camera's pause under the automations, as its Security card's
+  const { ctx, page, errors } = await phone('dark');
+  await test('Favorites: no camera cards, the Yard camera\'s pause under the automations', async () => {
+    assert.equal(await page.locator('#g-fav .camcard').count(), 0);
+    assert.match(await page.textContent('#g-fav [data-r="yard"]'), /Yard camera\s*Pause motion/);
+    assert.deepEqual(await page.$$eval('#g-fav [data-r="yard"] .chip2', b => b.map(x => x.textContent)), ['30m', '1h', '2h', '4h']);
+  });
+  await test('Favorites: a pause chip pauses the Yard camera, shown here and on its Security card', async () => {
+    await page.click('#g-fav [data-r="yard"] .chip2[data-v="60"]');
+    await page.waitForFunction(() => /Paused · 60m/.test(document.querySelector('#g-fav [data-r="yard"]').textContent));
+    assert.equal(await page.getAttribute('#g-fav [data-r="yard"] .chip2[data-v="60"]', 'aria-pressed'), 'true');
+    assert.equal(await page.evaluate(() => val('switch.yard_camera_motion_detection')), 'off');
+    assert.equal(await page.getAttribute('[data-dv="cams:yard"] .campause .chip2[data-v="60"]', 'aria-pressed'), 'true');
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
 { // a phone with both: Home's own data is kept, the old app's is not copied over it
   const seed = { 'aos.seen': JSON.stringify({ house: '999', housevintage: '999' }), 'house.bg': '"aurora"', 'housev.bg': '"ripples"' };
   const { ctx, page } = await phone('light', { seed });
