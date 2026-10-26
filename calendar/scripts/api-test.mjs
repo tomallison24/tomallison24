@@ -302,7 +302,7 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsy’s instructions and too
   assert.equal(q.body.output_config.effort, 'medium'); assert.equal(q.body.max_tokens, 16000);
   assert.equal(q.body.fallbacks, 'default');
   assert.deepEqual(q.body.system, [{ type: 'text', text: IPSY_SYSTEM, cache_control: { type: 'ephemeral' } }]);
-  assert.deepEqual(q.body.tools.map(t => t.name), ['find_events', 'get_event', 'free_time', 'create_event', 'update_event', 'delete_event', 'show_day', 'search_gmail', 'read_email', 'set_language', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
+  assert.deepEqual(q.body.tools.map(t => t.name), ['find_events', 'get_event', 'free_time', 'create_event', 'update_event', 'delete_event', 'show_day', 'search_gmail', 'read_email', 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
   for (const t of IPSY_CLIENT_TOOLS) { assert.equal(t.input_schema.type, 'object'); assert.equal(t.input_schema.additionalProperties, false); assert.ok(t.description.length > 30, t.name); }
   // no tool that changes more than one event, and none that takes a list of ids

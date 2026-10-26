@@ -1,9 +1,9 @@
-// Writes the Night Drive, Folk and Tron looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
+// Writes the Night Drive and Tron looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
 // says how a colour moves). Run it after changing a page's <style id="vintage"> block or an icon.svg:
 //
-//   node aOS/scripts/make-looks.mjs            the <style id="neon">, <style id="folk"> and <style id="grid">
-//                                               blocks, right after each page's Vintage block; icon-neon.svg,
-//                                               icon-folk.svg and icon-grid.svg beside each icon.svg, and their 180 and 512
+//   node aOS/scripts/make-looks.mjs            the <style id="neon"> and <style id="grid">
+//                                               blocks, right after each page's Vintage block; icon-neon.svg
+//                                               and icon-grid.svg beside each icon.svg, and their 180 and 512
 //                                               pngs (needs Playwright with Chromium: npm i -g playwright)
 //   node aOS/scripts/make-looks.mjs --check     only says what is out of date (check-apps.mjs runs it), exit 1 if any
 //
@@ -14,7 +14,7 @@ import path from 'path';
 import { lookBlock, signature, mapColor, LOOKS } from './looks.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const NEW = ['neon', 'folk', 'grid'];
+const NEW = ['neon', 'grid'];
 const check = process.argv.includes('--check');
 const pages = readdirSync(ROOT, { withFileTypes: true }).filter(d => d.isDirectory() && existsSync(path.join(ROOT, d.name, 'index.html')))
   .map(d => d.name).filter(d => /^<style id="vintage">/m.test(readFileSync(path.join(ROOT, d, 'index.html'), 'utf8')));
@@ -36,7 +36,7 @@ for (const app of pages) {
 
 // ---- the icons ----
 // Night Drive: a deep neon-tinted ground in the app's own hue, a striped sunset for the disc, a magenta tube.
-// Folk: the Gzhel palette, and the disc becomes a six-petalled flower. Tron: a near-black ground with a hint of the
+// Tron: a near-black ground with a hint of the
 // app's own hue, the night palette's light, the disc a red identity disc and the pill a red light trail. Masks (black and white)
 // are left as they are.
 const SIZE = /viewBox="0 0 (\d+) (\d+)"/;
@@ -60,8 +60,7 @@ function iconFor(look, svg) {
       const ring = (rr, w) => `<circle cx="${cx}" cy="${cy}" r="${(r * rr).toFixed(1)}" fill="none" stroke="@CY@" stroke-width="${(r * w).toFixed(1)}"/>`;   // its own red, not repainted below
       return `<g>${ring(0.9, 0.12)}${ring(0.52, 0.07)}<circle cx="${cx}" cy="${cy}" r="${(r * 0.12).toFixed(1)}" fill="@CY@"/></g>`;
     }
-    const petal = a => `<ellipse cx="${cx}" cy="${(cy - r * 0.52).toFixed(1)}" rx="${(r * 0.25).toFixed(1)}" ry="${(r * 0.44).toFixed(1)}" transform="rotate(${a} ${cx} ${cy})" fill="${mapColor('folk', fill, false)}"/>`;
-    return `<g>${[0, 60, 120, 180, 240, 300].map(petal).join('')}<circle cx="${cx}" cy="${cy}" r="${(r * 0.24).toFixed(1)}" fill="#C7261C"/><circle cx="${cx}" cy="${cy}" r="${(r * 0.1).toFixed(1)}" fill="#F5F7FB"/></g>`;
+    return m;
   });
   // every other colour (the masks are out of the way)
   svg = svg.replace(/(fill|stroke|stop-color)="(#[0-9A-Fa-f]{3,8})"/g, (m, k, c) => {

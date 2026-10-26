@@ -37,14 +37,10 @@
   // Home takes the Apps tab's place and opens first. The dock gives way to a Home button off Home
   // (paintQuick, below); Today moves up by your account, on Home, and the Ipsy bar does Search's job.
   const HOME_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>';
-  // the word for this tab (in Russian, not the same as the Home app's: ../home/lang/ru/aos.js)
-  const word = (k, en) => { const r = window.aosLang ? aosLang.t(k) : k; return r === k ? en : r; };
-  const HOME = word('Home (the aOS tab)', 'Home');
+  const HOME = 'Home';
   const appsTab = document.querySelector('[data-tab="apps"]');
   appsTab.dataset.tab = 'home';
   appsTab.innerHTML = HOME_SVG + HOME;
-  if (HOME !== 'Home') $('home').querySelector('h1').firstChild.data = HOME;
-  $('hqx').setAttribute('aria-label', word('Clear (the search bar)', 'Clear'));   // not the weather's Clear
   appsTab.parentNode.insertBefore(appsTab, appsTab.parentNode.querySelector('[data-tab]'));
   const bar = document.querySelector('nav.bar'), quick = document.createElement('div');
   quick.className = 'quick'; quick.setAttribute('aria-label', 'Back to Home');
@@ -72,7 +68,7 @@
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
-  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} return `../${id}/icon${/^(glass|neon|folk|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };
+  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} return `../${id}/icon${/^(glass|neon|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
   // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
@@ -143,9 +139,8 @@
   function prefsCame(apps) {
     for (const id of apps) {
       if (id === 'aos') {
-        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|folk|grid)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
+        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|grid)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
         if (W.theme) W.theme.set(W.theme.read());
-        try { const lg = localStorage.getItem('aos.lang'); if (window.aosLang && lg && lg !== aosLang.get()) aosLang.set(lg); } catch {}   // the language came from another device: drawn again in it
         pins = readPins();
         setLayout(readLayout(), false);
       } else if (frames[id]) { const f = frames[id].firstChild; if (f.moving) { f.moving = false; point(f, `../${id}/`); } }

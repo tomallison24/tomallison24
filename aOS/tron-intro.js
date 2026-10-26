@@ -15,7 +15,6 @@
   const root = document.documentElement, KEY = 'aos.tron.intro', SHOWN = 'aos.tron.shown';
   const mode = () => { try { const m = localStorage.getItem(KEY); return m === 'silent' || m === 'off' ? m : 'sound'; } catch { return 'sound'; } };
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const T = s => (window.aosLang ? aosLang.t(s) : s);
 
   // ---- the sound ----
   let ctx = null;
@@ -87,8 +86,8 @@
     el.innerHTML = '<div class="ti-floor" aria-hidden="true"></div><div class="ti-road" aria-hidden="true"><div class="ti-trail"></div><div class="ti-cycle"></div></div>'
       + '<div class="ti-name" translate="no">aOS</div><div class="ti-line" aria-hidden="true"></div><div class="ti-hi"></div>'
       + '<button type="button" class="ti-skip"></button>';
-    el.querySelector('.ti-hi').textContent = T('Greetings, programs.');
-    el.querySelector('.ti-skip').textContent = T('Skip');
+    el.querySelector('.ti-hi').textContent = 'Greetings, programs.';
+    el.querySelector('.ti-skip').textContent = 'Skip';
     el.setAttribute('popover', 'manual');
     root.appendChild(el);   // on <html>, so it covers aOS from its very first paint (the body may not be there yet)
     try { el.showPopover(); } catch {}   // and in the top layer, over Account (a dialog) when it's played again from there

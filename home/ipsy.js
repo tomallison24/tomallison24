@@ -44,10 +44,10 @@
   const me = document.currentScript;
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
-  // Night Drive, Folk and Tron wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-folk, ipsy-grid on top of ipsy-vintage).
-  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|folk|grid)$/.test(l || '') ? l : 'glass'; };
+  // Night Drive and Tron wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-grid on top of ipsy-vintage).
+  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|grid)$/.test(l || '') ? l : 'glass'; };
   const followers = new Set();                       // elements that wear the page's look
-  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'folk', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'folk' || l === 'grid'))); };
+  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'grid'))); };
   const wear = (el, l) => dress(el, l || LOOK());
   const follow = el => { followers.add(el); wear(el); };
   for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => { followers.forEach(el => wear(el)); redrawAll(); });
@@ -55,14 +55,7 @@
   function redrawAll() { const h = helper(); cells.forEach(c => { if (!c.fixed && c.host.isConnected) drawChar(c, h ? h.who : c.peek); }); onHelper.forEach(fn => { try { fn(h); } catch {} }); }
   new MutationObserver(() => redrawAll()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-look'] });
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // The language a short message asks for ("English", "switch to English please", «на русский»), or null
-  const LANG_NAME = { en: 'English', ru: 'Русский' };
-  const BUILT_LABEL = { set_language: 'Changing the language', get_settings: 'Looking at your settings', change_setting: 'Changing a setting', open_setting: 'Opening Settings' };
-  const LANG_WORDS = /^(?:(?:please|pls|switch|change|set|go|back|to|the|language|lang|in|into|use|speak|i|want|need|can't|cant|read|this|it|пожалуйста|переключи|переключись|переключить|верни|вернуть|поменяй|смени|сделай|включи|язык|на|по|хочу)\s+)*(english|eng|russian|английский|англ|русский|рус)(?:\s+(?:please|language|pls|пожалуйста|язык))?$/;
-  const langAsked = s => {
-    const m = LANG_WORDS.exec(String(s || '').toLowerCase().replace(/[.!?,«»"]/g, ' ').replace(/\s+/g, ' ').trim());
-    return m ? (/^(english|eng|английский|англ)$/.test(m[1]) ? 'en' : 'ru') : null;
-  };
+  const BUILT_LABEL = { get_settings: 'Looking at your settings', change_setting: 'Changing a setting', open_setting: 'Opening Settings' };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);   // a key of the list itself, never 'constructor' or '__proto__'
   const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -85,7 +78,7 @@
   //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
   //   write (a notepad: create_*, set_*, update_*…), show (points: show_*), talk (the answer appearing),
   //   done (a hop: a change saved).
-  // Night Drive puts mirror shades on every helper, Folk a red neckerchief with white dots, Tron a lit visor.
+  // Night Drive puts mirror shades on every helper, Tron a lit visor.
   // ---------------------------------------------------------------------------
   const EGG = 'M100 56C134 56 152 80 152 114C152 150 130 168 100 168C70 168 48 150 48 114C48 80 66 56 100 56Z';
   const SPIKES = (() => {
@@ -176,7 +169,6 @@
       + '<g class="h-shades"><rect class="h-lens2" x="73" y="96" width="25" height="15" rx="6"/><rect class="h-lens2" x="102" y="96" width="25" height="15" rx="6"/><path class="h-sbridge" d="M98 101h4"/><path class="h-sglint" d="M78 107l7-8M107 107l7-8"/></g>'
       + (c.smile === false ? '' : (c.cheeks === false ? '' : '<ellipse class="h-cheek" cx="72" cy="122" rx="7" ry="4"/><ellipse class="h-cheek" cx="128" cy="122" rx="7" ry="4"/>') + '<path class="h-smile" d="M93 123Q100 130 107 123"/>')
       + '<ellipse class="h-mouth" cx="100" cy="127" rx="6" ry="5"/>'
-      + '<g class="h-scarf"><path class="h-kerchief" d="M68 136Q100 150 132 136L114 158Q100 166 86 158Z"/><g class="h-kdots"><circle cx="86" cy="146" r="2.4"/><circle cx="114" cy="146" r="2.4"/><circle cx="100" cy="156" r="2.4"/></g><circle class="h-knot" cx="100" cy="146" r="5"/></g>'
       + '<g class="h-prop h-book"><path class="h-cover" d="M' + (hb - 6) + ' 128h' + f1(2 * (100 - hb) + 12) + 'v32h-' + f1(2 * (100 - hb) + 12) + 'z"/>'
       + '<path class="h-page" d="' + pg(hb - 2) + '"/><path class="h-page" d="' + pg(f1(202 - hb)) + '"/>'
       + '<path class="h-pl" d="M' + (hb + 4) + ' 138h' + f1(92 - hb) + 'M' + (hb + 4) + ' 144h' + f1(88 - hb) + 'M' + (hb + 4) + ' 150h' + f1(92 - hb) + 'M106 138h' + f1(92 - hb) + 'M106 144h' + f1(86 - hb) + 'M106 150h' + f1(92 - hb) + '"/>'
@@ -199,10 +191,9 @@
   const HELPER_KEY = 'aos.helper';
   const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && own(HELPERS, h.who) ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
   // in Tron your helper is Ares (Tron: Ares's rider, as in Tesla's Tron mode), whatever its name in the other looks
-  const ARES = () => (window.aosLang && aosLang.get() === 'ru' ? 'Арес' : 'Ares');
-  const helperName = () => { if (LOOK() === 'grid') return ARES(); const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
-  // the chat's title: its name, or with none, what it is (Mia is Mia; in Russian, Ipsy)
-  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (ru => h.who === 'mia' ? (ru ? 'Мия' : 'Mia') : ru ? 'Ipsy' : HELPERS[h.who].label)(window.aosLang && aosLang.get() === 'ru'); };
+  const helperName = () => { if (LOOK() === 'grid') return 'Ares'; const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
+  // the chat's title: its name, or with none, what it is (Mia is Mia)
+  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (h.who === 'mia' ? 'Mia' : HELPERS[h.who].label); };
   function setHelper(who, name) {
     if (!own(HELPERS, who)) return;
     ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
@@ -213,7 +204,7 @@
     const h = helper();
     cells.forEach(c => { if (!c.fixed) { c.peeking = false; drawChar(c, h ? h.who : c.peek); } });
     onHelper.forEach(fn => { try { fn(h); } catch {} });
-    if (window.aosLang && aosLang.helper) aosLang.helper();   // the words on the page that say Ipsy say the new name (home/lang.js)
+    if (window.aosNames) aosNames.helper();   // the words on the page that say Ipsy say the new name (home/names.js)
   }
   addEventListener('storage', e => { if (e.key === HELPER_KEY) helperChanged(); });   // changed in another app or frame
 
@@ -395,8 +386,8 @@
 .h-specs{opacity:0;transform:translateY(-40px);transition:transform .55s cubic-bezier(.3,1.5,.5,1),opacity .2s}
 .h-lens{fill:#DCEBE9;stroke:#1F6F6B;stroke-width:4} .h-handle{stroke:var(--line);stroke-width:5;stroke-linecap:round}
 .h-bubble{fill:#FFFDF7;stroke:var(--line);stroke-width:2} .h-star{fill:#D8572A} .h-wave{fill:none;stroke:#1F6F6B;stroke-width:3;stroke-linecap:round}
-/* Night Drive: mirror shades (off while the glasses are on); Folk: a red neckerchief with white dots; Tron: a lit visor */
-.h-shades,.h-scarf,.h-visor{display:none}
+/* Night Drive: mirror shades (off while the glasses are on); Tron: a lit visor */
+.h-shades,.h-visor{display:none}
 .ipsy-grid .h-visor{display:inline}
 .ipsy-grid .h-lids{opacity:0}
 [data-mood="scan"] .h-visor,[data-mood="cross"] [data-who="robot"] .h-visor{display:none}
@@ -408,10 +399,8 @@
 .ipsy-neon .h-shades{display:inline}
 .h-lens2{fill:#120B1F;stroke:#FF3D9A;stroke-width:2.6} .h-sbridge{fill:none;stroke:#FF3D9A;stroke-width:2.6;stroke-linecap:round} .h-sglint{fill:none;stroke:#22D3EE;stroke-width:2.2;stroke-linecap:round;opacity:.9}
 .ipsy-neon .h-cheek{fill:#FF3D9A}
-.ipsy-folk .h-scarf{display:inline}
-.h-kerchief,.h-knot{fill:var(--fk-scarf,#C7261C)} .h-kdots circle{fill:var(--fk-dot,#F6E7C6)} .h-knot{stroke:var(--fk-dot,#F6E7C6);stroke-width:1.5}
 /* Tron's rider: a visor for a face (no eyes, brows, mouth or glasses); its props lit red; the Light Cycle only to cross */
-[data-who="rider"] :is(.h-eyes,.h-brow,.h-smile,.h-mouth,.h-cheek,.h-specs,.h-visor,.h-shades,.h-scarf,.h-mag){display:none}
+[data-who="rider"] :is(.h-eyes,.h-brow,.h-smile,.h-mouth,.h-cheek,.h-specs,.h-visor,.h-shades,.h-mag){display:none}
 .ipsy-grid [data-who="rider"],[data-who="rider"]{filter:drop-shadow(0 0 2px rgba(255,42,42,.55))}
 .h-rlit{filter:drop-shadow(0 0 2.5px #FF2A2A)}
 .h-rvisor{fill:#060607;stroke:#FF2A2A;stroke-width:1.8}
@@ -703,7 +692,7 @@
   // family's things, and Meals' "Never in a plan" (the family's allergies): for those, open_setting shows where.
   // ---------------------------------------------------------------------------
   const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
-  const LOOKS = ['vintage', 'glass', 'neon', 'folk', 'grid'];
+  const LOOKS = ['vintage', 'glass', 'neon', 'grid'];
   const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
   const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const CLOCK = 'allison-clock-v1', CAL = 'allison-calendar-v1-settings', POD = 'allison-podcasts-v1', ORD = 'allison-orders-v1';
@@ -721,30 +710,28 @@
     if (id === 'clock') inObj(CLOCK, ['set', 'design']).put(v); else ls.set('design.' + id, v);
     if (id === pageApp()) { if (window.aosDesign) aosDesign.set(v); else if (window.clockDesign) clockDesign.set(v); }
   }
-  const afterReply = [];   // what waits until Ipsy's answer has been read: the language, an app drawn again
+  const afterReply = [];   // what waits until Ipsy's answer has been read: an app drawn again
   const pageApp = () => (window.aosDesign && aosDesign.app) || (window.aosLook ? 'aos' : '');
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive, Folk or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, {
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', grid: 'grid' }, {
       get: () => ls.get('aos.look', 'vintage'),
       put: v => {   // every app, as aOS's own Look picker writes it (AllisonOS.welcome.data.APPS): Money and Sparkle too, not only the apps with settings here
         const all = (AOS.welcome && AOS.welcome.data && AOS.welcome.data.APPS) || SET_APPS;
         if (window.aosLook) return aosLook.set(v, { apps: all }); ls.set('aos.look', v); all.forEach(id => putLook(id, v)); } }) },
-    language: { app: '*', live: true, about: 'The language of aOS and every app (drawn again in it after your reply)', ...choice({ en: 'en', ru: 'ru' }, {
-      get: () => (window.aosLang ? aosLang.get() : 'en'), put: v => { for (let i = afterReply.length; i--;) if (afterReply[i].lang) afterReply.splice(i, 1); if (window.aosLang && v !== aosLang.get()) afterReply.push(Object.assign(() => aosLang.set(v), { lang: true })); } }) },
     favorites: { app: 'aos', about: 'The apps pinned in Favorites on aOS Home, up to 4, by id (' + SET_APPS.join(', ') + ')', values: ['a comma-separated list of up to 4 app ids'],
       ok: v => { const l = String(v).split(',').map(s => s.trim()).filter(Boolean); return l.length <= 4 && l.every(id => SET_APPS.includes(id)); },
       to: v => [...new Set(String(v).split(',').map(s => s.trim()).filter(Boolean))], from: s => (Array.isArray(s) ? s.join(',') : ''),
       get: () => jget('aos.home.picks', []), put: v => jset('aos.home.picks', v) },
     'calendar.week_start': { app: 'calendar', about: 'Calendar: the day weeks start on', ...choice({ sunday: 0, monday: 1 }, { get: inObj(CAL, ['weekStart'], 0).get, put: v => { inObj(CAL, ['weekStart']).put(v); inObj(CAL, ['weekStartPicked']).put(true); } }) },
-    'calendar.time': { app: 'calendar', about: 'Calendar: 12- or 24-hour times (auto: as the language)', ...choice({ auto: 'auto', '12': '12', '24': '24' }, inObj(CAL, ['clock'], 'auto')) },
+    'calendar.time': { app: 'calendar', about: 'Calendar: 12- or 24-hour times (auto: as the phone\'s region)', ...choice({ auto: 'auto', '12': '12', '24': '24' }, inObj(CAL, ['clock'], 'auto')) },
     'calendar.temperature': { app: 'calendar', about: 'Calendar: °F or °C on its weather', ...choice({ auto: 'auto', f: 'f', c: 'c' }, inObj(CAL, ['units'], 'auto')) },
     'calendar.day_view_opens_at': { app: 'calendar', about: 'Calendar: the hour Day view opens at (0-23)', ...range(0, 23, 1, inObj(CAL, ['dayStart'], 7)) },
     ...Object.fromEntries(['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather', 'meals', 'orders', 'news'].map(l => ['calendar.show_' + l, { app: 'calendar', about: 'Calendar: show the ' + l + ' calendar', ...onoff(inObj(CAL, ['layers', l], l !== 'drinks')) }])),
     'calendar.new_event_length': { app: 'calendar', ask: true, about: 'Calendar: how long a new event is, in minutes', ...choice({ '15': 15, '30': 30, '45': 45, '60': 60, '90': 90, '120': 120 }, inObj(CAL, ['duration'], 60)) },
     'calendar.new_event_alert': { app: 'calendar', ask: true, about: 'Calendar: the alert a new event gets', ...choice({ none: '', at_start: 'PT0M', '5_min': '-PT5M', '10_min': '-PT10M', '15_min': '-PT15M', '30_min': '-PT30M', '1_hour': '-PT1H', '2_hours': '-PT2H', '1_day': '-P1D' }, inObj(CAL, ['alertTimed'], '-PT15M')) },
-    'clock.24_hour': { app: 'clock', about: 'Clock: 24-hour time', ...onoff({ get: () => { const s = (jget(CLOCK, {}) || {}).set || {}; return s.h24Picked ? !!s.h24 : !!s.h24 || (window.aosLang && aosLang.get() === 'ru'); }, put: v => { inObj(CLOCK, ['set', 'h24']).put(v); inObj(CLOCK, ['set', 'h24Picked']).put(true); } }) },
+    'clock.24_hour': { app: 'clock', about: 'Clock: 24-hour time', ...onoff({ get: () => { const s = (jget(CLOCK, {}) || {}).set || {}; return !!s.h24; }, put: v => { inObj(CLOCK, ['set', 'h24']).put(v); inObj(CLOCK, ['set', 'h24Picked']).put(true); } }) },
     'clock.seconds': { app: 'clock', about: 'Clock: seconds on the Nightstand clock', ...onoff(inObj(CLOCK, ['set', 'secs'], false)) },
     'clock.face': { app: 'clock', about: 'Clock: the Nightstand clock face', ...choice({ digital: false, analog: true }, inObj(CLOCK, ['set', 'analog'], false)) },
     'weather.units': { app: 'weather', about: 'Weather (and Home\'s weather): °F, mph, in or °C, km/h, mm', ...choice({ us: 'us', metric: 'metric' }, { get: () => jget('wx.units', 'us'), put: v => jset('wx.units', v) }) },
@@ -763,7 +750,7 @@
       get: () => (helper() || {}).who || '', put: v => setHelper(v, (helper() || {}).name || '') }) },
     'helper.name': { app: '*', live: true, keepCase: true, about: 'Your helper\'s name (Ipsy until it has one, up to 16 letters)', values: ['a name, up to 16 letters'], ok: v => v.length >= 1 && v.length <= 16, to: v => v, from: v => v,
       get: () => (helper() || {}).name || '', put: v => setHelper((helper() || {}).who || 'mia', v) },
-    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', folk: 'folk', grid: 'grid' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
+    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', grid: 'grid' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
   };
   // where a setting is: each app's Settings (the button that opens it), and aOS's Account sections
   const OPENER = { calendar: '#setBtn', clock: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', house: '#gear', mail: '#gear', meals: '#setBtn', news: '#setBtn', notes: '#setBtn', orders: '#setBtn', places: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', weather: '[data-action="location"]' };
@@ -821,19 +808,7 @@
     // the app's tools, for Ipsy in aOS: aOS opens the app out of sight and runs them there (aOS/home-tab.js)
     AOS.ipsy.mounted = { app: o.app, name: o.name, tools: o.tools || {}, label: o.label, context: o.context };
     const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok', hist: 'ipsy.' + o.app + '.history', closed: 'ipsy.' + o.app + '.closed' };
-    // Built in, in every app and in aOS: the language (../home/lang.js), for someone who switched to one they can't
-    // read. Claude's set_language tool (server/ipsy.js LANG_TOOL) or just typing "English" / «Русский» (no question
-    // used up, and before Ipsy is set up): aOS and every app are drawn again in it once Ipsy has answered.
-    let langTo = null;
     const BUILT_IN = {
-      set_language: async ({ lang } = {}) => {
-        if (!window.aosLang) return { error: true, content: 'There is no language setting here.' };
-        if (!LANG_NAME[lang]) return { error: true, content: 'lang must be "en" or "ru".' };
-        if (lang === aosLang.get()) return { content: 'aOS is already in ' + (lang === 'ru' ? 'Russian.' : 'English.') };
-        langTo = lang;
-        return { content: 'Done: aOS and every app switch to ' + (lang === 'ru' ? 'Russian' : 'English') + ' as soon as your reply is shown. Reply in that language, in a line.',
-          change: { text: LANG_NAME[lang], undo: () => { langTo = null; } } };
-      },
       ...settingsTools(o, () => close()),   // the settings Ipsy may change or show (above)
     };
     let messages = [], view = [], busy = false, undos = new Map();
@@ -871,7 +846,7 @@
     const say = s => { status.textContent = s || sub; };
     // what the status line says while your helper does each job ("Mia is reading…")
     const DOING = { think: 'is thinking…', read: 'is reading…', scan: 'is searching…', write: 'is writing…', show: 'is showing you', done: 'is done' };
-    const doing = job => 'Ipsy ' + (DOING[job] || DOING.think);   // home/lang.js says your helper's name in place of Ipsy, here and below
+    const doing = job => 'Ipsy ' + (DOING[job] || DOING.think);   // home/names.js says your helper's name in place of Ipsy, here and below
     const named = () => { $('ipsyNm').textContent = title(); btn.setAttribute('aria-label', 'Ask Ipsy'); input.placeholder = o.placeholder || 'Ask Ipsy'; };
     named();
     onHelper.add(() => { named(); if (!wrap.hidden && !busy) draw(); });
@@ -1131,22 +1106,13 @@
 
     async function submit() {
       const text = input.value.trim();
-      const want = langAsked(text);
-      if (want && !busy && window.aosLang) {   // "English", «Русский», "switch to English": at once, with no question to Claude
-        input.value = ''; input.style.height = '';
-        add({ t: 'me', text });
-        if (want === aosLang.get()) add({ t: 'it', text: want === 'ru' ? 'aOS уже на русском.' : 'aOS is already in English.' });
-        else { add({ t: 'it', text: want === 'ru' ? 'Переключаю aOS на русский…' : 'Switching aOS to English…' }); persist(); setTimeout(() => aosLang.set(want), 900); }
-        persist(); return;
-      }
       if (!text || busy || !ls.get(K.ok, '')) return;
       input.value = ''; input.style.height = '';
       busy = true; sendBtn.disabled = true;
       const mark = messages.length;          // where this question starts, to go back to if it fails
       let ctx = ''; try { ctx = o.context ? o.context() : ''; } catch {}
-      const ru = window.aosLang && aosLang.get() === 'ru' ? ' The person has aOS in Russian: answer in Russian.' : '';   // ../home/lang.js
       const me = helper(), tron = LOOK() === 'grid', who = tron ? ' You are this person’s helper, named Ares, drawn as ' + HELPERS.rider.kind + '.' : me ? ' You are this person’s helper, ' + (me.name.trim() ? 'named ' + me.name.trim() + ', ' : '') + 'drawn as ' + HELPERS[me.who].kind + '.' : '';
-      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ru + who + ']' }, { type: 'text', text }] });
+      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + who + ']' }, { type: 'text', text }] });
       add({ t: 'me', text });
       let failed = null;
       try {
@@ -1188,7 +1154,6 @@
         if (code === 'full') { /* nothing more to say */ }
       }
       busy = false; persist(); mood(document.activeElement === input ? 'listen' : 'idle'); say(''); draw();
-      if (langTo) { const l = langTo; langTo = null; afterReply.push(() => aosLang.set(l)); }
       if (afterReply.length) { const run = afterReply.splice(0); setTimeout(() => run.forEach(f => f()), 1600); }   // after the answer has been read
     }
 
@@ -1296,5 +1261,5 @@
 
   // helper(): { who, name } or null; helpers: [{ id, kind }]; picker(host): pick and name it (aOS Account); cross(slot, d): across aOS Home's bar
   AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label })), name: helperName,
-    look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'folk' | 'grid'
+    look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'grid'
 })();

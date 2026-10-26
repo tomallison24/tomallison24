@@ -255,10 +255,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur || 'USD' }).format(n); } catch { return '$' + Number(n).toFixed(2); }
   };
   const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
-  // In Russian (../home/lang.js) what came from a store or an email (stores, items, tracking numbers, notes) stays
-  // as written: translate="no" (raw); tr gives a placeholder the page can't translate by itself (a textarea's).
+  // What came from a store or an email (stores, items, tracking numbers, notes) stays as written: translate="no" (raw).
   const raw = s => '<span translate="no">' + esc(s) + '</span>';
-  const tr = s => window.aosLang ? aosLang.t(s) : s;
 
   // ---------------------------------------------------------------------
   // What an order is, for the screens
@@ -478,7 +476,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function card(o, i) {
     const ret = hasRet(o), s = ret ? retState(o) : stateOf(o), warn = !ret && needsCheck(o);
     return '<button class="ocard' + (isOpen(o) ? '' : ' done') + '" type="button" data-o="' + esc(o.id) + '" style="--i:' + i + '">'
-      + '<div class="otop">' + mono(o) + '<div class="omid"><div class="ostore"' + (o.store ? ' translate="no"' : '') + '>' + esc(o.store || 'Order') + (o.private ? '<span class="olock" title="' + esc(tr('Private: hidden from Ipsy')) + '">' + I.lock + '</span>' : '') + '</div><div class="owhat">' + whatHtml(o) + '</div></div>'
+      + '<div class="otop">' + mono(o) + '<div class="omid"><div class="ostore"' + (o.store ? ' translate="no"' : '') + '>' + esc(o.store || 'Order') + (o.private ? '<span class="olock" title="' + esc('Private: hidden from Ipsy') + '">' + I.lock + '</span>' : '') + '</div><div class="owhat">' + whatHtml(o) + '</div></div>'
       + (o.total != null ? '<span class="oprice">' + esc(money(o.total, o.cur)) + '</span>' : '') + '</div>'
       + '<div class="ostate"><b class="' + (warn ? 's-warn' : s.cls) + '">' + esc(warn ? 'Check details' : s.label) + '</b><span class="when">' + esc(s.when) + '</span></div>'
       + (ret ? retBar(o) + retRow(o) : stepBar(o) + carrierRow(o)) + '</button>';
@@ -728,9 +726,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (notesBusy || !isDay(r.by)) return;
     if (!SN) { toast(NOTES_SAY.signin); return; }
     const date = daysFrom(todayStr(), r.by) <= 1 ? todayStr() : P.addDays(r.by, -1);
-    const notes = [o.store, r.rma ? tr('Return number') + ' ' + r.rma : '', r.where ? tr('Drop off at') + ' ' + r.where : '', tr('Drop off by') + ' ' + fmtDay(r.by)].filter(Boolean).join('\n');
+    const notes = [o.store, r.rma ? 'Return number ' + r.rma : '', r.where ? 'Drop off at ' + r.where : '', 'Drop off by ' + fmtDay(r.by)].filter(Boolean).join('\n');
     notesBusy = true; renderOrder();
-    const res = await SN.addTodos({ list: 'Home', items: [{ key: 'orders:return:' + o.id, title: tr('Drop off the ' + (o.store || 'order') + ' return'), date, notes }] });
+    const res = await SN.addTodos({ list: 'Home', items: [{ key: 'orders:return:' + o.id, title: ('Drop off the ' + (o.store || 'order') + ' return'), date, notes }] });
     notesBusy = false; if (st.order === o) renderOrder();
     if (!res.ok) { toast(NOTES_SAY[res.why] || 'Couldn’t reach the Notes Sheet. Try again later.', null, 6000); return; }
     toast(res.added ? 'Reminder set in Notes for ' + dayWord(date) + '.' : 'It’s in Notes already.', null, 5000);
@@ -996,14 +994,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!statuses.includes(o.status)) statuses.push(o.status);
     let h = '<div class="box glass"><div class="kv">' + FIELDS.map(([k, label, ph, type, wide]) => {
       let ctl;
-      if (type === 'textarea') ctl = '<textarea id="ef_' + k + '" data-k="' + k + '" placeholder="' + esc(tr(ph)) + '" style="min-height:84px">' + esc(itemsText(o.items)) + '</textarea>';
+      if (type === 'textarea') ctl = '<textarea id="ef_' + k + '" data-k="' + k + '" placeholder="' + esc(ph) + '" style="min-height:84px">' + esc(itemsText(o.items)) + '</textarea>';
       else if (k === 'carrier') ctl = '<select id="ef_carrier" data-k="carrier"><option value=""></option>' + CARRIERS.concat(o.carrier && !CARRIERS.includes(o.carrier) ? [o.carrier] : []).map(c => '<option' + (o.carrier === c ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>';
       else if (k === 'status') ctl = '<select id="ef_status" data-k="status">' + statuses.map(s => '<option value="' + s + '"' + (o.status === s ? ' selected' : '') + '>' + esc(P.STATUS_NAMES[s] || s) + '</option>').join('') + '</select>';
       else if (k === 'kind') ctl = '<select id="ef_kind" data-k="kind">' + KIND_ROWS.map(([v, t]) => '<option value="' + v + '"' + ((o.kind || 'package') === v ? ' selected' : '') + '>' + esc(t) + '</option>').join('') + '</select>';
       else if (k === 'pickupBy' && o.kind !== 'pickup') return '';
       else ctl = '<input id="ef_' + k + '" data-k="' + k + '" type="' + (type === 'number' ? 'text' : type) + '"' + (type === 'number' ? ' inputmode="decimal"' : '') + ' value="' + esc(k === 'total' ? (o.total != null ? o.total : '') : o[k] || '') + '" placeholder="' + esc(ph) + '" autocomplete="off">';
       return '<div class="f' + (wide ? ' w' : '') + '"><label for="ef_' + k + '">' + esc(label) + '</label>' + ctl + '</div>';
-    }).join('') + '<div class="f w"><label for="ef_notes">Notes</label><textarea id="ef_notes" data-k="notes" placeholder="' + esc(tr('Anything to remember')) + '">' + esc(o.notes || '') + '</textarea></div></div></div>';
+    }).join('') + '<div class="f w"><label for="ef_notes">Notes</label><textarea id="ef_notes" data-k="notes" placeholder="' + esc('Anything to remember') + '">' + esc(o.notes || '') + '</textarea></div></div></div>';
     if (o.ret && o.ret.status) {
       const r = o.ret, val = k => k === 'refund' ? (r.refund != null ? r.refund : '') : r[k] || '';
       h += '<p class="sechead"><span>Return</span></p><div class="box glass"><div class="kv">'
@@ -1092,7 +1090,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (r.orders.length === 1) { const o = orders.find(x => x.id === r.orders[0].id) || orders[orders.length - 1]; if (o) openOrder(o.id); }
   }
   $('pasteBtn').onclick = pasteIn;
-  $('psText').placeholder = tr($('psText').placeholder);
   $('psAdd').onclick = () => { const t = $('psText').value; if (!t.trim()) return; closeSheet('pasteSheet'); readPasted(t); };
 
   let revive = new Set();   // ids "Read the last year again" cleared, which may come back

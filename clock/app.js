@@ -107,7 +107,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     S.sw.laps = Array.isArray(S.sw.laps) ? S.sw.laps.filter(n => typeof n === 'number' && n >= 0) : [];
     S.sw.acc = +S.sw.acc || 0; S.sw.t0 = +S.sw.t0 || 0; S.sw.run = !!S.sw.run && S.sw.t0 > 0;
     if (S.sw.face !== 'analog') S.sw.face = 'digital';
-    if (!['glass', 'neon', 'folk', 'grid'].includes(S.set.design)) S.set.design = 'vintage';
+    if (!['glass', 'neon', 'grid'].includes(S.set.design)) S.set.design = 'vintage';
     const hm = S.set.home;   // the main clock's city: null is this phone's own time zone
     S.set.home = hm && typeof hm.name === 'string' && L.validZone(hm.tz) ? { name: hm.name.slice(0, 60), where: String(hm.where || '').slice(0, 60), tz: hm.tz } : null;
     ['h', 'm', 's'].forEach(k => { const v = Math.floor(+S.pick[k] || 0); S.pick[k] = Math.max(0, Math.min(k === 'h' ? 23 : 59, v)); });
@@ -118,9 +118,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function save() {
     if (!ls.set(KEY, JSON.stringify(S)) && !warned) { warned = true; toast('This phone couldn’t save Clock: its storage is full.'); }
   }
-  // 24-hour time: as picked in Settings; until it's picked (h24Picked), Russian is 24-hour (../home/lang.js), English 12
-  const russian = () => !!(window.aosLang && aosLang.get() === 'ru');
-  const h24 = () => S.set.h24Picked ? !!S.set.h24 : (!!S.set.h24 || russian());
+  // 24-hour time: as picked in Settings
+  const h24 = () => !!S.set.h24;
   const hereZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } };
   const timeHTML = (h, m, secs) => { const c = L.clockText(h, m, h24(), secs); return esc(c.time) + (c.ap ? '<span>' + c.ap + '</span>' : ''); };
   const atLine = t => { const d = new Date(t); return L.clockLine(d.getHours(), d.getMinutes(), h24()); };
@@ -820,7 +819,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('setAnalog').setAttribute('aria-checked', String(!!S.set.analog));
   }
   $('setBtn').addEventListener('click', () => { paintSettings(); openSheet('setSheet'); });
-  // Design: Vintage, Standard, Night Drive, Folk or Tron, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
+  // Design: Vintage, Standard, Night Drive or Tron, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
   $('setDesign').addEventListener('click', e => {
     const b = e.target.closest('[data-design]'); if (!b || b.dataset.design === S.set.design) return;
     S.set.design = b.dataset.design; save();

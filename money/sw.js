@@ -2,8 +2,8 @@
 // a new deploy shows up on the next open and the cache is only the fallback.
 // What Money read never passes through here: it lives in this phone's storage,
 // and the calls to aOS (../money/api/) and Gmail are left alone.
-const CACHE = 'money-v1';
-const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'calc.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js', '../home/lang.js', '../home/lang/ru/shared.js', '../home/lang/ru/money.js'];
+const CACHE = 'money-v2';
+const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'calc.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/ipsy.js', 'ipsy-tools.js', '../home/names.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

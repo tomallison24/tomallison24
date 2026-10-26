@@ -5,10 +5,9 @@
   const W = AllisonOS.welcome, D = W.data, ACC = AllisonOS.account, $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const pick = (o, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);   // a message of the list itself, never 'constructor'
-  const tx = s => (window.aosLang ? aosLang.t(s) : s);   // a text the page doesn't show as text (a confirm), or one whose words move around its <b>, in Russian (../home/lang.js)
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   // Every app carries both its designs itself (picked in its own Settings, ../home/design.js), so its folder has
-  // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-neon-512.png, icon-folk-512.png, icon-grid-512.png. aOS shows
+  // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-neon-512.png, icon-grid-512.png. aOS shows
   // the one for its own look. The app's own icon (what a Home Screen shows) follows the design picked in the app.
   const lookNow = () => (window.aosLook ? aosLook.get() : 'vintage');
   const icon = id => `../${id}/icon-${lookNow() === 'vintage' ? '' : lookNow() + '-'}512.png`;
@@ -19,9 +18,8 @@
   const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42', sparkle: '194,87,127', money: '47,93,98' };   // each mid-century icon's colour
   const NEON_HUE = { notes: '86,73,110', podcasts: '145,63,113', places: '29,142,174', meals: '146,42,94', news: '135,109,217', fitness: '51,35,76', travel: '51,35,76', drinks: '135,109,217', weather: '135,109,217', calendar: '101,98,159', mail: '34,113,137', house: '251,162,74', orders: '223,56,142', sparkle: '205,72,136', money: '52,97,113' };   // the same, in Night Drive (aOS/scripts/looks.mjs)
   const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33', money: '120,58,54' };   // and in Tron
-  const FOLK_HUE = { notes: '63,76,106', podcasts: '155,61,73', places: '48,87,207', meals: '142,43,34', news: '97,140,71', fitness: '32,46,83', travel: '32,46,83', drinks: '97,140,71', weather: '97,140,71', calendar: '70,95,157', mail: '42,69,144', house: '219,156,34', orders: '221,62,49', sparkle: '202,74,61', money: '41,60,109' };   // and in Folk
   // the glow behind an app: its icon's tint, for aOS's look
-  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => ({ glass: o, neon: NEON_HUE, folk: FOLK_HUE, grid: GRID_HUE }[lookNow()] || VINTAGE_HUE)[id] || o[id] });
+  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => ({ glass: o, neon: NEON_HUE, grid: GRID_HUE }[lookNow()] || VINTAGE_HUE)[id] || o[id] });
   const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games', money: 'Finance' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals', 'money'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
@@ -306,8 +304,8 @@
     if ((b = ev.target.closest('[data-plan-stop]'))) return setPlan(b, { cancel: true });
     if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
   }
-  // Look: Vintage (mid-century, the default), Sea glass, Night Drive, Folk or Tron, kept on this phone (look.js); every app takes it too
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['folk', 'Folk', 'Gzhel by day, Khokhloma by night'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
+  // Look: Vintage (mid-century, the default), Sea glass, Night Drive or Tron, kept on this phone (look.js); every app takes it too
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
   const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${id === 'grid' ? 'Tron <span class="se">Special Edition</span>' : esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
   // a link to Updates or Subscription (a notification, the plan card) opens that one
@@ -316,16 +314,13 @@
     <div class="fbody" id="${id}" hidden>${body}</div>`;
   const unfold = (b, on) => { if (!b) return; on = on == null ? b.getAttribute('aria-expanded') !== 'true' : on; b.setAttribute('aria-expanded', String(on)); const x = $(b.getAttribute('aria-controls')); if (x) x.hidden = !on; };
   const THEME_NAME = t => (W.theme.list.find(([v]) => v === t) || [, 'Automatic'])[1];
-  // Language: English or Russian, for aOS and every app (../home/lang.js); each named in its own language, so it can always be found
-  const LANGS = window.aosLang ? aosLang.list : [['en', 'English']];
-  const langNow = () => (window.aosLang ? aosLang.get() : 'en');
   // Tron's intro as aOS opens (tron-intro.js): with its sound, silent, or off
   // Home's layout (aOS/home-tab.js): Classic, or Thumb arc for the right hand or the left
   const HOME_LAYOUTS = [['classic', 'Classic'], ['arc', 'Thumb arc'], ['arc-left', 'Left-handed arc']];
   const homeLayout = () => (window.aosHomeTab && aosHomeTab.layout ? aosHomeTab.layout() : 'classic');
   const TRON_INTRO = [['sound', 'Sound'], ['silent', 'Silent'], ['off', 'Off']];
   const tronIntro = () => { try { const m = localStorage.getItem('aos.tron.intro'); return m === 'silent' || m === 'off' ? m : 'sound'; } catch { return 'sound'; } };
-  const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
+  const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
   const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
   function acctPage(at) {
@@ -335,8 +330,6 @@
       <div class="group acct"><button type="button" class="soft runsetup" data-setup>Run through setup</button></div>
       <div class="group acct">
         ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p><p class="lnote tronnote">Tron intro, as aOS opens</p><div class="seg tronnote" id="tronIntroPick" role="group" aria-label="Tron intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-ti="${m}" aria-pressed="${m === tronIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft tronnote" data-tiplay>Play the intro</button>
-          <p class="lnote">Language</p>
-          <div class="seg" id="lang" translate="no">${LANGS.map(([l, n]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${n}</button>`).join('')}</div>
           <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>
           <p class="lnote">Home layout</p>
           <div class="seg" id="homeLayout">${HOME_LAYOUTS.map(([v, n]) => `<button type="button" data-hl="${v}" aria-pressed="${v === homeLayout()}">${n}</button>`).join('')}</div>
@@ -357,7 +350,6 @@
       if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS }))
         .then(() => { el.querySelector('#looks').innerHTML = lookOpts(); $('lookSub').textContent = looksLine(); });
       if (t) $('lookSub').textContent = looksLine();
-      const lg = ev.target.closest('[data-lang]'); if (lg && window.aosLang) aosLang.set(lg.dataset.lang);   // aOS and every open app are drawn again in it
       if (ev.target.closest('[data-replay]')) W.play();
       if (ev.target.closest('[data-setup]')) setupPage(0);
       onPlanTap(ev);
@@ -372,10 +364,9 @@
     return el;
   }
 
-  // Run through setup: your own settings, one at a time: language, look, light or dark, your helper and its name.
-  // Each is saved as you pick it (and follows you to your other devices, aOS/prefs-sync.js). Picking a language
-  // draws aOS again in it, so the walk-through carries on from the next step after (sessionStorage aos.setup).
-  const STEPS = ['lang', 'look', 'theme', 'helper', 'done'];
+  // Run through setup: your own settings, one at a time: look, light or dark, your helper and its name.
+  // Each is saved as you pick it (and follows you to your other devices, aOS/prefs-sync.js).
+  const STEPS = ['look', 'theme', 'helper', 'done'];
   function setupPage(at) {
     at = Math.max(0, Math.min(STEPS.length - 1, at | 0));
     const el = page('<h1 class="ptitle">Set up aOS</h1><div class="group acct setup" id="setupBox"></div>', { up: true });
@@ -386,8 +377,6 @@
       const dots = `<div class="sdots" aria-hidden="true">${STEPS.slice(0, n).map((_, i) => `<i class="${i < at ? 'did' : i === at ? 'on' : ''}"></i>`).join('')}</div>`;
       const head = (q, sub) => `${k === 'done' ? '' : dots}<p class="sstep">${k === 'done' ? 'All set' : `Step ${at + 1} of ${n}`}</p><h2 class="sq">${q}</h2>${sub ? `<p class="note">${sub}</p>` : ''}`;
       let body = '';
-      if (k === 'lang') body = head('Which language?', 'For aOS and every app. What the family wrote stays as it is.')
-        + `<div class="seg" id="sLang" translate="no">${LANGS.map(([l, nm]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${nm}</button>`).join('')}</div>`;
       if (k === 'look') body = head('Pick a look', 'Every app wears it. An app\'s own Settings can still have its own.') + `<div class="dlist" role="listbox" aria-label="Look">${lookOpts()}</div>`;
       if (k === 'theme') body = head('Light or dark?', 'Automatic follows your phone.') + `<div class="seg" id="sTheme">${W.theme.list.map(([t, nm]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${nm}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p>`;
       if (k === 'helper') body = head('Who’s your helper?', 'Ipsy, the helper you chat with in aOS and the apps. Pick one and give it a name.') + '<div id="sHelper"></div>';
@@ -397,8 +386,6 @@
       const b = box.querySelector('[aria-pressed="true"], [aria-selected="true"], .ipsy-whobtn'); if (b && b.focus) b.focus({ preventScroll: true });
     }
     box.addEventListener('click', ev => {
-      const lg = ev.target.closest('[data-lang]');
-      if (lg && window.aosLang && lg.dataset.lang !== langNow()) { try { sessionStorage.setItem('aos.setup', String(at + 1)); } catch {} aosLang.set(lg.dataset.lang); return; }   // aOS is drawn again in it: on from the next step
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); box.querySelectorAll('[data-t]').forEach(x => x.setAttribute('aria-pressed', String(x === t))); }
       const lk = ev.target.closest('[data-look]');
       if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS })).then(() => { const l = box.querySelector('.dlist'); if (l) l.innerHTML = lookOpts(); });
@@ -408,7 +395,6 @@
     draw();
     return el;
   }
-  try { const s = sessionStorage.getItem('aos.setup'); if (s != null) { sessionStorage.removeItem('aos.setup'); setTimeout(() => setupPage(+s), 700); } } catch {}   // after a language was picked
 
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -439,7 +425,7 @@
     const el = page(`<h1 class="ptitle">Lost a phone?</h1>
       <div class="glbl">1. First: Find My</div>
       <div class="group acct lost"><div><ol>
-        <li>${tx('Open <b>Find My</b> on another Apple device, or go to <b>icloud.com/find</b>.')}</li>
+        <li>Open <b>Find My</b> on another Apple device, or go to <b>icloud.com/find</b>.</li>
         <li>Choose the lost iPhone, then <b>Mark As Lost</b> to lock it.</li>
         <li>If it's gone for good, choose <b>Erase This Device</b>.</li></ol></div></div>
       <div class="glbl">2. Erase aOS from your other devices</div>
@@ -447,7 +433,7 @@
         <li>Back up first: open each app, online, on a phone you still have.</li>
         <li>Here in aOS, tap <b>Sign out and erase my other devices</b>.</li>
         <li>Each of your aOS apps elsewhere erases itself when it next opens online.</li>
-        <li>${tx('On <b>this</b> phone, open each other aOS app and sign in again.')}</li></ol>
+        <li>On <b>this</b> phone, open each other aOS app and sign in again.</li></ol>
         ${u ? `<button type="button" class="soft danger" id="lEraseOthers">Sign out and erase my other devices</button><div class="err" id="lErr"></div>` : `<p>Sign in to aOS first.</p>`}</div></div>
       <div class="glbl">3. Lost your only phone?</div>
       <div class="group acct lost"><div><ol>
@@ -463,7 +449,7 @@
     const lErr = el.querySelector('#lErr');
     if (el.querySelector('#lEraseOthers')) el.querySelector('#lEraseOthers').onclick = async e => {
       const b = e.currentTarget;
-      if (!confirm(tx('Sign out and erase every other device, and the other aOS apps on this phone?'))) return;
+      if (!confirm('Sign out and erase every other device, and the other aOS apps on this phone?')) return;
       busy(b, true); lErr.textContent = ''; lErr.style.color = '';
       try { await ACC.signOutOthers(true);
         lErr.style.color = 'var(--muted)'; lErr.textContent = 'Done: each erases itself when it next opens online.'; }
@@ -471,7 +457,7 @@
       busy(b, false);
     };
     el.querySelector('#lEraseHere').onclick = () => {
-      if (!confirm(tx('Sign out and erase what aOS keeps on this phone?'))) return;
+      if (!confirm('Sign out and erase what aOS keeps on this phone?')) return;
       AllisonOS.erase();
     };
     if (u && u.role === 'owner') paintLostFamily(el.querySelector('#lFam'));
@@ -483,7 +469,7 @@
     box.onclick = async e => {
       const b = e.target.closest('[data-erase]'); if (!b) return;
       const name = b.parentElement.querySelector('span').textContent;
-      if (!confirm(tx(`Sign out and erase every aOS app on ${name}'s devices (their account stays)?`))) return;
+      if (!confirm(`Sign out and erase every aOS app on ${name}'s devices (their account stays)?`)) return;
       busy(b, true);
       try { await ACC.call('erase', { id: b.dataset.erase }); b.textContent = 'Erased'; } catch (x) { b.textContent = why(x); busy(b, false); }
     };
@@ -506,11 +492,10 @@
       <circle cx="42.5" cy="22" r="6.2" opacity=".9"/><path d="M31 46c0-7.4 5.2-12.6 11.5-12.6S54 38.6 54 46z" opacity=".9"/></g>
       <g fill="#fff" stroke="#9FB0C9" stroke-width="1.2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
       <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
-  // Night Drive, Folk and Tron: the mid-century one, repainted (aOS/scripts/looks.mjs)
+  // Night Drive and Tron: the mid-century one, repainted (aOS/scripts/looks.mjs)
   const FAMILY_PAINT = {
     neon: { '#1F6F6B': '#227189', '#A9D3C7': '#AAD7E7', '#B9C6E0': '#C8C2D6', '#D8572A': '#DF388E', '#E3A72F': '#FBA24A', '#E3C5C3': '#D1CBDD', '#E9D6B4': '#FAD8BB', '#FBF5E9': '#FBF9FF' },
     grid: { '#1F6F6B': '#973835', '#A9D3C7': '#F2AEA8', '#B9C6E0': '#C4C7CA', '#D8572A': '#E41F24', '#E3A72F': '#FB6049', '#E3C5C3': '#CDD0D3', '#E9D6B4': '#E9AEA3', '#FBF5E9': '#FAFCFE' },
-    folk: { '#1F6F6B': '#2A4590', '#A9D3C7': '#97AEE3', '#B9C6E0': '#C1C5CF', '#D8572A': '#DD3E31', '#E3A72F': '#DB9C22', '#E3C5C3': '#CBCFD8', '#E9D6B4': '#E1CBAB', '#FBF5E9': '#FBFCFF' },
   };
   const familyIcon = () => { const l = aosLook.get(); return l === 'glass' ? FAMILY_ICON_GLASS : FAMILY_PAINT[l] ? FAMILY_ICON_VINTAGE.replace(/#[0-9A-F]{6}/g, c => FAMILY_PAINT[l][c] || c) : FAMILY_ICON_VINTAGE; };
   addEventListener('aos:look', () => {   // the picker: the family icon and every app's icon follow the look
@@ -524,7 +509,7 @@
     const hello = u ? `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${esc(u.name.split(/\s+/)[0])}` : 'Welcome home';
     if (u && !members) { try { members = (await ACC.call('members')).members; } catch { members = null; } }
     if (!u) members = null;
-    const famT = tx('The {family} Family').split('{family}');   // in Russian the words go round the name the other way
+    const famT = 'The {family} Family'.split('{family}');
     $('famhero').innerHTML = `<div class="famhero">${familyIcon()}<div class="ftxt"><small>${hello}</small><h2>${esc(famT[0])}<span class="ink">${FAMILY}</span>${esc(famT[1])}</h2></div>
       ${members && members.length ? `<div class="fwho">${members.map(m => `<span translate="no"><i>${esc(m.name[0].toUpperCase())}</i>${esc(m.name.split(/\s+/)[0])}</span>`).join('')}</div>` : ''}</div>`;
   }
@@ -588,7 +573,7 @@
       <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
       <button type="button" class="soft" data-lost>Erase a lost phone, step by step</button>`));
     $('aOthers').onclick = async () => {
-      if (!confirm(tx('Sign out everywhere else, including the other apps on this phone?'))) return;
+      if (!confirm('Sign out everywhere else, including the other apps on this phone?')) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
       try { await ACC.signOutOthers(); m.style.color = 'var(--muted)'; m.textContent = 'Done: everywhere else is signed out.'; }
       catch (e) { m.textContent = why(e); }
@@ -788,7 +773,7 @@
       const title = $('nTitle').value.trim(), body = $('nBody').value.trim();
       if (!title) { m.textContent = 'Give it a title.'; return; }
       if (!audience.length) { m.textContent = 'No one has notifications on yet.'; return; }
-      if (!confirm(tx(`Send "${title}" to ${audience.length} ${audience.length === 1 ? 'person' : 'people'}?`))) return;
+      if (!confirm(`Send "${title}" to ${audience.length} ${audience.length === 1 ? 'person' : 'people'}?`)) return;
       busy($('nGo'), true);
       let sent = 0, failed = 0;
       try {
@@ -856,7 +841,7 @@
     $('fam').onclick = async e => {
       const b = e.target.closest('[data-rm]'); if (!b) return;
       const name = b.parentElement.querySelector('span').firstChild.textContent;
-      if (!confirm(tx(`Remove ${name} from the family? They're signed out of every app, and their account and everything aOS keeps for them is deleted. This can't be undone.`))) return;
+      if (!confirm(`Remove ${name} from the family? They're signed out of every app, and their account and everything aOS keeps for them is deleted. This can't be undone.`)) return;
       try { await ACC.call('remove', { id: b.dataset.rm }); } catch {}
       paintFamily();
     };

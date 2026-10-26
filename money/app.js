@@ -534,7 +534,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!input.categories.length) { if (loud) toast('Nothing spent in the last year to look at.'); return; }
     st.ideasBusy = true; if (loud) busyPill('Ipsy is looking');
     try {
-      const r = await api('ideas', Object.assign(input, { lang: window.aosLang && aosLang.get() === 'ru' ? 'ru' : 'en' }), loud), n = (r.ideas || []).length;
+      const r = await api('ideas', input, loud), n = (r.ideas || []).length;
       changeSettings(s => { s.ideas = { at: Date.now(), ym: curYm(), list: r.ideas || [], no: (s.ideas && s.ideas.no) || [] }; });
       if (loud) { pillDone(n ? plural(n, 'idea') : 'No ideas'); toast(n ? 'Ipsy’s ideas are on This month.' : 'No ideas this time: your categories look clear.', null, 5000); }
     } catch (err) {

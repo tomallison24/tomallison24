@@ -72,7 +72,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
    account's prefs when local storage has none.
 2. **"See in Calendar" from a day.** Calendar links to `../drinks/?date=`; the day
    sheet could link back to `../calendar/?date=YYYY-MM-DD&view=day` (Calendar accepts it
-   already). New words, so Russian too.
+   already).
 3. After a successful sign-in, call `renderMore()` so the account row shows "Syncing…"
    at once.
 4. Code health: the IndexedDB "keep" hand-over helper (17 lines) is identical in Drinks

@@ -71,13 +71,13 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
-**Every app has five designs**, as one app: **Vintage** (mid-century modern in the Retro
-colours, the default), **Standard** (Sea glass), **Night Drive**, **Folk** and **Tron**, picked in aOS for
+**Every app has four designs**, as one app: **Vintage** (mid-century modern in the Retro
+colours, the default), **Standard** (Sea glass), **Night Drive** and **Tron**, picked in aOS for
 every app at once or in the app's own **Settings → Design** (Meals, `meals/`, is the pattern; Clock
-started it with its own `clock/design.js`). You write two of them: Night Drive, Folk and Tron are
+started it with its own `clock/design.js`). You write two of them: Night Drive and Tron are
 generated from Vintage by `node aOS/scripts/make-looks.mjs` (their `<style id="neon">`,
-`<style id="folk">` and `<style id="grid">` blocks after the Vintage one, and `icon-neon*` / `icon-folk*` /
-`icon-grid*` from `icon.svg`):
+and `<style id="grid">` blocks after the Vintage one, and `icon-neon*` / `icon-grid*` from
+`icon.svg`):
 - The Sea glass styles are the page's main `<style>`; the Vintage look is a second
   `<style id="vintage">` right after it (cream and walnut, mustard, teal, burnt orange, flat
   cards, atomic shapes in `.ambient`, Futura).
@@ -92,11 +92,8 @@ generated from Vintage by `node aOS/scripts/make-looks.mjs` (their `<style id="n
   Sea glass one (`scripts/make-icons.mjs` draws both); link the Vintage ones in the page and the
   manifest (colours `#241E1A`); design.js swaps them. aOS shows the one for its own look.
 - Server calls go to `../<id>/api/`, not `api/`.
-- **Russian**: in `<head>`, right after design.js, `<script src="../home/lang.js"></script>`,
-  `<script src="../home/lang/ru/shared.js"></script>` and `<script src="../home/lang/ru/<id>.js"></script>`
-  (all three in `sw.js` SHELL), and write `home/lang/ru/<id>.js` (`home/lang/README.md`: whole texts,
-  patterns, the glossary); `translate="no"` on what the family wrote. `node aOS/scripts/lang-scan.mjs <id>`
-  must list nothing (aOS/scripts/lang-test.mjs checks every app).
+- **Your helper's name**: in `<head>`, right after design.js, `<script src="../home/names.js"></script>`
+  (in `sw.js` SHELL too): the words that say Ipsy say the name the person gave their helper.
 - Tests: the app's browser test covers both designs and Settings → Design (seed
   `localStorage['design.<id>']` and hold the sky still with `aos.sky = 'day'`), and
   `aOS/scripts/sky-test.mjs` lists the app. `check-apps.mjs` checks the wiring.

@@ -69,7 +69,7 @@ the page is drawn.
   bubbles are cream); solid burnt-orange main buttons; Futura. Behind the title is
   the shared **Vintage sky** (`../home/sky.js`).
 - **Standard**: Sea glass: faint tiles and Liquid Glass sheets, no sky.
-- **Night Drive**, **Folk** and **Tron**: made from the Vintage block by
+- **Night Drive** and **Tron**: made from the Vintage block by
   `node aOS/scripts/make-looks.mjs` (never edited by hand).
 
 How: the Vintage look is the `<style id="vintage">` block after the glass styles

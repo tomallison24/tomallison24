@@ -145,12 +145,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const GROUP = Object.fromEntries(GROUPS.map(g => [g.id, g]));
   const groupName = id => GROUP[id] ? GROUP[id].name : 'Other';
-  // In Russian (../home/lang.js): the built-in exercises are translated; the ones the family typed in
-  // stay as written (translate="no"). A muscle group, or a sleep stage, said where a word alone is
-  // ambiguous ("Back", "Core"), is looked up with what it is.
-  const tr = s => window.aosLang ? aosLang.t(s) : s;
-  const trAs = (what, s) => { const k = what + ': ' + s, r = tr(k); return r === k ? s : r; };
-  const gName = id => trAs('Muscle group', groupName(id));
+  const gName = id => groupName(id);
   const BUILTIN = new Set(GROUPS.flatMap(g => g.ex.map(n => n.toLowerCase())));
   const exHtml = n => '<span' + (BUILTIN.has(String(n).toLowerCase()) ? '' : ' translate="no"') + '>' + esc(n) + '</span>';
   const isTimed = name => TIMED.has(String(name).toLowerCase());
@@ -627,9 +622,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const done = new Set(data.logs.map(x => x.exercise.toLowerCase()));
     const ql = String(q).trim().toLowerCase();
     return allExercises().map(x => {
-      const ws = words(x.name + ' ' + groupName(x.group) + ' ' + (ALSO[x.name.toLowerCase()] || '') + ' ' + tr(x.name) + ' ' + gName(x.group));   // and its Russian name, in Russian
+      const ws = words(x.name + ' ' + groupName(x.group) + ' ' + (ALSO[x.name.toLowerCase()] || '') + ' ' + gName(x.group));
       if (!qs.every(w => ws.some(v => v.startsWith(w) || (w.length > 3 && v.includes(w))))) return null;
-      const rank = (x.name.toLowerCase().startsWith(ql) || String(tr(x.name)).toLowerCase().startsWith(ql) ? 0 : 2) + (done.has(x.name.toLowerCase()) ? 0 : 1);
+      const rank = (x.name.toLowerCase().startsWith(ql) ? 0 : 2) + (done.has(x.name.toLowerCase()) ? 0 : 1);
       return Object.assign({ rank }, x);
     }).filter(Boolean).sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name)).slice(0, 12);
   }
@@ -656,7 +651,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function exerciseOptions(gid, val) {
     let picked = false;
     const o = n => { const sel = !picked && n === val; if (sel) picked = true; return '<option value="' + esc(n) + '"' + (sel ? ' selected' : '') + (BUILTIN.has(String(n).toLowerCase()) ? '' : ' translate="no"') + '>' + esc(n) + '</option>'; };
-    const grp = (label, list) => list.length ? (label ? '<optgroup label="' + esc(tr(label)) + '">' + list.map(o).join('') + '</optgroup>' : list.map(o).join('')) : '';
+    const grp = (label, list) => list.length ? (label ? '<optgroup label="' + esc(label) + '">' + list.map(o).join('') + '</optgroup>' : list.map(o).join('')) : '';
     const recent = recentIn(gid, 3), g = GROUP[gid], mine = mineIn(gid);
     const known = exercisesFor(gid).concat(recent);
     const extra = val && val !== OTHER && !known.includes(val) ? [val] : [];
@@ -1112,7 +1107,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     g += '<line class="goal" x1="0" x2="' + HW + '" y1="' + y(420).toFixed(1) + '" y2="' + y(420).toFixed(1) + '"/>';
     const n = night(sel), v = n.sleep != null ? n.sleep : n.staged ? (n.deep || 0) + (n.core || 0) + (n.rem || 0) : null;
     const s = n.sleep != null ? HL.status('sleep', n.sleep, data.health, hopts(sel)) : 'none';
-    const legend = '<div class="hleg">' + STAGES.map(([k, name]) => '<span data-st="' + k + '"><i aria-hidden="true"></i>' + esc(trAs('Sleep stage', name)) + (n[k] != null ? ' <b>' + esc(HL.hmShort(n[k])) + '</b>' : '') + '</span>').join('') + '</div>';
+    const legend = '<div class="hleg">' + STAGES.map(([k, name]) => '<span data-st="' + k + '"><i aria-hidden="true"></i>' + esc(name) + (n[k] != null ? ' <b>' + esc(HL.hmShort(n[k])) + '</b>' : '') + '</span>').join('') + '</div>';
     return '<section class="rgroup hm" data-k="sleep"><div class="hmh"><span class="hmn">Asleep</span>' + (s !== 'none' ? statPill(s, true) : '')
       + '<span class="hmv">' + (v == null ? '—' : esc(HL.hm(v))) + '</span></div>'
       + frame('sleep', days, sel, g, 'Sleep stages, the last ' + days.length + ' nights, a line at 7 hours. Arrow keys pick a night.') + legend + '</section>';
@@ -1518,7 +1513,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if ((b = e.target.closest('[data-punlinkid]'))) return linkTo({ id: b.dataset.punlinkid }, 'unlink');
     if (e.target.closest('#setErase')) {
       const msg = lastSyncAt ? 'Sign out and erase Fitness from this phone (the Sheet keeps a copy)?' : 'Sign out and erase Fitness from this phone, losing your unsynced log, Meds and Steps?';
-      if (!confirm(tr(msg))) return;
+      if (!confirm(msg)) return;
       if (lastSyncAt) await sync(true);
       if (window.AllisonOS && AllisonOS.erase) AllisonOS.erase();
     }

@@ -506,7 +506,7 @@ async function ideas(request, env, db, me) {
   const prompt = 'Spending by category, the last 12 months:\n' + JSON.stringify(input.categories)
     + '\n\nThe family\'s own changes:\n' + JSON.stringify(input.yourChanges)
     + '\n\nIdeas they said no to (kind:from-or-merchant>to, lower case):\n' + JSON.stringify(input.saidNo);
-  const r = await claude(env, key, IDEAS_SYSTEM + (b.lang === 'ru' ? '\nWrite "why" in Russian; keep the category and merchant names as they are.' : ''), prompt, IDEAS_SCHEMA);
+  const r = await claude(env, key, IDEAS_SYSTEM, prompt, IDEAS_SCHEMA);
   if (r.error) return reply({ error: r.error }, r.status);
   if (r.refused || !r.out) return reply({ ideas: [] });
   return reply({ ideas: keepIdeas(r.out, input) });

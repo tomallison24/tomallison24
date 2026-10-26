@@ -101,8 +101,8 @@ from.
   opened from there, the app hands its data to aOS and says it lives in aOS now.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
-  steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Night Drive,
-  Folk or Tron), `lang.js` (English or Russian), `sky.js` (the Vintage designs' day and night sky),
+  steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Night Drive
+  or Tron), `names.js` (your helper's name where the words say Ipsy), `sky.js` (the Vintage designs' day and night sky),
   `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the AI helper you
   chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
   `server/ipsy.js`) - plus the Welcome Lab. Its `index.html` is a "moved to aOS" notice.
@@ -124,27 +124,24 @@ from.
 - Light or dark: `home.settings.theme` (`auto`/`light`/`dark`), applied as
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
-- **Five designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
-  glass), Night Drive (80s neon), Folk (Gzhel by day, Khokhloma by night) and Tron (light cycles, after the
+- **Four designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
+  glass), Night Drive (80s neon) and Tron (light cycles, after the
   Tron: Ares mode in Tesla's cars: red light on black, dark only; its light trail runs around each screen behind
   everything, the helper becomes Ares, the Tron: Ares rider (named so in every app), and aOS alone opens with its intro and sound, `aOS/tron-intro.js`), picked for every
   app at once in aOS (Account > Appearance > Look: `aOS/look.js` writes each app's design) or in
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
   id="vintage">` block on or off, `data-look` on `<html>`, the icon (`icon-*.png` Vintage,
-  `icon-glass-*.png` Sea glass, `icon-neon-*.png`, `icon-folk-*.png`, `icon-grid-*.png`), status bar and bar colours.
-  A change to how an app looks is made in Vintage and Sea glass; **Night Drive, Folk and Tron are
-  generated from Vintage** (`<style id="neon">`, `<style id="folk">`, `<style id="grid">` and the icons, by
+  `icon-glass-*.png` Sea glass, `icon-neon-*.png`, `icon-grid-*.png`), status bar and bar colours.
+  A change to how an app looks is made in Vintage and Sea glass; **Night Drive and Tron are
+  generated from Vintage** (`<style id="neon">`, `<style id="grid">` and the icons, by
   `node aOS/scripts/make-looks.mjs`, palettes in `aOS/scripts/looks.mjs`): run it after changing a
   Vintage block or an `icon.svg` (check-apps fails until you do), never edit those blocks by hand.
   The Vintage designs used to be apps of their own (`<app>vintage/`): those folders are gone, and the deploy copies each app to its old Vintage address so phones
   that added one keep it (`design.js` moves that app's data over once). Server calls go to
   `../<app>/api/`, never a bare `api/`, so they work from that address too.
-- **English or Russian**: Account > Appearance > Language in aOS, for aOS and every app
-  (`aos.lang`). `home/lang.js` swaps the words on the page for Russian from `home/lang/ru/`
-  (`shared.js` and one file per app): a change to an app's words needs its Russian too, and what
-  the family wrote or outside content gets `translate="no"`. How, and the glossary:
-  `home/lang/README.md`; `node aOS/scripts/lang-scan.mjs <app>` lists English left in Russian.
+- **English only**: aOS and the apps were in Russian too (and had a fifth look, Folk); both are gone.
+  A phone that had either picked opens in English and Vintage.
 - The AllisonOS colours are **Sea glass** (sea glass, mist, shell, sand):
   `--w-pastel` / `--w-hot` in `welcome.js`, `--pastel` in `aOS/index.html`.
   Use these rather than new pastel gradients. "aOS" is always written with a

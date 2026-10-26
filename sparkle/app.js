@@ -108,7 +108,6 @@
   const rankOf = p => Math.max(p.rank || 0, RANK_AT.filter(n => levelSum(p) >= n).length - 1);
   const rankChip = p => `<span class="rank">${A.icon('tiara', 26)}<span>${RANKS[rankOf(p)]}</span></span>`;
   const cap = t => t[0].toUpperCase() + t.slice(1);
-  const tr = s => window.aosLang ? aosLang.t(s) : s;   // a dialog's words, in Russian when aOS is (home/lang.js)
   const giftChapter = id => Ch.LANDS.flatMap(l => Ch.CHAPTERS[l]).find(c => c.gift === id);
   function paintPicker() {
     const ps = players();
@@ -1402,7 +1401,7 @@
       persist(true); paintPicker(); s.close(); sync();
     };
     if (editing) s.querySelector('#cDel').onclick = () => {
-      if (!confirm(tr(`Remove ${p.name}? Their progress, coins and treasures are deleted on every phone.`))) return;
+      if (!confirm(`Remove ${p.name}? Their progress, coins and treasures are deleted on every phone.`)) return;
       delete save.players[p.id]; save.gone[p.id] = Date.now(); persist(true); paintPicker(); s.close(); sync();
     };
     paint();
