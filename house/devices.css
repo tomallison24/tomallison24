@@ -486,8 +486,9 @@
 .ag-glow { position: absolute; inset: 14%; z-index: -1; border-radius: 999px; pointer-events: none; filter: blur(16px);
   background: radial-gradient(closest-side, rgba(var(--c),0.9), rgba(var(--c),0)); opacity: .22; transition: opacity .5s, inset .5s; }
 .agw.lit .ag-glow { opacity: .85; inset: 2%; }
-.ag { position: relative; width: 100%; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 10px;
-  padding: 14px; border-radius: 26px; text-align: left;
+/* Short tiles, icon over name (2026-10-26; were square), so the Yard camera's pause fits under them in the same space. */
+.ag { position: relative; width: 100%; height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px;
+  padding: 8px 6px; border-radius: 22px; text-align: center;
   background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
   -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.26), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(0,0,0,0.7);
@@ -495,8 +496,8 @@
 .ag:active { transform: scale(0.96); }
 .ag:disabled { opacity: .4; }
 .ag.wait { opacity: .75; }
-.ag-disc { flex: none; width: 34px; height: 34px; margin-left: -4px; display: flex; align-items: center; justify-content: center; transition: color .3s; }
-.ag-name { font-size: 13.5px; font-weight: 600; line-height: 1.2; min-width: 0; }
+.ag-disc { flex: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: color .3s; }
+.ag-name { font-size: 12.5px; font-weight: 600; line-height: 1.15; min-width: 0; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .ag.lit { background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.78)); color: #1A1A1C;
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.9), inset 0 1px 0 #fff, 0 0 24px -6px rgba(var(--c),0.8); }
 .ag.lit .ag-disc { color: rgb(var(--c)); filter: saturate(1.4) brightness(.8); }
@@ -564,6 +565,14 @@
 .wx-s { min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.15; }
 .wx-hl { font-style: normal; font-size: 11px; font-weight: 500; opacity: .5; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .wx-go { flex: none; display: inline-flex; align-items: center; gap: 1px; font-size: 13px; font-weight: 600; opacity: .55; }
+/* The Yard camera's pause under the automations: the same pill, its name and state, and the
+   pause lengths as small chips. Only a control: a tap off the chips does nothing. */
+.yardw { margin: 10px 0 0; }
+.yardpill { padding: 0 10px 0 16px; }
+.yardpill:active { transform: none; }
+.yard-t small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.yardpill .chips { flex: none; flex-wrap: nowrap; gap: 6px; margin: 0; }
+.yardpill .chip2 { flex: none; min-width: 42px; height: 36px; padding: 0 8px; font-size: 13px; }
 /* Recent activity: the latest event in the same pill; the list in its popup */
 .acpill { width: 100%; text-align: left; font: inherit; }
 .ac-t { flex-direction: column; align-items: flex-start; gap: 1px; }

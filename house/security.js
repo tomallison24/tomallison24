@@ -98,7 +98,7 @@ family({
     for (const c of BLINKS) for (const el of cardsOf('cams:' + c.id)) this.paintCam(el, c);
     this.sum = sys.mood === 'offline' ? 'Offline' : sys.alert ? 'Indoor motion' : sys.armed ? `Armed · ${watching} watching` : { disarmed: 'Disarmed', arming: 'Arming', triggered: 'Triggered' }[sys.mood];
   },
-  // The cards' frames, for Favorites' copies.
+  // The cards' frames. (Favorites has no camera cards since 2026-10-26: only the Yard's pause, favorites.js.)
   shell(id) { return id === 'door' ? cardHTML('cams:door', '<div data-r="snap"></div><div data-r="tiles"></div>', 'camcard') : cardHTML('cams:' + id, `<div data-r="snap"></div><div class="camctl" data-r="ctl"></div>${BLINKS.find(c => c.id === id).pauseOnCard ? '<div class="campause" data-r="pause"></div>' : ''}`, 'camcard'); },
   paintDoor(door) {
     const dpic = haPic(attr(DOORBELL.cam, 'entity_picture'), (st(DOORBELL.cam) || {}).lu);

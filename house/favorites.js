@@ -23,6 +23,11 @@
 //     Green is script.hatch_bedtime with the green light, lit while it runs.
 //     Report a Bug fills the same helpers as the dashboard's form and runs
 //     script.log_bug, which appends it to bug_log.md.
+//     The tiles are short (icon over name), so the Yard camera's pause fits
+//     under them in the space the square tiles took (2026-10-26).
+//   - Yard camera: under the tiles, a pill with just its pause - 30 min to
+//     4 hours, as on its Security card (security.js: the same act, so the
+//     same script, toast and count). It opens nothing.
 //   - Weather: a glass pill over the automations - the condition and the
 //     temperature outside (with today's high and low, small, beneath the
 //     condition), the Weather app's own reading (WXNOW below) - that
@@ -34,7 +39,8 @@
 //     automation or script), you (a tap) or device (it reported itself))
 //   - Thermostats: Living Room and Office (the Windmill is left out, as on
 //     the dashboard)
-//   - Cameras: the living room Blink and the doorbell
+//   (No cameras: the Living Room and doorbell cards were taken off on
+//   2026-10-26, as asked; they are in Security.)
 //   - Lights: All on / All off, and Tom's and Elena's lamps
 // The device cards are the same cards as in their own views (the families
 // paint every copy), so they look and work the same in both places.
@@ -47,8 +53,10 @@ const FAV_AUTOS = [
   { id: 'sitter', name: 'Babysitter', onName: 'Sitter armed', icon: 'child', acc: '255,150,190', toggle: 'input_boolean.babysitter_mode' },
   { id: 'hatch', name: 'Hatch Green', icon: 'nightBulb', acc: '120,220,150', script: 'script.hatch_bedtime', ack: 'script.hatch_bedtime', vars: { light: 'green' } },
 ];
-const FAV_THERMOS = ['lr', 'of'], FAV_CAMS = ['living_room', 'door'], FAV_LAMPS = ['light.tom_lamp', 'light.elena_lamp'];
+const FAV_THERMOS = ['lr', 'of'], FAV_LAMPS = ['light.tom_lamp', 'light.elena_lamp'];
 const famOf = id => FAMILIES.find(f => f.id === id);
+// The Yard camera's pause lengths, short enough for one pill.
+const FAV_PAUSE = 'yard', FAV_PAUSES = PAUSES.map(([m, l]) => [m, m < 60 ? m + 'm' : m / 60 + 'h', { aria: 'Pause for ' + l }]);
 // The weather pill: the condition as the Weather app shows it - its icon (the
 // night's after sunset), its name, and a glow of its colour.
 const FAV_WX = {
@@ -147,7 +155,6 @@ family({
   sev: 'Medium', run: [],
 
   mount(el) {
-    const cams = famOf('cams');
     el.classList.add('favs');
     el.innerHTML = `
       <div class="runpanel" data-r="run" hidden></div>
@@ -155,10 +162,9 @@ family({
       <div class="agw wxw" data-r="wxw"><i class="ag-glow"></i><a class="wxpill" data-r="wx" href="../weather/" aria-label="Open Weather"></a></div>
       <div class="agw wxw acw" data-r="acw" data-dv="fav:activity"><i class="ag-glow"></i><button class="wxpill acpill" data-r="ac" data-a="activity" aria-label="Recent activity"></button></div>
       <div class="autos" data-dv="fav:autos"></div>
+      <div class="agw wxw yardw" data-r="yardw" data-dv="fav:yard"><i class="ag-glow"></i><div class="wxpill yardpill" data-r="yard"></div></div>
       <div class="vsec-h"><span>Thermostats</span></div>
       <div class="fcards">${THERMOS.filter(t => FAV_THERMOS.includes(t.id)).map(tCardHTML).join('')}</div>
-      <div class="vsec-h"><span>Cameras</span></div>
-      <div class="fcards">${FAV_CAMS.map(c => cams.shell(c)).join('')}</div>
       <div class="vsec-h"><span>Lights</span></div>
       <div class="hsplit" data-dv="lights:house"></div>
       <div class="lpills">${FAV_LAMPS.map(id => `<div class="lpw"><i class="lglow"></i><article class="lp dvc" data-dv="lights:${id}"></article></div>`).join('')}</div>`;
@@ -217,7 +223,17 @@ family({
         <button class="ag${s.lit ? ' lit' : ''}${tWaiting(s.d, 'lit') || tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="auto" data-v="${a.id}" aria-pressed="${s.lit}"${s.dis ? ' disabled' : ''}>
         <span class="ag-disc">${svg(a.icon, 24)}</span><span class="ag-name"${a.script ? ' translate="no"' : ''}>${esc(name)}</span></button></div>`;
     }).join(''));
+    this.renderYard();
     this.sum = [away ? 'Away' : '', this.run.length ? this.run.length + ' running' : away ? '' : 'Nothing running'].filter(Boolean).join(' · ');
+  },
+
+  // The Yard camera's pause: its state as its Security card reads it.
+  renderYard() {
+    const cams = famOf('cams'), c = BLINKS.find(x => x.id === FAV_PAUSE), r = cams.cam(c), left = cams.pauseLeft(c, r);
+    const word = left ? (left.mins != null ? `Paused · ${left.mins}m` : 'Paused') : r.offline ? 'Offline' : r.on ? 'Pause motion' : 'Motion off';
+    put(this.el.querySelector('[data-r="yard"]'), `<span class="wx-ic">${svg('cctv', 24)}</span><span class="wx-t ac-t yard-t"><b>Yard camera</b><small>${word}</small></span>`
+      + chipsHTML('pause', FAV_PAUSES, left && left.mins != null ? left.m : null, { dis: (!r.on && !left) || unav(c.pause) }));
+    this.el.querySelector('[data-r="yardw"]').style.setProperty('--c', left ? '255,196,110' : r.on && !r.offline ? '120,180,255' : '190,194,204');
   },
 
   sheet(id) {
@@ -252,6 +268,7 @@ family({
     };
   },
   act(id, a, b) {
+    if (id === FAV_PAUSE && a === 'pause') return famOf('cams').act(FAV_PAUSE, 'pause', b);
     if (a === 'go') { const x = this.run[Number(b.dataset.v)]; if (x) { goView(x.view); x.open(); } return; }
     if (a === 'activity') return openDev(this, 'activity');
     if (a === 'auto') {
