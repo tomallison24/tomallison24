@@ -113,6 +113,15 @@ on that phone; nothing old is deleted. The radar helper is asked at
   forecast is kept for instant switching and topped up quietly in the
   background. (Older versions kept one place; it is carried over as a saved
   city.)
+- **Trip**: signed in to the family account, the Places sheet (and the page
+  dots) also has where your next trip goes, with its dates under the name, for
+  as long as the trip is ahead or on. It comes from your Travel layer (the
+  bookings Travel keeps in your account for Calendar, `GET ../aOS/api/layer`,
+  read quietly once an hour): the outbound flight's destination, else the
+  hotel's city, geocoded the way a search is. It is not one of the 12 saved
+  cities, is never written to `wx.places` and has no ✕; signed out, without
+  Travel or with no trip ahead there is simply no Trip row, and nobody is asked
+  to sign in.
 - **Swipe between places**: drag the forecast card sideways and it follows
   your finger. Let go past a quarter of the way, or flick, and it slides off
   while the next place slides in from the other side; let go early and it

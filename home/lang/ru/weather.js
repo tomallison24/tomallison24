@@ -137,6 +137,8 @@ aosLang.add({
   'Location unavailable · tap to retry': 'Геопозиция недоступна · нажмите, чтобы повторить',
   'Tap to find where you are': 'Нажмите, чтобы определить, где вы',
 }, [
+  // the Trip place (your next trip's destination, from Travel): "Trip · Nov 3 – 8", the dates already in Russian
+  [/^Trip · (.+)$/, m => 'Поездка · ' + m[1]],
   // the hero: "H:72°  L:55°"
   [/^H:(-?\d+)° L:(-?\d+)°$/, m => '↑' + m[1] + '°\u00a0\u00a0↓' + m[2] + '°'],   // the high and low: arrows, as the Russian words don't fit on the disc
   [/^(\d+)% chance$/, m => 'Осадки ' + m[1] + '%'],

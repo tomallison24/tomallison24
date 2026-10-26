@@ -179,11 +179,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // copy up to date and neither overwrites the other's; the server shows the two together as Travel
   // (functions/aOS/api, GET layer).
   const LAYER = /^\/travelvintage\//.test(location.pathname) ? 'travelv' : 'travel';
-  function shareCal() {
-    const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
+  function calLayer() {
     // a private booking goes with its email's ids, so Calendar's Ipsy leaves that email out too
     const priv = b => b.private ? { private: true, msgId: (b.source && b.source.msgId) || '', threadId: (b.source && b.source.threadId) || '' } : {};
-    L.share(LAYER, { bookings: bookings.filter(b => b && b.status !== 'cancelled' && !b.fromCal && !b.calUid && !b.calSig).map(b => ({ ...Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]])), ...priv(b) })) });
+    // a flight's true moments, once live status knows them (depIsoOf): Calendar places it right in any zone
+    const when = b => b.type !== 'flight' ? {} : { ...(depIsoOf(b) ? { depIso: depIsoOf(b) } : {}), ...(arrIsoOf(b) ? { arrIso: arrIsoOf(b) } : {}) };
+    return { bookings: bookings.filter(b => b && b.status !== 'cancelled' && !b.fromCal && !b.calUid && !b.calSig).map(b => ({ ...Object.fromEntries(CAL_FIELDS.filter(k => b[k] != null && b[k] !== '').map(k => [k, typeof b[k] === 'string' ? b[k].slice(0, 500) : b[k]])), ...when(b), ...priv(b) })) };
+  }
+  function shareCal() {
+    const L = window.AllisonOS && AllisonOS.layer; if (!L) return;
+    L.share(LAYER, calLayer());
   }
   addEventListener('load', () => { if (ls.get(KEY, null)) shareCal(); });
   function save() { track(); persist(); if (signedIn()) scheduleSync(); }
@@ -227,8 +232,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // check-out with none before them: you arrive, then check in.
   const startOf = b => b.type === 'flight' ? b.dep : b.type === 'hotel' ? (b.checkIn ? b.checkIn + 'T' + (b.checkInTime || '23:00') : '') : b.type === 'car' ? b.pickup : b.start;
   const endOf = b => (b.type === 'flight' ? b.arr : b.type === 'hotel' ? (b.checkOut ? b.checkOut + 'T' + (b.checkOutTime || '06:00') : '') : b.type === 'car' ? b.dropoff : b.end) || startOf(b);
-  const startT = b => b.type === 'flight' ? moment(b.dep, b.depIso) : b.type === 'car' ? moment(b.pickup, b.pickupIso) : moment(startOf(b));
-  const endT = b => b.type === 'flight' ? moment(b.arr || b.dep, b.arr ? b.arrIso : b.depIso) : b.type === 'car' ? moment(b.dropoff || b.pickup, b.dropoff ? b.dropoffIso : b.pickupIso) : moment(endOf(b));
+  // A flight's live leg (refreshLive) knows the true moment of its scheduled departure and arrival
+  // (departure.scheduled.utc). For a booking read from the words of an email, with no zone of its own, that is
+  // the instant to count down to, call Now, open the live window on and send to Calendar, so it is right when
+  // this phone is in another zone. A zone the email gave comes first; with no live leg, the wall clock is read
+  // as this phone's (moment, above).
+  const liveIso = (b, k) => {
+    const x = live[b.id], s = x && x.leg && x.leg[k] && x.leg[k].scheduled && x.leg[k].scheduled.utc;
+    const t = s ? Date.parse(String(s).replace(' ', 'T').replace(/(T\d\d:\d\d)Z$/, '$1:00Z')) : NaN;
+    return isNaN(t) ? '' : new Date(t).toISOString();
+  };
+  const depIsoOf = b => b.depIso || (b.type === 'flight' ? liveIso(b, 'departure') : '');
+  const arrIsoOf = b => b.arrIso || (b.type === 'flight' ? liveIso(b, 'arrival') : '');
+  const startT = b => b.type === 'flight' ? moment(b.dep, depIsoOf(b)) : b.type === 'car' ? moment(b.pickup, b.pickupIso) : moment(startOf(b));
+  const endT = b => b.type === 'flight' ? moment(b.arr || b.dep, b.arr ? arrIsoOf(b) : depIsoOf(b)) : b.type === 'car' ? moment(b.dropoff || b.pickup, b.dropoff ? b.dropoffIso : b.pickupIso) : moment(endOf(b));
   const alive = () => bookings.filter(b => startOf(b));
   // A booking with no date (Frontier's emails sometimes leave it out) isn't on any day yet:
   // it waits in "To check" for a date from the calendar, the AI or you.
@@ -1168,14 +1185,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function countLookup() { const m = todayStr().slice(0, 7), n = lookupsThisMonth() + 1; ls.set(K.lookups, JSON.stringify({ m, n })); }
   const liveWindow = b => {
     if (b.type !== 'flight' || b.status === 'cancelled' || !b.flightNo || !b.airlineCode || !b.dep) return false;
-    const s = moment(b.dep, b.depIso), e = moment(b.arr || b.dep, b.arr ? b.arrIso : b.depIso);
+    const s = startT(b), e = endT(b);
     return s - Date.now() < 36 * H && Date.now() - e < 4 * H;
   };
   const inflight = new Map();
   function refreshLive(b, force) {
     if (!liveWindow(b) || liveAvail === false) return Promise.resolve();
     const cur = live[b.id];
-    const soon = moment(b.dep, b.depIso) - Date.now() < 6 * H;
+    const soon = startT(b) - Date.now() < 6 * H;
     if (!force && cur && Date.now() - cur.at < (soon ? 10 : 60) * 6e4) return Promise.resolve();
     if (!force && lookupsThisMonth() >= LOOKUPS_A_MONTH) return Promise.resolve();
     if (inflight.has(b.id)) return inflight.get(b.id);
@@ -1210,6 +1227,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       live[b.id] = { at: Date.now(), leg, found: !!leg };
     }
     saveLive();
+    if (!data.error && !b.depIso) shareCal();   // the layer now has the flight's true moments
   }
   // The airport's departure board, from travel/api/find: {ok, candidates: [{number, to, local}]} or {error}. Used by
   // findNumbers, and by Ipsy.
@@ -1317,7 +1335,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const desc = [b.conf ? 'Confirmation: ' + b.conf : '', b.notes].filter(Boolean).join('\n');
       if (b.type === 'flight' && b.dep) {
         const dep = b.dep.length >= 16 ? b.dep : b.dep + 'T09:00';
-        ev(b.id, '✈ ' + flightName(b) + ' ' + (b.from || '') + ' → ' + (b.to || ''), timed(dep, b.depIso).s, endFor(dep, b.depIso, b.arr, b.arrIso, 120), b.fromName || city(b.from), desc, 180);
+        ev(b.id, '✈ ' + flightName(b) + ' ' + (b.from || '') + ' → ' + (b.to || ''), timed(dep, depIsoOf(b)).s, endFor(dep, depIsoOf(b), b.arr, arrIsoOf(b), 120), b.fromName || city(b.from), desc, 180);
       } else if (b.type === 'hotel' && b.checkIn) {
         const out = b.checkOut && b.checkOut > b.checkIn ? b.checkOut : P.addDays(b.checkIn, 1);
         ev(b.id, '🏨 ' + (b.name || 'Hotel'), 'DTSTART;VALUE=DATE:' + b.checkIn.replace(/-/g, ''), 'DTEND;VALUE=DATE:' + out.replace(/-/g, ''), [b.name, b.address].filter(Boolean).join(', '), desc, null);
@@ -2316,5 +2334,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
 })();
