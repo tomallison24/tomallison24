@@ -12,7 +12,7 @@
 //   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
 //                         { erase: true }      -> and each of those apps erases aOS's data from its phone the
 //                                                 next time it opens online (GET state says erase: true)
-//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail;
+//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail, Meals, Orders, News;
 //                                                  'travelv' and 'notesv' are the Vintage designs of Travel and Notes: GET layer
 //                                                  shows each as part of its app)
 //   GET  layer            (family)             -> your own layers, for Calendar
@@ -50,11 +50,12 @@ const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
 const MAX_BODY = 256 * 1024;   // a layer or a handoff can be this big; everything else is tiny
 const HANDOFF_MAX = 240 * 1024, HANDOFF_DAYS = 14;   // one app's data moving into aOS 2, and how long it waits
 const MOVE_MAX = 5 * 1024 * 1024, MOVE_DAYS = 2;       // all of aOS's, moving to a new aOS icon
-// Settings that follow you between your devices (aOS/prefs-sync.js): Weather's places and units, Clock's
+// Settings that follow you between your devices (aOS/prefs-sync.js): Weather's places, units and view, Fitness's step and
+// move goals, Podcasts' settings, Orders' kinds, Clock's
 // world clocks, alarms, Bedtime, settings and recent timers, Calendar's settings, each app's design, aOS's
 // look, light or dark, Favorites and your helper (Ipsy, and its name); and which Google account Mail uses, and that Gmail is connected (so
 // Mail signs in to it by itself on a new device). Never a sign-in, a token or what a device keeps for itself.
-export const PREF_ITEM = /^(wx\.(places|units)|allison-clock-v1#(cities|alarms|sleep|set|tsound|recents)|allison-calendar-v1-settings|mail\.hint|mail\.token\.ever|design\.[a-z]{2,16}|aos\.look|aos\.lang|aos\.home\.picks|aos\.helper|home\.settings#theme)$/;
+export const PREF_ITEM = /^(wx\.(places|units|view)|allison-clock-v1#(cities|alarms|sleep|set|tsound|recents)|allison-calendar-v1-settings|allison-fitness-v1-(step|move)-goal|allison-podcasts-v1#set|allison-orders-v1#kinds|mail\.hint|mail\.token\.ever|design\.[a-z]{2,16}|aos\.look|aos\.lang|aos\.home\.picks|aos\.helper|home\.settings#theme)$/;
 const PREF_MAX = 64 * 1024, PREFS_MAX = 192 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"
@@ -63,7 +64,7 @@ const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts
 // own storage, so Calendar can't read theirs: each app keeps a copy of just what
 // Calendar shows in your own account (layer:<app>:<you>), only you can read it, and
 // it's written only when it changed (KV writes are scarce on the free plan).
-const LAYERS = ['notes', 'travel', 'fitness', 'mail'];
+const LAYERS = ['notes', 'travel', 'fitness', 'mail', 'meals', 'orders', 'news'];
 // Travel's Vintage design keeps its bookings under its own name, so the two Travel apps never overwrite each
 // other; Calendar only knows Travel, so GET layer shows the two together (travelBookings).
 const LAYER_APPS = [...LAYERS, 'travelv', 'notesv'];

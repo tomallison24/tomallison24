@@ -360,6 +360,14 @@ La Liga, Serie A, Bundesliga, Ligue 1, MLS, NFL, NBA, MLB, NHL and rugby
 Championship, Super Rugby Pacific, Rugby World Cup, internationals and
 rugby league). Your
 Sport filters apply to scores too. Tap a football or rugby game for its own page (see Match below); the other sports go to ESPN's match page.
+
+**Calendar** shows the next two weeks of games for the sports and teams you follow (the
+one-tap team, else your picks) as its News layer: `app.js` `fixtureItems`, from today's
+scoreboards and the saved fixtures, 40 at most, handed over through
+`AllisonOS.layer.share('news', …)` (`home/welcome.js`) into your own family account on every
+open and when the picks change; nothing when you follow nothing. Its links:
+`../news/?sport=scores` opens Sport > Scores, and `../news/?sport=scores&league=<id>&game=<id>`
+a football or rugby game's own page.
 Games show where to watch in the US (TV or streaming, e.g. FOX, FS2,
 Paramount+) when ESPN lists it; many games get their listing only a few
 days before.

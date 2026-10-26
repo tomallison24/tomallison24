@@ -47,9 +47,16 @@ AllisonOS apps' dates alongside.
     check-out, all-day) and car pick-ups and returns, with **Open in Travel**.
   - **Mail**: Remind Me days, as all-day items; each opens the
     conversation in Mail.
+  - **Meals**: the family's plan, each meal an all-day item ("Dinner:
+    Lasagna"), with **Open in Meals** (that day's recipe).
+  - **Orders**: each open order's day as an all-day item ("Arrives: Target",
+    "Delivery window ends", "Pick up by", "Return by"), with **Open in Orders**
+    (the order's sheet).
+  - **News**: the fixtures of the teams you follow, two hours each, with
+    **Open in News** (the match page, or Scores).
 
   On an iPhone every Home Screen app keeps its own storage, so Notes, Travel,
-  Fitness and Mail each keep a copy of just what Calendar shows in your own
+  Fitness, Mail, Meals, Orders and News each keep a copy of just what Calendar shows in your own
   family account (`AllisonOS.layer` in home/welcome.js, `POST /aOS/api/layer`),
   sent when their data changes and only if it did. Calendar reads yours with
   `GET /aOS/api/layer`; only you can read it. Each app has to be signed in to
@@ -102,7 +109,7 @@ Every view, sheet, drag and swipe works the same in both.
   little bars under it; Futura (built into iOS, nothing downloaded).
   **The calendars keep their meaning and take Retro colours**: the Family
   calendar is mustard, US Holidays olive, Notes plum, Travel teal, Mail denim,
-  Fitness burnt orange, Drinks rose (each a lighter shade in dark mode). The
+  Fitness burnt orange, Meals walnut, Orders aqua, News sage, Drinks rose (each a lighter shade in dark mode). The
   Family calendar is always mustard here, not the colour iCloud has for it,
   which is not part of this palette; Notes items are plum whatever colour their
   list has in Notes, with the list's name under the title (`app.js` picks these
@@ -154,7 +161,7 @@ piano on Saturday at 4*, *Move the dentist to 3:30*, *What can you change
 here?*
 
 - **Reading is free.** It reads what the app shows: the Family calendar and the
-  layers that are on (US Holidays, Notes, Travel, Mail, Fitness), and the
+  layers that are on (US Holidays, Notes, Travel, Mail, Fitness, Meals, Orders, News), and the
   weather (`ipsy-tools.js`: `find_events` for a range of days or words in a
   title, place or notes, `get_event` for one in full, `free_time` for the gaps
   in a day, `show_day` to open a day behind the chat). Not Drinks: that is your

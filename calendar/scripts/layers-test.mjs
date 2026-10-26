@@ -1,10 +1,11 @@
-// Calendar's Notes, Travel, Fitness and Mail layers through the family account,
+// Calendar's Notes, Travel, Fitness, Mail, Meals, Orders and News layers through the family account,
 // as on an iPhone, where every Home Screen app keeps its own storage: each app runs
 // in its own browser context (its own storage), signed in, and sends its copy
 // (AllisonOS.layer in home/welcome.js) to the real functions/aOS/api code on an
 // in-memory KV; then Calendar, with none of their data in its own storage, shows
-// them all. Also: only changes are sent, Notes' samples never are, and signed out,
-// Calendar says to sign in. Calendar is checked at its old Calendar Vintage address too (served from
+// them all (Mail's, Meals', Orders' and News' copies are written straight to the account, in the
+// shape the brief in aOS/UPGRADES.md gives). Also: only changes are sent, Notes' samples never are, and signed out,
+// Calendar says to sign in, and each layer's switch in Settings hides it. Calendar is checked at its old Calendar Vintage address too (served from
 // calendar/, as the deploy does), which reads the same layers.
 //   node calendar/scripts/layers-test.mjs [repo root]
 process.env.TZ = 'America/Denver';   // this test's own dates (TODAY, TOMORROW) read in the zone the browsers get below
@@ -102,8 +103,13 @@ await test('Notes, Travel and Fitness, each in its own storage and signed in, se
 });
 
 await putJSON(db, 'layer:mail:O1', { at: Date.now(), data: { items: [{ id: 'th1', date: TOMORROW, subject: 'Book the vet', from: 'Sam' }] } });
+// Meals, Orders and News keep their copies in the contract shapes (aOS/UPGRADES.md): a day's meals, open orders' days, two weeks of fixtures.
+const KICKOFF = (() => { const d = day(1); d.setHours(19, 30, 0, 0); return d; })();
+await putJSON(db, 'layer:meals:O1', { at: Date.now(), data: { items: [{ id: 'm1', date: TODAY, slot: 'dinner', title: 'Lasagna' }, { id: 'm2', date: TOMORROW, slot: 'breakfast', title: 'Pancakes' }, { id: 'm3', date: TOMORROW, slot: 'brunch', title: 'Not a slot' }] } });
+await putJSON(db, 'layer:orders:O1', { at: Date.now(), data: { items: [{ id: 'o1', date: TODAY, kind: 'arrives', store: 'Target', what: 'Kettle' }, { id: 'o2', date: TOMORROW, kind: 'return_by', store: 'Amazon', what: 'Shoes' }, { id: 'o3', date: TOMORROW, kind: 'pickup_by', store: 'Best Buy' }] } });
+await putJSON(db, 'layer:news:O1', { at: Date.now(), data: { items: [{ id: 'g1', start: KICKOFF.toISOString(), title: 'Liverpool v Everton', league: 'Premier League', url: '../news/?sport=scores&match=g1' }, { id: 'g2', start: KICKOFF.toISOString(), title: 'Nuggets v Lakers', league: 'NBA', url: 'https://evil.example/x' }] } });
 
-for (const dir of ['calendar', 'calendarvintage']) await test('Calendar (/' + dir + '/), with none of their data in its own storage, shows Notes, Travel, Fitness and Mail from the account', async () => {
+for (const dir of ['calendar', 'calendarvintage']) await test('Calendar (/' + dir + '/), with none of their data in its own storage, shows Notes, Travel, Fitness, Mail, Meals, Orders and News from the account', async () => {
   const { page, ctx } = await app(dir);
   await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'ok', null, { timeout: 8000 });
   await page.waitForTimeout(400);
@@ -111,9 +117,58 @@ for (const dir of ['calendar', 'calendarvintage']) await test('Calendar (/' + di
   await page.click('.tab[data-view="list"]').catch(() => {});
   await page.waitForTimeout(300);
   const text = await page.textContent('#main');
-  for (const s of ['Call the plumber', 'Renew passports', 'UA 1234', 'Workout', 'Remind: Book the vet']) assert.ok(text.includes(s), s + ' missing (' + kinds + '): ' + text.slice(0, 600));
+  for (const s of ['Call the plumber', 'Renew passports', 'UA 1234', 'Workout', 'Remind: Book the vet', 'Dinner: Lasagna', 'Breakfast: Pancakes', 'Arrives: Target', 'Return by: Amazon', 'Pick up by: Best Buy', 'Liverpool v Everton', 'Nuggets v Lakers']) assert.ok(text.includes(s), s + ' missing (' + kinds + '): ' + text.slice(0, 600));
   assert.ok(!text.includes('Old hotel'));
+  assert.ok(!text.includes('Not a slot'), 'an unknown meal slot stays out');
+  // the right days, titles, lines and links (the contract in aOS/UPGRADES.md)
+  const occ = await page.evaluate(() => window.__calendar.st.occ.filter(x => ['meals', 'orders', 'news'].includes(x.kind)).map(x => ({ kind: x.kind, title: x.title, sub: x.sub, link: x.link, startDate: x.startDate, allDay: x.allDay, hours: (x.end - x.start) / 36e5 })));
+  const by = title => occ.find(x => x.title === title) || assert.fail(title + ' not in st.occ: ' + JSON.stringify(occ));
+  assert.deepEqual(by('Dinner: Lasagna'), { kind: 'meals', title: 'Dinner: Lasagna', sub: 'Meals', link: '../meals/?date=' + TODAY, startDate: TODAY, allDay: true, hours: 24 });
+  assert.equal(by('Breakfast: Pancakes').startDate, TOMORROW);
+  assert.deepEqual(by('Arrives: Target'), { kind: 'orders', title: 'Arrives: Target', sub: 'Kettle', link: '../orders/?open=o1', startDate: TODAY, allDay: true, hours: 24 });
+  assert.equal(by('Return by: Amazon').startDate, TOMORROW);
+  assert.equal(by('Pick up by: Best Buy').sub, 'Orders', 'no what: the app name');
+  assert.deepEqual(by('Liverpool v Everton'), { kind: 'news', title: 'Liverpool v Everton', sub: 'Premier League', link: '../news/?sport=scores&match=g1', startDate: TOMORROW, allDay: false, hours: 2 });
+  assert.equal(by('Nuggets v Lakers').link, '../news/?sport=scores', 'a link off this site is not followed');
+  // the day: the kick-off's time; the event sheet: Open in <App>
+  await page.evaluate(() => { const c = window.__calendar; c.openEvent(c.st.occ.find(x => x.kind === 'news')); });
+  await page.waitForSelector('#evSheet:not([hidden])');
+  const sheet = await page.textContent('#evBody');
+  assert.ok(sheet.includes('Open in News') && sheet.includes('7:30') && sheet.includes('Premier League'), sheet);
+  assert.equal(await page.getAttribute('#evBody a.rowbtn', 'href'), '../news/?sport=scores&match=g1');
+  await page.evaluate(() => { const c = window.__calendar; c.openEvent(c.st.occ.find(x => x.title === 'Dinner: Lasagna')); });
+  await page.waitForTimeout(200);
+  assert.ok((await page.textContent('#evBody')).includes('Open in Meals'));
+  await page.evaluate(() => { const c = window.__calendar; c.openEvent(c.st.occ.find(x => x.title === 'Arrives: Target')); });
+  await page.waitForTimeout(200);
+  assert.ok((await page.textContent('#evBody')).includes('Open in Orders'));
   assert.equal(await page.evaluate(() => localStorage.getItem('allison-notes-v1')), null, 'Calendar has no Notes data of its own');
+  await ctx.close();
+});
+
+await test('the Meals, Orders and News switches in Settings hide each layer, and show it again', async () => {
+  const { page, ctx } = await app('calendar');
+  await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'ok', null, { timeout: 8000 });
+  await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
+  for (const [layer, title] of [['meals', 'Dinner: Lasagna'], ['orders', 'Arrives: Target'], ['news', 'Liverpool v Everton']]) {
+    assert.equal(await page.getAttribute('[data-layer="' + layer + '"]', 'aria-checked'), 'true', layer + ' is on by default');
+    await page.click('[data-layer="' + layer + '"]'); await page.waitForTimeout(200);
+    assert.equal(await page.evaluate(k => window.__calendar.st.occ.some(x => x.kind === k), layer), false, layer + ' hidden');
+    assert.equal(await page.evaluate(k => JSON.parse(localStorage.getItem('allison-calendar-v1-settings')).layers[k], layer), false, layer + ' saved off');
+    await page.click('[data-layer="' + layer + '"]'); await page.waitForTimeout(400);
+    assert.ok(await page.evaluate(t => window.__calendar.st.occ.some(x => x.title === t), title), title + ' back');
+  }
+  const rows = await page.textContent('#stBody');
+  for (const s of ['Breakfasts, lunches and dinners from the family’s plan in Meals', 'Deliveries, pickups and returns from Orders', 'Fixtures of the teams you follow in News']) assert.ok(rows.includes(s), s);
+  await ctx.close();
+});
+
+await test('with no copy from Meals yet, Settings says to open it once', async () => {
+  await db.delete('layer:meals:O1');
+  const { page, ctx } = await app('calendar');
+  await page.waitForFunction(() => window.__calendar && window.__calendar.st.layersState === 'ok', null, { timeout: 8000 });
+  await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
+  assert.ok((await page.textContent('#stBody')).includes('Open Meals once, signed in, to show it here'));
   await ctx.close();
 });
 

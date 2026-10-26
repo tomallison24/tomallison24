@@ -873,6 +873,30 @@ await step('the owner\'s phone hands the Sheet link and phrase it kept over to a
   await ctx.close();
 });
 
+await step('Calendar\'s Orders layer (home/welcome.js AllisonOS.layer, built by parse.js): open orders\' days; ?open=<id> from it opens the order\'s page', async () => {
+  const { ctx, page, errs, open } = await phone('light', { at: '/orders/?open=o-c/arrives' });
+  await page.goto(BASE + '/orders/icon.svg');
+  const eta = ymd(day(2)), by = ymd(day(9));
+  await seedPhone(page, { 'allison-orders-v1': JSON.stringify({ orders: [SEEDED('o-c', 'Corner Shop', { eta }), SEEDED('o-d', 'Done Shop', { status: 'delivered', eta, steps: { delivered: ymd(day(-1)) }, ret: { status: 'started', by } }),
+    SEEDED('o-p', 'Pharmacy', { eta, private: true })], kinds: { package: true } }) });
+  await open();
+  assert.deepEqual(await page.evaluate(() => window.__orders.shared()), { items: [
+    { id: 'o-c/arrives', date: eta, kind: 'arrives', store: 'Corner Shop', what: 'A thing from Corner Shop' },
+    { id: 'o-d/return_by', date: by, kind: 'return_by', store: 'Done Shop', what: 'A thing from Done Shop' }] }, 'the layer: the arrival and the return, not the private order');
+  assert.ok(await page.isVisible('#opage'), 'the order page is open');
+  assert.match(await page.textContent('#opage'), /Corner Shop/);
+  // the order's own id works too; one that isn't here opens nothing
+  await page.goto(BASE + '/orders/?open=o-c'); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(400);
+  assert.ok(await page.isVisible('#opage') && /Corner Shop/.test(await page.textContent('#opage')));
+  await page.goto(BASE + '/orders/?open=nope'); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(1200);
+  assert.ok(await page.isHidden('#opage'));
+  // marking it delivered takes its arrival off the layer
+  await page.evaluate(() => { const o = window.__orders.orders.find(x => x.id === 'o-c'); o.status = 'delivered'; o.steps.delivered = new Date().toISOString().slice(0, 10); window.__orders.save(); });
+  assert.deepEqual((await page.evaluate(() => window.__orders.shared())).items.map(x => x.id), ['o-d/return_by']);
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
 await browser.close();
 server.close();
 console.log(failed ? failed + ' failed' : 'all passed');

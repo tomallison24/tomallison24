@@ -12,7 +12,7 @@
 //   deletions of one occurrence, all future ones or the whole series; drag
 //   an event in Day or Week to move it, or its bottom edge to resize it.
 // - Layers alongside the Family calendar: US holidays (worked out here),
-//   Notes' reminders and nudges, Travel's trips, Mail's Remind Me days,
+//   Notes' reminders and nudges, Travel's trips, Mail's Remind Me days, Meals' plan, Orders' deliveries, News' fixtures,
 //   Fitness's workouts (they share this phone's storage when opened from
 //   AllisonOS Home), and the weather (Open-Meteo, as in the Weather app).
 // - Two designs, picked in Settings > Design: Vintage (the default) and Standard
@@ -71,6 +71,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
     dumbbell: '<svg viewBox="0 0 24 24"><path d="M8.4 12h7.2"/><rect x="5" y="7.4" width="3.4" height="9.2" rx="1.2"/><rect x="15.6" y="7.4" width="3.4" height="9.2" rx="1.2"/><path d="M5 10H3.6a.6.6 0 0 0-.6.6v2.8a.6.6 0 0 0 .6.6H5M19 10h1.4a.6.6 0 0 1 .6.6v2.8a.6.6 0 0 1-.6.6H19"/></svg>',
     glass: '<svg viewBox="0 0 24 24"><path d="M7.2 3.6h9.6c.4 3.8.3 6.2-.6 7.8-.9 1.6-2.4 2.6-4.2 2.6s-3.3-1-4.2-2.6c-.9-1.6-1-4-.6-7.8z"/><path d="M12 14v6.2M8.6 20.4h6.8"/></svg>',
+    fork: '<svg viewBox="0 0 24 24"><path d="M7 3.4v5.2a2.6 2.6 0 0 0 5.2 0V3.4"/><path d="M9.6 3.4v17.2"/><path d="M17.4 3.4c-1.6 1.2-2.4 3.2-2.4 6v3.4h2.4"/><path d="M17.4 3.4v17.2"/></svg>',
+    box: '<svg viewBox="0 0 24 24"><path d="M3.6 7.6L12 3.4l8.4 4.2v8.8L12 20.6l-8.4-4.2z"/><path d="M3.6 7.6L12 11.8l8.4-4.2"/><path d="M12 11.8v8.8"/><path d="M7.8 5.5l8.4 4.2"/></svg>',
+    ball: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.2l3.4 2.5-1.3 4h-4.2l-1.3-4z"/><path d="M12 7.2V3.4M15.4 9.7l3.6-1.2M14.1 13.7l2.2 3.2M9.9 13.7l-2.2 3.2M8.6 9.7L5 8.5"/></svg>',
     flag: '<svg viewBox="0 0 24 24"><path d="M5.5 21V4.2"/><path d="M5.5 4.6c3.6-1.8 6.2 1.6 9.8-.2v9.2c-3.6 1.8-6.2-1.6-9.8.2"/></svg>',
     sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
     cloudSun: '<svg viewBox="0 0 24 24"><path d="M7 18.5h9.5a3.5 3.5 0 0 0 .5-7 5 5 0 0 0-9.6-1.3A4.2 4.2 0 0 0 7 18.5z"/><path d="M15.5 6.2a3 3 0 0 1 3.6 3.9M17 3v1.4M21 7.2h1.4M19.9 4.3l1-1"/></svg>',
@@ -86,9 +89,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const settings = Object.assign({
     weekStart: 0, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
-    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true, drinks: false },
+    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, news: true, weather: true, drinks: false },
   }, ls.json(K.settings, {}));
-  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, weather: true, drinks: false }, settings.layers || {});
+  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, news: true, weather: true, drinks: false }, settings.layers || {});
   // Weeks start on Sunday, the US way. Settings saved before that kept Monday only as the
   // old default; unless the week start was picked here (weekStartPicked), it moves to Sunday.
   if (!settings.weekStartPicked && settings.weekStart !== 0) { settings.weekStart = 0; try { if (ls.json(K.settings, null)) ls.set(K.settings, JSON.stringify(settings)); } catch {} }
@@ -128,8 +131,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const dayLetter = s => { const d = shortDay(s); return /^[A-Za-z]/.test(d) ? d.slice(0, 1) : d.slice(0, 1).toUpperCase() + d.slice(1, 2); };
   // What the family wrote (titles, places, notes, names) and what came from elsewhere (bookings) stays as it is
   // in Russian (../home/lang.js): translate="no", but not on the words the app writes itself.
-  const KEEP_KINDS = { family: 1, note: 1, travel: 1 }, APP_WORDS = new Set(['Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking']);
-  const keep = (x, s) => KEEP_KINDS[x.kind] && !APP_WORDS.has(s) && !(x.kind === 'travel' && /^(Pick up|Return) · /.test(s)) ? ' translate="no"' : '';
+  const KEEP_KINDS = { family: 1, note: 1, travel: 1, meals: 1, orders: 1, news: 1 }, APP_WORDS = new Set(['Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking', 'Meals', 'Orders', 'News']);
+  // a title the app starts ("Pick up · Hertz", "Dinner: Lasagna", "Arrives: Target") is translated up to the colon; the rest stays
+  const APP_START = { travel: /^(Pick up|Return) · /, meals: /^(Breakfast|Lunch|Dinner): /, orders: /^(Arrives|Delivery window ends|Pick up by|Return by): / };
+  const keep = (x, s) => KEEP_KINDS[x.kind] && !APP_WORDS.has(s) && !(APP_START[x.kind] && APP_START[x.kind].test(s)) ? ' translate="no"' : '';
   // the line under a title: a done reminder's list name stays as it is, " · done" is the app's
   const subSpan = x => keep(x, x.sub) && x.kind === 'note' && / · done$/.test(x.sub) ? '<span><span translate="no">' + esc(x.sub.slice(0, -7)) + '</span> · done</span>' : '<span' + keep(x, x.sub) + '>' + esc(x.sub) + '</span>';
 
@@ -155,6 +160,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     travel: { name: 'Travel', color: 'var(--tr)', sub: 'Flights, hotels and rental cars from Travel' },
     mail: { name: 'Mail', color: 'var(--ml)', sub: 'Remind Me days from Mail' },
     fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'Workouts logged in Fitness' },
+    meals: { name: 'Meals', color: 'var(--mls)', sub: 'Breakfasts, lunches and dinners from the family’s plan in Meals' },
+    orders: { name: 'Orders', color: 'var(--ord)', sub: 'Deliveries, pickups and returns from Orders' },
+    news: { name: 'News', color: 'var(--nws)', sub: 'Fixtures of the teams you follow in News' },
     drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your drinks and alcohol-free days, seen only by you' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast on each day' },
   };
@@ -289,6 +297,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (settings.layers.notes) out.push(...noteItems(w));
     if (settings.layers.travel) out.push(...travelItems(w));
     if (settings.layers.fitness) out.push(...fitnessItems(w));
+    if (settings.layers.meals) out.push(...mealsItems(w));
+    if (settings.layers.orders) out.push(...ordersItems(w));
+    if (settings.layers.news) out.push(...newsItems(w));
     if (settings.layers.drinks) out.push(...drinksItems(w));
     if (settings.layers.mail && st.mail && Array.isArray(st.mail.items)) out.push(...st.mail.items.filter(x => x.start >= w.from - 31 * D && x.start < w.to).map(x => Object.assign({}, x, { color: LAYER.mail.color })));
     out.sort((a, b) => (b.allDay - a.allDay) || a.start - b.start || (b.end - b.start) - (a.end - a.start));
@@ -330,13 +341,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return out;
   }
 
-  // ---- Notes, Travel, Fitness and Mail: from your own family account ----
+  // ---- Notes, Travel, Fitness, Mail, Meals, Orders and News: from your own family account ----
   // On an iPhone each Home Screen app keeps its own storage, so Calendar can't read
   // theirs. Each keeps a copy of just what Calendar shows in your family account
   // (AllisonOS.layer in home/welcome.js; functions/aOS/api, GET layer), read here.
   // Where this browser does share their storage (a computer), that comes first.
+  const LAYER_APPS = ['notes', 'travel', 'fitness', 'mail', 'meals', 'orders', 'news'];
   async function loadLayers(force) {
-    if (!['notes', 'travel', 'fitness', 'mail'].some(k => settings.layers[k])) return;
+    if (!LAYER_APPS.some(k => settings.layers[k])) return;
     const acct = window.AllisonOS && AllisonOS.account, tok = acct && acct.token();
     if (!tok) { st.layersState = 'signin'; mailFromLayer(); return; }
     if (!force && st.layers && Date.now() - st.layers.at < 5 * MIN) return;
@@ -371,7 +383,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     st.mailState = 'ok';
   }
   const layerNote = k => {
-    if (ls.json({ note: 'allison-notes-v1', travel: 'allison-travel-v1', fitness: 'allison-fitness-v1' }[k], null)) return LAYER[k].sub;   // this browser has it
+    const own = { note: 'allison-notes-v1', travel: 'allison-travel-v1', fitness: 'allison-fitness-v1' }[k];
+    if (own && ls.json(own, null)) return LAYER[k].sub;   // this browser has it
     if (st.layersState === 'signin') return 'Sign in to your family account first: open aOS.';
     if (st.layersState === 'off') return 'Family accounts aren’t switched on yet.';
     if (st.layersState === 'ok' && !st.layers[k === 'note' ? 'notes' : k]) return 'Open ' + LAYER[k].name + ' once, signed in, to show it here';
@@ -494,6 +507,33 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || dayMs(date) < w.from - D || dayMs(date) >= w.to) continue;
       if (typeof d.sd === 'number') out.push(allDayItem('drinks', 'drk|' + date, 'Drinks · ' + f1(d.sd) + ' standard', date, null, { sub: plural(+d.n || 0, 'drink'), link: '../drinks/?date=' + date }));
       else if (d.status === 'af') out.push(allDayItem('drinks', 'drk|' + date, 'Alcohol-free', date, null, { link: '../drinks/?date=' + date }));
+    }
+    return out;
+  }
+
+  // ---- Meals, Orders and News: only the copy each keeps in your family account (none keeps Calendar's shape itself) ----
+  const layerItems = app => { const L = st.layers && st.layers[app]; return L && L.data && Array.isArray(L.data.items) ? L.data.items.filter(Boolean) : []; };
+  const inDays = (w, date) => isDay(date) && dayMs(date) >= w.from - D && dayMs(date) < w.to;
+  // Meals: the family's plan, each meal an all-day item ("Dinner: Lasagna"); the day's recipe opens in Meals
+  const SLOT = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' };
+  function mealsItems(w) {
+    return layerItems('meals').filter(x => inDays(w, x.date) && SLOT[x.slot] && x.title)
+      .map(x => allDayItem('meals', 'meal|' + x.id, SLOT[x.slot] + ': ' + String(x.title).slice(0, 120), x.date, null, { sub: 'Meals', link: '../meals/?date=' + x.date, icon: 'fork' }));
+  }
+  // Orders: each open order's day, an all-day item ("Arrives: Target", "Return by: Amazon"); the order's sheet opens in Orders
+  const ORDER_KIND = { arrives: 'Arrives', window: 'Delivery window ends', pickup_by: 'Pick up by', return_by: 'Return by' };
+  function ordersItems(w) {
+    return layerItems('orders').filter(x => inDays(w, x.date) && ORDER_KIND[x.kind])
+      .map(x => allDayItem('orders', 'ord|' + x.id + '|' + x.kind, ORDER_KIND[x.kind] + ': ' + (x.store || 'Order'), x.date, null, { sub: x.what ? String(x.what).slice(0, 120) : 'Orders', link: '../orders/?open=' + encodeURIComponent(x.id), icon: 'box' }));
+  }
+  // News: fixtures of the teams you follow, two hours each; the match page in News when it names one on this site, else Scores
+  const samePath = u => typeof u === 'string' && /^(\.\.\/|\/(?!\/))[^\s]*$/.test(u);
+  function newsItems(w) {
+    const out = [];
+    for (const x of layerItems('news')) {
+      const s = Date.parse(x.start || '');
+      if (isNaN(s) || s < w.from - D || s >= w.to || !x.title) continue;
+      out.push(timedItem('news', 'news|' + x.id, String(x.title).slice(0, 120), s, s + 2 * H, { sub: x.league ? String(x.league).slice(0, 80) : 'News', link: samePath(x.url) ? x.url : '../news/?sport=scores', icon: 'ball' }));
     }
     return out;
   }
@@ -654,7 +694,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const now = Date.now();
     const tm = x.allDay ? 'all-day' + (x.endDate > addDays(x.startDate, 1) ? '<small>' + esc(fmt(noon(x.startDate), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(addDays(x.endDate, -1)), { day: 'numeric', month: 'short' })) + '</small>' : '')
       : esc(fmtTime(x.start)) + '<small>' + esc(x.end > x.start ? fmtTime(x.end) : '') + '</small>';
-    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : x.kind === 'drinks' ? ICON.glass : ICON.flag) + subSpan(x) + '</span>' : '';
+    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : x.kind === 'drinks' ? ICON.glass : x.icon && ICON[x.icon] ? ICON[x.icon] : ICON.flag) + subSpan(x) + '</span>' : '';
     return '<button class="evrow' + (x.end < now && !opts.noPast ? ' past' : '') + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + '><span class="tm">' + tm + '</span><span class="bd"><span class="t"' + keep(x, x.title) + '>' + esc(x.title) + '</span>' + sub + '</span></button>';
   }
 
@@ -1056,7 +1096,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i><span translate="no">' + esc(o.organizer.name || o.organizer.email) + '</span> <small>organizer</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i><span translate="no">' + esc(a.name || a.email) + '</span>' + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
       if (o.description) rows.push(kv('notes', '<span translate="no">' + esc(o.description) + '</span>'));
     } else {
-      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : x.kind === 'drinks' ? 'glass' : 'flag', subSpan(x)));
+      if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : x.kind === 'drinks' ? 'glass' : x.icon && ICON[x.icon] ? x.icon : 'flag', subSpan(x)));
       if (x.notes) rows.push(kv('notes', '<span translate="no">' + esc(x.notes) + '</span>'));
     }
     const cn = fam ? (st.calendar && st.calendar.name || 'Family') : LAYER[x.kind].name;
@@ -1413,7 +1453,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
       + '<p class="label">Calendars</p><div class="rgroup glass">'
       + '<div class="lrow" id="stFamily" style="--c:' + esc(calColor()) + '"><i></i><span class="l"><span translate="no">' + esc(st.calendar && st.calendar.name || 'Family') + '</span><small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
-      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', drinks: 'drinks', weather: 'weather' }[k]; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
+      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'news', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes' }[k] || k; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
       + '</div>'
       + '<p class="label">Display</p><div class="rgroup glass">'
       + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[0, 'Sunday'], [1, 'Monday']], settings.weekStart) + '</div>'
@@ -1438,7 +1478,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const sw = e.target.closest('[data-layer]');
     if (sw && !sw.disabled) {
       const k = sw.dataset.layer; settings.layers[k] = !settings.layers[k]; saveSettings();
-      if (['notes', 'travel', 'fitness', 'mail'].includes(k) && settings.layers[k]) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => renderSettings());
+      if (LAYER_APPS.includes(k) && settings.layers[k]) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => renderSettings());
       if (k === 'drinks') { if (settings.layers.drinks) loadDrinks(true).then(() => renderSettings()); else st.drinks = null; }
       if (k === 'weather' && settings.layers.weather) loadWeather(true);
       rebuild(); render(); renderSettings(); return;

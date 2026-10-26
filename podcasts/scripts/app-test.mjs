@@ -379,6 +379,34 @@ await test('the owner’s phone hands the Sheet link and phrase it kept over to 
   await W.ctx.close();
 });
 
+await test('signed out, the refresh on open and the Top shows chart ask nobody to sign in (the feeds are read quietly, the app keeps what it has); a tap on Refresh does', async () => {
+  const P = await newPage('light', { [KEY]: seed().replace('"lastRefresh":' + NOW, '"lastRefresh":0') }), p = P.page;   // lastRefresh 0: the feeds are checked on open
+  const calls = [];
+  // the family's route, locked (functions/podcasts/api/_middleware.js): a 401 with no session
+  await p.route('**/' + FOLDER + '/api/**', route => {
+    const req = route.request(), who = PEOPLE[(req.headers().authorization || '').replace('Bearer ', '')];
+    calls.push(new URL(req.url()).pathname + (who ? ' as ' + who.id : ' signed out'));
+    if (!who) return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'signin' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) });
+  });
+  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(2500);
+  assert.ok(calls.some(c => c.startsWith('/' + FOLDER + '/api/feed')), 'the feeds were asked for on open: ' + JSON.stringify(calls));
+  assert.equal(await p.$('#aos-signin'), null, 'no sign-in sheet for the refresh on open');
+  assert.deepEqual(await p.evaluate(() => window.__podcasts.S.follows.map(f => f.id)), ['alpha', 'beta'], 'the library it has stays');
+  await p.click('#searchTab'); await p.waitForTimeout(1200);   // the Top shows chart loads by itself
+  assert.ok(calls.some(c => c.startsWith('/' + FOLDER + '/api/top')), 'the chart was asked for: ' + JSON.stringify(calls));
+  assert.equal(await p.$('#aos-signin'), null, 'no sign-in sheet for the chart');
+  assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
+  // a tap: Refresh asks for Face ID
+  await p.click('[data-tab="home"]'); await p.waitForTimeout(300);
+  await p.click('#refreshBtn');
+  await p.waitForSelector('#aos-signin', { timeout: 5000 });
+  assert.match(await p.textContent('#aos-signin'), /Continue with Face ID/, 'a tap raises the sign-in sheet');
+  await p.click('#aos-signin .s-not'); await p.waitForTimeout(2500);
+  assert.equal(await p.$('#aos-signin'), null, 'Not now closes it');
+  await P.ctx.close();
+});
+
 await test('Vintage, the default design: the Retro look, light and dark: Futura, flat cream or walnut, mustard, orange, teal, atomic shapes, the player', async () => {
   for (const scheme of ['light', 'dark']) {
     const R = await newPage(scheme, { [KEY]: seed().replace('"lastRefresh":' + NOW, '"lastRefresh":0') }), rp = R.page;   // lastRefresh 0: the stubbed feeds load, so the lists have episodes
