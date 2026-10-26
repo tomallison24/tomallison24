@@ -9,6 +9,7 @@
 //                                        meal's amount and its days (nights), staples apart
 //   MealsLogic.total(amounts)            "1 lb" x 4 is "4 lb"; mixed units stay "1 lb + 2 cups"
 //   MealsLogic.listText(groups)          the list as plain text, to paste into Notes
+//   MealsLogic.calendarItems(plan)       Calendar's Meals layer: each meal on its day
 (function (root) {
   'use strict';
   const A = root.NotesAisles;
@@ -48,5 +49,22 @@
 
   const listText = groups => groups.map(g => g.name + '\n' + g.items.map(x => '- ' + x.item + (x.amounts && x.amounts.length ? ' (' + total(x.amounts) + ')' : '')).join('\n')).join('\n\n');
 
-  root.MealsLogic = { sections, shopping, total, listText };
+  // Calendar's Meals layer (home/welcome.js AllisonOS.layer, drawn by calendar/app.js): every meal of the
+  // family's plan on its own day, leftovers too, with the slot Calendar writes before the title ("Dinner: …").
+  // A day's date is the plan's (dates, once accepted), else counted from the day it was planned from.
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  function calendarItems(p) {
+    if (!p || !p.id || !Array.isArray(p.meals)) return [];
+    const out = [];
+    p.meals.forEach((m, i) => {
+      if (!m || !m.title) return;
+      const day = m.day || i + 1, date = (Array.isArray(p.dates) && p.dates[day - 1]) || (ISO.test(p.start || '') ? addDays(p.start, day - 1) : '');
+      if (!ISO.test(date || '')) return;
+      out.push({ id: p.id + ':' + i, date, slot: ['breakfast', 'lunch', 'dinner'].includes(m.slot) ? m.slot : 'dinner', title: String(m.title).slice(0, 120) });
+    });
+    return out;
+  }
+
+  root.MealsLogic = { sections, shopping, total, listText, calendarItems };
 })(typeof window !== 'undefined' ? window : globalThis);

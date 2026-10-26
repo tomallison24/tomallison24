@@ -90,7 +90,10 @@ Workers KV (`meals:settings`, `meals:taste`, `meals:draft`, `meals:plan`,
 `functions/meals/api`, which only signed-in family can call
 (`functions/meals/api/_middleware.js`). The last plan is kept on the phone too
 (`allison-meals-v2`), so the list opens in the store with no signal. Needs family
-accounts switched on. **Taste** (`meals:taste`): the titles rated Loved it or Not
+accounts switched on. **Calendar** shows the plan as its Meals layer: every meal on its
+day (`logic.js` `calendarItems`, handed over through `AllisonOS.layer.share('meals', …)`,
+`home/welcome.js`, into your own family account), and its link `../meals/?date=YYYY-MM-DD`
+opens that day's dinner here. **Taste** (`meals:taste`): the titles rated Loved it or Not
 again (the last 20 of each), fed to the model with every plan. Ipsy keeps only a
 count of questions (`meals:ipsy:<user id>:<day>`, gone after two days), and plans a
 count a day too. The family's Google Sheet is the record of every plan (below).

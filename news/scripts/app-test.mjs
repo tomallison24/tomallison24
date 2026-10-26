@@ -48,7 +48,8 @@ const errors = [], requested = [];
 // as it was); design: 'glass' for Standard; at: the address opened.
 async function newPage(scheme, store = {}, { raw = null, design = null, at = '/news/' } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, timezoneId: 'America/New_York', locale: 'en-US', serviceWorkers: 'block' });
-  await ctx.route('**/site.api.espn.com/**', r => { const m = new URL(r.request().url()).pathname.match(/sports\/(.+)\/scoreboard/); return r.fulfill({ json: espnFor(m[1]) }); });
+  await ctx.route('**/site.api.espn.com/**', r => { const m = new URL(r.request().url()).pathname.match(/sports\/(.+)\/scoreboard/); return m ? r.fulfill({ json: espnFor(m[1]) }) : r.fulfill({ status: 503, json: {} }); });
+  await ctx.route('**/site.web.api.espn.com/**', r => r.fulfill({ status: 503, json: {} }));   // a match page's details: not in this test (match-test.mjs)
   await ctx.route('**/data/scores.json*', r => r.fulfill({ json: snapshot() }));
   await ctx.route('**/data/news.json*', r => r.fulfill({ json: newsJson() }));
   await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"off"}' }));
@@ -384,6 +385,34 @@ await test('a phone with both: News\' own data is kept, the old app\'s is not co
   assert.equal(await b.page.evaluate(() => localStorage.getItem('news.scores.league')), '"uefa.champions"');
   assert.equal(await pillText(b.page, 'Scores'), 'Champions League');
   await b.ctx.close();
+});
+
+await test('Calendar\'s News layer: nothing when you follow nothing; a team\'s games for two weeks, timed, with the league and a link to its page; ?sport=scores opens Scores, and a game its own page', async () => {
+  const n = await newPage('light');
+  await n.page.waitForFunction(() => window.__news.shared());
+  assert.deepEqual(await n.page.evaluate(() => window.__news.shared()), { items: [] }, 'following nothing: an empty layer');
+  await n.ctx.close();
+  const t = await newPage('light', { 'news.sport.quick': 'team:football:liverpool' });
+  await t.page.waitForFunction(() => window.__news.shared() && window.__news.shared().items.length);
+  const items = await t.page.evaluate(() => window.__news.shared().items), ids = items.map(x => x.id);
+  assert.ok(['eng.1:eng.1-up1', 'eng.1:eng.1-up4', 'uefa.champions:uefa.champions-up0', 'uefa.champions:5'].every(id => ids.includes(id)), 'Liverpool\'s fixtures in both leagues, and today\'s game to come: ' + ids.join(' '));
+  assert.ok(!ids.includes('eng.1:eng.1-up0') && !ids.some(id => /^(nfl|rugby|eng\.2)/.test(id)), 'only Liverpool\'s: ' + ids.join(' '));
+  assert.deepEqual(items.map(x => x.start), items.map(x => x.start).sort(), 'soonest first');
+  const g = items.find(x => x.id === 'eng.1:eng.1-up1');
+  assert.deepEqual({ ...g, start: '' }, { id: 'eng.1:eng.1-up1', start: '', title: 'Manchester City v Liverpool', league: 'Premier League', url: '../news/?sport=scores&league=eng.1&game=eng.1-up1' });
+  assert.ok(items.every(x => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(x.start) && Date.parse(x.start) <= Date.now() + 14 * 864e5), 'ISO instants within two weeks');
+  // the team switched off: the layer empties
+  await t.page.locator('.fb-top .chip.pill').click();
+  await visibleMenu(t.page).locator('button', { hasText: 'All sport' }).click();
+  await t.page.waitForFunction(() => window.__news.shared().items.length === 0);
+  await t.ctx.close();
+  // the links: ?sport=scores opens Sport > Scores (this open only); with a league and game, that game's own page
+  const s = await newPage('light', { 'news.topic': 'uk', 'news.sport.mode': 'news' }, { at: '/news/?sport=scores&league=eng.1&game=eng.1-up0' });
+  assert.equal(await s.page.locator('.modes [data-mode="scores"]').getAttribute('aria-selected'), 'true');
+  await s.page.waitForFunction(() => !document.getElementById('match-sheet').hidden);
+  assert.equal((await s.page.locator('#match-title').innerText()).trim(), 'Premier League');
+  assert.deepEqual(await s.page.evaluate(() => [localStorage.getItem('news.topic'), localStorage.getItem('news.sport.mode')]), ['"uk"', '"news"'], 'not remembered');
+  await s.ctx.close();
 });
 
 await test('nothing trips the Content Security Policy, and no script errors', async () => {

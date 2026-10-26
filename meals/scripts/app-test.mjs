@@ -316,6 +316,22 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('nothing wider than the phone; no script errors', !(await wide(page)) && !errs.length, errs.join(' | '));
   await ctx.close();
 }
+{ // Calendar's Meals layer (home/welcome.js AllisonOS.layer, built by logic.js), and ?date= from a day on it
+  const { ctx, page, errs } = await phone();
+  await page.waitForFunction(() => window.__meals.shared(), null, { timeout: 5000 });
+  const plan = JSON.parse(m.get('meals:plan')), shared = await page.evaluate(() => window.__meals.shared());
+  ok('Calendar\'s Meals layer: every meal of the family\'s plan on its day, a slot each', shared.items.length === 3 && shared.items.every((x, i) => x.id === plan.id + ':' + i && x.date === plan.dates[i] && x.slot === 'dinner' && x.title === plan.meals[i].title), JSON.stringify(shared));
+  ok('no script errors', !errs.length, errs.join(' | '));
+  await ctx.close();
+  const d = await phone('light', { at: '/meals/?date=' + plan.dates[1] });
+  await d.page.waitForTimeout(600);
+  ok('?date= (Calendar\'s link) opens the Plan tab and that day\'s dinner', (await d.page.getAttribute('#tabs [data-tab="plan"]', 'aria-pressed')) === 'true' && await d.page.locator('#recipeSheet').isVisible()
+    && (await d.page.textContent('#recipeBody')).includes(plan.meals[1].title) && / dinner$/.test(await d.page.textContent('#recipeLbl')) && !d.errs.length, (await d.page.textContent('#recipeLbl')) + ' ' + d.errs.join(' | '));
+  await d.ctx.close();
+  const n = await phone('light', { at: '/meals/?date=2020-01-01' });
+  ok('a day the plan hasn\'t: the plan as usual', await n.page.locator('#recipeSheet').isHidden() && !n.errs.length, n.errs.join(' | '));
+  await n.ctx.close();
+}
 { // a plan that keeps using coconut is never kept
   coconut = true;
   const { ctx, page } = await phone();

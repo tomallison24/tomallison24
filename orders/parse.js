@@ -875,9 +875,34 @@
     return s && s.id ? s : null;
   }
 
+  // Calendar's Orders layer (home/welcome.js AllisonOS.layer, drawn by calendar/app.js): the day an open order
+  // arrives (and the last day of a delivery window), the last day to pick one up (while it's ready, or ordered),
+  // and the day to send a return back (until the store has it). Never a delivered, picked up or cancelled
+  // order, a hidden or private one, or a kind switched off (kinds). An order can give several items, so each
+  // item's id is the order's with the kind after a slash (the app's ?open= takes either). At most 60, soonest first.
+  const KIND_WORDS = { package: 'Package', pickup: 'Store pickup', food: 'Food', digital: 'Digital', other: 'Order' };
+  function calendarItems(orders, { kinds = {} } = {}) {
+    const day = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? String(s) : '';
+    const out = [];
+    for (const o of orders || []) {
+      if (!o || typeof o.id !== 'string' || o.hide || o.private || kinds[o.kind || 'package'] === false) continue;
+      const items = Array.isArray(o.items) ? o.items : [], first = items[0] && items[0].name ? String(items[0].name).slice(0, 120) : '';
+      const store = String(o.store || 'Order').slice(0, 80);
+      const what = first ? first + (items.length > 1 ? ' and ' + (items.length - 1) + ' more' : '') : o.orderNo ? 'Order ' + o.orderNo : KIND_WORDS[o.kind] || KIND_WORDS.package;
+      const push = (kind, date) => { if (day(date)) out.push({ id: o.id + '/' + kind, date: day(date), kind, store, what }); };
+      if (['ordered', 'shipped', 'out', 'pickup'].includes(o.status)) {
+        if (o.status !== 'pickup') { push('arrives', o.eta); if (o.etaEnd && o.etaEnd !== o.eta) push('window', o.etaEnd); }
+        if (o.status === 'pickup' || o.status === 'ordered') push('pickup_by', o.pickupBy);
+      }
+      const r = o.ret;
+      if (r && r.status && r.status !== 'received' && r.status !== 'refunded') push('return_by', r.by);
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 60);
+  }
+
   const api = { parseEmail, parseText, upsert, findMatch, findTotal, findOrderNo, trackingIn, trackUrl, statusOf, itemsFromText, fromSchema, htmlToText, jsonLdBlocks, microdata,
     findDates, dateIn, senderInfo, storeOf, kindOf, idFor, hash, keyOf, addDays, daysBetween, localYmd, rank, STATUS_NAMES, KINDS, carrierName, lastDay,
-    returnOf, retRank, RETURN_NAMES, saneOrder };
+    returnOf, retRank, RETURN_NAMES, saneOrder, calendarItems };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OrdersParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

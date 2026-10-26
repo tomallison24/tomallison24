@@ -221,6 +221,8 @@
     'Open in Mail': 'Открыть в Почте',
     'Open in Fitness': 'Открыть в Фитнесе',
     'Open in Meals': 'Открыть в Меню',
+    // under an Orders item: the kind of order, when it has no items (orders/parse.js KIND_WORDS)
+    'Package': 'Посылка', 'Store pickup': 'Самовывоз из магазина', 'Food': 'Еда', 'Digital': 'Цифровой заказ',
     'Open in Orders': 'Открыть в Заказах',
     'Open in News': 'Открыть в Новостях',
     'Open in Drinks': 'Открыть в Напитках',
@@ -372,6 +374,9 @@
     [/^(\d+) drinks?$/, m => P(m[1], 'напиток', 'напитка', 'напитков')],
     [/^(Pick up|Return) · (.+)$/, m => (m[1] === 'Pick up' ? 'Получение' : 'Возврат') + ' · ' + m[2].replace(/^Rental car(?=,|$)/, 'Прокат авто')],
     [/^(Breakfast|Lunch|Dinner): (.+)$/, m => ({ Breakfast: 'Завтрак', Lunch: 'Обед', Dinner: 'Ужин' })[m[1]] + ': ' + m[2]],
+    // under an Orders item: what the order is, as Orders words it (orders/parse.js calendarItems)
+    [/^Order (.+)$/, m => 'Заказ ' + m[1]],
+    [/^(.+) and (\d+) more$/, m => m[1] + ' и ещё ' + m[2]],
     [/^(Arrives|Delivery window ends|Pick up by|Return by): (.+)$/, m => ({ Arrives: 'Прибывает', 'Delivery window ends': 'Окно доставки до', 'Pick up by': 'Забрать до', 'Return by': 'Вернуть до' })[m[1]] + ': ' + (m[2] === 'Order' ? 'Заказ' : m[2])],
     [/^Open (.+) once, signed in, to show it here$/, m => 'Чтобы показать здесь, откройте «' + aosLang.t(m[1]) + '» один раз после входа'],
     [/^(\d+) reminders?$/, m => P(m[1], 'напоминание', 'напоминания', 'напоминаний')],
