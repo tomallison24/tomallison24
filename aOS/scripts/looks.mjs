@@ -252,22 +252,29 @@ ${SHAPE(3)}{background:var(--fk-leaf);border-radius:100% 0}
     const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
     const CYR = 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116';
     const face = (fam, w, file, range) => `@font-face{font-family:"${fam}";font-style:normal;font-weight:${w};font-display:swap;src:url("../home/fonts/${file}.woff2") format("woff2");unicode-range:${range}}`;
-    return `/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - a red Light Cycle and its red trail on a black grid,
-   the cabin lit red. Red light on black at night, on clean white by day: Orbitron headings (Exo 2 for Cyrillic), Exo 2 for
-   the rest (SIL Open Font License, ../home/fonts); an identity disc, a white square and a red light trail for the shapes,
-   a grid floor under them, and a glow on what's lit. */
+    return `/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
+   only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
+   over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.
+   Orbitron headings (Exo 2 for Cyrillic), Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
+   dot and pill behind the title go: the car's screen is calm. */
 ${face('Orbitron', 700, 'orbitron-700-latin', LAT)}
 ${face('Exo 2', '400 700', 'exo-2-latin', LAT)}
 ${face('Exo 2', '400 700', 'exo-2-cyrillic', CYR)}
+@property --tr-a{syntax:'<angle>';inherits:false;initial-value:0deg}
 ${HEADS}{font-family:${LOOKS.grid.display};font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
-:root{--tr-line:#D0101E;--tr-hot:#2A2E35;--tr-glow:.35;--tr-grid:rgba(208,16,30,.16)}
-${darkBoth('--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.28)')}
-${SHAPE(1)}{background:radial-gradient(circle,var(--tr-line) 0 7%,transparent 7.5% 30%,var(--tr-line) 31% 35%,transparent 36% 55%,var(--tr-line) 56% 63%,transparent 64%);filter:drop-shadow(0 0 calc(var(--tr-glow) * 12px) var(--tr-line));opacity:1}
-${SHAPE(2)}{background:transparent;border-radius:4px;box-shadow:inset 0 0 0 3px var(--tr-hot),0 0 calc(var(--tr-glow) * 10px) color-mix(in srgb,var(--tr-hot) 60%,transparent)}
-${SHAPE(3)}{background:linear-gradient(90deg,transparent,var(--tr-line) 35%,var(--tr-line)) center/100% 22% no-repeat;border-radius:0;filter:drop-shadow(0 0 calc(var(--tr-glow) * 8px) var(--tr-line))}
+:root{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.16);color-scheme:dark}
+${SHAPE(1)},${SHAPE(2)},${SHAPE(3)}{display:none}
 ${BAND}::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
   background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
   transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
+:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px max(4px,env(safe-area-inset-bottom)) 4px;z-index:-1;pointer-events:none;border-radius:30px}
+:root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
+:root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  filter:drop-shadow(0 0 4px #FF2A2A);animation:trRun 7s linear infinite}
+@keyframes trRun{to{--tr-a:360deg}}
+@media (prefers-reduced-motion:reduce){:root::after{animation:none;opacity:0}}
 :is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
 `;
   }

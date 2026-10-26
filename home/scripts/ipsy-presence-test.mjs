@@ -22,7 +22,7 @@ await new Promise(r => server.listen(0,'127.0.0.1',r));
 const base = 'http://127.0.0.1:' + server.address().port, browser = await chromium.launch();
 let tested = 0;
 try {
-  for (const width of [375,390,768]) for (const design of ['glass','vintage']) for (const scheme of ['light','dark']) {
+  for (const width of [375,390,768]) for (const design of ['glass','vintage','grid']) for (const scheme of ['light','dark']) {
     const ctx = await browser.newContext({viewport:{width,height:844},colorScheme:scheme,serviceWorkers:'block'});
     await ctx.route(u => !u.href.startsWith(base),route => route.abort());
     for (const app of apps) {
@@ -31,7 +31,8 @@ try {
       await page.goto(base + '/' + app + '/');
       await page.evaluate(({app,design}) => {
         document.documentElement.dataset.look = design;
-        const style = document.getElementById('vintage'); if (style) style.media = design === 'vintage' ? 'all' : 'not all';
+        const style = document.getElementById('vintage'); if (style) style.media = design === 'glass' ? 'not all' : 'all';
+        const grid = document.getElementById('grid'); if (grid) grid.media = design === 'grid' ? 'all' : 'not all';
         localStorage.setItem('ipsy.' + app + '.ok','yes');
         localStorage.setItem('aos.helper','{"who":"fox","name":""}');
       },{app,design});
@@ -61,6 +62,14 @@ try {
       for (const [mood,sel,anim] of [['talk','.h-mouth','ipsyJaw'],['read','.h-eyes','ipsyRead'],['scan','.h-eyes','ipsyDart'],['write','.h-rigR','ipsyScribble'],['done','.h-hop','ipsyHop'],['think','.h-bubble','ipsyBubble']]) {
         await page.locator('.ipsy-btn .ipsy-host').evaluate((e,m)=>e.dataset.mood=m,mood);
         assert.ok((await page.locator('.ipsy-btn ' + sel).first().evaluate(e=>getComputedStyle(e).animationName)).includes(anim),label + ': ' + mood);
+      }
+      if (design === 'grid') {   // Tron: whichever helper was picked, the Tron rider, its visor sweeping as it searches and lit as it talks
+        assert.equal(await page.locator('.ipsy-btn .ipsy-char').getAttribute('data-who'),'rider',label + ': the Tron rider');
+        for (const [mood,sel,anim] of [['scan','.h-rsweep','ipsyVisor'],['talk','.h-rline','ipsyRtalk']]) {
+          await page.locator('.ipsy-btn .ipsy-host').evaluate((e,m)=>e.dataset.mood=m,mood);
+          assert.ok((await page.locator('.ipsy-btn ' + sel).evaluate(e=>getComputedStyle(e).animationName)).includes(anim),label + ': rider ' + mood);
+        }
+        await page.locator('.ipsy-btn .ipsy-host').evaluate(e=>e.dataset.mood='idle');
       }
       const specsOff = await page.waitForFunction(() => getComputedStyle(document.querySelector('.ipsy-btn .h-specs')).opacity === '0', null, { timeout: 3000 }).then(() => true, () => false);   // they fade off (a transition): waited for
       assert.ok(specsOff,label + ': glasses off but for scanning');

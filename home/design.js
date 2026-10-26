@@ -42,7 +42,7 @@
   const APP = data.app || '';
   const KEY = 'design.' + APP;
   const root = document.documentElement;
-  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], neon: ['#F5F2FD', '#140A22'], folk: ['#F4F7FD', '#0F0B07'], grid: ['#F3F5F7', '#050608'] };
+  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], neon: ['#F5F2FD', '#140A22'], folk: ['#F4F7FD', '#0F0B07'], grid: ['#050608', '#050608'] };
   const LOOKS = ['vintage', 'glass', 'neon', 'folk', 'grid'];
   const ok = v => LOOKS.includes(v) ? v : 'vintage';
   const pairs = s => String(s || '').split(',').map(p => p.split('=').map(x => x.trim())).filter(p => p.length === 2 && p[0] && p[1]);
@@ -112,6 +112,8 @@
   function apply(look) {
     look = ok(look);
     root.setAttribute('data-look', look);
+    if (look === 'grid') root.setAttribute('data-theme', 'dark'); else if (root.getAttribute('data-theme') === 'dark' && root.dataset.tron) root.removeAttribute('data-theme');   // Tron is dark only, as in the car (welcome.js keeps it so, and puts your own back after)
+    if (look === 'grid') root.dataset.tron = '1'; else delete root.dataset.tron;
     const v = document.getElementById('vintage'); if (v) v.media = look === 'glass' ? 'not all' : 'all';
     for (const id of ['neon', 'folk', 'grid']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
     for (const m of document.querySelectorAll('meta[name="theme-color"]')) {

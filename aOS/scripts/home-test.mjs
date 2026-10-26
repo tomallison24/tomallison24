@@ -178,7 +178,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await pg.evaluate(() => { localStorage.setItem('design.weather', 'glass'); aosHomeTab.show('weather'); }); await pg.waitForTimeout(2200);
     const inApp = await pg.evaluate(() => { const f = document.querySelector('.frame[data-id="weather"] iframe'), d = f.contentDocument, fade = d.getElementById('aos-topfade');
       return { bar: getComputedStyle(document.getElementById('barcap')).backgroundColor, top: f.contentWindow.AllisonOS.topColor(), fade: !!fade && !fade.hidden && getComputedStyle(fade).backgroundImage.includes(f.contentWindow.AllisonOS.topColor()) }; });
-    check(homeBar === await pg.evaluate(() => getComputedStyle(document.body).backgroundColor) && inApp.bar === inApp.top && inApp.bar !== homeBar && inApp.fade,
+    check(homeBar === await pg.evaluate(() => (b => /,\s*0\)$|transparent/.test(b) ? getComputedStyle(document.documentElement).backgroundColor : b)(getComputedStyle(document.body).backgroundColor)) && inApp.bar === inApp.top && inApp.bar !== homeBar && inApp.fade,
       `under a solid status bar, the bar is the app's own colour while it's open, and its top fades into it (${homeBar} > ${inApp.bar}) ${tag}`);
     await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(600);
     check(await bar() === homeBar, `and aOS's again on the way back ${tag}`);

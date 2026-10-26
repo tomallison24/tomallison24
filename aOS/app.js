@@ -319,7 +319,10 @@
   // Language: English or Russian, for aOS and every app (../home/lang.js); each named in its own language, so it can always be found
   const LANGS = window.aosLang ? aosLang.list : [['en', 'English']];
   const langNow = () => (window.aosLang ? aosLang.get() : 'en');
-  const looksLine = () => `${THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
+  // Tron's intro as aOS opens (tron-intro.js): with its sound, silent, or off
+  const TRON_INTRO = [['sound', 'Sound'], ['silent', 'Silent'], ['off', 'Off']];
+  const tronIntro = () => { try { const m = localStorage.getItem('aos.tron.intro'); return m === 'silent' || m === 'off' ? m : 'sound'; } catch { return 'sound'; } };
+  const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]} · ${(LANGS.find(([l]) => l === langNow()) || LANGS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
   const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
   function acctPage(at) {
@@ -328,7 +331,7 @@
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
       <div class="group acct"><button type="button" class="soft runsetup" data-setup>Run through setup</button></div>
       <div class="group acct">
-        ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div>
+        ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p><p class="lnote tronnote">Tron intro, as aOS opens</p><div class="seg tronnote" id="tronIntroPick" role="group" aria-label="Tron intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-ti="${m}" aria-pressed="${m === tronIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft tronnote" data-tiplay>Play the intro</button>
           <p class="lnote">Language</p>
           <div class="seg" id="lang" translate="no">${LANGS.map(([l, n]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${n}</button>`).join('')}</div>
           <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>`, 'lookSub')}
@@ -341,6 +344,8 @@
     el.addEventListener('click', ev => {
       const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
+      const ti = ev.target.closest('[data-ti]'); if (ti) { try { localStorage.setItem('aos.tron.intro', ti.dataset.ti); } catch {} el.querySelectorAll('[data-ti]').forEach(b => b.setAttribute('aria-pressed', String(b === ti))); }
+      if (ev.target.closest('[data-tiplay]') && window.aosTronIntro) aosTronIntro.show({ force: true });
       const lk = ev.target.closest('[data-look]');
       if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS }))
         .then(() => { el.querySelector('#looks').innerHTML = lookOpts(); $('lookSub').textContent = looksLine(); });
@@ -377,7 +382,7 @@
       if (k === 'lang') body = head('Which language?', 'For aOS and every app. What the family wrote stays as it is.')
         + `<div class="seg" id="sLang" translate="no">${LANGS.map(([l, nm]) => `<button type="button" data-lang="${l}" lang="${l}" aria-pressed="${l === langNow()}">${nm}</button>`).join('')}</div>`;
       if (k === 'look') body = head('Pick a look', 'Every app wears it. An app\'s own Settings can still have its own.') + `<div class="dlist" role="listbox" aria-label="Look">${lookOpts()}</div>`;
-      if (k === 'theme') body = head('Light or dark?', 'Automatic follows your phone.') + `<div class="seg" id="sTheme">${W.theme.list.map(([t, nm]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${nm}</button>`).join('')}</div>`;
+      if (k === 'theme') body = head('Light or dark?', 'Automatic follows your phone.') + `<div class="seg" id="sTheme">${W.theme.list.map(([t, nm]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${nm}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p>`;
       if (k === 'helper') body = head('Who’s your helper?', 'Ipsy, the helper you chat with in aOS and the apps. Pick one and give it a name.') + '<div id="sHelper"></div>';
       if (k === 'done') body = head('You’re all set', 'Change any of these again in Account.') + `<ul class="sdone"><li>${esc(looksLine())}</li><li>${esc(helperLine())}</li></ul>`;
       box.innerHTML = body + `<div class="row2">${at && k !== 'done' ? '<button type="button" class="soft" data-sback>Back</button>' : ''}<button type="button" class="go" data-snext>${k === 'done' ? 'Done' : k === 'helper' ? 'Finish' : 'Next'}</button></div>`;

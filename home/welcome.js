@@ -103,6 +103,9 @@
         'Your language now follows you to your other devices, as your look does',
         'Meals: cook a past plan again, or one meal from it: its meals come back on the Plan tab with their recipes, and their ingredients go on the shopping list, for the whole family (two weeks, or until you take them off)',
         'Meals: a recipe from a past plan opens on top of the plan, where before it opened hidden behind it',
+        'Tron, Tesla style: always dark, as the car\'s screen goes, red only for what\'s lit, and a red light trail that runs around every screen behind everything, a light racing along it',
+        'In Tron, your helper suits up as the Tron rider: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar',
+        'aOS opens with a short Tron intro and its own sound (Account > Appearance > Tron intro: Sound, Silent or Off; a phone may need a tap for the sound)',
         'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name',
         'Fixes from a review of every app: Places no longer re-syncs a place that came back unchanged (it sent it again every second while open); Calendar\'s Year view steps from Feb 29 to Feb 28; Travel says "tomorrow" by your own day, not UTC, and drops a Gmail sign-in Google refused instead of failing for an hour; Podcasts\' mini player shows the right show for an episode with a repeated title; Weather\'s My Location no longer waits out another place\'s forecast; Mail\'s Add tag keeps its name after a failed add',
         'More fixes from the review: Notes\' Undo no longer drops a note another phone added meanwhile, and an edit to a note deleted elsewhere is kept as a new note; Calendar says "1 day after" for an alarm set after an all-day event; Travel reads long emails for Ipsy and says when it couldn\'t; Money syncs a busy month (its newest 1,500) instead of stalling every later one; Weather names a nameless alert; Home\'s join link shows the address before joining; Home, Podcasts and Weather refuse to open inside another site\'s page; offline, an app\'s page loads and nothing else is served as HTML',
@@ -1105,7 +1108,9 @@
   // ---- Appearance: System, Light or Dark (home.settings.theme), applied by every app ----
   const THEMES = [['auto', 'System'], ['light', 'Light'], ['dark', 'Dark']];
   const readTheme = () => { try { const t = (JSON.parse(localStorage.getItem('home.settings')) || {}).theme; return ['light', 'dark'].includes(t) ? t : 'auto'; } catch { return 'auto'; } };
-  const applyTheme = t => { const r = document.documentElement; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); forceScheme(t); };
+  // Tron is dark only, as the car's screen is: your own choice is kept, and comes back with another look
+  const tron = () => document.documentElement.getAttribute('data-look') === 'grid';
+  const applyTheme = t => { const r = document.documentElement; if (tron()) t = 'dark'; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); forceScheme(t); };
   // Some apps' CSS follows only the iPhone's setting (@media (prefers-color-scheme: ...)).
   // A chosen Light or Dark switches those rules on or off to match, so every app follows
   // it; System puts them back. The theme-color metas are matched the same way.
@@ -1128,6 +1133,9 @@
   const themeSeg = () => `<div class="c-seg" role="group" aria-label="Appearance">${THEMES.map(([v, n]) => `<button type="button" data-t="${v}" aria-pressed="${v === readTheme()}">${n}</button>`).join('')}</div>`;
   const bindSeg = root => { for (const b of root.querySelectorAll('.c-seg button')) b.onclick = () => { setTheme(b.dataset.t); root.querySelectorAll('.c-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }; };
   applyTheme(readTheme());   // every app, every time
+  let lookNow = document.documentElement.getAttribute('data-look');
+  new MutationObserver(() => { const l = document.documentElement.getAttribute('data-look'); if (l !== lookNow) { lookNow = l; applyTheme(readTheme()); } })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['data-look'] });
   // changed on another page (aOS's Appearance, Ipsy in another app): this one follows at once
   addEventListener('storage', e => { if (e.key === 'home.settings') { applyTheme(readTheme()); dispatchEvent(new CustomEvent('aos:theme', { detail: readTheme() })); } });
 
@@ -2125,7 +2133,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // opts.stops: just these (an update's walkthrough of what changed), with no Light or dark at the end
   function spotTour(o, id, opts = {}) {
     const { el, q, close } = o, S = opts.stops ? {} : SPOTS[id], name = NAMES[id];
-    const list = opts.stops ? opts.stops.slice() : [...S.stops, ...(DARK_ONLY.includes(id) ? [] : [{ theme: true, t: 'Light or dark', d: `Follow your ${ios ? 'iPhone' : 'device'}, or keep ${name} always light or always dark. Try it: ${name} changes behind this.` }])];
+    const list = opts.stops ? opts.stops.slice() : [...S.stops, ...(DARK_ONLY.includes(id) || tron() ? [] : [{ theme: true, t: 'Light or dark', d: `Follow your ${ios ? 'iPhone' : 'device'}, or keep ${name} always light or always dark. Try it: ${name} changes behind this.` }])];
     el.insertAdjacentHTML('beforeend', `<div class="s-hole"></div><div class="s-ripple"></div><div class="s-hand"></div>
       <div class="s-card" role="group" aria-live="polite"><h3></h3><p></p><div class="s-x"></div>
         <div class="s-row"><div class="w-dots"></div><button class="s-back" type="button" aria-label="Back" hidden>‹</button><button class="s-next" type="button">Next</button></div></div>`);
@@ -2328,7 +2336,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
       <div class="c-word">${letters(window.aosLang ? aosLang.t(name) : name)}</div><div class="a-by">aOS<sup>${esc(v)}</sup></div><div class="a-tag">${esc(T.tag || '')}</div></div></div>`;
     // no install card: Safari showed how, and this plays once it's on the Home Screen. Light or dark
     // last: each app on the Home Screen keeps its own settings, so each one asks.
-    const cards = [...T.cards, ...(DARK_ONLY.includes(id) ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: `Follow your iPhone, or keep ${name} always light or always dark.` }])];
+    const cards = [...T.cards, ...(DARK_ONLY.includes(id) || tron() ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: `Follow your iPhone, or keep ${name} always light or always dark.` }])];
     return run(`Welcome to ${name}`, head, () => { markSeen(id, latest()); if (spotEnd) spotEnd(); }, async o => {
       await sceneApp(o, id);
       if (await spotsReady(id)) await spotTour(o, id); else await tour(o, cards);   // the live tour, or its cards if it can't find its way
