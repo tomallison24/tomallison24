@@ -165,10 +165,12 @@ there's no new Google Cloud project, but its address must be added to that clien
    `https://tomallison24-news.pages.dev/money/`
 3. **Save**. Google can take a few minutes to pick it up.
 
-`gmail.readonly` is already on the consent screen for Travel and Orders. Opened from aOS, Money can
-use Mail's sign-in while it's fresh (they share storage there). Google gives a browser-only app an
-hour-long sign-in; Money goes back through Google quietly when it needs to, and asks for a tap if
-Google can't answer quietly.
+`gmail.readonly` is already on the consent screen for Travel and Orders. Opened from aOS, Money uses
+Mail's sign-in first while it's fresh (they share storage there; same Google account, by the address
+each kept), so it never goes back through Google while Mail is signed in; Mail's token is Mail's to
+renew or drop, Money only reads it, and skips one Gmail refused. On its own (or when Mail has none),
+Google gives a browser-only app an hour-long sign-in; Money goes back through Google quietly when it
+needs to, and asks for a tap if Google can't answer quietly.
 
 ## Files
 

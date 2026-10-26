@@ -185,7 +185,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     { id: 'repeats', name: 'Recurring', sub: 'What repeats, and a year of it', icon: I.repeat },
   ];
   const curYm = () => today().slice(0, 7);
-  const st = { view: VIEWS.some(v => v.id === ls.get(K.view, '')) ? ls.get(K.view, '') : 'month', ym: curYm(), q: '', server: null, reading: false, list: null };
+  const st = { view: VIEWS.some(v => v.id === ls.get(K.view, '')) ? ls.get(K.view, '') : 'month', ym: curYm(), q: '', server: null, reading: false, list: null, mailBad: '' };
 
   // Each card its own colour, in the order of what's been spent on them (the same on every view).
   function cardColours() {
@@ -573,9 +573,18 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, '');
   class AuthError extends Error {}
   function ownToken() { try { const o = JSON.parse(ls.get(K.token, 'null')); if (o && o.exp > Date.now()) return o; } catch {} return null; }
-  // Opened from aOS, Mail's sign-in is in the same storage: its permission covers reading.
-  function mailToken() { try { const o = JSON.parse(ls.get('mail.token', 'null')); if (o && o.exp > Date.now() && /gmail\.(modify|readonly)|mail\.google\.com/.test(o.scope || '')) return o; } catch {} return null; }
-  const getToken = () => ownToken() || mailToken();
+  // Opened from aOS, Mail's sign-in is in the same storage: its permission covers reading, so Money
+  // uses it first (same Google account, fresh, not refused by Gmail this session) and never goes
+  // back through Google while Mail is signed in; its own sign-in is for Money on its own. Mail's
+  // token is Mail's to keep or drop: Money only reads it (one Gmail refused is skipped, st.mailBad).
+  function mailToken() {
+    try {
+      const o = JSON.parse(ls.get('mail.token', 'null')), mine = ls.get(K.hint, '').toLowerCase(), theirs = ls.get('mail.hint', '').toLowerCase();
+      if (o && o.t && o.t !== st.mailBad && o.exp > Date.now() && /gmail\.(modify|readonly)|mail\.google\.com/.test(o.scope || '') && (!mine || !theirs || mine === theirs)) return Object.assign({}, o, { mail: true });
+    } catch {}
+    return null;
+  }
+  const getToken = () => mailToken() || ownToken();
   const mayRenew = () => !!ls.get(K.token + '.ever', '') && Date.now() - +ls.get(K.lastAuth, 0) > 60e3 && Date.now() - +ls.get(K.silentFail, 0) > 12 * H;
   const hasGmail = () => !!getToken() || !!ls.get(K.token + '.ever', '');
   // This phone may read Monarch's emails: nobody reads them yet, or its person is the reader (or it's signed out).
@@ -631,7 +640,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { res = await fetch(url, { headers: { Authorization: 'Bearer ' + tok.t }, signal: ctl.signal }); text = await res.text(); }
     catch { clearTimeout(timer); if (tries < 2) { await sleep(600 * 2 ** tries); return gmail(path, params, tries + 1); } throw new Error('No connection to Gmail'); }
     clearTimeout(timer);
-    if (res.status === 401) { if (tok === ownToken()) ls.del(K.token); throw new AuthError('expired'); }
+    if (res.status === 401) {
+      // Mail's token refused: left to Mail, not used again this session; Money's own, if any, has its turn
+      if (tok.mail) { st.mailBad = tok.t; if (ownToken()) return gmail(path, params, tries); }
+      else ls.del(K.token);
+      throw new AuthError('expired');
+    }
     if (res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text))) { if (tries < 2) { await sleep(2500 + Math.random() * 1500); return gmail(path, params, tries + 1); } throw new Error('Gmail asked to slow down. Try again in a minute.'); }
     if (res.status >= 500 && tries < 2) { await sleep(800 * 2 ** tries); return gmail(path, params, tries + 1); }
     if (!res.ok) { let m = text.slice(0, 160); try { m = JSON.parse(text).error.message; } catch {} throw new Error(m || 'Gmail returned ' + res.status); }
@@ -788,7 +802,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           }
         } else if (!s.can && !s.open) {
           // not shared with this person (or no longer): nothing of the family's stays here
-          if (!hasGmail() || !s.reader) { D.tx = []; D.alerts = []; D.hints = []; D.mAt = {}; D.dirty = []; }
+          // (the reader always may see it, so this is never the reader's own reading)
+          D.tx = []; D.alerts = []; D.hints = []; D.mAt = {}; D.dirty = [];
         }
         // the reader (or the first phone with something to send) sends what it read, six months at a time
         if ((s.reader || s.open) && hasGmail() && D.dirty.length && D.tx.length) {
@@ -839,10 +854,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<div class="rgroup acct"><p><strong>' + esc(acct[0]) + '</strong>' + esc(acct[1]) + '</p>' + (!signed ? '<button class="btn" type="button" id="signIn">Sign in with Face ID</button>' : '') + '</div>';
     if (!viewer) {
       html += '<p class="label">Monarch’s emails</p><div class="rgroup">';
-      if (hasGmail()) html += '<div class="acct"><p><strong>Gmail connected</strong>Read ' + esc(ago(D.readAt)) + '. Money reads only Monarch’s emails, and can’t change or send anything.</p></div>'
+      const tok = getToken(), own = !!ls.get(K.token + '.ever', '');   // Mail's sign-in, or Money's own (ever: there's one to disconnect)
+      if (hasGmail()) html += '<div class="acct"><p><strong>' + (tok && tok.mail ? 'Gmail connected through Mail' : 'Gmail connected') + '</strong>Read ' + esc(ago(D.readAt)) + '. Money reads only Monarch’s emails, and can’t change or send anything.</p></div>'
         + '<button class="rowbtn" type="button" id="readNow"><span class="ic">' + I.refresh + '</span><span>Read now</span></button>'
         + '<button class="rowbtn" type="button" id="readAgain"><span class="ic">' + I.mail + '</span><span>Read the last 5 years again<span class="sub">Every Monarch email, from the start</span></span></button>'
-        + '<button class="rowbtn" type="button" id="gmailOut"><span class="ic">' + I.out + '</span><span>Disconnect Gmail</span></button>';
+        + (own ? '<button class="rowbtn" type="button" id="gmailOut"><span class="ic">' + I.out + '</span><span>Disconnect Gmail</span></button>' : '');
       else html += '<div class="acct"><p><strong>Gmail not connected</strong>Money reads Monarch’s alert emails, read-only: it can’t change or send anything.</p><button class="btn" type="button" id="gmailIn">Connect Gmail</button></div>';
       html += '</div><p class="note">In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.</p>';
     }
