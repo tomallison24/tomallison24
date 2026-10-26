@@ -55,6 +55,10 @@ let sheet = fakeSheet(GS, SHEET_SECRET), sheetSet = true;
 const sheetCalls = [], claims = [];
 let sheetRefused = 0;   // syncs aOS answered 'no-sheet' (not set up in aOS yet)
 let sheetFail = '';     // when set, the Sheet answers every sync with this error
+// Notes' Sheet (Add to Notes: the shopping list into the Groceries list in Notes, home/sheet.js): the real
+// Notes script on an in-memory Sheet of its own, at /sheet/api/notes; notesSet false: not set up in aOS yet
+const notesSheet = fakeSheet(path.join(R, 'notes/google-sheet-sync.gs'), SHEET_SECRET), notesCalls = [];
+let notesSet = true;
 
 // The stand-in AI (Anthropic's Messages API shape): every meal the prompt asks for, by its key.
 const DISHES = ['Beef bulgogi bowls', 'Beef and bean chili', 'Bolognese with penne', 'Beef kofta wraps', 'Beef and broccoli stir-fry', 'Steak fajitas', 'Beef pho'];
@@ -88,6 +92,11 @@ async function phone(scheme = 'light', { design = null, seed = null, at = '/meal
     const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
     if (rq.headers()['x-sheet'] !== '1') return json({ error: 'header' }, 400);
     if (!who) return json({ error: 'signin' }, 401);
+    if (/\/sheet\/api\/notes$/.test(new URL(rq.url()).pathname)) {
+      if (!notesSet) return json({ ok: false, error: 'no-sheet' }, 409);
+      notesCalls.push({ who: who.id, body: JSON.parse(rq.postData()) });
+      return json(notesSheet.post(rq.postData(), { key: SHEET_SECRET, who: who.id, name: who.name.split(' ')[0], ...(who.role === 'owner' ? { owner: '1' } : {}) }));
+    }
     if (rq.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(rq.postData()) }); sheetSet = true; return json({ configured: true }); }
     if (rq.method() === 'GET') return json({ configured: sheetSet });
     if (sheetFail && rq.method() === 'POST') return json({ ok: false, error: sheetFail });
@@ -213,6 +222,36 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await beef.click();
   ok('ticking an item', (await beef.getAttribute('aria-checked')) === 'true');
   ok('nothing wider than the phone', !(await wide(page)));
+
+  // Add to Notes: what's still to buy goes to the Groceries list in Notes, through the family's Notes Sheet
+  const addToNotes = async () => { await page.click('[data-act="notes"]'); await page.waitForFunction(() => !document.querySelector('[data-act="notes"]').disabled && !document.getElementById('toast').hidden, null, { timeout: 8000 }); return page.textContent('#toastMsg'); };
+  ok('Add to Notes sits beside Copy the list', (await text(page, '#main .card .btns .btn')).slice(0, 2).join('|') === 'Copy the list|Add to Notes');
+  const unticked = await page.$$eval('.irow[aria-checked="false"]', els => els.map(e => e.querySelector('.it span').textContent));
+  const n1 = unticked.length - 1, items = k => k + ' item' + (k === 1 ? '' : 's');   // the one under You probably have is a staple, not sent
+  const t1 = await addToNotes();
+  ok('the toast says how many went', t1 === 'Added ' + items(n1) + ' to Groceries in Notes.', t1);
+  ok('two requests, as a phone\'s Notes sends them: a read (nothing in it), then the reminders with the Groceries list', notesCalls.length === 2
+    && JSON.stringify(notesCalls[0].body) === JSON.stringify({ action: 'sync', v: 2, window: 90, today: notesCalls[0].body.today, notes: [], todos: [], lists: [], graves: {} })
+    && /^\d{4}-\d{2}-\d{2}$/.test(notesCalls[0].body.today) && notesCalls[1].body.action === 'sync' && notesCalls[1].body.v === 2 && notesCalls[1].who === 'O1'
+    && JSON.stringify(notesCalls[1].body.lists.map(l => [l.id, l.name, l.color])) === JSON.stringify([['l3', 'Groceries', '#10B981']]), JSON.stringify(notesCalls.map(c => c.body)).slice(0, 600));
+  const sent = notesCalls[1].body.todos;
+  ok('each unticked item once, named as the list shows it, the amount in its notes, in Notes\' own shape', sent.length === unticked.length - 1 && sent.every(t => Object.keys(t).sort().join() === 'created,date,done,doneAt,flagged,id,list,notes,prio,tags,time,title,updated' && t.list === 'l3' && t.done === false && /^t[0-9a-z]{8,16}$/.test(t.id) && typeof t.updated === 'number')
+    && sent.some(t => t.title === 'Broccoli' && t.notes === '3 lb') && !sent.some(t => t.title === 'Ground beef') && !sent.some(t => /olive oil/i.test(t.title)), JSON.stringify(sent).slice(0, 400));
+  const tab = notesSheet.tab('✓ Groceries');
+  ok('the Sheet has them in its Groceries tab, as Tom\'s', tab && tab[0][0] === 'Who' && tab.slice(1).every(r => r[0] === 'Tom') && tab.slice(1).map(r => r[1]).includes('Broccoli'), JSON.stringify(tab).slice(0, 300));
+  const t2 = await addToNotes();
+  ok('again: nothing doubled, and the toast says so', t2 === 'They’re all in Groceries in Notes already.' && notesCalls.length === 3 && notesSheet.tab('✓ Groceries').length === tab.length, t2 + ' ' + notesCalls.length);
+  // Ground beef unticked: it joins the list; the others are already there (the same ids)
+  await beef.click();
+  const t3 = await addToNotes();
+  const ids = notesCalls[4].body.todos.map(t => t.id);
+  ok('one more unticked: only it goes, the rest counted as there already', t3 === 'Added 1 item to Groceries in Notes; ' + n1 + (n1 === 1 ? ' was' : ' were') + ' there already.' && ids.length === 1 && !sent.some(t => ids.includes(t.id)) && notesCalls[4].body.todos[0].title === 'Ground beef' && notesCalls[4].body.lists.length === 0, t3);
+  await beef.click();
+  // not set up in aOS yet: a plain word why, and the list stays as it is
+  notesSet = false;
+  const t4 = await addToNotes();
+  ok('no Notes Sheet in aOS: the toast says so', t4 === 'Set up the Notes Sheet in aOS first (Account → Google Sheets).', t4);
+  notesSet = true;
   ok('no script errors', !errs.length, errs.join(' | '));
 
   // no signal in the store: the plan and list are still there, ticks kept

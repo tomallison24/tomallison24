@@ -358,7 +358,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (r.status === 503 || r.status === 404) { st.layersState = 'off'; return; }
       if (!r.ok) throw new Error('layer-' + r.status);
       st.layers = Object.assign({ at: Date.now() }, (await r.json()).layers || {}); st.layersState = 'ok';
-      mailFromLayer(); rebuild(); render();
+      noteDone.clear(); mailFromLayer(); rebuild(); render();
     } catch { st.layersState = 'error'; }
   }
   // Private: hidden from Ipsy (ipsy-tools.js). A Family event keeps it in itself (X-AOS-PRIVATE, so every phone
@@ -392,6 +392,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   };
 
   // ---- Notes: reminders with a date, and notes with a nudge ----
+  // noteDone: reminders ticked off (or back on) from here, ahead of the next layer load (tickNote below).
+  const noteDone = new Map();
   function noteItems(w) {
     const data = layerData('allison-notes-v1', 'notes');
     if (!data) return [];
@@ -399,7 +401,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     for (const t of data.todos || []) {
       if (!t || !t.date || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) continue;
       const list = lists.get(t.list), color = !vintage() && list && /^#[0-9a-f]{6}$/i.test(list.color || '') ? list.color : LAYER.note.color;   // Vintage: plum for every list (the list's name is still in the line under the title)
-      const extra = { sub: (list ? list.name : 'Reminder') + (t.done ? ' · done' : ''), color, link: '../notes/', done: !!t.done, notes: t.notes || '', flagged: !!t.flagged };
+      const done = noteDone.has(t.id) ? noteDone.get(t.id) : !!t.done;
+      const extra = { sub: (list ? list.name : 'Reminder') + (done ? ' · done' : ''), color, link: '../notes/', done, notes: t.notes || '', flagged: !!t.flagged };
       if (t.time && /^\d{2}:\d{2}$/.test(t.time)) {
         const [h, mi] = t.time.split(':').map(Number);
         const s = I.zonedToUtc(Object.assign(partsOf(t.date), { h, mi, s: 0 }), TZ);
@@ -1103,12 +1106,33 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('evBody').innerHTML = '<div class="evhead" style="--c:' + esc(x.color) + '"><span class="cn"' + (fam ? ' translate="no"' : '') + '><i></i>' + esc(cn) + '</span><h3' + (x.done ? ' class="done"' : '') + keep(x, x.title) + '>' + esc(x.title) + '</h3><p class="when">' + whenWords(x) + '</p></div>'
       + (rows.length ? '<div class="rgroup glass">' + rows.join('') + '</div>' : '')
       + (fam ? '<div class="actrow"><button class="btn quiet danger" type="button" id="evDelete">Delete Event</button></div>'
-        : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '</span></a>' : '') + (x.kind !== 'family' && x.kind !== 'drinks' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar</span></button>' : '') + '</div>');
+        : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '</span></a>' : '')
+          + (x.kind === 'note' && /^todo\|/.test(x.id) ? '<button class="rowbtn" type="button" id="evDone"><span class="ic">' + ICON.tick + '</span><span>' + (x.done ? 'Mark as not done' : 'Mark as done') + '</span></button>' : '')
+          + (x.kind !== 'family' && x.kind !== 'drinks' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar</span></button>' : '') + '</div>');
     $('evActs').innerHTML = (fam && st.api === 'ok' ? '<button class="textbtn" type="button" id="evEdit">Edit</button>' : '') + '<button class="iconbtn" type="button" data-close aria-label="Done">' + ICON.close + '</button>';
     openSheet('evSheet');
     const del = $('evDelete'); if (del) del.onclick = () => deleteEvent(x);
     const ed = $('evEdit'); if (ed) ed.onclick = () => { closeSheet('evSheet'); openEditor({ occ: x }); };
     const cp = $('evCopy'); if (cp) cp.onclick = () => { closeSheet('evSheet'); openEditor({ copyOf: x }); };
+    const dn = $('evDone'); if (dn) dn.onclick = () => { closeSheet('evSheet'); tickNote(x.id.slice(5), !x.done); };
+  }
+  // A Notes reminder ticked off (or back on) from here: shown so at once, and written to the family's Notes
+  // through its Sheet (../home/sheet.js AllisonOS.sheet.notes, signed in), where Notes picks it up on its next
+  // open. Undo in the toast; when the write fails the tick comes back off, and the toast says why.
+  const NOTES_SAY = {
+    signin: 'Sign in to tick it off in Notes.',
+    'no-sheet': 'Set up the Notes Sheet in aOS first (Account → Google Sheets).',
+    offline: 'Offline. Try again when you’re back online.',
+    'not-found': 'That reminder isn’t in the Notes Sheet any more.',
+  };
+  async function tickNote(id, done) {
+    const SN = window.AllisonOS && AllisonOS.sheet && AllisonOS.sheet.notes;
+    if (!SN) { toast(NOTES_SAY.signin); return; }
+    const was = noteDone.has(id) ? noteDone.get(id) : !done;
+    noteDone.set(id, done); rebuild(); render();
+    const r = await SN.setDone(id, done);
+    if (!r.ok) { noteDone.set(id, was); rebuild(); render(); toast(NOTES_SAY[r.why] || 'Couldn’t reach the Notes Sheet. Try again later.', null, 6000); return; }
+    toast(done ? 'Done in Notes' : 'Not done in Notes', { label: 'Undo', action: () => tickNote(id, !done) }, 6000);
   }
 
   // ---------------------------------------------------------------------

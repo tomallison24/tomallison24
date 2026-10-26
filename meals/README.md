@@ -186,7 +186,10 @@ broccoli*.
 - **Web pages are read, never obeyed**, and a recipe it finds still has to pass
   the allergy check.
 - **Limits.** Ipsy can't add single items to the shopping list (it comes from the
-  plan and the meals cooked again; **Copy the list** puts it in Notes) or change
+  plan and the meals cooked again; **Copy the list** puts it on the clipboard, and
+  **Add to Notes** sends what's still to buy straight to the Groceries list in
+  Notes through the family's Notes Sheet, signed in: `home/sheet.js`
+  `AllisonOS.sheet.notes`, each item once however often it's tapped) or change
   Past plans other than the current one.
 - **Not tried against the real API**: the tests use a stand-in for Claude, so the
   first real plans are the real test of the instructions.

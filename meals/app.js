@@ -327,8 +327,32 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let h = groups.map((g, i) => '<p class="sechead"><span>' + esc(g.name) + '</span><span>' + g.items.filter(x => !done.has(x.key)).length + '</span></p><div class="rgroup" style="--i:' + (i + 1) + '">' + g.items.map(row).join('') + '</div>').join('');
     if (s.pantry.length) h += '<p class="sechead"><span>You probably have</span><span>' + s.pantry.length + '</span></p><div class="rgroup">' + s.pantry.map(row).join('') + '</div>';
     h += '<div class="card"><div class="btns" style="margin-top:0"><button class="btn" type="button" data-act="copy">' + ICON.copy + 'Copy the list</button>'
+      + '<button class="btn" type="button" data-act="notes"' + (notesBusy ? ' disabled' : '') + '>' + ICON.tick + (notesBusy ? 'Adding to Notes…' : 'Add to Notes') + '</button>'
       + (done.size ? '<button class="btn quiet" type="button" data-act="untick">Clear ticks</button>' : '') + '</div></div>';
     return h;
+  }
+  // Add to Notes: what's still to buy goes to the Groceries list in Notes through the family's Notes Sheet
+  // (../home/sheet.js AllisonOS.sheet.notes, signed in; Notes sorts a grocery list into store sections itself,
+  // the same ones as here). An item sent before is one reminder, ticked back open if it was bought since.
+  // Extra, if you use Notes: with no sign-in or Notes Sheet the toast says so, and Copy the list is as it was.
+  let notesBusy = false;
+  const NOTES_SAY = {
+    signin: 'Sign in to add the list to Notes.',
+    'no-sheet': 'Set up the Notes Sheet in aOS first (Account → Google Sheets).',
+    offline: 'Offline. Try again when you’re back online.',
+  };
+  async function addToNotes() {
+    if (notesBusy) return;
+    const SN = SH() && SH().notes;
+    const s = shop(), done = new Set(ticks.keys), buy = s.buy.filter(x => !done.has(x.key));
+    if (!buy.length) { toast('Nothing to add: everything is ticked.'); return; }
+    if (!SN) { toast(NOTES_SAY.signin); return; }
+    notesBusy = true; render();
+    const r = await SN.addTodos({ list: 'Groceries', reopen: true, items: buy.map(x => ({ title: cap(x.item), notes: L.total(x.amounts) })) });
+    notesBusy = false; render();
+    if (!r.ok) { toast(NOTES_SAY[r.why] || 'Couldn’t reach the Notes Sheet. Try again later.', null, 6000); return; }
+    const n = r.added + r.reopened;
+    toast(!n ? 'They’re all in Groceries in Notes already.' : 'Added ' + plural(n, 'item') + ' to Groceries in Notes' + (r.already ? '; ' + r.already + (r.already === 1 ? ' was' : ' were') + ' there already.' : '.'), null, 5000);
   }
 
   // ---------------------------------------------------------------------
@@ -371,6 +395,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (act === 'signin') return signIn();
     if (act === 'older') return loadOlder();
     if (act === 'untick') { ticks.keys = []; ls.set(K.ticks, ticks); render(); return; }
+    if (act === 'notes') return addToNotes();
     if (act === 'copy') {
       const s = shop(), text = L.listText(L.sections(s.buy, x => x.item));
       try { await navigator.clipboard.writeText(text); toast('Copied ' + plural(s.buy.length, 'item') + '.'); }
