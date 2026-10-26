@@ -74,7 +74,7 @@
   /* the tabs: one scrolling page each */
   /* the tabs scroll in a box of their own and the page itself never moves: on iOS 26 a fixed bar
      over a scrolling page can drift up to the middle of the screen (the pages below do the same) */
-  #scroller { position: fixed; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: none; }
+  #scroller { position: fixed; inset: 0; overflow-x: hidden; overscroll-behavior-x: none; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: none; }
   .tab { padding: calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 112px); max-width: 640px; margin: 0 auto; }
   .tab[hidden] { display: none; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 2px 20px; }
@@ -186,7 +186,7 @@
   .find input { flex: 1; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
 
   /* pages that slide in: an app, a story, the account */
-  .page { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateX(100%); transition: transform .4s cubic-bezier(.2,.8,.2,1); }
+  .page { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-x: hidden; overscroll-behavior-x: none; overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateX(100%); transition: transform .4s cubic-bezier(.2,.8,.2,1); }
   .page.on { transform: none; }
   .page.up { transform: translateY(100%); } .page.up.on { transform: none; }
   .page .in { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 66px) 18px calc(env(safe-area-inset-bottom) + 40px); }
