@@ -547,7 +547,7 @@ for (const signedIn of [false, true]) {
   await ctx.close();
 }
 
-// ---- Run through setup (Account): language, look, light or dark, your helper and its name, a step at a time ----
+// ---- Run through setup (Account): look, light or dark, your helper and its name, a step at a time ----
 {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: 'block' });
   await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
@@ -559,9 +559,8 @@ for (const signedIn of [false, true]) {
   await pg.goto(BASE + '/aOS/'); await pg.waitForSelector('#ipsySlot .ipsy-char', { timeout: 15000 });
   check(await pg.evaluate(() => AllisonOS.ipsy.helper()) === null, 'no helper yet: none picked');
   await pg.evaluate(() => aosAccount.open()); await pg.waitForSelector('[data-setup]');
-  await pg.click('[data-setup]'); await pg.waitForSelector('#setupBox #sLang');
-  check(/Step 1 of 4/.test(await pg.textContent('#setupBox')) && await pg.locator('#setupBox [data-sback]').count() === 0, 'Run through setup starts with the language, step 1 of 4');
-  await pg.click('#setupBox [data-snext]');
+  await pg.click('[data-setup]'); await pg.waitForSelector('#setupBox .dlist');
+  check(/Step 1 of 3/.test(await pg.textContent('#setupBox')) && await pg.locator('#setupBox [data-sback]').count() === 0 && await pg.locator('#setupBox [data-lang]').count() === 0, 'Run through setup starts with the look, step 1 of 3 (no language)');
   await pg.click('#setupBox [data-look="glass"]'); await pg.waitForTimeout(600);
   check(await pg.evaluate(() => localStorage.getItem('aos.look')) === 'glass', 'the look is saved as it is picked');
   await pg.click('#setupBox [data-snext]');
@@ -577,9 +576,6 @@ for (const signedIn of [false, true]) {
   check(h.h && h.h.who === 'otter' && h.h.name === 'Biscuit' && h.who === 'otter' && h.label === 'Ask Biscuit', `the helper is yours at once, on Home too (${JSON.stringify(h)})`);
   await pg.click('#setupBox [data-snext]'); await pg.waitForTimeout(500);
   check(await pg.locator('#setupBox').count() === 0, 'Done closes it');
-  // a language picked draws aOS again in it: the walk-through carries on from the next step
-  await pg.evaluate(() => sessionStorage.setItem('aos.setup', '1')); await pg.reload(); await pg.waitForSelector('#setupBox .dlist', { timeout: 8000 }).catch(() => {});
-  check(/Step 2 of 4/.test(await pg.textContent('#setupBox').catch(() => '')), 'after the language, it carries on with the look');
   check(!errs.length, 'Run through setup: no script errors' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
