@@ -83,8 +83,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 ## Fitness
 
 1. **Week start from the family account** and **"See in Calendar"**: as Drinks, 1 and 2.
-2. **Goals that follow you.** Step and move goals are changeable by Ipsy but kept on
-   one phone: add them to prefs sync (aOS, 4).
+2. ~~**Goals that follow you.**~~ Done (aOS2.2): step and move goals sync.
 3. ~~`shareCal` re-serialised 400 days of logs on every persist.~~ Done in #395: the
    layer is shared only when the log changed.
 4. Health data stays out of web searches by design (Fitness's Ipsy has none); keep it so.
