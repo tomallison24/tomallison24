@@ -163,6 +163,13 @@
     'Done': 'Готово',
     'Tap a star to pin an app, up to four. The rest fill in with the apps you use most.': 'Нажмите на звёздочку, чтобы закрепить приложение (до четырёх). Остальные места займут те, которыми вы пользуетесь чаще всего.',
     'Every app': 'Все приложения',
+    // Thumb arc
+    'Everything else': 'Остальные приложения',
+    'Tap a star to put an app on the outer ring, up to four. The rest fill in with the apps you use most.': 'Нажмите на звёздочку, чтобы поставить приложение на внешнее кольцо (до четырёх). Остальные места займут те, которыми вы пользуетесь чаще всего.',
+    'Home layout': 'Вид главной',
+    'Now': 'Сейчас',
+    'Classic': 'Классический', 'Thumb arc': 'Дуга', 'Left-handed arc': 'Дуга для левой руки',
+    'Thumb arc puts Home, Mail, Weather and Calendar and your four favorites in the corner your thumb rests on, and every app on one screen.': 'Дуга ставит Дом, Почту, Погоду, Календарь и четыре избранных приложения в угол под большим пальцем, а все приложения помещаются на один экран.',
     'Family': 'Семья',
     'Every day': 'На каждый день',
     'Out and about': 'В пути',

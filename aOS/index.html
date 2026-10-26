@@ -450,6 +450,45 @@
   .hcat.half { grid-column: auto; }
   .hcat h3 { margin: 0 10px 10px; font-size: 15px; font-weight: 650; }
   .hg { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 14px 2px; }
+  /* Thumb arc (aOS/home-tab.js, html[data-home="arc"]): the fixed four on an inner ring and four favorites on an outer one,
+     in the bottom corner your thumb rests on (data-hand="left": the other), every other app above them; the rest of Home gives way */
+  .arconly, html[data-home="arc"] #hmain > :not(.arconly) { display: none; }
+  html[data-home="arc"] #hmain > .arconly:not([hidden]) { display: block; }
+  html[data-home="arc"] #hmain > .sec.arconly:not([hidden]) { display: flex; }
+  html[data-home="arc"] #hmain > .hrest:not([hidden]) { display: grid; }
+  html[data-home="arc"] #home { position: relative; z-index: 1; padding-bottom: calc(400px * var(--arck, 1) + env(safe-area-inset-bottom)); }
+  html[data-home="arc"] #home .head { margin-bottom: 14px; }
+  /* the date is Home's title here (the word Home gives way, so every app fits above the rings) */
+  html[data-home="arc"] #home .head h1 { font-size: 0; line-height: 0; padding-bottom: 14px; }
+  html[data-home="arc"] #home .head h1 small { display: block; margin: 6px 0 0; font-size: 13px; line-height: 1.3; }
+  html[data-home="arc"] #home .sec { margin: 18px 2px 10px; }
+  .hglance { margin-top: 12px; }
+  html[data-home="arc"] #hmain > .hglance:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .hglance button { display: flex; align-items: center; gap: 8px; min-width: 0; height: 44px; padding: 0 12px 0 8px; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--edge); font-size: 14px; font-weight: 600; text-align: left; transition: transform .2s; }
+  .hglance button:active { transform: scale(.96); }
+  .hglance img { flex: none; width: 28px; height: 28px; border-radius: 8px; }
+  .hglance span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .hglance i { font-style: normal; color: var(--muted); }
+  .hglance b { font-weight: inherit; }
+  .hrest { --n: 4; gap: 14px 4px; }
+  .harc { position: fixed; right: 0; bottom: max(env(safe-area-inset-bottom), 12px); z-index: 2; width: 390px; height: 400px; transform: scale(var(--arck, 1)); transform-origin: 100% 100%; pointer-events: none; }
+  html[data-hand="left"] .harc { right: auto; left: 0; transform-origin: 0 100%; }
+  .harc.harcbg { z-index: -1; }
+  .harc .ring { position: absolute; border-radius: 50%; pointer-events: none; }
+  .harc .r1 { background: var(--card); box-shadow: inset 0 0 0 1.5px var(--edge); }
+  .harc .r2 { background: var(--dot); }
+  .harc .fav { position: absolute; width: 78px; margin: -33px 0 0 -39px; pointer-events: auto; }
+  .harc .fav .ic img { width: 58px; height: 58px; border-radius: 16px; }
+  .harc .fav.in .ic img { width: 56px; height: 56px; border-radius: 15px; }
+  .harc .fav.in .pin { display: none; }
+  /* on the inner ring, a badge sits on the corner away from the next icon up */
+  .harc .fav.in .unread { right: auto; left: -8px; }
+  html[data-hand="left"] .harc .fav.in .unread { left: auto; right: -8px; }
+  html[data-hand="left"] .harc .live { left: auto; right: -11px; }
+  .harc .live { position: absolute; top: -7px; left: -11px; height: 21px; padding: 0 7px; border-radius: 11px; background: var(--accent); color: var(--on); font: 700 12px/21px -apple-system, system-ui, sans-serif; font-style: normal; white-space: nowrap; box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
+  .harc .orb { position: absolute; display: grid; place-items: center; width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 50%; background: var(--accent); color: var(--on); pointer-events: auto; box-shadow: 0 10px 24px -12px rgba(0,0,0,.5); transition: transform .2s; }
+  .harc .orb:active { transform: scale(.94); }
+  .harc .orb svg { width: 32px; height: 32px; }
   .hgroup { border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; }
   .hrow { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; cursor: pointer; transition: transform .2s; }
   .hrow + .hrow { border-top: 1px solid var(--line); }
@@ -897,6 +936,13 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <div class="favs" id="favs"></div>
     <div class="sec"><h2>Every app</h2></div>
     <div class="hcats" id="spaces"></div>
+    <!-- Thumb arc (Account > Appearance > Home layout): what's next, every other app, and the two rings in the corner -->
+    <div class="arconly hglance" id="hglance"></div>
+    <div class="sec arconly"><h2>Everything else</h2><button type="button" id="arcEdit">Edit</button></div>
+    <p class="hint arconly" id="arcHint" hidden>Tap a star to put an app on the outer ring, up to four. The rest fill in with the apps you use most.</p>
+    <div class="arconly hg hrest" id="hrest"></div>
+    <div class="arconly harc harcbg" id="harcbg" aria-hidden="true"></div>   <!-- the rings, behind the apps above them -->
+    <div class="arconly harc" id="harc"></div>
   </div>
 </section>
 </main>

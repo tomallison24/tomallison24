@@ -10,6 +10,8 @@
 //     clear of it (welcome.js takes aOS's insets as the app's safe-area spacing), no "add me" steps
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
+//   - Thumb arc (Home layout): the fixed four and four favorites on two rings in the corner, every app on the
+//     first screen (a small phone too), the orb going to the Ipsy bar, Edit, the left hand, and Classic again
 //   - no dock, nothing floats over Home (Home floats at the bottom on Today); Mail's unread count on
 //     its icon; Today beside the account; Home scrolls in its own box, the page never moves
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
@@ -324,6 +326,60 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
     await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
   }
 
+  check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
+  await ctx.close();
+}
+// ---- Thumb arc (Account > Appearance > Home layout): the fixed four and four favorites in the corner your thumb rests on ----
+for (const [w, h, look] of [[390, 844, 'vintage'], [375, 667, 'glass']]) {
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, hasTouch: true, serviceWorkers: 'block' });
+  await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
+  await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
+  await ctx.addInitScript(([apps, look]) => { if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+    const s = { aos: '999' }; for (const a of apps) s[a] = '999';
+    localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.look', look); localStorage.setItem('aos.tron.intro', 'off');
+    localStorage.setItem('aos.home.picks', '["mail","drinks"]'); }, [APPS, look]);
+  const pg = await ctx.newPage(), errs = [], tag = `(${w}x${h}, ${look})`;
+  pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(900);
+  check(await pg.evaluate(() => aosHomeTab.layout()) === 'classic' && await pg.isVisible('#favs') && await pg.locator('#harc').isHidden(), `Classic until you pick Thumb arc ${tag}`);
+  // picked in Account > Appearance
+  await pg.locator('.tab:not([hidden]) [data-acct]').click(); await pg.click('[aria-controls="fLook"]'); await pg.click('[data-hl="arc"]');
+  check(await pg.evaluate(() => localStorage.getItem('aos.home.layout') === 'arc' && document.documentElement.dataset.home === 'arc'), `Account > Appearance > Home layout: Thumb arc ${tag}`);
+  await pg.evaluate(() => document.querySelector('.page.on .close, .page .close').click()); await pg.waitForTimeout(600);
+  const arc = await pg.evaluate(() => ({ inner: [...document.querySelectorAll('#harc .fav.in')].map(a => a.dataset.open), outer: [...document.querySelectorAll('#harc .fav[data-fav]')].map(a => a.dataset.open),
+    rest: [...document.querySelectorAll('#hrest .happ')].map(a => a.dataset.open), classic: getComputedStyle(document.getElementById('favs')).display }));
+  const all = [...arc.inner, ...arc.outer, ...arc.rest];
+  check(arc.inner.join() === 'house,mail,weather,calendar', `the inner ring: Home, Mail, Weather and Calendar (${arc.inner}) ${tag}`);
+  check(arc.outer.length === 4 && arc.outer[0] === 'drinks' && !arc.outer.some(id => arc.inner.includes(id)), `the outer ring: a pin first, then the most used, none of the four (${arc.outer}) ${tag}`);
+  check(all.length === APPS.length && new Set(all).size === APPS.length && arc.classic === 'none', `every app once, the rest above the rings; Classic's Favorites give way (${all.length}) ${tag}`);
+  // every app on the first screen, and no ring icon over another app
+  const fit = await pg.evaluate(() => {
+    const box = el => el.getBoundingClientRect(), on = r => r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth;
+    const ring = [...document.querySelectorAll('#harc .fav, #harc .orb')].map(e => box(e.querySelector('.ic') || e)), rest = [...document.querySelectorAll('#hrest .happ')].map(box);
+    const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    return { on: [...document.querySelectorAll('#harc [data-open], #hrest [data-open]')].every(e => on(box(e))), over: ring.some(a => rest.some(b => hit(a, b))), k: getComputedStyle(document.documentElement).getPropertyValue('--arck') };
+  });
+  check(fit.on && !fit.over, `every app on the first screen, no ring icon over another (scaled ${fit.k}) ${tag}`);
+  await pg.evaluate(() => window.aosHome.unread('mail', 4)); await pg.waitForTimeout(100);
+  check(await pg.textContent('#harc [data-open="mail"] .unread') === '4', `Mail's unread count on its icon on the ring ${tag}`);
+  await pg.locator('#harc [data-open="mail"]').click(); await pg.waitForTimeout(900);
+  check(await pg.evaluate(() => document.body.classList.contains('in-app') && [...document.querySelectorAll('.frame')].some(f => !f.hidden && f.dataset.id === 'mail')), `one tap on the ring opens Mail inside aOS ${tag}`);
+  await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
+  await pg.locator('#harc .orb').click(); await pg.waitForTimeout(150);
+  check(await pg.evaluate(() => document.activeElement === document.getElementById('hq')), `the orb in the corner goes to the Ipsy bar ${tag}`);
+  await pg.locator('#hq').fill('pod'); await pg.waitForTimeout(150);
+  check(await pg.locator('#harc').isHidden(), `typing: the rings give way to what's found ${tag}`);
+  await pg.locator('#hq').press('Escape'); await pg.waitForTimeout(100);
+  // Edit: a star puts an app on the outer ring
+  const extra = arc.rest[0];
+  await pg.click('#arcEdit'); await pg.locator(`#hrest [data-pin="${extra}"]`).click(); await pg.click('#arcEdit'); await pg.waitForTimeout(100);
+  check((await pg.evaluate(() => [...document.querySelectorAll('#harc .fav[data-fav]')].map(a => a.dataset.open))).slice(0, 2).join() === `drinks,${extra}` && !(await pg.locator(`#hrest [data-open="${extra}"]`).count()), `Edit: a star puts ${extra} on the outer ring ${tag}`);
+  // left-handed: the other corner; and Classic again, with Mail back among its pins
+  await pg.evaluate(() => aosHomeTab.layout('arc-left')); await pg.waitForTimeout(100);
+  const orb = await pg.locator('#harc .orb').boundingBox(), meals = await pg.locator('#harc .fav[data-fav]').first().boundingBox();
+  check(orb.x + orb.width / 2 < w / 2 && meals.x > orb.x, `Left-handed arc: the rings in the bottom left corner ${tag}`);
+  await pg.evaluate(() => aosHomeTab.layout('classic')); await pg.waitForTimeout(100);
+  check(await pg.isVisible('#favs') && await pg.locator('#harc').isHidden() && (await pg.evaluate(() => [...document.querySelectorAll('#favs .fav')].map(f => f.dataset.open))).slice(0, 2).join() === 'mail,drinks', `Classic again: Mail, pinned there, is back in Favorites ${tag}`);
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
