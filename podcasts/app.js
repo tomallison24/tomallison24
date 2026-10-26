@@ -365,7 +365,8 @@
   async function fetchFeed(url, bg){
     try { return await (await api('feed?url=' + encodeURIComponent(url), bg)).text(); }
     catch(e) {
-      try { const r = await fetch(media(url), {cache:'no-store', credentials:'omit'}); if (r.ok) return await r.text(); } catch(_) {}
+      // the family lock ('signin') is not a missing server: the feed isn't read from the page instead
+      if (e.message !== 'signin') try { const r = await fetch(media(url), {cache:'no-store', credentials:'omit'}); if (r.ok) return await r.text(); } catch(_) {}
       if (navigator.onLine === false) throw new Error('You’re offline.');
       throw new Error(quiet(e.message) ? 'This show’s feed can’t be read from here.' : e.message);
     }
@@ -505,6 +506,7 @@
   async function directory(path, direct, bg){
     try { return ((await (await api(path, bg)).json()).results || []).map(cleanShow); }
     catch(e) {
+      if (e.message === 'signin') return [];   // the family lock, not a missing server: nothing to show until a sign-in, and no asking Apple from the page
       if (!quiet(e.message)) throw e;
       // Apple's own addresses, where they let a page read them
       try { return (await direct()).map(cleanShow); } catch(_) { throw new Error('Search isn’t available right now.'); }
