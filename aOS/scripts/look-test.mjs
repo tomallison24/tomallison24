@@ -5,7 +5,9 @@
 // the pick sets the icon, the status bar and the address that are added, and the installed app
 // (empty storage of its own) opens in the look the address or the cookie carries. Night Drive and Folk:
 // picked in Appearance, each is aOS's look and every app's (each app's design.<id>, Clock's set.design),
-// with its own block, ground, icons and (Folk) fonts.
+// with its own block, ground, icons and (Folk) fonts. Tron, as in the car: dark only, its light trail behind everything,
+// the helper as the Tron rider, and aOS opening with its intro (and its sound, asked for with a tap where the phone won't
+// start it), once a launch, Skip and Off in Account.
 // The accounts server is stood in for (the server rules are accounts-api-test.mjs).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -34,6 +36,12 @@ async function open(scheme = 'light', seed = {}, o = {}) {
     if (route === 'state') return J({ storage: true, setup: true, user, plan: null });
     if (route === 'members') return J({ members: [user] });
     return J({});
+  });
+  if (o.watch) await ctx.addInitScript(() => {   // Tron's intro, as it comes and goes (aOS/tron-intro.js)
+    window.__tron = {};
+    new MutationObserver(() => { const e = document.getElementById('tronIntro'); if (!e) return; const t = window.__tron; t.shown = true;
+      t.name = (e.querySelector('.ti-name') || {}).textContent; t.hi = (e.querySelector('.ti-hi') || {}).textContent; if (e.classList.contains('ask')) t.ask = true; })
+      .observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   });
   if (o.cookie) await ctx.addCookies([{ name: 'aos_look', value: o.cookie, url: BASE + '/aOS/' }]);
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
@@ -185,7 +193,7 @@ for (const scheme of ['light', 'dark']) {
     await p.goto(BASE + '/calendar/'); await p.waitForTimeout(900);
     const c = await p.evaluate(() => { const e = document.querySelector('.ambient .aos-sky-cap'); if (!e) return null; const cs = getComputedStyle(e), r = e.getBoundingClientRect();
       return { display: cs.display, opacity: cs.opacity, radius: cs.borderRadius, top: Math.round(r.top), covers: r.left <= 0 && r.right >= innerWidth, first: (/^linear-gradient\((rgba?\([^)]*\))/.exec(cs.backgroundImage) || [])[1],
-        ground: getComputedStyle(document.body).backgroundColor, tint: [...document.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || matchMedia(m.media).matches).content }; });
+        ground: (b => /,\s*0\)$|transparent/.test(b) ? getComputedStyle(document.documentElement).backgroundColor : b)(getComputedStyle(document.body).backgroundColor), tint: [...document.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || matchMedia(m.media).matches).content }; });
     const hex = s => '#' + (s.match(/\d+/g) || []).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
     if (!c || c.display !== 'block') pr.push(look + ': no fade under the status bar');
     else {
@@ -208,7 +216,7 @@ for (const scheme of ['light', 'dark']) {
   await p.evaluate(() => { window.capOff = 0; new MutationObserver(ms => { for (const m of ms) if (/display:\s*none/.test(m.oldValue || '')) capOff++; }).observe(document.getElementById('barcap'), { attributes: true, attributeOldValue: true, attributeFilter: ['style'] }); });
   const bar = async () => { await p.waitForTimeout(300); return p.evaluate(() => { const hex = c => '#' + c.match(/\d+/g).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase(), cap = document.getElementById('barcap');
     const off = capOff; capOff = 0;
-    return { ground: hex(getComputedStyle(document.body).backgroundColor), metas: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content.toUpperCase()),
+    return { ground: hex((b => /,\s*0\)$|transparent/.test(b) ? getComputedStyle(document.documentElement).backgroundColor : b)(getComputedStyle(document.body).backgroundColor)), metas: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content.toUpperCase()),
       cap: hex(getComputedStyle(cap).backgroundColor), capH: cap.getBoundingClientRect().height, capTop: cap.getBoundingClientRect().top, off }; }); };
   const check = async (what, changed = true) => { const s = await bar();
     if (s.metas.some(m => m !== s.ground)) pr.push(`${what}: the bar's metas ${s.metas.join(', ')} are not the page's ${s.ground}`);
@@ -231,6 +239,52 @@ for (const scheme of ['light', 'dark']) {
   if (await p.evaluate(() => document.cookie) !== '') pr.push('after the erase the cookie is still there: ' + await p.evaluate(() => document.cookie));
   if (await p.evaluate(() => localStorage.getItem('aos.look')) !== null) pr.push('aos.look is still stored');
   report('erased from a lost phone: the aos_look cookie goes with the storage', pr); await ctx.close();
+}
+
+// 9. Tron, as in the car: dark only (a phone in light mode with Appearance set to Light: aOS and an app are dark, and Light is
+// back with another look); the trail behind everything; aOS opens with its intro once a launch, the sound asked for with a
+// tap where the phone won't start it, Skip ending it, Off in Account stopping it; the helper is the Tron rider
+{
+  const seed = { 'aos.look': 'grid', 'design.notes': 'grid', 'home.settings': JSON.stringify({ theme: 'light' }), 'aos.helper': '{"who":"fox","name":"Biscuit"}' };
+  const { ctx, p, errs } = await open('light', seed, { watch: true }); const pr = [...errs];
+  // the intro was there from the first paint, and (no tap yet: the phone won't start the sound) asked for one
+  const seen = await p.evaluate(() => window.__tron || {});
+  if (!seen.shown || seen.name !== 'aOS' || seen.hi !== 'Greetings, programs.') pr.push('aOS did not open with the Tron intro: ' + JSON.stringify(seen));
+  if (!seen.ask) pr.push('with no tap yet, the intro did not ask for one for its sound');
+  await p.waitForFunction(() => !document.getElementById('tronIntro'), null, { timeout: 6000 }).catch(() => pr.push('the intro did not end by itself'));
+  let st = await p.evaluate(() => ({ theme: document.documentElement.dataset.theme, bg: getComputedStyle(document.documentElement).backgroundColor, body: getComputedStyle(document.body).backgroundColor,
+    before: getComputedStyle(document.documentElement, '::before').zIndex, after: getComputedStyle(document.documentElement, '::after').content, who: (document.querySelector('#ipsySlot .ipsy-char') || {}).dataset?.who }));
+  if (st.theme !== 'dark' || !/^rgb\((\d), (\d), (\d)\)$/.test(st.bg)) pr.push('Tron is not dark on a phone in light mode with Light picked: ' + JSON.stringify(st));
+  if (st.before !== '-1' || st.after === 'none' || !/, 0\)$|transparent/.test(st.body)) pr.push('the light trail is not behind everything: ' + JSON.stringify(st));
+  if (st.who !== 'rider') pr.push('the helper is not the Tron rider in Tron: ' + st.who);
+  // once a launch: a reload doesn't play it again
+  await p.reload(); await p.waitForTimeout(300);
+  if (await p.evaluate(() => !!document.getElementById('tronIntro'))) pr.push('the intro played again on a reload');
+  // played again from Account: the phone won't start the sound by itself, so it asks; a tap plays it; Skip ends it
+  await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
+  await openLook(p);
+  if (!(await p.isVisible('#tronIntroPick [data-ti="sound"][aria-pressed="true"]'))) pr.push('Account has no Tron intro setting, Sound picked');
+  if (!(await p.isVisible('.tronnote'))) pr.push('Account does not say Tron is always dark');
+  await p.click('[data-tiplay]');   // a tap: its sound plays at once
+  await p.waitForSelector('#tronIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
+  // (a sound played holds the intro on about two seconds more: time for Skip)
+  if (await p.evaluate(() => !!document.querySelector('#tronIntro:not(.out)'))) {
+    await p.click('#tronIntro:not(.out) .ti-skip', { timeout: 3000 });
+    await p.waitForFunction(() => !document.getElementById('tronIntro'), null, { timeout: 2000 }).catch(() => pr.push('Skip did not end the intro'));
+  } else pr.push('the intro did not hold on while its sound played');
+  // Off: a new launch opens straight to aOS
+  await p.click('[data-ti="off"]');
+  const p2 = await ctx.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
+  if (await p2.evaluate(() => !!document.getElementById('tronIntro'))) pr.push('the intro played with Off picked');
+  // an app in Tron: dark, its trail showing (its #app wrapper clear)
+  const p3 = await ctx.newPage(); await p3.route('**/api/**', r => r.fulfill({ status: 401, body: '{}' })); await p3.goto(BASE + '/notes/'); await p3.waitForTimeout(600);
+  const n = await p3.evaluate(() => ({ theme: document.documentElement.dataset.theme, app: getComputedStyle(document.getElementById('app')).backgroundColor, intro: !!document.getElementById('tronIntro') }));
+  if (n.theme !== 'dark' || !/, 0\)$|transparent/.test(n.app) || n.intro) pr.push('Notes in Tron: ' + JSON.stringify(n));
+  // another look: your Light comes back, and your helper
+  await p.click('#looks [data-look="vintage"]'); await p.waitForTimeout(300);
+  st = await p.evaluate(() => ({ theme: document.documentElement.dataset.theme, who: (document.querySelector('#ipsySlot .ipsy-char') || {}).dataset?.who }));
+  if (st.theme !== 'light' || st.who !== 'fox') pr.push('back in Vintage, Light and the fox did not come back: ' + JSON.stringify(st));
+  report('Tron, as in the car: dark only, the trail behind everything, the rider, and aOS\'s intro with its sound (once a launch, Skip, Off)', pr); await ctx.close();
 }
 
 await b.close(); server.close();

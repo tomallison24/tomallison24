@@ -126,7 +126,8 @@ from.
   `@media (prefers-color-scheme)` rules to match.
 - **Five designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
   glass), Night Drive (80s neon), Folk (Gzhel by day, Khokhloma by night) and Tron (light cycles, after the
-  Tron: Ares mode in Tesla's cars: red light on a black grid), picked for every
+  Tron: Ares mode in Tesla's cars: red light on black, dark only; its light trail runs around each screen behind
+  everything, the helper suits up as the Tron rider, and aOS alone opens with its intro and sound, `aOS/tron-intro.js`), picked for every
   app at once in aOS (Account > Appearance > Look: `aOS/look.js` writes each app's design) or in
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style

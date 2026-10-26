@@ -50,7 +50,10 @@
   const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'folk', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'folk' || l === 'grid'))); };
   const wear = (el, l) => dress(el, l || LOOK());
   const follow = el => { followers.add(el); wear(el); };
-  for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => followers.forEach(el => wear(el)));
+  for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => { followers.forEach(el => wear(el)); redrawAll(); });
+  // the look changed (Tron's rider, or back to the helper you picked)
+  function redrawAll() { const h = helper(); cells.forEach(c => { if (!c.fixed && c.host.isConnected) drawChar(c, h ? h.who : c.peek); }); }
+  new MutationObserver(() => redrawAll()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-look'] });
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   // The language a short message asks for ("English", "switch to English please", «на русский»), or null
   const LANG_NAME = { en: 'English', ru: 'Русский' };
@@ -131,6 +134,22 @@
       front: '<path d="M94 112h12l-6 6z" fill="#2B2522" stroke="#2B2522" stroke-width="3" stroke-linejoin="round"/>' + STROKE('#2B2522', 1.6, 'M80 118l-14-2M80 122l-13 3M120 118l14-2M120 122l13 3').replace('/>', ' opacity=".6"/>') },
   };
   const WHO = Object.keys(HELPERS);
+  // Tron's rider (Tron: Ares, as the Light Cycle's driver in Tesla's cars): in the Tron look, everyone's helper suits up as
+  // this - black suit and helmet lit with red, the identity disc behind - whichever helper they picked (its name stays theirs).
+  // Not in the picker. Its jobs are the others': a lit data pad to read, a light that sweeps the visor to search, a stylus of
+  // light to write; across aOS Home's bar it rides its Light Cycle, the red trail behind it.
+  const RED = '#FF2A2A';
+  HELPERS.rider = { label: 'Tron rider', kind: 'the Tron rider', sh: 54, smile: false, cheeks: false,
+    vars: '--limb:#141418;--limbw:11;--paw:#141418;--pawedge:' + RED + ';--foot:#141418',
+    back: '<circle cx="100" cy="116" r="60" fill="none" stroke="' + RED + '" stroke-opacity=".35" stroke-width="3"/><circle cx="100" cy="116" r="48" fill="none" stroke="' + RED + '" stroke-opacity=".18" stroke-width="2"/>'
+      + '<g class="h-cycle"><path class="h-trail" d="M-250 164H34"/><circle cx="38" cy="162" r="20" fill="#0E0E10" stroke="' + RED + '" stroke-width="5"/><circle cx="162" cy="162" r="20" fill="#0E0E10" stroke="' + RED + '" stroke-width="5"/>'
+      + '<path d="M22 158Q34 128 82 130L156 136Q172 140 168 156Q128 148 92 156Z" fill="#111114" stroke="' + RED + '" stroke-width="3"/></g>',
+    body: '<path d="M58 168Q56 120 74 108Q100 98 126 108Q144 120 142 168Z" fill="#141418" stroke="#2C2C30" stroke-width="1.5"/>'
+      + '<path d="M64 74Q64 34 100 34Q136 34 136 74V94Q136 108 122 110H78Q64 108 64 94Z" fill="#0E0E10" stroke="#2C2C30" stroke-width="1.5"/>'
+      + '<g class="h-rlit" fill="none" stroke="' + RED + '" stroke-width="2.6" stroke-linecap="round"><path d="M100 36V58"/><path d="M66 86Q67 100 78 106"/><path d="M134 86Q133 100 122 106"/>'
+      + '<path d="M70 122Q100 138 130 122"/><path d="M100 132V166"/><path d="M62 160Q64 134 76 116"/><path d="M138 160Q136 134 124 116"/><circle cx="100" cy="150" r="6"/></g>',
+    front: '<g class="h-rvis"><path class="h-rvisor" d="M71 70Q100 58 129 70V90Q100 98 71 90Z"/><rect class="h-rsweep" x="93" y="64" width="14" height="30" rx="7"/>'
+      + '<path d="M80 73Q90 68 102 67" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/><path class="h-rline" d="M80 84Q100 90 120 84"/></g>' };
   const MOODS = ['idle', 'listen', 'think', 'read', 'scan', 'write', 'show', 'talk', 'done'];
 
   function charSvg(who) {
@@ -200,7 +219,9 @@
   // takes turns with the others (peek), one every few seconds.
   const cells = new Set();
   let peekAt = Math.floor(Math.random() * WHO.length), peekT = 0;
+  const looksAs = who => (LOOK() === 'grid' ? 'rider' : who);
   function drawChar(c, who) {
+    if (!c.fixed) who = looksAs(who);
     if (c.who === who) return;
     c.who = who; c.host.innerHTML = charSvg(who); c.svg = c.host.firstChild;
     if (c.peeking) c.svg.classList.add('h-peek');
@@ -217,7 +238,7 @@
     if (peekT || helper()) return;
     peekT = setInterval(() => {
       if (helper()) { clearInterval(peekT); peekT = 0; return; }
-      if (document.visibilityState !== 'visible' || still()) return;
+      if (document.visibilityState !== 'visible' || still() || LOOK() === 'grid') return;
       peekAt++;
       cells.forEach(c => { if (!c.host.isConnected) { cells.delete(c); return; } if (c.fixed || c.mood !== 'idle' || c.host.closest('.ipsy-wrap:not([hidden])')) return; c.peek = WHO[peekIndex()]; c.peeking = true; drawChar(c, c.peek); });
     }, 4200);
@@ -278,6 +299,9 @@
       [0.42, 1, 'translateY(12px) rotate(90deg)'], [0.47, 1, 'translateY(-12px) rotate(0deg)'], [0.52, 1, 'none'], [0.57, 0.94, 'translateY(-14px) rotate(-50deg)'], [0.62, 0.84, 'translateY(12px) rotate(-90deg)', 'cubic-bezier(.1,.6,.3,1)'],
       [0.9, 0, 'translateY(12px) rotate(-90deg)'], [0.95, 0, 'translateY(-10px) rotate(0deg)'], [1, 0, 'none']] },
   };
+  // the rider: mounts, rides its Light Cycle out (leaning in), turns at the end, rides back
+  MOVES.rider = { speed: 0.9, frames: [[0, 0, 'none'], [0.06, 0, 'translateY(-6px)'], [0.44, 1, 'rotate(-5deg)', 'cubic-bezier(.55,0,.25,1)'], [0.5, 1, 'scaleX(-1) rotate(-5deg)'],
+    [0.94, 0, 'scaleX(-1) rotate(-5deg)', 'cubic-bezier(.55,0,.25,1)'], [1, 0, 'none']] };
   function cross(slot, d) {
     const host = slot.querySelector('.ipsy-host'), svg = slot.querySelector('.ipsy-char'), pose = svg && svg.querySelector('.h-pose');
     if (!host || !pose || still()) return null;
@@ -384,6 +408,29 @@
 .ipsy-neon .h-cheek{fill:#FF3D9A}
 .ipsy-folk .h-scarf{display:inline}
 .h-kerchief,.h-knot{fill:var(--fk-scarf,#C7261C)} .h-kdots circle{fill:var(--fk-dot,#F6E7C6)} .h-knot{stroke:var(--fk-dot,#F6E7C6);stroke-width:1.5}
+/* Tron's rider: a visor for a face (no eyes, brows, mouth or glasses); its props lit red; the Light Cycle only to cross */
+[data-who="rider"] :is(.h-eyes,.h-brow,.h-smile,.h-mouth,.h-cheek,.h-specs,.h-visor,.h-shades,.h-scarf,.h-mag){display:none}
+.ipsy-grid [data-who="rider"],[data-who="rider"]{filter:drop-shadow(0 0 2px rgba(255,42,42,.55))}
+.h-rlit{filter:drop-shadow(0 0 2.5px #FF2A2A)}
+.h-rvisor{fill:#060607;stroke:#FF2A2A;stroke-width:1.8}
+.h-rline{fill:none;stroke:#FF2A2A;stroke-width:2.2;stroke-linecap:round;opacity:.7}
+.h-rsweep{fill:#FF2A2A;opacity:0;transform-origin:100px 79px}
+[data-mood="scan"] [data-who="rider"] .h-rsweep{opacity:.85;animation:ipsyVisor 1.2s ease-in-out infinite alternate}
+@keyframes ipsyVisor{from{transform:translateX(-20px)}to{transform:translateX(20px)}}
+[data-mood="talk"] [data-who="rider"] .h-rline{animation:ipsyRtalk .32s ease-in-out infinite alternate}
+@keyframes ipsyRtalk{from{opacity:.25}to{opacity:1}}
+[data-who="rider"] .h-cover{fill:#1A0204;stroke:#FF2A2A;stroke-width:2.4} [data-who="rider"] .h-page{fill:#0E0E10;stroke:#FF2A2A} [data-who="rider"] .h-pl{stroke:#FF8A8A;opacity:.95}
+[data-who="rider"] .h-pad{fill:#0E0E10;stroke:#FF2A2A} [data-who="rider"] .h-padtop{fill:#FF2A2A} [data-who="rider"] .h-wl{stroke:#FF8A8A}
+[data-who="rider"] .h-pencil{fill:#FF2A2A;stroke:#FFD3D3} [data-who="rider"] .h-tip{fill:#FFE1E1}
+[data-who="rider"] :is(.h-star){fill:#FF2A2A} [data-who="rider"] .h-wave{stroke:#FF2A2A} [data-who="rider"] .h-bubble{fill:#0E0E10;stroke:#FF2A2A}
+[data-who="rider"] .h-shadow{fill:#FF2A2A;opacity:.18}
+.ipsy-char[data-who="rider"] .h-foot{fill:#141418;stroke:#FF2A2A;stroke-width:2}
+.h-cycle{display:none}
+.h-trail{fill:none;stroke:#FF2A2A;stroke-width:5;stroke-linecap:round;filter:drop-shadow(0 0 5px #FF2A2A)}
+[data-mood="cross"] [data-who="rider"] .h-cycle{display:inline}
+[data-mood="cross"] [data-who="rider"] .h-foot{display:none}
+[data-mood="cross"] [data-who="rider"] .h-armL{transform:rotate(-75deg)}
+[data-mood="cross"] [data-who="rider"] .h-armR{transform:rotate(-40deg)}
 .h-peek{animation:ipsyPeek .5s cubic-bezier(.2,1.3,.35,1) both}
 /* idle: bobs, blinks, waves now and then; a tail wags */
 .h-bob{animation:ipsyBob 4.8s ease-in-out infinite}
