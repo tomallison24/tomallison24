@@ -6,8 +6,8 @@
 // (empty storage of its own) opens in the look the address or the cookie carries. Night Drive and Folk:
 // picked in Appearance, each is aOS's look and every app's (each app's design.<id>, Clock's set.design),
 // with its own block, ground, icons and (Folk) fonts. Tron, as in the car: dark only, its light trail behind everything,
-// the helper as the Tron rider, and aOS opening with its intro (and its sound, asked for with a tap where the phone won't
-// start it), once a launch, Skip and Off in Account.
+// the helper as the Tron rider, and aOS opening with its intro and its sound (nothing to tap), once a launch, Skip and
+// Off in Account.
 // The accounts server is stood in for (the server rules are accounts-api-test.mjs).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -40,7 +40,7 @@ async function open(scheme = 'light', seed = {}, o = {}) {
   if (o.watch) await ctx.addInitScript(() => {   // Tron's intro, as it comes and goes (aOS/tron-intro.js)
     window.__tron = {};
     new MutationObserver(() => { const e = document.getElementById('tronIntro'); if (!e) return; const t = window.__tron; t.shown = true;
-      t.name = (e.querySelector('.ti-name') || {}).textContent; t.hi = (e.querySelector('.ti-hi') || {}).textContent; if (e.classList.contains('ask')) t.ask = true; })
+      t.name = (e.querySelector('.ti-name') || {}).textContent; t.hi = (e.querySelector('.ti-hi') || {}).textContent; if (e.classList.contains('ask')) t.ask = true; if (e.querySelector('.ti-sound')) t.soundButton = true; })
       .observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   });
   if (o.cookie) await ctx.addCookies([{ name: 'aos_look', value: o.cookie, url: BASE + '/aOS/' }]);
@@ -242,21 +242,23 @@ for (const scheme of ['light', 'dark']) {
 }
 
 // 9. Tron, as in the car: dark only (a phone in light mode with Appearance set to Light: aOS and an app are dark, and Light is
-// back with another look); the trail behind everything; aOS opens with its intro once a launch, the sound asked for with a
-// tap where the phone won't start it, Skip ending it, Off in Account stopping it; the helper is the Tron rider
+// back with another look); the trail behind everything; aOS opens with its intro once a launch, its sound with nothing to
+// tap, Skip ending it, Off in Account stopping it; the helper is the Tron rider, called Ares (your own name back after)
 {
   const seed = { 'aos.look': 'grid', 'design.notes': 'grid', 'home.settings': JSON.stringify({ theme: 'light' }), 'aos.helper': '{"who":"fox","name":"Biscuit"}' };
   const { ctx, p, errs } = await open('light', seed, { watch: true }); const pr = [...errs];
-  // the intro was there from the first paint, and (no tap yet: the phone won't start the sound) asked for one
+  // the intro was there from the first paint, its sound with nothing to tap (no "Tap for sound")
   const seen = await p.evaluate(() => window.__tron || {});
   if (!seen.shown || seen.name !== 'aOS' || seen.hi !== 'Greetings, programs.') pr.push('aOS did not open with the Tron intro: ' + JSON.stringify(seen));
-  if (!seen.ask) pr.push('with no tap yet, the intro did not ask for one for its sound');
+  if (seen.ask || seen.soundButton) pr.push('the intro asks for a tap for its sound');
   await p.waitForFunction(() => !document.getElementById('tronIntro'), null, { timeout: 6000 }).catch(() => pr.push('the intro did not end by itself'));
   let st = await p.evaluate(() => ({ theme: document.documentElement.dataset.theme, bg: getComputedStyle(document.documentElement).backgroundColor, body: getComputedStyle(document.body).backgroundColor,
     before: getComputedStyle(document.documentElement, '::before').zIndex, after: getComputedStyle(document.documentElement, '::after').content, who: (document.querySelector('#ipsySlot .ipsy-char') || {}).dataset?.who }));
   if (st.theme !== 'dark' || !/^rgb\((\d), (\d), (\d)\)$/.test(st.bg)) pr.push('Tron is not dark on a phone in light mode with Light picked: ' + JSON.stringify(st));
   if (st.before !== '-1' || st.after === 'none' || !/, 0\)$|transparent/.test(st.body)) pr.push('the light trail is not behind everything: ' + JSON.stringify(st));
   if (st.who !== 'rider') pr.push('the helper is not the Tron rider in Tron: ' + st.who);
+  const ph = await p.evaluate(() => document.getElementById('hq').placeholder);
+  if (!/ask Ares$/.test(ph)) pr.push('in Tron the helper is not called Ares: ' + ph);
   // once a launch: a reload doesn't play it again
   await p.reload(); await p.waitForTimeout(300);
   if (await p.evaluate(() => !!document.getElementById('tronIntro'))) pr.push('the intro played again on a reload');
@@ -284,6 +286,9 @@ for (const scheme of ['light', 'dark']) {
   await p.click('#looks [data-look="vintage"]'); await p.waitForTimeout(300);
   st = await p.evaluate(() => ({ theme: document.documentElement.dataset.theme, who: (document.querySelector('#ipsySlot .ipsy-char') || {}).dataset?.who }));
   if (st.theme !== 'light' || st.who !== 'fox') pr.push('back in Vintage, Light and the fox did not come back: ' + JSON.stringify(st));
+  await p.waitForTimeout(100);
+  const ph2 = await p.evaluate(() => document.getElementById('hq').placeholder);
+  if (!/ask Biscuit$/.test(ph2)) pr.push('back in Vintage, the helper is not Biscuit again: ' + ph2);
   report('Tron, as in the car: dark only, the trail behind everything, the rider, and aOS\'s intro with its sound (once a launch, Skip, Off)', pr); await ctx.close();
 }
 

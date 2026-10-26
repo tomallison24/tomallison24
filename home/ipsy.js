@@ -52,7 +52,7 @@
   const follow = el => { followers.add(el); wear(el); };
   for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => { followers.forEach(el => wear(el)); redrawAll(); });
   // the look changed (Tron's rider, or back to the helper you picked)
-  function redrawAll() { const h = helper(); cells.forEach(c => { if (!c.fixed && c.host.isConnected) drawChar(c, h ? h.who : c.peek); }); }
+  function redrawAll() { const h = helper(); cells.forEach(c => { if (!c.fixed && c.host.isConnected) drawChar(c, h ? h.who : c.peek); }); onHelper.forEach(fn => { try { fn(h); } catch {} }); }
   new MutationObserver(() => redrawAll()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-look'] });
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   // The language a short message asks for ("English", "switch to English please", «на русский»), or null
@@ -139,7 +139,7 @@
   // Not in the picker. Its jobs are the others': a lit data pad to read, a light that sweeps the visor to search, a stylus of
   // light to write; across aOS Home's bar it rides its Light Cycle, the red trail behind it.
   const RED = '#FF2A2A';
-  HELPERS.rider = { label: 'Tron rider', kind: 'the Tron rider', sh: 54, smile: false, cheeks: false,
+  HELPERS.rider = { label: 'Ares', kind: 'Ares, the red Light Cycle rider from Tron: Ares', sh: 54, smile: false, cheeks: false,
     vars: '--limb:#141418;--limbw:11;--paw:#141418;--pawedge:' + RED + ';--foot:#141418',
     back: '<circle cx="100" cy="116" r="60" fill="none" stroke="' + RED + '" stroke-opacity=".35" stroke-width="3"/><circle cx="100" cy="116" r="48" fill="none" stroke="' + RED + '" stroke-opacity=".18" stroke-width="2"/>'
       + '<g class="h-cycle"><path class="h-trail" d="M-250 164H34"/><circle cx="38" cy="162" r="20" fill="#0E0E10" stroke="' + RED + '" stroke-width="5"/><circle cx="162" cy="162" r="20" fill="#0E0E10" stroke="' + RED + '" stroke-width="5"/>'
@@ -198,9 +198,11 @@
   // turns peeking out of the corner, and the chat starts by asking you to pick one.
   const HELPER_KEY = 'aos.helper';
   const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && own(HELPERS, h.who) ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
-  const helperName = () => { const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
+  // in Tron your helper is Ares (Tron: Ares's rider, as in Tesla's Tron mode), whatever its name in the other looks
+  const ARES = () => (window.aosLang && aosLang.get() === 'ru' ? 'Арес' : 'Ares');
+  const helperName = () => { if (LOOK() === 'grid') return ARES(); const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
   // the chat's title: its name, or with none, what it is (Mia is Mia; in Russian, Ipsy)
-  const title = () => { const h = helper(); return !h || h.name.trim() ? helperName() : (ru => h.who === 'mia' ? (ru ? 'Мия' : 'Mia') : ru ? 'Ipsy' : HELPERS[h.who].label)(window.aosLang && aosLang.get() === 'ru'); };
+  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (ru => h.who === 'mia' ? (ru ? 'Мия' : 'Mia') : ru ? 'Ipsy' : HELPERS[h.who].label)(window.aosLang && aosLang.get() === 'ru'); };
   function setHelper(who, name) {
     if (!own(HELPERS, who)) return;
     ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
@@ -1143,7 +1145,7 @@
       const mark = messages.length;          // where this question starts, to go back to if it fails
       let ctx = ''; try { ctx = o.context ? o.context() : ''; } catch {}
       const ru = window.aosLang && aosLang.get() === 'ru' ? ' The person has aOS in Russian: answer in Russian.' : '';   // ../home/lang.js
-      const me = helper(), who = me ? ' You are this person’s helper, ' + (me.name.trim() ? 'named ' + me.name.trim() + ', ' : '') + 'drawn as ' + HELPERS[me.who].kind + '.' : '';
+      const me = helper(), tron = LOOK() === 'grid', who = tron ? ' You are this person’s helper, named Ares, drawn as ' + HELPERS.rider.kind + '.' : me ? ' You are this person’s helper, ' + (me.name.trim() ? 'named ' + me.name.trim() + ', ' : '') + 'drawn as ' + HELPERS[me.who].kind + '.' : '';
       messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + ru + who + ']' }, { type: 'text', text }] });
       add({ t: 'me', text });
       let failed = null;

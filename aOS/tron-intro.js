@@ -4,8 +4,8 @@
 // inside it, straight to themselves. Once a launch (sessionStorage aos.tron.shown), not on every reload.
 //
 // The sound is made here (Web Audio): a low swell, the cycle's whoosh, a hit as the name locks in, a quick
-// rising arpeggio and a chord. Phones only let a page play sound after a tap, so when it can't start by
-// itself the screen says "Tap for sound" and a tap plays it. Account > Appearance > Tron intro: Sound
+// rising arpeggio and a chord, played as the intro starts, with nothing to tap (a phone that won't let a page
+// start sound by itself, before any tap, shows the intro without it). Account > Appearance > Tron intro: Sound
 // (the default), Silent, or Off (localStorage aos.tron.intro = 'sound' | 'silent' | 'off'). Skip ends it.
 // With Reduce Motion it's a short fade, no streak or flicker.
 //
@@ -66,10 +66,6 @@
 #tronIntro .ti-line{width:0;height:2px;margin-top:16px;background:#FF2A2A;box-shadow:0 0 10px #FF2A2A;animation:tiLine .5s 1.2s ease-out forwards}
 #tronIntro .ti-hi{margin-top:14px;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:#A3A8B0;opacity:0;animation:tiIn .5s 1.4s ease forwards}
 #tronIntro .ti-skip{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;min-width:64px;height:44px;padding:0 14px;border:0;border-radius:22px;background:rgba(255,255,255,.08);color:#C9CDD2;font:600 15px "Exo 2",system-ui,sans-serif}
-#tronIntro .ti-sound{position:absolute;bottom:max(28px,calc(env(safe-area-inset-bottom) + 16px));left:50%;transform:translateX(-50%);display:none;align-items:center;gap:8px;height:44px;padding:0 18px;border:0;border-radius:22px;
-  background:rgba(255,42,42,.14);box-shadow:inset 0 0 0 1.5px #FF2A2A;color:#FFD3D3;font:600 15px "Exo 2",system-ui,sans-serif;white-space:nowrap}
-#tronIntro.ask .ti-sound{display:inline-flex}
-#tronIntro .ti-sound svg{width:18px;height:18px}
 @keyframes tiFloor{from{transform:perspective(220px) rotateX(84deg) translateY(30%);opacity:0}to{transform:perspective(220px) rotateX(58deg);opacity:1}}
 @keyframes tiTrail{to{transform:scaleX(1)}} @keyframes tiFade{to{opacity:.25}}
 @keyframes tiCycle{to{transform:translateX(calc(100vw + 40px))}}
@@ -77,7 +73,6 @@
 @keyframes tiLine{to{width:min(220px,60vw)}} @keyframes tiIn{to{opacity:1}}
 @media (prefers-reduced-motion:reduce){#tronIntro .ti-floor,#tronIntro .ti-trail,#tronIntro .ti-cycle{animation:none}#tronIntro .ti-cycle,#tronIntro .ti-trail{display:none}
   #tronIntro .ti-name{animation:tiIn .5s .1s ease forwards}#tronIntro .ti-line{animation:tiLine .01s .3s forwards}#tronIntro .ti-hi{animation:tiIn .5s .3s ease forwards}}`;
-  const SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 
   let el = null;
   function show({ force = false } = {}) {
@@ -91,25 +86,19 @@
     el = document.createElement('div'); el.id = 'tronIntro'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'aOS');
     el.innerHTML = '<div class="ti-floor" aria-hidden="true"></div><div class="ti-road" aria-hidden="true"><div class="ti-trail"></div><div class="ti-cycle"></div></div>'
       + '<div class="ti-name" translate="no">aOS</div><div class="ti-line" aria-hidden="true"></div><div class="ti-hi"></div>'
-      + '<button type="button" class="ti-skip"></button><button type="button" class="ti-sound">' + SPEAKER + '<span></span></button>';
+      + '<button type="button" class="ti-skip"></button>';
     el.querySelector('.ti-hi').textContent = T('Greetings, programs.');
     el.querySelector('.ti-skip').textContent = T('Skip');
-    el.querySelector('.ti-sound span').textContent = T('Tap for sound');
     el.setAttribute('popover', 'manual');
     root.appendChild(el);   // on <html>, so it covers aOS from its very first paint (the body may not be there yet)
     try { el.showPopover(); } catch {}   // and in the top layer, over Account (a dialog) when it's played again from there
     let played = false, end = performance.now() + (still() ? 1600 : 2700);
-    const tryPlay = () => { if (played || m !== 'sound') return; if (play()) { played = true; el.classList.remove('ask'); el.dataset.sound = 'playing'; end = Math.max(end, performance.now() + 1900); } };
+    const tryPlay = () => { if (played || m !== 'sound') return; if (play()) { played = true; el.dataset.sound = 'playing'; end = Math.max(end, performance.now() + 1900); } };
     if (m === 'sound') {
       const a = audio();
       if (a) { if (a.state === 'running') tryPlay(); else a.resume().then(tryPlay, () => {}); }
-      setTimeout(() => { if (el && !played) el.classList.add('ask'); }, 250);
     }
     const close = () => { if (!el) return; const e = el; el = null; e.classList.add('out'); setTimeout(() => { try { e.hidePopover(); } catch {} e.remove(); st.remove(); }, 520); };
-    el.addEventListener('pointerdown', e => {
-      if (e.target.closest('.ti-skip')) return;
-      const a = audio(); if (a && a.state !== 'running') a.resume().then(tryPlay, () => {}); else tryPlay();   // a tap lets a phone play it
-    });
     el.querySelector('.ti-skip').addEventListener('click', close);
     const tick = () => { if (!el) return; if (performance.now() >= end) close(); else setTimeout(tick, 120); };
     setTimeout(tick, 400);

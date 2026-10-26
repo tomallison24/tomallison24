@@ -356,10 +356,10 @@
     'A recipe from a past plan opens on top of the plan, not hidden behind it': 'Рецепт из прошлого плана открывается поверх плана, а не прячется за ним',
     'Tron, Tesla style: always dark, as the car\'s screen goes, red only for what\'s lit, and a red light trail that runs around every screen behind everything, a light racing along it':
       'Трон в стиле Tesla: всегда тёмный, как экран машины, красным светится только главное, а по краю каждого экрана, позади всего, бежит красный световой след',
-    'In Tron, your helper suits up as the Tron rider: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar':
-      'В Троне помощник надевает костюм гонщика Трона: светящийся костюм и шлем, планшет для чтения, луч, бегущий по визору при поиске, и световой мотоцикл, на котором он проносится по строке на главной aOS',
-    'aOS opens with a short Tron intro and its own sound (Account > Appearance > Tron intro: Sound, Silent or Off; a phone may need a tap for the sound)':
-      'aOS открывается короткой заставкой Трона со своим звуком («Аккаунт» > «Оформление» > «Заставка Трона»: звук, без звука или выкл.; телефону может понадобиться касание для звука)',
+    'In Tron, your helper is Ares, the rider from Tron: Ares: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar':
+      'В Троне помощник — Арес, гонщик из «Трон: Арес»: светящийся костюм и шлем, планшет для чтения, луч, бегущий по визору при поиске, и световой мотоцикл, на котором он проносится по строке на главной aOS',
+    'aOS opens with a short Tron intro and its own sound, nothing to tap (Account > Appearance > Tron intro: Sound, Silent or Off)':
+      'aOS открывается короткой заставкой Трона со своим звуком, ничего нажимать не нужно («Аккаунт» > «Оформление» > «Заставка Трона»: звук, без звука или выкл.)',
     'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
     'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name':
       'aOS: «Пройти настройку» в начале Аккаунта проводит по вашим настройкам по одной: язык, стиль, светлая или тёмная тема, помощник и его имя',
