@@ -106,6 +106,7 @@
         'Tron, Tesla style: always dark, as the car\'s screen goes, red only for what\'s lit, and a red light trail that runs around every screen behind everything, a light racing along it',
         'In Tron, your helper is Ares, the rider from Tron: Ares: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar',
         'aOS opens with a short Tron intro and its own sound, nothing to tap (Account > Appearance > Tron intro: Sound, Silent or Off)',
+        'Tron\'s intro always ends, even on a phone that refuses to start its sound (before, that could leave aOS stuck on the intro), and the welcome and update screens now wait for it instead of playing underneath; a Tron welcome no longer offers Light or dark',
         'aOS Home: try Thumb arc (Account > Appearance > Home layout): Home, Mail, Weather and Calendar on an inner ring and your four favorites on an outer one, in the corner your thumb rests on, with what\'s next and every other app above them, so every app is on one screen. Left-handed arc puts it in the other corner',
         'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name',
         'Fixes from a review of every app: Places no longer re-syncs a place that came back unchanged (it sent it again every second while open); Calendar\'s Year view steps from Feb 29 to Feb 28; Travel says "tomorrow" by your own day, not UTC, and drops a Gmail sign-in Google refused instead of failing for an hour; Podcasts\' mini player shows the right show for an episode with a repeated title; Weather\'s My Location no longer waits out another place\'s forecast; Mail\'s Add tag keeps its name after a failed add',
@@ -1397,7 +1398,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
     { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, Money and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
-    { x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' },
+    ...(tron() ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' }]),   // Tron is dark only
     { i: 'lock', t: 'Yours alone', d: 'What you set up stays on this phone.' },
     ...(!ios && !standalone() ? [{ x: 'install', noart: true, t: 'Add aOS to this device', name: 'aOS', icon: icon('aos') }] : []),   // iPhone: Safari showed how already
     { i: 'grid', t: 'Choose your apps', d: 'Every AllisonOS app is here. Tap one: it opens in Safari, ready to add to your Home Screen, and shows you around once it is there.' },
@@ -1780,9 +1781,12 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     el.querySelector('.w-skip').onclick = close;
     return { el, q: s => el.querySelector(s), close, closers };
   }
+  // In Tron, aOS opens with its intro (aOS/tron-intro.js) over everything: a welcome waits for it to end, so none of its
+  // opening plays unseen underneath (at most a few seconds, whatever happens to the intro).
+  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.getElementById('tronIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
   const run = (label, inner, onClose, body) => {
     if (open) return open;
-    open = new Promise(resolve => { const o = mount(label, inner, resolve, onClose); body(o).catch(() => o.close()); });
+    open = introDone().then(() => new Promise(resolve => { const o = mount(label, inner, resolve, onClose); body(o).catch(() => o.close()); }));
     return open;
   };
 

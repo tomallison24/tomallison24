@@ -27,8 +27,9 @@ async function open(scheme = 'light', seed = {}, o = {}) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme,
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mobile/15E148 Safari/604.1' });
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps: {} };
-  await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); if (!s.__install) sessionStorage.setItem('aos.later.aos', '1');
-    for (const k in s) if (!sessionStorage.getItem('seeded.' + k)) { localStorage.setItem(k, s[k]); sessionStorage.setItem('seeded.' + k, '1'); } } catch {} }, seed);
+  await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); if (!s.__fresh) localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); if (!s.__install) sessionStorage.setItem('aos.later.aos', '1');
+    for (const k in s) if (!k.startsWith('__') && !sessionStorage.getItem('seeded.' + k)) { localStorage.setItem(k, s[k]); sessionStorage.setItem('seeded.' + k, '1'); } } catch {}
+    if (s.__home) Object.defineProperty(navigator, 'standalone', { get: () => true }); }, seed);   // __home: opened from the Home Screen
   await ctx.route('**/*', r => {
     const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort();
     if (!u.pathname.startsWith('/aOS/api/')) return r.continue();
@@ -290,6 +291,46 @@ for (const scheme of ['light', 'dark']) {
   const ph2 = await p.evaluate(() => document.getElementById('hq').placeholder);
   if (!/ask Biscuit$/.test(ph2)) pr.push('back in Vintage, the helper is not Biscuit again: ' + ph2);
   report('Tron, as in the car: dark only, the trail behind everything, the rider, and aOS\'s intro with its sound (once a launch, Skip, Off)', pr); await ctx.close();
+}
+
+// 10. a Tron phone's first open from the Home Screen: the intro, and only then the welcome (none of its opening plays unseen
+// under the intro), through to aOS with the first open noted; the Light or dark card is left out (Tron is dark only). And
+// whatever the sound does, the intro ends: a phone that throws on Web Audio, or one that lets the context start on a later
+// tap (then no sound, and no error, after the intro has gone)
+{
+  const { ctx, p, errs } = await open('dark', { 'aos.look': 'grid', __fresh: 1, __home: 1 }, { watch: true }); const pr = [...errs];
+  const first = await p.evaluate(() => ({ intro: !!document.getElementById('tronIntro'), welcome: !!document.getElementById('aos-welcome') }));
+  if (!first.intro) pr.push('a fresh Tron phone did not open with the intro');
+  if (first.welcome) pr.push('the welcome started under the intro');
+  await p.waitForFunction(() => !document.getElementById('tronIntro'), null, { timeout: 6000 }).catch(() => pr.push('the intro did not end by itself'));
+  await p.waitForSelector('#aos-welcome.in', { timeout: 3000 }).catch(() => pr.push('the welcome did not follow the intro'));
+  await p.waitForSelector('#aos-welcome .c-panel.on', { timeout: 25000 }).catch(() => pr.push('the welcome never reached its cards'));
+  const heads = [];
+  for (let i = 0; i < 9 && await p.locator('#aos-welcome').count(); i++) {   // Continue through the cards to the end
+    heads.push(await p.locator('#aos-welcome h2').textContent().catch(() => ''));
+    await p.click('#aos-welcome .c-btns .w-btn', { timeout: 3000 }).catch(() => pr.push('the welcome\'s button could not be tapped on "' + heads[heads.length - 1] + '"'));
+    await p.waitForTimeout(700);
+  }
+  await p.waitForFunction(() => !document.getElementById('aos-welcome'), null, { timeout: 3000 }).catch(() => pr.push('the welcome did not end: ' + heads.join(' > ')));
+  if (heads.includes('Light or dark')) pr.push('the welcome offers Light or dark in Tron, which is dark only');
+  if (!(await p.evaluate(() => (JSON.parse(localStorage.getItem('aos.seen') || '{}')).aos))) pr.push('the first open was not noted (aos.seen)');
+  pr.push(...errs.filter(e => !pr.includes(e)));
+  await ctx.close();
+  // the sound throwing, or starting late
+  for (const [how, patch] of [['throws', 'Object.defineProperty(AudioContext.prototype, "resume", { value() { throw new Error("no audio"); } })'],
+    ['starts after the intro', 'Object.defineProperty(AudioContext.prototype, "resume", { value() { return new Promise(r => setTimeout(r, 4500)); } })']]) {
+    const c2 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mobile/15E148 Safari/604.1' });
+    await c2.addInitScript(({ patch }) => { try { localStorage.setItem('aos.look', 'grid'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); } catch {} new Function(patch)(); }, { patch });
+    await c2.route('**/*', r => { const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort(); return u.pathname.startsWith('/aOS/api/') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }) : r.continue(); });
+    const p2 = await c2.newPage(); const e2 = []; p2.on('pageerror', e => e2.push(e.message));
+    await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(200);
+    if (!(await p2.evaluate(() => !!document.getElementById('tronIntro')))) pr.push('Web Audio ' + how + ': no intro');
+    await p2.waitForFunction(() => !document.getElementById('tronIntro'), null, { timeout: 6000 }).catch(() => pr.push('Web Audio ' + how + ': the intro did not end'));
+    await p2.waitForTimeout(5000);   // the late start comes now: the intro is gone, so nothing plays and nothing errors
+    if (e2.length) pr.push('Web Audio ' + how + ': ' + e2.join('; '));
+    await c2.close();
+  }
+  report('a Tron phone\'s first open: the intro, then the welcome to its end (no Light or dark); the intro ends whatever Web Audio does', pr);
 }
 
 await b.close(); server.close();
