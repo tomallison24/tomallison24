@@ -305,9 +305,9 @@ export { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES };
 export const ipsyModelOf = env => modelOf(env, 'CALENDAR_IPSY_MODEL');
 const S = { type: 'string' };
 const AT = { type: 'string', description: 'YYYY-MM-DDTHH:MM, in the phone’s time zone; YYYY-MM-DD for an all-day event' };
-const CALENDARS = ['family', 'holidays', 'notes', 'travel', 'mail', 'fitness'];
+const CALENDARS = ['family', 'holidays', 'notes', 'travel', 'mail', 'fitness', 'meals', 'orders', 'news'];
 export const IPSY_CLIENT_TOOLS = [
-  T('find_events', 'Find events in the calendar: the Family calendar and the layers that are on (US Holidays, Notes reminders, Travel bookings, Mail reminders, Fitness workouts). Without from and to: the next two weeks, or with a query, everything loaded. Returns each event\'s id, calendar, title, start and end (YYYY-MM-DD HH:MM, or days for all-day ones, end being the last day), place, and read_only with the reason when Ipsy can\'t change it; for ranges within the next 16 days, the weather too.', {
+  T('find_events', 'Find events in the calendar: the Family calendar and the layers that are on (US Holidays, Notes reminders, Travel bookings, Mail reminders, Fitness workouts, Meals, Orders, News fixtures). Without from and to: the next two weeks, or with a query, everything loaded. Returns each event\'s id, calendar, title, start and end (YYYY-MM-DD HH:MM, or days for all-day ones, end being the last day), place, and read_only with the reason when Ipsy can\'t change it; for ranges within the next 16 days, the weather too.', {
     from: { ...DAY, description: 'First day (YYYY-MM-DD)' },
     to: { ...DAY, description: 'Last day (YYYY-MM-DD), at most about a year after from' },
     query: { type: 'string', description: 'Words that must all appear in the title, place or notes' },

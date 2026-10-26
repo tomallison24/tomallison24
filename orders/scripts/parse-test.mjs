@@ -460,4 +460,33 @@ test('helpers', () => {
   assert.equal(P.dateIn('Saturday', at(10, 12)), '2026-10-17'); assert.equal(P.dateIn('tomorrow', at(10, 12)), '2026-10-13');
 });
 
+test('Calendar\'s Orders layer: arrivals, windows, pickups and returns of open orders, soonest first; finished, hidden, private and switched-off kinds left out; 60 at most', () => {
+  const o = (id, extra) => ({ id, store: 'Shop ' + id, items: [{ name: 'Thing ' + id }], status: 'shipped', kind: 'package', ...extra });
+  const items = P.calendarItems([
+    o('a', { eta: '2026-10-20', etaEnd: '2026-10-22', items: [{ name: 'Oak flooring' }, { name: 'Underlay' }] }),
+    o('b', { status: 'ordered', kind: 'pickup', eta: '2026-10-19', pickupBy: '2026-10-25', items: [] , orderNo: 'T-77' }),
+    o('c', { status: 'pickup', kind: 'pickup', eta: '2026-10-12', pickupBy: '2026-10-18', items: [] }),
+    o('d', { status: 'delivered', eta: '2026-10-11', ret: { status: 'started', by: '2026-11-19' } }),
+    o('e', { status: 'delivered', ret: { status: 'sent', by: '2026-11-01' } }),
+    o('f', { status: 'delivered', ret: { status: 'received', by: '2026-10-30' } }),
+    o('g', { status: 'delivered', eta: '2026-10-21' }), o('h', { status: 'pickedup', pickupBy: '2026-10-21' }), o('i', { status: 'cancelled', eta: '2026-10-21' }),
+    o('j', { eta: '2026-10-21', hide: true }), o('k', { eta: '2026-10-21', private: true }), o('l', { eta: '2026-10-21', kind: 'food' }),
+    o('m', { eta: 'Oct 21', status: 'out' }), o('n', { status: 'shipped', eta: '2026-10-17', etaEnd: '2026-10-17' }),
+  ], { kinds: { food: false } });
+  assert.deepEqual(items, [
+    { id: 'n/arrives', date: '2026-10-17', kind: 'arrives', store: 'Shop n', what: 'Thing n' },
+    { id: 'c/pickup_by', date: '2026-10-18', kind: 'pickup_by', store: 'Shop c', what: 'Store pickup' },
+    { id: 'b/arrives', date: '2026-10-19', kind: 'arrives', store: 'Shop b', what: 'Order T-77' },
+    { id: 'a/arrives', date: '2026-10-20', kind: 'arrives', store: 'Shop a', what: 'Oak flooring and 1 more' },
+    { id: 'a/window', date: '2026-10-22', kind: 'window', store: 'Shop a', what: 'Oak flooring and 1 more' },
+    { id: 'b/pickup_by', date: '2026-10-25', kind: 'pickup_by', store: 'Shop b', what: 'Order T-77' },
+    { id: 'e/return_by', date: '2026-11-01', kind: 'return_by', store: 'Shop e', what: 'Thing e' },
+    { id: 'd/return_by', date: '2026-11-19', kind: 'return_by', store: 'Shop d', what: 'Thing d' },
+  ]);
+  const many = Array.from({ length: 70 }, (_, i) => o('x' + i, { eta: P.addDays('2026-10-01', 69 - i) }));
+  const capped = P.calendarItems(many);
+  assert.equal(capped.length, 60); assert.equal(capped[0].date, '2026-10-01'); assert.equal(capped[59].date, '2026-11-29');
+  assert.deepEqual(P.calendarItems(null), []); assert.deepEqual(P.calendarItems([{ status: 'shipped', eta: '2026-10-21' }]), [], 'no id, no item');
+});
+
 console.log('\n' + n + ' tests passed');

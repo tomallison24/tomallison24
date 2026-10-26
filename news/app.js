@@ -842,6 +842,7 @@
     quick = id && quick !== id ? id : null;
     store.set('news.sport.quick', quick);
     refreshPicks();
+    shareCalSoon();
     renderFilterbar();
     renderFeed();
     keepBarInPlace();
@@ -853,6 +854,7 @@
     picksChanged = true;
     store.set('news.sport.picks', picks);
     refreshPicks();
+    shareCalSoon();
     if (sheetOpen) renderSheet();
     else { renderFilterbar(); renderFeed(); }
     refreshSport();
@@ -952,6 +954,40 @@
     });
   }
 
+  // Calendar's News layer, kept in your own family account (home/welcome.js AllisonOS.layer): the next two
+  // weeks of games for the sports and teams you follow (the one-tap team, else your picks), from today's
+  // scoreboards and the saved fixtures, soonest first and 40 at most; nothing when you follow nothing. A
+  // football or rugby game carries the link to its own page here (?sport=scores&league=…&game=…). Built only
+  // when the scores, the fixtures or the picks changed, and only once the fixtures have been read (so a phone
+  // that has read nothing yet never clears the calendar).
+  let sharedKey = null, shared = null;
+  function fixtureItems(now = Date.now()) {
+    if (!pickList.length) return [];
+    const from = new Date(now); from.setHours(0, 0, 0, 0);
+    const to = now + 14 * 864e5, out = [];
+    for (const l of relevantLeagues()) {
+      const seen = new Set();
+      for (const g of [...(scores[l.id] || []), ...(fixtures[l.id] || [])]) {
+        const t = Date.parse(g.start);
+        if (!g.id || seen.has(g.id) || g.state === 'post' || !(t >= from.getTime() && t <= to) || !gameMatches(g, l)) continue;
+        seen.add(g.id);
+        const [a, b] = l.homeFirst ? [g.home, g.away] : [g.away, g.home];
+        out.push({ id: `${l.id}:${g.id}`, start: new Date(t).toISOString(), title: `${a.name || a.short} ${l.homeFirst ? 'v' : 'at'} ${b.name || b.short}`, league: l.label,
+          ...(matchKind(l) ? { url: `../news/?sport=scores&league=${encodeURIComponent(l.id)}&game=${encodeURIComponent(g.id)}` } : {}) });
+      }
+    }
+    return out.sort((a, b) => a.start.localeCompare(b.start)).slice(0, 40);
+  }
+  function shareCal() {
+    const lay = window.AllisonOS && AllisonOS.layer; if (!lay || !leagues || (pickList.length && !snap)) return;
+    const key = [scoresAt, snapFetched, ...pickList.map(p => p.id)].join('|');
+    if (key === sharedKey) return;
+    sharedKey = key; shared = { items: fixtureItems() };
+    lay.share('news', shared);
+  }
+  // ...after reading the saved fixtures first, when you follow something and they haven't been read yet.
+  const shareCalSoon = () => { if (pickList.length && !snap) leaguesP.then(() => getSnapshot(15 * 60e3)).then(shareCal); else shareCal(); };
+
   async function loadLeagues() {
     try {
       const res = await fetch(LEAGUES_URL, { cache: 'no-cache' });
@@ -1013,6 +1049,7 @@
     renderFilterbar();
     if (topic === SPORT && sportMode === 'scores') renderFeed();
     scheduleScores();
+    shareCal();
   }
 
   function scheduleScores() {
@@ -1850,12 +1887,19 @@
 
   $('today').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  // Opened from Calendar's News layer: ?sport=scores opens Sport > Scores (this open only, not remembered),
+  // and &league=<id>&game=<id> that game's own page, once the fixtures are read.
+  const link = new URLSearchParams(location.search), toScores = link.get('sport') === 'scores';
+  if (toScores) { topic = SPORT; sportMode = 'scores'; }
   // Last copy of the sport list first, so picks apply from the first frame.
   try { const raw = store.get('news.sport.catalog'); if (raw) catalog = buildCatalog(raw); } catch {}
   refreshPicks();
   render();
   load();
   const catalogP = loadCatalog(), leaguesP = loadLeagues();
+  if (toScores && link.get('league') && link.get('game')) leaguesP.then(() => getSnapshot(15 * 60e3)).then(() => openMatch(link.get('league'), link.get('game')));
+  // Calendar's layer, on every open: once the lists are read and the page has loaded (welcome.js, deferred, gives AllisonOS.layer)
+  Promise.all([catalogP, leaguesP, new Promise(r => document.readyState === 'complete' ? r() : addEventListener('load', r))]).then(shareCalSoon);
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
@@ -1904,4 +1948,7 @@
       }),
     });
   }
+
+  // For the tests (news/scripts/app-test.mjs) only.
+  window.__news = { shared: () => shared, fixtureItems };
 })();

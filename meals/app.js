@@ -115,6 +115,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       scheduleSheet();   // the family's Google Sheet hears what the family changed
     } catch (e) { st.state = e.code; st.error = e.code; }
     render();
+    if (wantDate) { showDate(); wantDate = ''; }   // the day asked for (?date=), now the plan is known
   }
 
   // ---------------------------------------------------------------------
@@ -134,7 +135,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     slideTabs(true);
     $('fab').hidden = st.tab !== 'plan' || !!(data.draft && data.draft.meals) || st.busy === 'plan';   // a new plan waiting: accept, try again or discard it first
     main.innerHTML = notice() + (st.tab === 'ipsy' ? talk() : st.tab === 'plan' ? planTab() : list());
+    shareCal();
   }
+  // Calendar's Meals layer, kept in your own family account (home/welcome.js AllisonOS.layer): every meal of
+  // the family's plan on its day (logic.js calendarItems), so Calendar shows "Dinner: …" on each phone (on an
+  // iPhone it can't read this app's storage). Every render() comes here, so the layer is built only when the
+  // plan changed (a cheap fingerprint: its id, dates and titles), and only once this phone knows the plan: the
+  // server's answer, or the copy kept here; never the blank before the first load, which would clear the calendar.
+  let sharedFp = null, shared = null;
+  function shareCal() {
+    const lay = window.AllisonOS && AllisonOS.layer, p = data.plan; if (!lay || (st.state !== 'ok' && !p)) return;
+    const fp = p ? [p.id, (p.dates || []).join(','), ...(p.meals || []).map(m => m && m.title)].join('|') : '';
+    if (fp === sharedFp) return;
+    sharedFp = fp; shared = { items: L.calendarItems(p) };
+    lay.share('meals', shared);
+  }
+  addEventListener('load', shareCal);   // the server may answer before welcome.js (deferred) has given AllisonOS.layer
 
   // dates: 'YYYY-MM-DD' on this phone's calendar
   const isoDay = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -876,6 +892,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   render();
   animateIn(main);
+  // Opened from Calendar's Meals layer: ?date=YYYY-MM-DD opens that day's dinner (else its first meal) once the
+  // plan is known, from the copy here now or the server's answer; a day the plan hasn't shows the plan as usual.
+  let wantDate = /^\d{4}-\d{2}-\d{2}$/.test(new URLSearchParams(location.search).get('date') || '') ? new URLSearchParams(location.search).get('date') : '';
+  function showDate() {
+    const p = data.plan, di = wantDate && p && Array.isArray(p.dates) ? p.dates.indexOf(wantDate) : -1;
+    if (di < 0) return;
+    wantDate = '';
+    const ms = p.meals.map((m, i) => [m, i]).filter(([m, i]) => (m.day || i + 1) === di + 1);
+    if (!ms.length) return;
+    const [, i] = ms.find(([m]) => slotOf(m) === 'dinner') || ms[0];
+    st.tab = 'plan'; folded = false; render(); slideTabs(true); openRecipe(i, p);
+  }
+  showDate();
   load();
   setTimeout(() => handOver(), 600);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !st.busy) load(); });
@@ -908,5 +937,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (meals/scripts/app-test.mjs) only.
-  window.__meals = { st, flow, data: () => data, render, load, makePlan, openRecipe, openPast, openSettings, keep, sheetSync, loadOlder, sheetPlans: () => [...sheetPlans.keys()], graves: () => sheetGraves };
+  window.__meals = { st, flow, data: () => data, render, load, makePlan, openRecipe, openPast, openSettings, keep, sheetSync, loadOlder, sheetPlans: () => [...sheetPlans.keys()], graves: () => sheetGraves, shared: () => shared };
 })();

@@ -345,23 +345,28 @@
   // Pages, a local server) the answer is a 404 or an HTML page, and the app
   // goes straight to the feed for the rest of the session.
   let apiGone = false;
-  async function api(path){
+  // bg: a call nobody tapped for (the refresh on open and its timer, the Top shows chart): signed out, the
+  // 401 comes back as 'signin' with no sign-in sheet, and the app shows what it has. A tap (Search, a show,
+  // Refresh, Check for New Episodes) asks for Face ID.
+  async function api(path, bg){
     if (apiGone) throw new Error('noapi');
     let r;
     // signed in to the family where accounts are on (the route only answers family): the session goes with it
-    const get = window.AllisonOS && AllisonOS.account && AllisonOS.account.fetch ? AllisonOS.account.fetch : fetch;
-    try { r = await get('../podcasts/api/' + path, {headers:{'X-Podcasts':'1'}, cache:'no-store', credentials:'same-origin'}); }
+    const A = window.AllisonOS && AllisonOS.account && AllisonOS.account.fetch, opts = {headers:{'X-Podcasts':'1'}, cache:'no-store', credentials:'same-origin'};
+    try { r = await (A ? A('../podcasts/api/' + path, opts, {quiet: !!bg}) : fetch('../podcasts/api/' + path, opts)); }
     catch(e) { throw new Error('offline'); }
     const ct = r.headers.get('Content-Type') || '';
     if (r.status === 404 || r.status === 405 || /html/i.test(ct)) { apiGone = true; throw new Error('noapi'); }
+    if (r.status === 401) throw new Error('signin');
     if (!r.ok) { let m = ''; try { m = (await r.json()).error; } catch(e) {} throw new Error(m || 'The feed couldn’t be loaded.'); }
     return r;
   }
-  const quiet = m => m === 'noapi' || m === 'offline';
-  async function fetchFeed(url){
-    try { return await (await api('feed?url=' + encodeURIComponent(url))).text(); }
+  const quiet = m => m === 'noapi' || m === 'offline' || m === 'signin';
+  async function fetchFeed(url, bg){
+    try { return await (await api('feed?url=' + encodeURIComponent(url), bg)).text(); }
     catch(e) {
-      try { const r = await fetch(media(url), {cache:'no-store', credentials:'omit'}); if (r.ok) return await r.text(); } catch(_) {}
+      // the family lock ('signin') is not a missing server: the feed isn't read from the page instead
+      if (e.message !== 'signin') try { const r = await fetch(media(url), {cache:'no-store', credentials:'omit'}); if (r.ok) return await r.text(); } catch(_) {}
       if (navigator.onLine === false) throw new Error('You’re offline.');
       throw new Error(quiet(e.message) ? 'This show’s feed can’t be read from here.' : e.message);
     }
@@ -450,8 +455,8 @@
     return out;
   }
 
-  async function loadShow(feed, id, meta){
-    const p = parseFeed(await fetchFeed(feed), id);
+  async function loadShow(feed, id, meta, bg){
+    const p = parseFeed(await fetchFeed(feed, bg), id);
     const old = shows.get(id), f = followOf(id);
     const sh = {id, feed: p.newFeed || feed, title: p.title, author: p.author, art: p.art,
       itArt: (meta && meta.art) || (old && old.itArt) || '', desc: p.desc, link: p.link,
@@ -473,7 +478,7 @@
     await pool([...S.follows], 4, async f => {
       const had = shows.get(f.id), newest = had && had.eps[0] ? had.eps[0].d : (f.latest || 0);
       try {
-        const sh = await loadShow(f.feed, f.id);
+        const sh = await loadShow(f.feed, f.id, undefined, !manual);
         if (newest) fresh += sh.eps.filter(e => e.d > newest).length;
       } catch(e) { failed++; f.err = e.message || 'Couldn’t update'; }
     });
@@ -498,9 +503,10 @@
   const itShow = r => ({title: r.collectionName || r.trackName || '', author: r.artistName || '', feed: r.feedUrl || '',
     art: media(r.artworkUrl600 || r.artworkUrl100 || ''), genre: r.primaryGenreName || ''});
   const cleanShow = r => ({title: String(r.title || ''), author: String(r.author || ''), feed: webUrl(r.feed), art: media(r.art), genre: String(r.genre || '')});
-  async function directory(path, direct){
-    try { return ((await (await api(path)).json()).results || []).map(cleanShow); }
+  async function directory(path, direct, bg){
+    try { return ((await (await api(path, bg)).json()).results || []).map(cleanShow); }
     catch(e) {
+      if (e.message === 'signin') return [];   // the family lock, not a missing server: nothing to show until a sign-in, and no asking Apple from the page
       if (!quiet(e.message)) throw e;
       // Apple's own addresses, where they let a page read them
       try { return (await direct()).map(cleanShow); } catch(_) { throw new Error('Search isn’t available right now.'); }
@@ -509,13 +515,13 @@
   const itJson = async u => { const r = await fetch(u, {credentials:'omit'}); if (!r.ok) throw new Error('Search isn’t available right now.'); return r.json(); };
   const searchShows = term => directory('search?cc=' + S.set.cc + '&term=' + encodeURIComponent(term), async () =>
     ((await itJson('https://itunes.apple.com/search?media=podcast&entity=podcast&limit=30&country=' + S.set.cc + '&term=' + encodeURIComponent(term))).results || []).map(itShow));
-  const topShows = () => directory('top?cc=' + S.set.cc, async () => {
+  const topShows = () => directory('top?cc=' + S.set.cc, async () => {   // loaded on its own as the Search tab opens: no sign-in sheet for it
     const chart = await itJson('https://rss.applemarketingtools.com/api/v2/' + S.set.cc + '/podcasts/top/50/podcasts.json');
     const ids = ((chart.feed && chart.feed.results) || []).map(r => r.id);
     const look = await itJson('https://itunes.apple.com/lookup?entity=podcast&country=' + S.set.cc + '&id=' + ids.join(','));
     const by = new Map((look.results || []).map(r => [String(r.collectionId), itShow(r)]));
     return ids.map(id => by.get(String(id))).filter(Boolean);
-  });
+  }, true);
 
   // =====================================================================
   // FOLLOWING, SAVED, UP NEXT, PLAYED

@@ -400,6 +400,42 @@ await step('the family\'s Google Sheet: signed out, Travel works on the phone, s
   await ctx.close();
 });
 
+await step('signed out, live status on open, the ping, the calendar pass and the flight board ask nobody to sign in (the 401 is kept quiet); Check again on a flight does', async () => {
+  const dep = new Date(soon), arr = new Date(soon.getTime() + 2 * 3600e3), hm = d => iso(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const { ctx, page, errs } = await famPhone(null, [hop('f-quiet', 0, { dep: hm(dep), arr: hm(arr) })]);   // a flight in 5 hours: in the live window
+  const calls = [];
+  // Travel's and Calendar's routes, locked (functions/<app>/api/_middleware.js): a 401 with no session. A page route comes before the phone's
+  await page.route(u => u.origin === BASE && /^\/(travel|calendar)\/api\//.test(u.pathname), route => {
+    const req = route.request(), who = PEOPLE[(req.headers().authorization || '').replace('Bearer ', '')];
+    calls.push(new URL(req.url()).pathname + (who ? ' as ' + who.id : ' signed out'));
+    if (!who) return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'signin' }) });
+    return route.fulfill({ json: req.url().includes('/ping') ? { ok: true, status: true, ai: true, find: true } : { ok: true, found: false } });
+  });
+  await page.evaluate(() => { localStorage.removeItem('allison-travel-v1-live'); localStorage.removeItem('allison-travel-v1-smart-at'); });   // the first open (the phone's own route answered) is forgotten: this open asks again
+  await page.reload(); await page.waitForFunction(() => window.__travel);
+  await page.waitForTimeout(4000);   // past the ping (1.5 s) and the smart pass (2.5 s: the calendar, then the flight board)
+  assert.ok(calls.some(c => c.startsWith('/travel/api/flight')), 'live status was asked for on open: ' + JSON.stringify(calls));
+  assert.ok(calls.some(c => c.startsWith('/travel/api/ping')), 'the ping was asked: ' + JSON.stringify(calls));
+  assert.ok(calls.some(c => c.startsWith('/calendar/api/events')), 'the calendar pass asked: ' + JSON.stringify(calls));
+  assert.ok(calls.every(c => c.endsWith(' signed out')), 'nothing went with a session');
+  assert.equal(await page.$('#aos-signin'), null, 'no sign-in sheet for any of them');
+  assert.ok(await page.isHidden('#toast'), 'and no toast');
+  // the app keeps what it has: the trip is there, and a flight's live status is simply not checked yet
+  await page.click('.trip[data-trip]'); await page.waitForSelector('#tripPage:not([hidden])');
+  await page.click('#tpBody .ev.flight'); await page.waitForSelector('#bkSheet:not([hidden]) #bkLive');
+  await page.waitForTimeout(800);
+  assert.equal(await page.$('#aos-signin'), null, 'opening the flight asks nobody either');
+  assert.match(await page.textContent('#bkLive'), /Not checked yet/, 'live status stays unknown, not "not set up"');
+  // a tap: Check again asks for Face ID
+  await page.click('#bkLiveGo');
+  await page.waitForSelector('#aos-signin', { timeout: 5000 });
+  assert.match(await page.textContent('#aos-signin'), /Continue with Face ID/, 'a tap raises the sign-in sheet');
+  await page.click('#aos-signin .s-not'); await page.waitForTimeout(1500);
+  assert.equal(await page.$('#aos-signin'), null, 'Not now closes it');
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
 await step('signed in, a Sheet not set up in aOS yet says nothing; a real error shows one toast a session', async () => {
   sheetFail = 'no-sheet';
   const { ctx, page, errs } = await famPhone('tok-ella', [stay('h-solo', 'Austin Motel', 20, 22)]);

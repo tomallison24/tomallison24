@@ -71,7 +71,7 @@ function world() {
     }
     if (url === 'https://tomallison24-news.pages.dev/aOS/api/state') {
       // aOS: who a family session belongs to
-      const tok = String((init.headers || {}).Authorization || '').replace('Bearer ', ''); w.stateCalls.push(tok);
+      const tok = String((init.headers || {}).Authorization || '').replace('Bearer ', ''); w.stateCalls.push(tok); w.stateHeaders = init.headers || {};
       const people = { 'tok-tom-0123456789': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella-0123456789': { id: 'ella', name: 'Ella', role: 'member' } };
       return Response.json({ storage: true, setup: true, user: people[tok] || null });
     }
@@ -155,6 +155,11 @@ const A = phone('a'), B = phone('b');
   ok('3. a Sheet link and phrase of the phone\'s own (as before aOS), no session: refused, and the Sheet is never asked', r.status === 403 && r.body.error === 'signin' && w.sheetCalls === 0);
   r = await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
   ok('3. signed in, but the server has no Sheet yet: refused, and says so', r.status === 403 && r.body.error === 'no-sheet');
+  ok('3. asking aOS carries no Access service token when the Worker has none', !('CF-Access-Client-Id' in w.stateHeaders));
+  w.env.ACCESS_CLIENT_ID = 'abc.access'; w.env.ACCESS_CLIENT_SECRET = 'shh';
+  r = await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
+  ok('3. behind Cloudflare Access: the Worker\'s service token goes with the session when it asks aOS', w.stateHeaders['CF-Access-Client-Id'] === 'abc.access' && w.stateHeaders['CF-Access-Client-Secret'] === 'shh' && w.stateCalls[w.stateCalls.length - 1] === TOM);
+  delete w.env.ACCESS_CLIENT_ID; delete w.env.ACCESS_CLIENT_SECRET;
   w.sheet(SHEET, 'guess');
   r = await call(w, '/subscribe', { subscription: sub(A), session: TOM, prefs: NY });
   ok('3. the server\'s phrase is wrong: refused, as the Sheet says', r.status === 403 && r.body.error === 'wrong-secret');

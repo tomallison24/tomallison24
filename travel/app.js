@@ -1160,8 +1160,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   let liveAvail = null;   // null: not asked yet; true/false once the server has answered
   const API = new URL('../travel/api/', location.href).href;
-  // calls to the locked server routes go signed in (home/account.js), once accounts are on
-  const aosFetch = (u, o) => window.AllisonOS && AllisonOS.account ? AllisonOS.account.fetch(u, o) : fetch(u, o);
+  // calls to the locked server routes go signed in (home/account.js), once accounts are on. quiet: a call nobody tapped
+  // for (live status on open and its timer, the ping, the calendar and flight-board passes): signed out, the 401 comes
+  // back as it is, with no sign-in sheet, and the app shows what it has; a tap (Check again, Have Ipsy check) asks for Face ID
+  const aosFetch = (u, o, quiet) => window.AllisonOS && AllisonOS.account ? AllisonOS.account.fetch(u, o, quiet ? { quiet: true } : undefined) : fetch(u, o);
   function lookupsThisMonth() { const o = ls.json(K.lookups, {}); const m = todayStr().slice(0, 7); return o.m === m ? o.n || 0 : 0; }
   function countLookup() { const m = todayStr().slice(0, 7), n = lookupsThisMonth() + 1; ls.set(K.lookups, JSON.stringify({ m, n })); }
   const liveWindow = b => {
@@ -1179,8 +1181,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (inflight.has(b.id)) return inflight.get(b.id);
     const p = (async () => {
       let data;
-      try { data = await flightData(b.airlineCode + b.flightNo, b.dep.slice(0, 10)); } catch { return; }
-      if (data.error === 'no-key') return;
+      try { data = await flightData(b.airlineCode + b.flightNo, b.dep.slice(0, 10), !force); } catch { return; }
+      if (data.error === 'no-key' || data.error === 'signin') return;   // signed out: what it has stays, until a tap or a sign-in
       countLookup();
       keepLive(b, data);
     })().finally(() => { inflight.delete(b.id); render(); if (st.booking && st.booking.id === b.id) renderLiveBox(); });
@@ -1189,10 +1191,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // One flight on one day, from travel/api/flight: {ok, found, legs} or {error}. Throws when nothing answers; no server here
   // at all (e.g. GitHub Pages), or no key there, turns live status off. Used by refreshLive, and by Ipsy (ipsy-tools.js).
-  async function flightData(no, date) {
+  async function flightData(no, date, quiet) {
     let r, data;
     try {
-      r = await aosFetch(API + 'flight?' + new URLSearchParams({ no, date }), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+      r = await aosFetch(API + 'flight?' + new URLSearchParams({ no, date }), { headers: { 'X-Travel': '1' }, cache: 'no-store' }, quiet);
       data = await r.json();
     } catch (e) { if (r && !/json/.test(r.headers.get('content-type') || '')) liveAvail = false; throw e; }
     if (!data || typeof data !== 'object') throw new Error('bad answer');
@@ -1211,8 +1213,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // The airport's departure board, from travel/api/find: {ok, candidates: [{number, to, local}]} or {error}. Used by
   // findNumbers, and by Ipsy.
-  async function boardData(q) {
-    const r = await aosFetch(API + 'find?' + new URLSearchParams(q), { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+  async function boardData(q, quiet) {
+    const r = await aosFetch(API + 'find?' + new URLSearchParams(q), { headers: { 'X-Travel': '1' }, cache: 'no-store' }, quiet);
     return r.json();
   }
   const utc = s => { const t = Date.parse(String(s || '').replace(' ', 'T').replace(/Z$/, ':00Z').replace(/:(\d\d):00Z$/, ':$1:00Z')); return isNaN(t) ? Date.parse(String(s || '').replace(' ', 'T')) : t; };
@@ -1355,8 +1357,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const icsName = uid => uid.trim().replace(/[^A-Za-z0-9._@-]+/g, '-').slice(0, 200) + '.ics';
   const uidsOf = b => [...ics([b]).matchAll(/UID:(.+)\r\n/g)].map(m => m[1]);
   const sigOf = text => P.hash(text.replace(/DTSTAMP:.*\r\n/g, ''));
-  async function calFetch(path, init) {
-    const r = await aosFetch(CAL_API + path, { cache: 'no-store', ...(init || {}), headers: { 'X-Calendar': '1', ...((init && init.headers) || {}) } });
+  async function calFetch(path, init, quiet) {
+    const r = await aosFetch(CAL_API + path, { cache: 'no-store', ...(init || {}), headers: { 'X-Calendar': '1', ...((init && init.headers) || {}) } }, quiet);
     let d = null; try { d = await r.json(); } catch {}
     return { r, d };
   }
@@ -1371,7 +1373,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let changed = false;
     try {
       const a = new Date(); a.setDate(a.getDate() - 1); const z = new Date(); z.setDate(z.getDate() + 400);
-      const { r, d } = await calFetch('events?start=' + calStamp(a) + '&end=' + calStamp(z));
+      const { r, d } = await calFetch('events?start=' + calStamp(a) + '&end=' + calStamp(z), null, true);   // runs by itself: signed out, nothing happens
       if (!r.ok || !d || !d.ok) { if (r.status === 404 || (d && d.error === 'no-account')) calAvail = false; return; }
       calAvail = true;
       const today = todayStr();
@@ -1422,7 +1424,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         if (b.calSig !== sig) wrote.push({ b, text, sig });
       }
       for (const w of wrote) {
-        const { r: wr, d: wd } = await calFetch('import', { method: 'POST', headers: { 'Content-Type': 'text/calendar; charset=utf-8' }, body: w.text });
+        const { r: wr, d: wd } = await calFetch('import', { method: 'POST', headers: { 'Content-Type': 'text/calendar; charset=utf-8' }, body: w.text }, true);
         if (wr.ok && wd && wd.ok) { w.b.calSig = w.sig; changed = true; }
         else if (wr.status === 404 || (wd && wd.error === 'no-account')) { calAvail = false; break; }
       }
@@ -1488,11 +1490,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   async function aiPass(queue, quiet) {
     const out = { asked: 0, filled: 0, nothing: 0, unread: 0, done: new Set(), changes: [], stop: '' };
     if (!aiOn() || !queue.length) return out;
-    if (aiAvail === null) await pingLive();
+    if (aiAvail === null) await pingLive(quiet);
     if (!aiAvail) return out;
     const use = aiUse();
     let changed = false;
-    const acct = window.AllisonOS && window.AllisonOS.account;
     for (const q of queue) {
       const b = bookings.find(x => x.id === q.bid);
       if (!b || b.private || b.edited || b.status === 'cancelled' || b.ride || staleUndated(b) || (startOf(b) && isPast(b))) { out.done.add(q.bid); continue; }     // history isn't looked up
@@ -1505,12 +1506,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (!ask.length) { out.nothing++; out.done.add(q.bid); continue; }
       const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
         body: JSON.stringify({ type: b.type, missing: ask, known: knownFor(b), text: q.text.slice(0, 8000), subject: q.subject, emailDate: new Date(q.date).toISOString() }) };
-      const tok = quiet && acct && acct.token && acct.token();      // no session: tried as is (a 401 stops it), never a Face ID prompt
-      if (tok) init.headers.Authorization = 'Bearer ' + tok;
       out.asked++;
       let res, d = null;
       try {
-        res = await (quiet ? fetch(API + 'extract', init) : aosFetch(API + 'extract', init));
+        res = await aosFetch(API + 'extract', init, quiet);      // quiet: no session, or none any more: a 401 stops it, never a Face ID prompt
         if (quiet && res.status === 401) { out.stop = 'signin'; break; }
         d = await res.json();
       } catch { if (quiet) { out.stop = 'offline'; break; } continue; }
@@ -1738,7 +1737,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const todo = bookings.filter(b => !b.private && myMail(b) && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
       && !(startOf(b) && isPast(b)) && P.missingFields(b).length && !tried.has(tag(b))).slice(0, 10);
     if (!todo.length) return;
-    if (aiAvail === null) await pingLive();
+    if (aiAvail === null) await pingLive(true);
     if (!aiAvail) return;
     if (mode !== '1') {
       if (autoOffered) return;
@@ -1900,7 +1899,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // A flight with an airline, the airports, the day and the time but no number: the airport's departure board has it.
   async function findNumbers() {
-    if (findAvail === null && liveAvail === null) await pingLive();
+    if (findAvail === null && liveAvail === null) await pingLive(true);
     if (!findAvail) return;
     const use = aiUse();
     let changed = false;
@@ -1911,7 +1910,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (use.find >= FIND_A_MONTH) break;
       use.tried[tried] = Date.now(); use.find++; aiSave(use);
       try {
-        const d = await boardData({ airline: b.airlineCode, from: b.from, to: b.to, date: b.dep.slice(0, 10), time: b.dep.slice(11, 16) });
+        const d = await boardData({ airline: b.airlineCode, from: b.from, to: b.to, date: b.dep.slice(0, 10), time: b.dep.slice(11, 16) }, true);
+        if (d && d.error === 'signin') { delete use.tried[tried]; use.find--; aiSave(use); break; }   // signed out: not counted, asked again signed in
         if (d && d.error === 'no-key') { findAvail = false; break; }
         if (d && d.error === 'limit') break;
         if (d && d.ok && d.candidates && d.candidates.length === 1 && /^\d{1,4}[A-Z]?$/.test(d.candidates[0].number)) { b.flightNo = d.candidates[0].number; fill(b, 'flightNo', 'board'); changed = true; }
@@ -2021,11 +2021,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function openSettings() {
     renderSettings(); openSheet('setSheet');
-    if (liveAvail === null) pingLive().then(renderSettings);
+    if (liveAvail === null) pingLive(true).then(renderSettings);
   }
-  async function pingLive() {
+  // quiet (on open, Settings, the passes that run by themselves): signed out, nothing is asked and nothing is decided
+  // (the answer stays unknown, so a tap asks again); a tap's ping asks for Face ID
+  async function pingLive(quiet) {
     try {
-      const r = await aosFetch(API + 'ping', { headers: { 'X-Travel': '1' }, cache: 'no-store' });
+      const r = await aosFetch(API + 'ping', { headers: { 'X-Travel': '1' }, cache: 'no-store' }, quiet);
+      if (r.status === 401) return;
       const d = await r.json();
       liveAvail = !!d.status; aiAvail = !!d.ai; findAvail = !!d.find; aiModels = d.models && d.models.check ? d.models : null;
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
@@ -2268,7 +2271,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
   if (Date.now() - +ls.get(K.smartAt, 0) > 20 * 6e4) setTimeout(() => smartPass(), 2500);
   else setTimeout(() => ipsyAutoCheck(), 2500);
-  if (aiOn()) setTimeout(() => pingLive().then(render), 1500);
+  if (aiOn()) setTimeout(() => pingLive(true).then(render), 1500);
   setTimeout(() => handOver().finally(() => sync()), 600);
   // Refresh "in 3 h" labels and live status while open.
   setInterval(() => { if (document.visibilityState === 'visible') { alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b)); render(); } }, 5 * 6e4);

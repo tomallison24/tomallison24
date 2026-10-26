@@ -45,6 +45,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # the site behind Cloudflare Access: the Worker's service token, so it can still ask the site whose
+          # phone a reminder is (aOS/RELEASING.md, "Notifications"; calendar/README.md, "Locking the server functions")
+          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
         working-directory: notes/push
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
@@ -77,4 +81,10 @@ jobs:
           sed -i "s/id = \"NOTES_PUSH_KV_ID\"/id = \"$id\"/" wrangler.toml
           # wrangler pinned to an exact release, as in push.yml; it runs with the token.
           npx --yes wrangler@4.142.0 deploy
+          # The Access service token, when the repository has one (set after the login wall went up).
+          if [ -n "$ACCESS_CLIENT_ID" ] && [ -n "$ACCESS_CLIENT_SECRET" ]; then
+            printf '%s' "$ACCESS_CLIENT_ID" | npx --yes wrangler@4.142.0 secret put ACCESS_CLIENT_ID
+            printf '%s' "$ACCESS_CLIENT_SECRET" | npx --yes wrangler@4.142.0 secret put ACCESS_CLIENT_SECRET
+            echo "Access service token set on the Worker."
+          fi
           echo "Deployed. Paste the https://notes-push.<your-subdomain>.workers.dev address above into Notes: Reminders -> bell -> Server address."

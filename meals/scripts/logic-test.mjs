@@ -52,4 +52,18 @@ test('the list as text, to paste into Notes', () => {
   assert.match(t, /^Produce\n- broccoli \(1 lb\)\n- garlic \(6 cloves\)/);
   assert.match(t, /Meat\n- boneless chicken thighs \(5\.5 lb\)/);
 });
+test('Calendar\'s Meals layer: every meal on its day (leftovers too), a slot each, dinner unless said; nothing without a plan', () => {
+  const plan = { id: 'p1', start: '2026-10-05', dates: ['2026-10-05', '2026-10-06', '2026-10-07'], meals: [
+    { day: 1, slot: 'dinner', title: 'Beef pho' }, { day: 2, slot: 'lunch', leftover: 1, title: 'Beef pho' }, { day: 2, title: 'Steak fajitas' },
+    { day: 3, slot: 'breakfast', title: 'Shakshuka' }, { day: 3, slot: 'dinner', title: '' }] };
+  assert.deepEqual(L.calendarItems(plan), [
+    { id: 'p1:0', date: '2026-10-05', slot: 'dinner', title: 'Beef pho' },
+    { id: 'p1:1', date: '2026-10-06', slot: 'lunch', title: 'Beef pho' },
+    { id: 'p1:2', date: '2026-10-06', slot: 'dinner', title: 'Steak fajitas' },
+    { id: 'p1:3', date: '2026-10-07', slot: 'breakfast', title: 'Shakshuka' }]);
+  // a plan from before dates: counted from its start; a day past the dates it has: left out
+  assert.deepEqual(L.calendarItems({ id: 'p2', start: '2026-01-30', meals: [{ title: 'A' }, { day: 3, title: 'C' }] }).map(x => x.date), ['2026-01-30', '2026-02-01']);
+  assert.deepEqual(L.calendarItems({ id: 'p3', dates: ['2026-10-05'], meals: [{ day: 1, title: 'A' }, { day: 2, title: 'B' }] }).map(x => x.id), ['p3:0']);
+  assert.deepEqual(L.calendarItems(null), []); assert.deepEqual(L.calendarItems({ id: 'p4', meals: [{ title: 'A' }] }), []);
+});
 console.log(`\n${n} passed`);

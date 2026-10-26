@@ -85,7 +85,7 @@ export const LANG_TOOL = {
 // only the settings named here, each checked again on the phone; aOS/RELEASING.md, "Ipsy and settings").
 const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
 export const SETTING_IDS = ['theme', 'look', 'language', 'favorites', 'calendar.week_start', 'calendar.time', 'calendar.temperature', 'calendar.day_view_opens_at',
-  ...['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather'].map(l => 'calendar.show_' + l), 'calendar.new_event_length', 'calendar.new_event_alert',
+  ...['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather', 'meals', 'orders', 'news'].map(l => 'calendar.show_' + l), 'calendar.new_event_length', 'calendar.new_event_alert',
   'clock.24_hour', 'clock.seconds', 'clock.face', 'weather.units', 'podcasts.skip_back', 'podcasts.skip_forward', 'podcasts.when_episode_ends', 'fitness.step_goal', 'fitness.move_goal',
   ...['pickup', 'food', 'digital', 'other'].map(k => 'orders.count_' + k), ...['orders', 'travel', 'calendar'].map(a => 'ipsy.gmail_' + a),
   'orders.ipsy_keeps_orders_up_to_date', 'travel.ipsy_fills_in', 'travel.ipsy_checks_by_itself', ...SET_APPS.map(id => 'design_' + id), 'helper.character', 'helper.name'];

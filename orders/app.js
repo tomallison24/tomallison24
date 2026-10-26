@@ -208,9 +208,24 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function persist() {
     const ok = ls.set(KEY, JSON.stringify({ orders, kinds })) && ls.set(K.graves, JSON.stringify(graves));
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Orders: storage is full.' + (synced ? ' Your orders are safe in the family’s Google Sheet.' : ' Back up soon.')); }
+    shareCal();
   }
   const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
   function save() { track(); persist(); if (signedIn()) scheduleSync(); }
+  // Calendar's Orders layer, kept in your own family account (home/welcome.js AllisonOS.layer): the days open
+  // orders arrive, pickups and returns are due (parse.js calendarItems), so Calendar shows them on every phone
+  // (on an iPhone it can't read this app's storage). Every persist() comes here: the layer is at most 60 small
+  // items, so it's built each time and handed over only when it differs from the last; on open, once there
+  // are orders here (an empty phone never clears the calendar).
+  let sharedFp = null, shared = null;
+  function shareCal() {
+    const lay = window.AllisonOS && AllisonOS.layer; if (!lay) return;
+    const items = P.calendarItems(orders, { kinds }), fp = JSON.stringify(items);
+    if (fp === sharedFp) return;
+    sharedFp = fp; shared = { items };
+    lay.share('orders', shared);
+  }
+  addEventListener('load', () => { if (orders.length) shareCal(); });
   const saveSeen = () => { ls.set(K.seen, JSON.stringify([...seen].slice(-6000))); ls.set(K.skipped, JSON.stringify(skipped)); };
 
   // ---------------------------------------------------------------------
@@ -1552,6 +1567,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
   // The family's Sheet: what this phone kept of its old link goes to aOS, then a sync (Gmail is read after it).
   startSync = sleep(600).then(handOver).catch(() => {}).then(() => sync());
+  // Opened from Calendar's Orders layer: ?open=<id> opens that order's page (the id may carry the item's kind
+  // after a slash, as the layer names them); an order not on this phone yet is looked for after the Sheet sync.
+  const want = String(new URLSearchParams(location.search).get('open') || '').split('/')[0];
+  if (want) { openOrder(want); if (!st.order) startSync.then(() => { if (!st.order) openOrder(want); }); }
   // Refresh "today" and "was due" labels while open.
   setInterval(() => { if (document.visibilityState === 'visible') render(); }, 5 * 6e4);
   // "Updated" pill, once, when a new version arrives (as in Notes).
@@ -1588,5 +1607,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // For the tests (orders/scripts/app-test.mjs) only.
   window.__orders = { get orders() { return orders; }, tidy: cleanupOnce, get kinds() { return kinds; }, upsert: f => P.upsert(orders, f, { graves, revive }), render, scan, save, needsCheck, stale,
-    sync, orderDay, pruneFrom, older, notMine, graves: () => graves };
+    sync, orderDay, pruneFrom, older, notMine, graves: () => graves, shared: () => shared };
 })();

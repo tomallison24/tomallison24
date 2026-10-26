@@ -540,6 +540,11 @@ queued.
   passed over, the kinds switched on, the Log events not yet in the Sheet) and
   the family's Google Sheet (above). An old Sheet link, until it's handed to
   aOS, also in IndexedDB.
+- **Calendar's Orders layer**: the days open orders arrive (and a delivery window's
+  last day), pickups and returns are due (`parse.js` `calendarItems`: never a finished,
+  hidden or private order, 60 at most), handed over through
+  `AllisonOS.layer.share('orders', …)` (`home/welcome.js`) into your own family account
+  on every save. Calendar's link `../orders/?open=<id>` opens that order's page here.
 - Published with the other apps by `.github/workflows/news.yml`.
 
 ## Tests

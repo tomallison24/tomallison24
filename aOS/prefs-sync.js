@@ -2,8 +2,9 @@
 // has them too. Everything else an app keeps stays on the device it was made on (shared things, like
 // notes and trips, come from the family's account or Sheet already).
 //
-//   Weather: your places and units          Clock: world clocks, alarms, Bedtime, its settings, recent timers
+//   Weather: your places, units and view    Clock: world clocks, alarms, Bedtime, its settings, recent timers
 //   Calendar: its settings (week start, clock, alerts, what it shows)
+//   Fitness: your step and move goals        Podcasts: its settings    Orders: which kinds it counts
 //   Mail: which Google account, and that Gmail is connected - never the sign-in itself: on a new device
 //         Mail signs in to that account by itself as it opens (silently when Google knows the device,
 //         else with one tap), and that one sign-in covers Travel and Orders, as everywhere
@@ -31,6 +32,7 @@
   const ITEMS = [
     { id: 'wx.places', key: 'wx.places', app: 'weather' },
     { id: 'wx.units', key: 'wx.units', app: 'weather', blank: v => v === 'us' || v === '"us"' },
+    { id: 'wx.view', key: 'wx.view', app: 'weather', blank: v => v === '"now"' },
     { id: CLOCK + '#cities', key: CLOCK, field: 'cities', app: 'clock' },
     { id: CLOCK + '#alarms', key: CLOCK, field: 'alarms', app: 'clock', out: a => Array.isArray(a) ? a.map(x => drop(x, ['next', 'snoozeAt'])) : a },
     { id: CLOCK + '#sleep', key: CLOCK, field: 'sleep', app: 'clock', out: s => drop(s, ['next', 'bedNext', 'skip', 'snoozeAt']), blank: v => !(json(v) || {}).set },
@@ -38,6 +40,10 @@
     { id: CLOCK + '#tsound', key: CLOCK, field: 'tsound', app: 'clock', blank: v => v === '"twinbell"' },
     { id: CLOCK + '#recents', key: CLOCK, field: 'recents', app: 'clock' },
     { id: 'allison-calendar-v1-settings', key: 'allison-calendar-v1-settings', app: 'calendar' },
+    { id: 'allison-fitness-v1-step-goal', key: 'allison-fitness-v1-step-goal', app: 'fitness' },
+    { id: 'allison-fitness-v1-move-goal', key: 'allison-fitness-v1-move-goal', app: 'fitness' },
+    { id: 'allison-podcasts-v1#set', key: 'allison-podcasts-v1', field: 'set', app: 'podcasts' },
+    { id: 'allison-orders-v1#kinds', key: 'allison-orders-v1', field: 'kinds', app: 'orders' },
     // quiet: Mail reads these as it opens, so an open Mail isn't started again for them (it would go to Google)
     { id: 'mail.hint', key: 'mail.hint', app: 'mail', quiet: true },
     { id: 'mail.token.ever', key: 'mail.token.ever', app: 'mail', quiet: true },
