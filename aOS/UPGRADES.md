@@ -27,15 +27,8 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
    `#subscription`, `#lost-phone` and `#app=<id>` through the same `aosGo` message
    lets Fitness's vitals alert (and a future "plan ending" notice) open where it should
    when aOS is already open.
-4. **Settings Ipsy can change follow you to your other devices.** Fitness's step and
-   move goals, Podcasts' settings, Orders' kinds and Weather's view: add them to
-   `aOS/prefs-sync.js` ITEMS and the server's `PREF_ITEM` (`functions/aOS/api`), with
-   `blank` tests. Set it on the iPhone, the iPad has it.
-5. **Quiet background calls.** `home/account.js` `fetch` raises the Face ID sheet on a
-   401; Podcasts' feed refresh (every open and every 30 minutes) and Travel's live
-   status and calendar fetch go through it, so a signed-out person is asked on every
-   open. A `{ quiet: true }` option (Bearer if any, return the 401, never prompt) for
-   timers and opens, as Travel's `aiPass(quiet)` already does; the prompt only on a tap.
+4. ~~**Settings Ipsy can change follow you to your other devices.**~~ Done (aOS2.2): Fitness's step and move goals, Podcasts' settings, Orders' kinds and Weather's view sync
+5. ~~**Quiet background calls.**~~ Done (aOS2.2): `account.fetch(url, opts, { quiet: true })`; Podcasts and Travel use it for everything nobody tapped for
 6. **Backlog 8 still stands:** a "Sign in to show Drinks / share with Calendar" row in
    an app once `aos.signin.asked` is final (welcome.js can't ask again by design).
 7. **Home (the house) on Today.** Home's "Running now" and Away/Eco state, shared as a
@@ -52,10 +45,8 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## Calendar
 
-1. **More layers.** Meals' dinners, Orders' deliveries and pickups, News' followed
-   teams' fixtures and Clock's wake-up time (see each app below): Calendar lists each
-   new layer in `LAYER`/`rebuild` with its own colour and icon, and `functions/aOS/api`
-   adds it to `LAYERS`.
+1. **More layers.** ~~Meals, Orders and News~~ done (aOS2.2); Clock's wake-up time (see
+   Clock) still open: Calendar lists a layer in `LAYER`/`rebuild`, `functions/aOS/api` in `LAYERS`.
 2. **A reminder ticked off from Calendar.** The Notes layer is one way; an
    `AllisonOS.layer.update('notes', id, { done: true })` that aOS stores and Notes reads
    on sync would let the family finish a reminder from Calendar's day view (and Ipsy).
@@ -117,10 +108,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## Meals
 
-1. **Dinners on the family calendar.** Meals knows each day's dinner and date
-   (`p.dates`); sharing `{ items: [{ date, title: 'Dinner: …' }] }` as a `meals` layer in
-   `keep()`/`load()`, as Mail shares its reminders, puts "what's for dinner" on everyone's
-   calendar. Calendar lists the layer (Calendar, 1).
+1. ~~**Dinners on the family calendar.**~~ Done (aOS2.2): every meal of the plan, by day; `?date=` opens the day's recipe
 2. **The shopping list straight into Notes.** "Copy the list" goes through the
    clipboard; Notes' grocery lists use the same `home/aisles.js` sections, so a direct
    import into a Notes grocery list (a Notes import slot, or `/sheet/api/notes`) would
@@ -141,8 +129,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## News
 
-1. **Followed teams' fixtures on the calendar.** `data/scores.json` already has them;
-   a News layer ("Liverpool, Sat 12:30") for the teams a person follows.
+1. ~~**Followed teams' fixtures on the calendar.**~~ Done (aOS2.2): the next two weeks, two hours each; `?sport=scores` or a match page opens from Calendar
 2. **Ipsy's `find_stories`** could take lists of sources and topics.
 3. Code health: double `store.get` per line at `news/app.js:92-97`; the "Updated" pill
    fingerprint (16 lines) is duplicated in Notes and Orders (belongs in `welcome.js`).
@@ -164,9 +151,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## Orders
 
-1. **Deliveries and pickups on the calendar.** `eta`, `etaEnd` and `pickupBy` as an
-   `orders` layer: "Arrives: Walmart (Oct 28)", "Pick up by Sat". One function in
-   `orders/app.js`, Calendar lists it (Calendar, 1).
+1. ~~**Deliveries and pickups on the calendar.**~~ Done (aOS2.2): arrivals, delivery windows, pickup deadlines and return days; `?open=` opens the order
 2. **"Start a return" adds a Notes reminder** ("Drop off the Amazon return by Nov 19"),
    which alerts the phone through Notes push: `/sheet/api/notes` with one todo works
    today; a helper in `home/sheet.js` would make it clean.
@@ -185,7 +170,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## Podcasts
 
-1. **Quiet feed refresh** (aOS, 5): the biggest annoyance once accounts are on.
+1. ~~**Quiet feed refresh**~~ Done (aOS2.2).
 2. **Adopt the server's `X-Feed-Url`** (the final address after redirects) into the
    follow, as `itunes:new-feed-url` is, so a moved host keeps working after its redirect stops.
 3. **Ipsy settings:** `podcasts.cc` (Top shows country) and playback speed in
@@ -200,7 +185,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
    the true moment: feed it into `startT`/`endT` and the Calendar layer's `depIso`, so the
    countdown, "Now", the live window and Calendar are right for text-read bookings even
    when the phone is in another zone. `travel/app.js` only.
-2. **Quiet live status and calendar fetch** (aOS, 5).
+2. ~~**Quiet live status and calendar fetch**~~ Done (aOS2.2).
 3. Offset-less wall times are read as the phone's zone (documented); countdowns are off
    while away until 1 lands.
 4. Code health: `parse.js` `tWin` alias and `utc()` readability (any `parse.js` change
@@ -212,8 +197,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
    bookings with `to`, `city`, `checkIn`); a "Trip" place (the destination for the trip's
    days) without saving one of the 12 cities. `weather/app.js` reads the layer through
    `account.fetch`, signed in only; `P.AIRPORTS` city names are in `travel/parse.js`.
-2. **`wx.view` follows you** (one `ITEMS` line in `aOS/prefs-sync.js`): both phones open
-   on the same timeline view.
+2. ~~**`wx.view` follows you**~~ Done (aOS2.2).
 3. Dates in Weather, Mail, Travel, Notes, Podcasts, Places and Home show in the phone's
    own format; US on a US phone (`BACKLOG.md`).
 
