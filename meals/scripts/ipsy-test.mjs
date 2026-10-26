@@ -93,6 +93,16 @@ const SCRIPTS = [
     r => { const items = parsed(r[0]).sections.flatMap(s => s.items).map(i => i.item); return use(['tick_items', { items: [items[0], 'unicorn steak'] }]); },
     r => { assert.deepEqual(parsed(r[0]).notOnTheList, ['unicorn steak']); return end('Ticked it off.'); },
   ] },
+  { re: /cook day 1 again/i, turns: [
+    () => use(['get_past_plans', {}]),
+    r => use(['add_past_meals', { plan: parsed(r[0]).plans[0].id, meals: [{ day: 1 }] }]),
+    r => { assert.deepEqual(parsed(r[0]).added, ['Chicken tacos']); return use(['get_shopping_list', {}]); },
+    r => { assert.ok(parsed(r[0]).sections.flatMap(s => s.items).some(i => /Chicken tacos/.test(i.for)), 'the list says which meal an item is for'); return end('Chicken tacos is on the list again.'); },
+  ] },
+  { re: /take the tacos off/i, turns: [
+    () => use(['remove_past_meals', { titles: ['chicken tacos'] }]),
+    r => { assert.deepEqual(parsed(r[0]).removed, ['Chicken tacos']); return end('Taken off the list.'); },
+  ] },
   { re: /show me day 1/i, turns: [
     () => use(['get_recipes', { plan: 'current', days: [1] }], ['show_meal', { plan: 'current', day: 1 }]),
     () => end('It’s open behind the chat.'),
@@ -330,6 +340,27 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(ticks.keys.length, 1); assert.equal(ticks.at, plan(m).at);
     await page.locator('.ipsy-change .ipsy-undo').last().click();
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-meals-v1-ticks')).keys), []);
+  });
+
+  await step(tag + ': cooking a past meal again: on the Plan tab and the list for the family; taken off again; Undo each time', async () => {
+    const again = () => JSON.parse(m.get('meals:again') || '[]');
+    await ask(page, 'Cook day 1 again');
+    await page.waitForFunction(() => /on the list again/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
+    await idle(page);
+    assert.deepEqual(again().map(x => [x.title, x.from, x.by]), [['Chicken tacos', plan(m).id, 'Tom']]);
+    assert.match((await texts(page, '.ipsy-change')).at(-1), /^Cooking again: Chicken tacos ?Undo$/);
+    await page.locator('.ipsy-change .ipsy-undo').last().click();
+    await until(() => again().length === 0, 'Undo takes it off');
+    await ask(page, 'Cook day 1 again');
+    await page.waitForFunction(() => document.querySelector('.ipsy-log').textContent.split('on the list again').length > 2, null, { timeout: 15000 });
+    await idle(page);
+    await ask(page, 'Take the tacos off');
+    await page.waitForFunction(() => /Taken off the list/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
+    await idle(page);
+    assert.equal(again().length, 0);
+    await page.locator('.ipsy-change .ipsy-undo').last().click();
+    await until(() => again().length === 1, 'Undo puts it back');
+    m.delete('meals:again'); await page.evaluate(() => window.__meals.load());
   });
 
   await step(tag + ': a recipe opened on screen behind the chat', async () => {

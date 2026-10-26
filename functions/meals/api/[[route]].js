@@ -3,7 +3,7 @@
 // protein in every meal, what they never eat). One plan for the whole family (so everyone sees
 // what's for dinner), locked to signed-in family by _middleware.js.
 //
-//   GET  state      -> { ai, model, settings, taste, draft, plan, log }
+//   GET  state      -> { ai, model, settings, taste, draft, plan, log, again }
 //                      ai: 'anthropic', or null with no key yet; log: the accepted plans,
 //                      newest first, in short (id, dates, what they were built around, titles)
 //   GET  log/<id>   -> { plan } one accepted plan, whole
@@ -27,6 +27,12 @@
 //                      owner only; { error: 'owner-only' } for anyone else)
 //   POST rate       { title, up } -> { taste } a meal the family loved (up: true), or never again
 //                      (false); null forgets it. New plans make more like the loved ones, none of the others.
+//   POST again      { add: [meal], from?, people? } -> { again } meals from a past plan, cooked again:
+//                      on the Plan tab with their recipes, and in the shopping list beside the plan's.
+//                      Cleaned and checked against what the family avoids now, as a plan's meals are
+//                      ({ error: 'avoid', hits }: nothing is added); the same meal again isn't added twice.
+//                   { remove: [id] } takes them off; { put: [entry] } puts the list back as it was (Undo).
+//                      Each one goes by itself AGAIN_DAYS after it was added.
 //
 // For Ipsy, the helper you chat with (its changes, and their Undo, go through these and the
 // ones above, so the allergy check and every other rule here applies to them too):
@@ -72,6 +78,7 @@
 //   meals:log       [{ id, start, end, foods, slots, people, titles }] accepted plans, newest
 //                   first, the last 52; meals:log:<id> each one whole
 //   meals:history   [{ title, cuisine, at }] the last 60 meals, so new plans differ
+//   meals:again     [{ id, from, people, at, by, ...meal }] meals cooked again (POST again), oldest first
 // (Plans from before had only dinners, one a night, built around one meat: meat, shop, sales.
 // They still open, as dinners.) Writes happen only when a plan is made or changed, or settings change.
 //
@@ -106,6 +113,9 @@ const int = (v, lo, hi, d) => { if (v == null || v === '') return d; const n = M
 // Plans cost money (a few Claude calls each): at most AI_DAILY a person a day, counted in the
 // accounts' KV as meals:ai:<user id>:<day> (gone after two days), written before the call.
 export const AI_DAILY = 20;
+// Meals cooked again from past plans (POST again): at most AGAIN_MAX at once, each kept AGAIN_DAYS
+export const AGAIN_MAX = 21, AGAIN_DAYS = 14;
+const againOf = (a, now = Date.now()) => (Array.isArray(a) ? a : []).filter(x => x && x.id && x.at > now - AGAIN_DAYS * 864e5).slice(-AGAIN_MAX);
 async function countAi(db, me) {
   const key = 'meals:ai:' + me.id + ':' + today(), n = (+(await db.get(key)) || 0) + 1;
   if (n > AI_DAILY) return false;
@@ -334,7 +344,14 @@ export const IPSY_CLIENT_TOOLS = [
   T('get_past_plans', 'The plans the family accepted before, newest first: each one\'s id, dates, what it was built around and its meals.', {
     limit: { type: 'integer', description: 'Most to return (default 12, at most 52)' },
   }),
-  T('get_shopping_list', 'The shopping list for the current plan, as the List tab shows it: by grocery section, each item\'s amount, which days need it, and whether it is ticked on this phone; staples apart.', {}),
+  T('get_shopping_list', 'The shopping list, as the List tab shows it: the current plan\'s ingredients and those of the meals being cooked again, by grocery section, each item\'s amount, which days (or which meal cooked again) need it, and whether it is ticked on this phone; staples apart.', {}),
+  T('add_past_meals', 'Cook meals from a past plan again: they go on the Plan tab (Cooking again) with their recipes, and their ingredients into the shopping list, for everyone in the family, for two weeks. The server checks them against what the family never eats now. Undo takes them off.', {
+    plan: { type: 'string', description: 'A past plan\'s id (get_past_plans)' },
+    meals: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['day'], properties: { day: DAYN, slot: SLOT } }, description: 'Which of its meals (default: all but leftover lunches)' },
+  }, ['plan']),
+  T('remove_past_meals', 'Take meals being cooked again off the Plan tab and the shopping list.', {
+    titles: { type: 'array', items: { type: 'string' }, description: 'Their titles, as get_meals gives them under cookingAgain' },
+  }, ['titles']),
   T('tick_items', 'Tick items off the shopping list (or untick them), on this phone only.', {
     items: { type: 'array', items: { type: 'string' }, description: 'Item names as get_shopping_list gives them' },
     ticked: { type: 'boolean', description: 'true to tick (default), false to untick' },
@@ -363,7 +380,8 @@ export const IPSY_SYSTEM = persona({
   app: 'Meals',
   about: 'an iPhone app a family uses to plan healthy breakfasts, lunches and dinners with you: they say what they fancy and you plan the meals, each with its recipe, and a shopping list',
   can: [
-    'Read the family\'s Meals: get_meals (the plan, the new plan waiting, the family\'s rules, what they loved), get_recipes (whole recipes), get_past_plans, and get_shopping_list.',
+    'Read the family\'s Meals: get_meals (the plan, the new plan waiting, the family\'s rules, what they loved, the meals being cooked again), get_recipes (whole recipes), get_past_plans, and get_shopping_list.',
+    'Bring back meals from a past plan, one or all of them, to cook again (add_past_meals): their recipes go on the Plan tab and their ingredients into the shopping list. Take them off again with remove_past_meals.',
     'Change one meal on the plan or on the new plan waiting (set_meal): you write the whole meal, and the server checks it before it is saved.',
     'Make a new plan the way the app does (make_plan), accept it so it becomes the family\'s plan (accept_plan), or discard it (discard_draft).',
     'Tick items off the shopping list on this phone (tick_items), and open a recipe on the screen (show_meal).',
@@ -376,7 +394,7 @@ export const IPSY_SYSTEM = persona({
     'Change one meal when asked, without asking first: it shows in the chat with an Undo. A whole plan is different: make_plan in place of a new plan already waiting, accept_plan and discard_draft ask the person first with a Yes / No card in the chat. If they say no, leave it.',
     'A meal you write is a whole recipe for the plan\'s number of people: US measures, amounts for everyone, staples (oil, salt, pepper, dried spices, flour, sugar) marked pantry, short steps in order, and a different dish and way of cooking from the plan\'s other meals.',
     '"What can I make with ...": suggest a few meals that keep to the rules; put one on the plan only when asked. When they want a plan, ask what you need to know one short question at a time (which meals, what they fancy, how many days, how many people), then make it.',
-    'You can\'t change the family\'s rules or what they never eat (that is Settings, the gear, for the person to do), or add things to the shopping list (it comes from the plan; Copy the list puts it in Notes). Ticks stay on this phone.',
+    'You can\'t change the family\'s rules or what they never eat (that is Settings, the gear, for the person to do), or add single items to the shopping list (it comes from the plan and the meals cooked again; Copy the list puts it in Notes). Ticks stay on this phone.',
     'Recipes, vegetables and protein are made and estimated by AI: say to check times, temperatures and labels when it matters.',
   ],
   bold: 'a meal or a day',
@@ -410,7 +428,7 @@ export async function onRequest({ request, params, env }, f = fetch) {
     const settings = settingsOf(await getJSON(db, 'meals:settings'));
     if (route === 'state' && method === 'GET') {
       const plan = await getJSON(db, 'meals:plan'), draft = await getJSON(db, 'meals:draft'), log = (await getJSON(db, 'meals:log')) || [];
-      return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, settings, taste: tasteOf(await getJSON(db, 'meals:taste')), draft, plan, log });
+      return reply({ ai: aiOf(env), model: aiOf(env) ? modelOf(env) : null, settings, taste: tasteOf(await getJSON(db, 'meals:taste')), draft, plan, log, again: againOf(await getJSON(db, 'meals:again')) });
     }
     if (route === 'settings' && method === 'POST') {
       const b = await body(request), s = settingsOf({ ...settings, ...b });
@@ -430,6 +448,33 @@ export async function onRequest({ request, params, env }, f = fetch) {
       if (b.up === false) t.nope = [{ title, at: Date.now() }, ...t.nope].slice(0, 20);
       await putJSON(db, 'meals:taste', t);
       return reply({ taste: t });
+    }
+    if (route === 'again' && method === 'POST') {
+      const b = await body(request), now = againOf(await getJSON(db, 'meals:again'));
+      let again = now;
+      if (Array.isArray(b.put)) {   // Undo: the list as it was, each entry checked again as it's added
+        const put = b.put.slice(-AGAIN_MAX).map(x => x && typeof x === 'object' && /^a[a-z0-9]{1,20}$/.test(String(x.id)) && +x.at > 0
+          ? { ...cleanMeal({ ...x, leftover: undefined }), id: x.id, from: str(x.from, 20), people: int(x.people, 1, 12, 0), at: Math.min(Math.round(+x.at), Date.now()), by: str(x.by, 60) } : null)
+          .filter(x => x && x.title);
+        const hits = avoidHits(planText(put), settings.avoid);
+        if (hits.length) return reply({ error: 'avoid', hits }, 422);
+        again = againOf(put);
+      } else if (Array.isArray(b.remove)) {
+        const ids = new Set(b.remove.map(String));
+        again = now.filter(x => !ids.has(x.id));
+      } else {
+        const add = (Array.isArray(b.add) ? b.add : []).slice(0, AGAIN_MAX).filter(m => m && !m.leftover).map(m => cleanMeal({ ...m, leftover: undefined })).filter(Boolean);
+        if (!add.length) return reply({ error: 'meal' }, 400);
+        const hits = avoidHits(planText(add), settings.avoid);
+        if (hits.length) return reply({ error: 'avoid', hits }, 422);
+        const same = m => x => x.title.toLowerCase() === m.title.toLowerCase();
+        const at = Date.now(), from = str(b.from, 20), people = int(b.people, 1, 12, 0);
+        const fresh = add.filter((m, i) => !now.some(same(m)) && add.findIndex(same(m)) === i)
+          .map((m, i) => ({ ...m, id: 'a' + (at + i).toString(36), from, people, at, by: me.name }));
+        again = againOf([...now, ...fresh]);
+      }
+      await putJSON(db, 'meals:again', again);
+      return reply({ again });
     }
     if (route === 'plan' && method === 'POST') {
       if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);

@@ -8,8 +8,9 @@
 //   window.MealsIpsy(app) -> the options for AllisonOS.ipsy.mount (tools, label, context, words)
 //   app: the app's own pieces (meals/app.js passes them): data (the family's Meals as the app
 //        has it), api (its server calls), keep (its save: this phone's copy, the Sheet, the
-//        screen), say, toast, L (logic.js), shopOf, dayLabel, dateOf, slotName, about,
-//        past (a past plan, whole), state, today, planning, ticked, setTicks, show, screen
+//        screen), say, toast, L (logic.js), shopOf, shop (the List's: the plan and the meals
+//        cooked again), whenWords, dayLabel, dateOf, slotName, about, past (a past plan, whole),
+//        state, today, planning, ticked, setTicks, show, screen
 //
 // The plan, the new plan waiting (the draft) and the family's rules are the family's, on the
 // family server. Ipsy changes the plans only through the app's own server calls (night, plan,
@@ -76,6 +77,7 @@ window.MealsIpsy = function (app) {
         avoid: s.avoid || [],
         loved: t.loved.map(x => x.title), neverAgain: t.nope.map(x => x.title),
         pastPlans: (d.log || []).length,
+        cookingAgain: (d.again || []).map(m => ({ title: m.title, meal: slotOf(m), ...(m.by ? { addedBy: m.by } : {}) })),
         ...(d.ai === null && state === 'ok' ? { ai: 'Meals’ AI key isn’t set up yet, so make_plan won’t work.' } : {}),
         ...(state !== 'ok' && state !== 'loading' ? { note: 'Meals couldn’t reach the family server just now: this is the copy on this phone.' } : {}),
       } };
@@ -100,16 +102,16 @@ window.MealsIpsy = function (app) {
     },
 
     async get_shopping_list() {
-      const p = D().plan;
-      if (!has(p)) return { content: { sections: [], note: D().draft ? 'No accepted plan yet: the list comes once the new plan is accepted.' : 'No plan yet.' } };
-      const s = app.shopOf(p), done = new Set(app.ticked());
-      const row = x => ({ item: x.item, ...(x.amounts.length ? { amount: app.L.total(x.amounts) } : {}), days: x.nights, ...(done.has(x.key) ? { ticked: true } : {}) });
-      return { content: { plan: p.id || '', sections: app.L.sections(s.buy, x => x.item).map(g => ({ section: g.name, items: g.items.map(row) })), youProbablyHave: s.pantry.map(row) } };
+      const p = D().plan, again = D().again || [];
+      if (!has(p) && !again.length) return { content: { sections: [], note: D().draft ? 'No accepted plan yet: the list comes once the new plan is accepted.' : 'No plan yet, and no past meals being cooked again.' } };
+      const s = app.shop(), done = new Set(app.ticked());
+      const row = x => ({ item: x.item, ...(x.amounts.length ? { amount: app.L.total(x.amounts) } : {}), for: app.whenWords(x, has(p) ? p : null), ...(done.has(x.key) ? { ticked: true } : {}) });
+      return { content: { plan: (has(p) && p.id) || '', sections: app.L.sections(s.buy, x => x.item).map(g => ({ section: g.name, items: g.items.map(row) })), youProbablyHave: s.pantry.map(row) } };
     },
 
     async tick_items(q) {
-      const p = D().plan; if (!has(p)) fail('There’s no shopping list yet: no plan has been accepted.');
-      const s = app.shopOf(p), list = [...s.buy, ...s.pantry], norm = t => String(t || '').toLowerCase().trim();
+      if (!has(D().plan) && !(D().again || []).length) fail('There’s no shopping list yet: no plan has been accepted.');
+      const s = app.shop(), list = [...s.buy, ...s.pantry], norm = t => String(t || '').toLowerCase().trim();
       const before = app.ticked(), keys = new Set(before), on = q.ticked !== false, found = [], missing = [];
       for (const name of (Array.isArray(q.items) ? q.items : []).slice(0, 200)) {
         const x = list.find(i => norm(i.item) === norm(name) || i.key === norm(name));
@@ -189,6 +191,38 @@ window.MealsIpsy = function (app) {
         }) } };
     },
 
+    async add_past_meals(q) {
+      const id = clip(q.plan, 20); if (!/^p[a-z0-9]{1,16}$/.test(id)) fail('plan is a past plan’s id from get_past_plans.');
+      let p; try { p = await app.past(id); } catch (e) { fail(e.code === 'not-found' ? 'No past plan with id ' + id + '.' : app.say(e.code)); }
+      if (!has(p)) fail('No past plan with id ' + id + '.');
+      const want = Array.isArray(q.meals) && q.meals.length ? q.meals.map(x => p.meals[find(p, x || {})]) : p.meals;
+      const cook = want.filter(m => m && !m.leftover && (m.ingredients || []).length);
+      if (!cook.length) fail('Those are leftover lunches, with no recipe of their own: bring back the dinner they came from.');
+      const before = copy(D().again || []), on = t => before.some(x => x.title.toLowerCase() === t.toLowerCase());
+      const add = cook.filter(m => !on(m.title));
+      if (!add.length) return { content: { added: [], note: 'They’re all being cooked again already.' } };
+      const j = await call('again', { add, from: p.id || '', people: p.people });
+      app.keep({ again: j.again });
+      const titles = add.map(m => m.title);
+      return { content: { added: titles, cookingAgain: j.again.map(m => m.title), note: 'On the Plan tab with their recipes, and their ingredients are in the shopping list.' },
+        change: { text: 'Cooking again: ' + (titles.length > 3 ? titles.length + ' meals' : join(titles)), undo: later('cooking those again', async () => {
+          const r = await call('again', { put: before }); app.keep({ again: r.again });
+        }) } };
+    },
+
+    async remove_past_meals(q) {
+      const before = copy(D().again || []), norm = t => String(t || '').toLowerCase().trim();
+      const names = (Array.isArray(q.titles) ? q.titles : []).map(norm);
+      const gone = before.filter(m => names.includes(norm(m.title)));
+      if (!gone.length) fail('None of those are being cooked again. They are: ' + (before.map(m => m.title).join('; ') || 'none') + '.');
+      const j = await call('again', { remove: gone.map(m => m.id) });
+      app.keep({ again: j.again });
+      return { content: { removed: gone.map(m => m.title) },
+        change: { text: 'Off the list: ' + join(gone.map(m => m.title)), undo: later('taking those off', async () => {
+          const r = await call('again', { put: before }); app.keep({ again: r.again });
+        }) } };
+    },
+
     async show_meal(q) {
       const p = need(which(q)), i = find(p, q);
       app.show(p, i);
@@ -202,6 +236,7 @@ window.MealsIpsy = function (app) {
     tick_items: i => i.ticked === false ? 'Unticking the list' : 'Ticking off the list', set_meal: i => 'Changing ' + (SLOTS.includes(i.slot) ? i.slot : 'dinner') + (Number.isInteger(i.day) ? ' on day ' + i.day : ''),
     make_plan: i => 'Planning the meals (' + ((i.days || 3) * ((i.meals || ['dinner']).length || 1) > 6 ? 'about a minute' : 'about half a minute') + ')', accept_plan: () => 'Saving the plan',
     discard_draft: () => 'Discarding the new plan', show_meal: () => 'Opening the recipe',
+    add_past_meals: () => 'Bringing back past meals', remove_past_meals: () => 'Taking meals off the list',
   };
 
   return {

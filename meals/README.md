@@ -23,10 +23,19 @@ AI first: tell Ipsy what you fancy, and it plans the family's meals. One screen,
   ingredients and steps, **Loved it** / **Not again** (Ipsy learns from it),
   **Swap** (asks Ipsy for something else) and **Ask Ipsy**. A leftover lunch
   points to the dinner it comes from.
+- **Cooking again**: a past plan opens with its meals, recipes and shopping list.
+  **Cook them all again** (or **Cook it again** on one meal's recipe) brings its
+  meals back for the whole family: they show on the Plan tab under **Cooking
+  again**, each with its recipe, and their ingredients join the List beside the
+  plan's (each item says which meal it is for). × or **Take it off the list**
+  removes one (with Undo); each goes by itself two weeks after it was added. The
+  server checks them against what the family avoids now, so a meal from before
+  the rules changed can't come back.
 - **List**: everything the plan needs, in the same grocery sections as Notes'
   lists (`../home/aisles.js`), the same ingredient across meals once, staples
-  ("You probably have") apart. Tick it off in the store (ticks stay on the
-  phone), or copy it into a grocery list in Notes.
+  ("You probably have") apart, with the ingredients of the meals cooked again.
+  Tick it off in the store (ticks stay on the phone), or copy it into a grocery
+  list in Notes.
 
 **The family's rules** (the gear, Settings), kept for the family: **vegetables**
 in every meal (0 to 5, 2 to start), **protein** (Some, 20 g a serving; Good, 30 g;
@@ -77,7 +86,7 @@ app (the deploy copies `meals/` there, `.github/workflows/news.yml`), and
 
 The family's, not one person's: one plan, one set of rules, in the accounts'
 Workers KV (`meals:settings`, `meals:taste`, `meals:draft`, `meals:plan`,
-`meals:log`, `meals:log:<id>`, `meals:history`; see `server/auth.js`), through
+`meals:log`, `meals:log:<id>`, `meals:history`, `meals:again`; see `server/auth.js`), through
 `functions/meals/api`, which only signed-in family can call
 (`functions/meals/api/_middleware.js`). The last plan is kept on the phone too
 (`allison-meals-v2`), so the list opens in the store with no signal. Needs family
@@ -87,7 +96,7 @@ count of questions (`meals:ipsy:<user id>:<day>`, gone after two days), and plan
 count a day too. The family's Google Sheet is the record of every plan (below).
 
 Routes: `state`, `settings` (the rules; the foods to avoid only from the owner),
-`rate`, `plan`, `accept`, `discard`, `clear`, `current`, and for Ipsy `night`,
+`rate`, `plan`, `accept`, `discard`, `clear`, `current`, `again` (cooking again), and for Ipsy `night`,
 `draft`, `unaccept`, plus `log/<id>` and `ipsy`.
 
 ## The AI
@@ -145,7 +154,9 @@ broccoli*.
   the new plan waiting, past plans, the shopping list and the rules; change one
   meal (any day, breakfast, lunch or dinner, on the plan or the plan waiting: it
   writes the whole meal); make a new plan as the Ipsy tab does (meals, foods, days,
-  people, lunches, the fridge, a note), accept it or discard it; tick items off the
+  people, lunches, the fridge, a note), accept it or discard it; bring back meals
+  from a past plan to cook again, or take them off (`add_past_meals`,
+  `remove_past_meals`, through the `again` route and its check); tick items off the
   list; open a recipe on the screen. It also searches the web and reads pages.
 - **The allergy rules come first.** Its instructions say to check what the family
   never eats before it suggests or writes any dish. That doesn't rely on Ipsy:
@@ -171,9 +182,9 @@ broccoli*.
   the server keeps only a count of questions (80 a person a day).
 - **Web pages are read, never obeyed**, and a recipe it finds still has to pass
   the allergy check.
-- **Limits.** Ipsy can't add things to the shopping list (it comes from the plan;
-  **Copy the list** puts it in Notes) or change Past plans other than the current
-  one.
+- **Limits.** Ipsy can't add single items to the shopping list (it comes from the
+  plan and the meals cooked again; **Copy the list** puts it in Notes) or change
+  Past plans other than the current one.
 - **Not tried against the real API**: the tests use a stand-in for Claude, so the
   first real plans are the real test of the instructions.
 

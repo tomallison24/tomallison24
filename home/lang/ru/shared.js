@@ -347,6 +347,13 @@
     'Your language now follows you to your other devices, as your look does': 'Язык теперь переходит с вами на другие устройства, как и оформление',
     'Every app calls your helper by its name where it said Ipsy: "Or just tell Biscuit…", "Hides this note from Biscuit". With no name yet, by what it is: "Ask the fox"':
       'Все приложения называют помощника по имени там, где было «Ипси»: «Или просто скажите Biscuit…», «Biscuit не увидит эту заметку». Пока имени нет, по-русски это Ипси (а Мия — Мия)',
+    'Meals: cook a past plan again, or one meal from it: its meals come back on the Plan tab with their recipes, and their ingredients go on the shopping list, for the whole family (two weeks, or until you take them off)':
+      'Меню: приготовьте прошлый план снова — целиком или одно блюдо: блюда возвращаются на вкладку «План» с рецептами, а продукты — в список покупок, для всей семьи (на две недели или пока вы их не уберёте)',
+    'Meals: a recipe from a past plan opens on top of the plan, where before it opened hidden behind it':
+      'Меню: рецепт из прошлого плана открывается поверх плана — раньше он открывался за ним и был не виден',
+    'Cook a past plan again, or one meal from it: open it in Past plans, then Cook them all again (or Cook it again on a recipe). The recipes show under Cooking again and the ingredients go on the List':
+      'Приготовьте прошлый план снова — целиком или одно блюдо: откройте его в «Прошлых планах» и нажмите «Приготовить всё снова» (или «Приготовить снова» в рецепте). Рецепты появятся в разделе «Готовим снова», а продукты — в списке покупок',
+    'A recipe from a past plan opens on top of the plan, not hidden behind it': 'Рецепт из прошлого плана открывается поверх плана, а не прячется за ним',
     'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
     'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name':
       'aOS: «Пройти настройку» в начале Аккаунта проводит по вашим настройкам по одной: язык, стиль, светлая или тёмная тема, помощник и его имя',

@@ -24,7 +24,7 @@
     const m = /^(?:(\d+)\+ vegetables? and about|About) (\d+) g protein in every meal(?: · never (.+))?$/.exec(s);
     return m ? (m[1] ? m[1] + '+ ' + aosLang.plural(m[1], 'овощ', 'овоща', 'овощей') + ' и около ' : 'Около ') + m[2] + ' г белка в каждом блюде' + (m[3] ? ' · никогда: ' + T(m[3]).replace(/ and /g, ' и ') : '') : null;
   };
-  const WHAT = { 'the new plan': 'новый план', 'saving the plan': 'сохранение плана', 'the discard': 'отклонение' };
+  const WHAT = { 'the new plan': 'новый план', 'saving the plan': 'сохранение плана', 'the discard': 'отклонение', 'cooking those again': 'возврат блюд', 'taking those off': 'удаление блюд из списка' };
   aosLang.add({
     // ---- the page ----
     'Meals': 'Меню',
@@ -105,6 +105,23 @@
     'Tell Ipsy what you fancy, and it plans the meals.': 'Скажите Ипси, чего хочется, и она спланирует меню.',
     'Plan with Ipsy': 'Спланировать с Ипси',
     'Past plans': 'Прошлые планы',
+    'Cooking again': 'Готовим снова',
+    'Their ingredients are in the List. Each comes off after two weeks.': 'Продукты — в списке покупок. Каждое блюдо уходит отсюда через две недели.',
+    'Its ingredients are in the List. It comes off after two weeks.': 'Продукты — в списке покупок. Блюдо уходит отсюда через две недели.',
+    'Cook them all again': 'Приготовить всё снова',
+    'Cook it again': 'Приготовить снова',
+    'Adds the meals and their ingredients to Plan and List. Or tap one meal to cook just that.': 'Добавит блюда в план, а продукты — в список покупок. Или нажмите на одно блюдо, чтобы приготовить только его.',
+    'Adds the meal and its ingredients to Plan and List. Or tap one meal to cook just that.': 'Добавит блюдо в план, а продукты — в список покупок.',
+    'Adds it to Plan, with its ingredients in the List.': 'Добавит блюдо в план, а продукты — в список покупок.',
+    'On the list to cook again: its ingredients are in the List.': 'Уже в списке «Готовим снова»: продукты — в списке покупок.',
+    'Take it off the list': 'Убрать из списка',
+    'They’re all on the list already.': 'Они все уже в списке.',
+    'It’s on the list already.': 'Оно уже в списке.',
+    'They’re off the list.': 'Они убраны из списка.',
+    'Put back.': 'Возвращено.',
+    'Plan your meals with Ipsy first, or cook a past one again (Plan, Past plans).': 'Сначала спланируйте меню с Ипси или приготовьте что-то из прошлых планов снова («План», «Прошлые планы»).',
+    'Bringing back past meals': 'Возвращаю блюда из прошлых планов',
+    'Taking meals off the list': 'Убираю блюда из списка',
     'Current': 'Текущий',
     'Looking in the Sheet…': 'Ищу в таблице…',
     'Show older plans from the Sheet': 'Показать старые планы из таблицы',
@@ -262,10 +279,19 @@
       m => 'Составить новый план вместо ожидающего (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + (m[3] ? ', автор: ' + m[3] : '') + ')? Изменение увидит вся семья.'],
     [/^Save the new plan \((\d+) meals \((.+?)\)\) for the family, from (.+?)\?(?: It takes the place of the current plan \((\d+) meals \((.+)\)\) for everyone\.| Everyone in the family sees it\.)$/,
       m => 'Сохранить новый план (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + ') для семьи, с ' + m[3] + '?' + (m[4] ? ' Он заменит текущий план (' + meals(+m[4]) + ', ' + (about(m[5]) || m[5]) + ') для всех.' : ' Его увидит вся семья.')],
+    // cooking again (meals from past plans): their titles as Claude wrote them
+    [/^Take (.+) off the list$/, m => 'Убрать «' + m[1] + '» из списка'],
+    [/^(\d+) meals are on the list\. The recipes are on the Plan tab\.$/, m => meals(+m[1]) + ' в списке. Рецепты — на вкладке «План».'],
+    [/^(.+) is on the list\. Its recipe is on the Plan tab\.$/, m => '«' + m[1] + '» в списке. Рецепт — на вкладке «План».'],
+    [/^(.+) is off the list\.$/, m => '«' + m[1] + '» убрано из списка.'],
+    [/^That uses something the family avoids now \((.+)\), so it wasn’t added\.$/, m => 'Там есть то, что семья теперь не ест (' + T(m[1]) + '), поэтому блюдо не добавлено.'],
+    [/^Cooking again: (\d+) meals$/, m => 'Готовим снова: ' + meals(+m[1])],
+    [/^Cooking again: (.+)$/, m => 'Готовим снова: ' + m[1].replace(/ and /g, ' и ')],
+    [/^Off the list: (.+)$/, m => 'Убрано из списка: ' + m[1].replace(/ and /g, ' и ')],
     [/^Saved the new plan for the family, from (.+)$/, m => 'Новый план сохранён для семьи, с ' + m[1]],
     [/^Discard the new plan waiting \((\d+) meals \((.+?)\)(?:, by (.+))?\)\? It goes for everyone in the family; the current plan stays\.$/,
       m => 'Отклонить ожидающий план (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + (m[3] ? ', автор: ' + m[3] : '') + ')? Он исчезнет у всей семьи; текущий план останется.'],
     [/^Discarded the new plan \((\d+) meals \((.+)\)\)$/, m => 'Новый план отклонён (' + meals(+m[1]) + ', ' + (about(m[2]) || m[2]) + ')'],
-    [/^Couldn’t undo (the new plan|saving the plan|the discard|.+ (?:breakfast|lunch|dinner))\. (.*)$/, m => 'Не удалось отменить: ' + (WHAT[m[1]] || T(m[1])) + '. ' + T(m[2])],
+    [/^Couldn’t undo (the new plan|saving the plan|the discard|cooking those again|taking those off|.+ (?:breakfast|lunch|dinner))\. (.*)$/, m => 'Не удалось отменить: ' + (WHAT[m[1]] || T(m[1])) + '. ' + T(m[2])],
   ]);
 }
