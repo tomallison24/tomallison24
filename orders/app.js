@@ -690,6 +690,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (hasRet(o)) {
       const r = o.ret;
       if (r.status === 'started' && !r.undelivered) acts.push('<button class="rowbtn" type="button" id="opRetSent"><span class="ic">' + I.ret + '</span><span>Mark as sent back<span class="sub">Dropped off or posted</span></span></button>');
+      if (r.status === 'started' && !r.undelivered && isDay(r.by)) acts.push('<button class="rowbtn" type="button" id="opRetNotes"' + (notesBusy ? ' disabled' : '') + '><span class="ic">' + I.check + '</span><span>' + (notesBusy ? 'Adding to Notes…' : 'Remind me in Notes') + '<span class="sub">A reminder the day before the drop-off date</span></span></button>');
       if (r.status !== 'refunded') acts.push('<button class="rowbtn" type="button" id="opRetPaid"><span class="ic">' + I.check + '</span><span>Mark as refunded</span></button>');
       if (r.source && r.source.threadId) acts.push('<a class="rowbtn" href="' + esc(LINKS.mailApp(r.source.threadId)) + '"><span class="ic">' + I.mail + '</span><span>Open the return email in Mail<span class="sub" translate="no">' + esc(r.source.subject || '') + '</span></span></a>');
     }
@@ -712,6 +713,28 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('opBody').innerHTML = h;
   }
   $('opBack').onclick = finishPage; $('opDone').onclick = finishPage;
+  // Remind me in Notes: a dated reminder in the family's Notes (through its Sheet: ../home/sheet.js
+  // AllisonOS.sheet.notes, signed in) the day before the drop-off date (the day itself when that's today or
+  // past), with the store and return number in its notes. Its id comes from the order, so tapping again adds
+  // nothing twice. Extra, if you use Notes: with no sign-in or Notes Sheet the toast says so.
+  let notesBusy = false;
+  const NOTES_SAY = {
+    signin: 'Sign in to set a reminder in Notes.',
+    'no-sheet': 'Set up the Notes Sheet in aOS first (Account → Google Sheets).',
+    offline: 'Offline. Try again when you’re back online.',
+  };
+  async function remindReturn(o) {
+    const r = o.ret || {}, SN = SH() && SH().notes;
+    if (notesBusy || !isDay(r.by)) return;
+    if (!SN) { toast(NOTES_SAY.signin); return; }
+    const date = daysFrom(todayStr(), r.by) <= 1 ? todayStr() : P.addDays(r.by, -1);
+    const notes = [o.store, r.rma ? tr('Return number') + ' ' + r.rma : '', r.where ? tr('Drop off at') + ' ' + r.where : '', tr('Drop off by') + ' ' + fmtDay(r.by)].filter(Boolean).join('\n');
+    notesBusy = true; renderOrder();
+    const res = await SN.addTodos({ list: 'Home', items: [{ key: 'orders:return:' + o.id, title: tr('Drop off the ' + (o.store || 'order') + ' return'), date, notes }] });
+    notesBusy = false; if (st.order === o) renderOrder();
+    if (!res.ok) { toast(NOTES_SAY[res.why] || 'Couldn’t reach the Notes Sheet. Try again later.', null, 6000); return; }
+    toast(res.added ? 'Reminder set in Notes for ' + dayWord(date) + '.' : 'It’s in Notes already.', null, 5000);
+  }
   $('opEdit').onclick = () => { if (st.order) openEdit(st.order.id); };
   $('opBody').addEventListener('click', async e => {
     const o = st.order; if (!o) return;
@@ -738,6 +761,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return;
     }
     if (e.target.closest('#opEdit2')) return openEdit(o.id);
+    if (e.target.closest('#opRetNotes')) return remindReturn(o);
     const retTo = e.target.closest('#opRetStart') ? 'started' : e.target.closest('#opRetSent') ? 'sent' : e.target.closest('#opRetPaid') ? 'refunded' : '';
     if (retTo) {
       const before = JSON.parse(JSON.stringify(o)), r = o.ret = o.ret || { status: '', steps: {} };

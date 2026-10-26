@@ -80,7 +80,7 @@
     'Sign in with Face ID to share Money with your family, or to see it if it’s shared with you.': 'Войдите с Face ID, чтобы поделиться Деньгами с семьёй или увидеть их, если с вами поделились.',
     'Checking…': 'Проверяю…', 'You read Monarch’s emails for the family': 'Вы читаете письма Monarch для семьи', 'Not shared with anyone yet.': 'Пока ни с кем не поделились.',
     'Nobody reads Monarch’s emails yet': 'Письма Monarch пока никто не читает', 'Connect Gmail on the phone that gets them.': 'Подключите Gmail на телефоне, куда они приходят.',
-    'Sign in with Face ID': 'Войти с Face ID', 'Monarch’s emails': 'Письма Monarch', 'Gmail connected': 'Gmail подключён',
+    'Sign in with Face ID': 'Войти с Face ID', 'Monarch’s emails': 'Письма Monarch', 'Gmail connected': 'Gmail подключён', 'Gmail connected through Mail': 'Gmail подключён через Почту',
     'Read now': 'Прочитать сейчас', 'Read the last 5 years again': 'Прочитать последние 5 лет заново', 'Every Monarch email, from the start': 'Все письма Monarch, с самого начала',
     'Disconnect Gmail': 'Отключить Gmail', 'Gmail not connected': 'Gmail не подключён',
     'Money reads Monarch’s alert emails, read-only: it can’t change or send anything.': 'Деньги читают письма-оповещения Monarch только для чтения: ничего не могут изменить или отправить.',

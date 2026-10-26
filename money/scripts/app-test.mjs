@@ -19,6 +19,9 @@
 // - Ipsy, the helper you chat with: there for whoever sees Money, its tools on the family's own view;
 // - kept in IndexedDB (moved from localStorage), five years of it, and read back after a reload;
 // - back from Google's sign-in inside aOS: the token kept before the page goes back into aOS;
+// - Mail's Gmail sign-in (inside aOS, the same storage) used first: no trip to Google while Mail is
+//   signed in; without it, Money's own quiet renewal as before; Mail's token refused by Gmail: Money's
+//   own has its turn, and Mail's token is left as it was;
 // - signed out with no data: the empty page asks to connect Gmail;
 // - dark mode, the designs (Vintage, the default, and Standard, from Settings > Design), and nothing
 //   tripping the page's Content Security Policy or throwing.
@@ -93,11 +96,11 @@ const MAIL = {
   // read long ago (it's in seen), and read wrong: its merchant is in the phone as "Joes Garag"
   m5: { subject: '💲 New expense from Joe’s Garage in Monarch', html: alertHtml('We noticed an expense of $88.20 from Joe&#39;s Garage, which was spent from Rocket Credit Card **9876 (...9876) and has been categorized as 🚗 Auto Maintenance.'), at: RECENT - 3600e3 },
 };
-const gmailCalls = [];
+const gmailCalls = [], gmailAuth = [];   // Money's own token is fake-token; Mail's, inside aOS, mail-token
 async function gmail(route) {
   const u = new URL(route.request().url());
-  gmailCalls.push(u.pathname + u.search);
-  if (route.request().headers().authorization !== 'Bearer fake-token') return route.fulfill({ status: 401, body: '{}' });
+  gmailCalls.push(u.pathname + u.search); gmailAuth.push(route.request().headers().authorization);
+  if (!/^Bearer (fake-token|mail-token)$/.test(route.request().headers().authorization)) return route.fulfill({ status: 401, body: '{}' });
   if (u.pathname.endsWith('/profile')) return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ emailAddress: 'pat@example.com' }) });
   // m6: listed, but gone by the time it's fetched (404): the rest are read all the same
   if (u.pathname.endsWith('/messages')) return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ messages: [...Object.keys(MAIL), 'm6'].map(id => ({ id })) }) });
@@ -141,9 +144,9 @@ async function api(route) {
 const browser = await chromium.launch();
 let shot = 0;
 const snap = async (p, name) => { if (SHOTS) await p.screenshot({ path: path.join(SHOTS, pad(++shot) + '-' + name + '.png'), fullPage: true }); };
-async function phone({ sess, data, token, look = 'vintage', scheme = 'light' } = {}) {
+async function phone({ sess, data, token, look = 'vintage', scheme = 'light', ls = {} } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, timezoneId: TZ, colorScheme: scheme, serviceWorkers: 'block' });
-  await ctx.addInitScript(([sess, data, token, look]) => {
+  await ctx.addInitScript(([sess, data, token, look, ls]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('aos.seen', JSON.stringify({ money: '999' }));
@@ -152,7 +155,8 @@ async function phone({ sess, data, token, look = 'vintage', scheme = 'light' } =
     if (sess) localStorage.setItem('aos.session', sess);
     if (data) localStorage.setItem('allison-money-v1', data);
     if (token) { localStorage.setItem('money.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' })); localStorage.setItem('money.token.ever', '1'); }
-  }, [sess || null, data || null, token || false, look]);
+    for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v);
+  }, [sess || null, data || null, token || false, look, ls]);
   await ctx.route(/^https:\/\/gmail\.googleapis\.com\//, gmail);
   await ctx.route('**/money/api/**', api);
   await ctx.route('**/aOS/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
@@ -462,6 +466,63 @@ await test('back from Google’s sign-in inside aOS: the token is kept before th
   const tok = JSON.parse(await G.p.evaluate(() => localStorage.getItem('money.token')) || 'null');
   assert.equal(tok && tok.t, 'fake-token', 'Gmail stays connected');
   await G.ctx.close();
+});
+// Mail's sign-in as Mail keeps it (mail/app.js, K.token and K.hint), in the storage Money shares inside aOS.
+const MAIL_TOKEN = t => JSON.stringify({ t, exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.settings.basic' });
+const GOOGLE = /^https:\/\/accounts\.google\.com\//;
+await test('Mail’s Gmail sign-in is used first: Monarch’s emails read with it, no trip to Google, Mail’s token untouched', async () => {
+  const mail = MAIL_TOKEN('mail-token'), from = gmailAuth.length;
+  const M = await phone({ ls: { 'mail.token': mail, 'mail.hint': 'pat@example.com' } });
+  await M.p.waitForFunction(() => window.__money && window.__money.D.readAt > 0 && !window.__money.st.reading, null, { timeout: 15000 });
+  await M.p.waitForTimeout(1200);   // past the quiet renewal Money would start without a token (800ms)
+  assert.match(M.p.url(), /\/money\//, 'stayed on the page');
+  assert.ok(gmailAuth.slice(from).length > 0 && gmailAuth.slice(from).every(a => a === 'Bearer mail-token'), 'Gmail asked with Mail’s token: ' + gmailAuth.slice(from).join(' '));
+  assert.ok((await M.p.evaluate(() => window.__money.D.tx)).some(x => x.merchant === 'Book Nook'), 'and read');
+  const ls = await M.p.evaluate(() => ({ own: localStorage.getItem('money.token'), ever: localStorage.getItem('money.token.ever'), state: localStorage.getItem('money.state'), mail: localStorage.getItem('mail.token') }));
+  assert.equal(ls.own, null, 'no Gmail sign-in of Money’s own'); assert.equal(ls.ever, null); assert.equal(ls.state, null, 'no sign-in started');
+  assert.equal(ls.mail, mail, 'Mail’s token as it was');
+  await M.p.click('#setBtn');
+  const t = await M.p.locator('#setBody').innerText();
+  assert.match(t, /Gmail connected through Mail/); assert.doesNotMatch(t, /Disconnect Gmail/, 'nothing of Money’s own to disconnect');
+  assert.deepEqual(M.errs, []);
+  await M.ctx.close();
+});
+await test('without Mail’s sign-in, Money’s own as before: its token gone, it goes back through Google quietly', async () => {
+  const seen = { tx: SEED, lastScan: Date.now() - 7 * 3600e3, readAt: Date.now() - 7 * 3600e3 };
+  // the Mail sign-in that doesn't count: another Google account's
+  const M = await phone({ data: JSON.stringify(seen), ls: { 'money.token.ever': '1', 'money.hint': 'pat@example.com', 'mail.token': MAIL_TOKEN('mail-token'), 'mail.hint': 'someone.else@example.com' } });
+  await M.p.waitForURL(GOOGLE, { timeout: 10000 });
+  const u = new URL(M.p.url());
+  assert.equal(u.searchParams.get('prompt'), 'none', 'quietly'); assert.equal(u.searchParams.get('login_hint'), 'pat@example.com');
+  assert.ok(u.searchParams.get('redirect_uri').endsWith('/money/'));
+  await M.ctx.close();
+});
+await test('Mail’s token refused by Gmail: Money’s own has its turn, and Mail’s token is left to Mail', async () => {
+  const mail = MAIL_TOKEN('mail-stale'), from = gmailAuth.length;
+  const M = await phone({ token: true, ls: { 'mail.token': mail, 'mail.hint': 'pat@example.com' } });
+  await M.p.waitForFunction(() => window.__money && window.__money.D.readAt > 0 && !window.__money.st.reading, null, { timeout: 15000 });
+  const auth = gmailAuth.slice(from);
+  assert.equal(auth[0], 'Bearer mail-stale', 'Mail’s first'); assert.ok(auth.includes('Bearer fake-token'), 'then Money’s own: ' + auth.join(' '));
+  assert.ok(auth.filter(a => a === 'Bearer mail-stale').length <= 2, 'the refused token isn’t tried again and again: ' + auth.join(' '));
+  assert.match(M.p.url(), /\/money\//, 'no trip to Google');
+  assert.ok((await M.p.evaluate(() => window.__money.D.tx)).some(x => x.merchant === 'Book Nook'), 'read with Money’s own');
+  const ls = await M.p.evaluate(() => ({ own: JSON.parse(localStorage.getItem('money.token')).t, mail: localStorage.getItem('mail.token') }));
+  assert.equal(ls.own, 'fake-token', 'Money’s own kept'); assert.equal(ls.mail, mail, 'Mail’s token as it was: Mail’s to renew');
+  await M.p.click('#setBtn');
+  assert.match(await M.p.locator('#setBody').innerText(), /Gmail connected(?! through)[\s\S]*Disconnect Gmail/);
+  assert.deepEqual(M.errs, []);
+  await M.ctx.close();
+});
+await test('Mail’s token refused and none of Money’s own: Money asks for Gmail itself, Mail’s token untouched', async () => {
+  const mail = MAIL_TOKEN('mail-stale');
+  const M = await phone({ ls: { 'mail.token': mail, 'mail.hint': 'pat@example.com' } });
+  await M.p.waitForFunction(() => window.__money && !window.__money.st.reading && window.__money.st.mailBad === 'mail-stale', null, { timeout: 15000 });
+  await M.p.waitForTimeout(1200);
+  assert.match(M.p.url(), /\/money\//, 'never signed in on its own, so no quiet renewal to try');
+  assert.equal(await M.p.locator('#main [data-act="connect"]').count(), 1, 'asks to connect Gmail');
+  assert.equal(await M.p.evaluate(() => localStorage.getItem('mail.token')), mail);
+  assert.deepEqual(M.errs, []);
+  await M.ctx.close();
 });
 await test('signed out with nothing yet: asks to connect Gmail', async () => {
   const C = await phone({});

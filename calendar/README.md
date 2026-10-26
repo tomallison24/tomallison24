@@ -42,7 +42,10 @@ AllisonOS apps' dates alongside.
     Friday, Christmas Eve, New Year's Eve, the clock changes). Worked out on
     the phone; nothing is fetched.
   - **Notes**: reminders with a date, and notes with a nudge, in their list's
-    colour (plum in Vintage), with **Open in Notes**.
+    colour (plum in Vintage), with **Open in Notes**. A reminder's sheet has **Mark
+    as done** (or **not done**): shown so here at once, and written to the family's
+    Notes through its Sheet (`home/sheet.js` `AllisonOS.sheet.notes`, signed in),
+    with Undo in the toast; Notes picks it up on its next open.
   - **Travel**: flights (departure to arrival), hotels (check-in to
     check-out, all-day) and car pick-ups and returns, with **Open in Travel**.
   - **Mail**: Remind Me days, as all-day items; each opens the

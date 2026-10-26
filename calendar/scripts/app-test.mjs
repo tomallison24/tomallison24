@@ -22,6 +22,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert/strict';
+import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';   // an in-memory Sheet for Notes' script: a reminder ticked off from here
 const require = createRequire(execSync('npm root -g').toString().trim() + '/');
 const { chromium } = require('playwright');
 
@@ -526,6 +527,75 @@ await test('nothing tripped the Content Security Policy and no script errors', a
 });
 
 await ctx.close();
+
+// A Notes reminder ticked off from here: shown done at once, written to the family's Notes through its Sheet
+// (home/sheet.js AllisonOS.sheet.notes at /sheet/api/notes: the real Notes script on an in-memory Sheet), Undo in
+// the toast; signed out, a plain word why and nothing changes.
+await test('a Notes reminder is ticked off from its sheet (Mark as done), at once here and in Notes’ Sheet, with Undo; signed out it says so', async () => {
+  const SECRET = 'test-secret-phrase', TOM = { key: SECRET, who: 'tom', name: 'Tom', owner: '1' };
+  const sheet = fakeSheet(path.join(ROOT, 'notes', 'google-sheet-sync.gs'), SECRET), posts = [];
+  const plumber = { id: 't1', list: 'l1', title: 'Call the plumber', notes: 'About the tap', date: TODAY, time: '09:00', prio: 0, flagged: false, done: false, doneAt: null, tags: [], created: 1, updated: 1 };
+  sheet.post({ action: 'sync', notes: [], todos: [plumber], lists: [{ id: 'l1', name: 'Home', color: '#F59E0B', updated: 1 }], graves: {} }, TOM);
+  const read = () => sheet.post({ action: 'sync', notes: [], todos: [], lists: [], graves: {} }, TOM).todos.find(t => t.id === 't1');
+  const notesRoute = ctx => ctx.route('**/sheet/api/notes', route => {
+    const req = route.request(), tok = (req.headers().authorization || '').replace('Bearer ', '');
+    const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (req.headers()['x-sheet'] !== '1') return json({ error: 'header' }, 400);
+    if (tok !== 'tok-tom') return json({ error: 'signin' }, 401);
+    posts.push(JSON.parse(req.postData()));
+    return json(sheet.post(req.postData(), TOM));
+  });
+  const openPlumber = async page => { await page.click('.evrow:has-text("Call the plumber")'); await page.waitForSelector('#evSheet:not([hidden])'); };
+  const toast = page => page.waitForFunction(() => !document.getElementById('toast').hidden, null, { timeout: 8000 }).then(() => page.textContent('#toastMsg'));
+  // signed in
+  const seen = JSON.stringify({ calendar: '999' }), session = JSON.stringify({ token: 'tok-tom', user: { id: 'tom', name: 'Tom', role: 'owner' }, at: 1 });
+  let { ctx, page } = await newPage('light', { seed: { 'aos.seen': seen, 'aos.session': session } });
+  await notesRoute(ctx);
+  await page.goto(BASE + '/calendar/'); await page.waitForSelector('#mgrid'); await page.waitForTimeout(400);
+  await openPlumber(page);
+  assert.equal(await page.textContent('#evDone'), 'Mark as done');
+  assert.equal(await page.$('#evBody h3.done'), null);
+  await page.click('#evDone');
+  await page.waitForFunction(() => document.getElementById('evSheet').hidden);
+  assert.ok((await page.textContent('.evrow:has-text("Call the plumber")')).includes('Home · done'), 'done at once here');
+  assert.ok(await page.$('.evrow.done:has-text("Call the plumber")'));
+  assert.equal(await toast(page), 'Done in Notes');
+  assert.equal(await page.textContent('#toastAct'), 'Undo');
+  assert.equal(posts.length, 2, 'a read, then the reminder, whole and newer');
+  assert.deepEqual(posts[0], { action: 'sync', v: 2, window: 90, today: TODAY, notes: [], todos: [], lists: [], graves: {} });
+  const sent = posts[1].todos[0];
+  assert.deepEqual([posts[1].action, posts[1].v, posts[1].todos.length, posts[1].lists, posts[1].notes, posts[1].graves], ['sync', 2, 1, [], [], {}]);
+  assert.deepEqual([sent.id, sent.title, sent.notes, sent.date, sent.time, sent.list, sent.done, sent.by], ['t1', 'Call the plumber', 'About the tap', TODAY, '09:00', 'l1', true, 'tom']);
+  assert.ok(typeof sent.doneAt === 'number' && sent.updated === sent.doneAt && sent.updated > 1);
+  assert.equal(read().done, true, 'ticked off in the Sheet: Notes gets it on its next open');
+  assert.equal(sheet.tab('✓ Home')[1][7], 'Yes');
+  await openPlumber(page);
+  assert.equal(await page.textContent('#evDone'), 'Mark as not done');
+  assert.ok(await page.$('#evBody h3.done'));
+  await page.click('#evSheet .iconbtn[data-close]'); await page.waitForFunction(() => document.getElementById('evSheet').hidden);
+  // Undo
+  await page.click('#toastAct');
+  await page.waitForFunction(() => !document.querySelector('.evrow.done'));
+  assert.equal(await toast(page), 'Not done in Notes');
+  assert.equal(posts.length, 4);
+  assert.deepEqual([posts[3].todos[0].done, posts[3].todos[0].doneAt], [false, null]);
+  assert.equal(read().done, false, 'open again in the Sheet');
+  assert.ok(!(await page.textContent('.evrow:has-text("Call the plumber")')).includes('done'));
+  assert.deepEqual(errors, []);
+  await ctx.close();
+  // signed out: nothing changes, and the toast says why
+  ({ ctx, page } = await newPage('light'));
+  await notesRoute(ctx);
+  await page.goto(BASE + '/calendar/'); await page.waitForSelector('#mgrid'); await page.waitForTimeout(400);
+  await openPlumber(page);
+  await page.click('#evDone');
+  assert.equal(await toast(page), 'Sign in to tick it off in Notes.');
+  assert.equal(await page.$('.evrow.done'), null, 'not shown done');
+  assert.equal(posts.length, 4, 'nothing sent');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
 await browser.close();
 server.close();
 console.log('\n' + n + ' tests passed');

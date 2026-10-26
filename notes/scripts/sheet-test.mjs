@@ -2,11 +2,15 @@
 // in-memory Sheet (drinks/scripts/fake-sheet.mjs): who gets in; one Sheet for the family, where
 // everything is shared except Just-me items, which only their own person gets, sets, clears or
 // deletes; rows from before aOS become the owner's; finished reminders older than 90 days stay in
-// the Sheet and come back when asked for; the Who column; Places on the same Sheet; and what the
-// notification server (notes/push) gets.
+// the Sheet and come back when asked for; the Who column; Places on the same Sheet; what the
+// notification server (notes/push) gets; and the reminders the other apps write through home/sheet.js
+// (AllisonOS.sheet.notes: Meals' shopping list, Orders' return, Calendar's tick), built as a phone's
+// Notes would send them and merged by the same script.
 //   node notes/scripts/sheet-test.mjs
 import assert from 'node:assert/strict';
 import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';
+await import('../../home/sheet.js');   // a plain script: in Node it puts AllisonOS.sheet on globalThis
+const NB = globalThis.AllisonOS.sheet.notes.build;
 
 const GS = new URL('../google-sheet-sync.gs', import.meta.url).pathname;
 const SECRET = 'test-secret-phrase';
@@ -232,6 +236,111 @@ test('text that looks like a formula stays text, and a long note survives the 45
   sync(s, { notes: [{ ...note, title: '=IMPORTXML("http://x")' }, { ...note, id: 'n2', title: 'Long', body: long }] });
   assert.ok(s.sheets.get('#home').raw.includes('\'=IMPORTXML("http://x")'), 'written with a leading \' so the Sheet keeps it as text');
   assert.equal(sync(s).notes.find(n => n.id === 'n2').body.length, 100000);
+});
+
+// ---- home/sheet.js: reminders from the other apps, through Notes' own protocol ----
+const TODAY = '2026-10-20';
+const T0 = Date.parse('2026-10-20T15:00:00Z');
+const phoneSync = (s, who = TOM) => sync(s, { window: 90, today: TODAY }, who);   // what a phone's Notes sends on opening
+const openTodos = r => r.todos.filter(t => !t.done).map(t => t.title).sort();
+const LIST_COLORS = ['#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EC4899', '#06B6D4', '#EF4444'];   // Notes' list colours (notes/app.js)
+
+test('home/sheet.js: the read is a phone\'s empty sync, and adding builds reminders as Notes makes them', () => {
+  const read = NB.read(TODAY);
+  assert.deepEqual(read, { action: 'sync', v: 2, window: 90, today: TODAY, notes: [], todos: [], lists: [], graves: {} });
+  const s = mk(), state = s.post(read, TOM);
+  assert.deepEqual([state.lists, state.todos], [[], []]);
+  const r = NB.add(state, { list: 'Groceries', items: [{ title: 'Milk', notes: '2 qt' }, { title: ' Eggs ' }, { title: '' }, { title: 'Milk' }] }, T0, TODAY);
+  assert.deepEqual([r.added, r.already, r.reopened, r.ids.length], [2, 0, 0, 2], 'blank and repeated titles dropped');
+  assert.deepEqual(r.list, { id: 'l3', name: 'Groceries' }, 'no Groceries list yet: made with Notes\' own sample id, so a phone still showing the samples has one Groceries');
+  assert.deepEqual(r.body.lists, [{ id: 'l3', updated: T0, name: 'Groceries', color: '#10B981' }]);
+  assert.deepEqual(Object.keys(r.body).sort(), ['action', 'graves', 'lists', 'notes', 'today', 'todos', 'v', 'window']);
+  const milk = r.body.todos[0];
+  assert.deepEqual(milk, { id: r.ids[0], list: 'l3', title: 'Milk', notes: '2 qt', date: null, time: null, prio: 0, flagged: false, done: false, doneAt: null, tags: [], created: T0, updated: T0 }, 'the shape of a reminder Notes\' quick add makes');
+  assert.match(milk.id, /^t[0-9a-z]{8,16}$/);
+  assert.equal(r.body.todos[1].title, 'Eggs');
+  // the script takes it, as the person's own, and a phone opening Notes gets it in its Groceries list
+  s.post(r.body, ELLA);
+  const phone = phoneSync(s, TOM);
+  assert.deepEqual(phone.lists.map(l => [l.id, l.name, l.by]), [['l3', 'Groceries', 'ella']]);
+  assert.deepEqual(openTodos(phone), ['Eggs', 'Milk']);
+  assert.equal(phone.todos[0].by, 'ella');
+  assert.deepEqual(s.tab('✓ Groceries').slice(1).map(x => x.slice(0, 2)), [['Ella', 'Milk'], ['Ella', 'Eggs']]);
+});
+
+test('home/sheet.js: the same items again are the same ids, and nothing is sent or doubled; reopen unticks a finished one', () => {
+  const s = mk();
+  const first = NB.add(s.post(NB.read(TODAY), TOM), { list: 'Groceries', items: [{ title: 'Milk' }, { title: 'Eggs' }] }, T0, TODAY);
+  s.post(first.body, TOM);
+  const again = NB.add(s.post(NB.read(TODAY), TOM), { list: 'groceries', items: [{ title: 'milk' }, { title: 'Eggs' }, { title: 'Bread' }] }, T0 + 1000, TODAY);
+  assert.deepEqual(again.ids.slice(0, 2), first.ids, 'ids from the list and the title, whatever the case');
+  assert.deepEqual([again.added, again.already], [1, 2]);
+  assert.deepEqual(again.body.todos.map(t => t.title), ['Bread'], 'only the new one goes');
+  assert.deepEqual(again.body.lists, [], 'the list is there already: not sent again');
+  s.post(again.body, TOM);
+  assert.deepEqual(openTodos(phoneSync(s)), ['Bread', 'Eggs', 'Milk']);
+  // a phone ticks Milk off; the list sent again leaves it ticked, unless reopen (Meals: bought last week, needed again)
+  const milk = phoneSync(s).todos.find(t => t.title === 'Milk');
+  s.post(sync(s, { todos: [{ ...milk, done: true, doneAt: T0 + 2000, updated: T0 + 2000 }] }), ELLA);
+  const kept = NB.add(s.post(NB.read(TODAY), TOM), { list: 'Groceries', items: [{ title: 'Milk' }] }, T0 + 3000, TODAY);
+  assert.deepEqual([kept.body, kept.already], [null, 1]);
+  const re = NB.add(s.post(NB.read(TODAY), TOM), { list: 'Groceries', items: [{ title: 'Milk', notes: '1 gal' }], reopen: true }, T0 + 3000, TODAY);
+  assert.deepEqual([re.added, re.already, re.reopened], [0, 0, 1]);
+  assert.deepEqual([re.body.todos[0].id, re.body.todos[0].done, re.body.todos[0].doneAt, re.body.todos[0].notes, re.body.todos[0].updated], [milk.id, false, null, '1 gal', T0 + 3000]);
+  s.post(re.body, TOM);
+  const after = phoneSync(s).todos.find(t => t.id === milk.id);
+  assert.deepEqual([after.done, after.by, after.list], [false, 'tom', 'l3'], 'open again, still whose it was, in its list');
+  assert.equal(phoneSync(s).todos.filter(t => t.title === 'Milk').length, 1, 'never two');
+});
+
+test('home/sheet.js: a key gives an item its id (Orders: the order), a date and time travel, and the list is found by name or made', () => {
+  const s = mk();
+  const nope = NB.add(s.post(NB.read(TODAY), TOM), { list: 'Home', items: [{ title: 'Drop off the Amazon return', key: 'orders:return:o-abc', date: '2026-10-24', time: '09:00', notes: 'Amazon\nReturn number RMA1' }] }, T0, TODAY);
+  const same = NB.add(s.post(NB.read(TODAY), TOM), { list: 'Home', items: [{ title: 'Drop off the Amazon return (edited)', key: 'orders:return:o-abc' }] }, T0 + 1, TODAY);
+  assert.equal(same.ids[0], nope.ids[0], 'the key, not the words, is the id');
+  assert.notEqual(NB.add(s.post(NB.read(TODAY), TOM), { list: 'Home', items: [{ title: 'x', key: 'orders:return:o-abd' }] }, T0, TODAY).ids[0], nope.ids[0]);
+  assert.deepEqual([nope.body.todos[0].date, nope.body.todos[0].time, nope.body.todos[0].notes, nope.body.todos[0].list], ['2026-10-24', '09:00', 'Amazon\nReturn number RMA1', 'l2']);
+  const bad = NB.add(s.post(NB.read(TODAY), TOM), { list: 'Home', items: [{ title: 'x', date: 'tomorrow', time: '9am' }] }, T0, TODAY);
+  assert.deepEqual([bad.body.todos[0].date, bad.body.todos[0].time], [null, null], 'a date or time not in Notes\' form is left off');
+  s.post(nope.body, TOM);
+  const rep = NB.add(s.post(NB.read(TODAY), TOM), { list: 'Home', items: [{ title: 'y', key: 'orders:return:o-abc' }] }, T0 + 2, TODAY);
+  assert.deepEqual([rep.body, rep.already, rep.ids], [null, 1, nope.ids], 'the same order again: nothing to send');
+  assert.deepEqual(s.post({ action: 'due' }, { key: SECRET, who: 'notes-push' }).todos.map(t => [t.title, t.date, t.time]), [['Drop off the Amazon return', '2026-10-24', '09:00']], 'and Notes\' notifications know it');
+  // a list the family named (any case), a Just-me list only as a last resort, a list of a new name made with an id of its own
+  s.post(sync(s, { lists: [{ id: 'lx', name: 'School run', color: '#EC4899', updated: T0 }, { id: 'ly', name: 'Errands', color: '#EC4899', updated: T0, only: true }, { id: 'lz', name: 'Errands', color: '#06B6D4', updated: T0 }] }), TOM);
+  const st = s.post(NB.read(TODAY), TOM);
+  assert.equal(NB.list(st, 'school RUN', T0).list.id, 'lx');
+  assert.equal(NB.list(st, 'Errands', T0).list.id, 'lz', 'the shared one first');
+  const made = NB.list(st, 'Chores', T0);
+  assert.equal(made.made, true); assert.match(made.list.id, /^l[0-9a-z]{8,16}$/); assert.equal(made.list.id, NB.list(st, 'chores', T0 + 9).list.id);
+  assert.ok(LIST_COLORS.includes(made.list.color));
+  // a phone still on the samples (Groceries as l3, maybe in Russian): found by the sample id when no name matches
+  assert.equal(NB.list({ lists: [{ id: 'l3', name: 'Продукты', color: '#10B981', grocery: true }] }, 'Groceries', T0).list.name, 'Продукты');
+});
+
+test('home/sheet.js: ticking a reminder off (Calendar) sends it whole and newer; back on again; a missing one says so', () => {
+  const s = mk();
+  s.post(sync(s, { lists: [list], todos: [todo('t1', { date: TODAY, notes: 'About the tap', created: T0 - 10, updated: T0 - 10 })] }), TOM);
+  let st = s.post(NB.read(TODAY), ELLA);
+  const d = NB.done(st, 't1', true, T0, TODAY);
+  assert.deepEqual([d.body.todos.length, d.body.todos[0].id, d.body.todos[0].done, d.body.todos[0].doneAt, d.body.todos[0].updated, d.body.todos[0].notes, d.body.todos[0].title], [1, 't1', true, T0, T0, 'About the tap', 'Milk']);
+  assert.deepEqual([d.body.lists, d.body.notes, d.body.graves], [[], [], {}]);
+  s.post(d.body, ELLA);
+  let t = phoneSync(s, TOM).todos[0];
+  assert.deepEqual([t.done, t.doneAt, t.by], [true, T0, 'tom'], 'done on Tom\'s phone too, still his');
+  assert.equal(s.tab('✓ Groceries')[1][7], 'Yes');
+  st = s.post(NB.read(TODAY), ELLA);
+  assert.deepEqual(NB.done(st, 't1', true, T0 + 1, TODAY), { body: null, already: true });
+  const u = NB.done(st, 't1', false, T0 + 5, TODAY);
+  assert.deepEqual([u.body.todos[0].done, u.body.todos[0].doneAt, u.body.todos[0].updated], [false, null, T0 + 5]);
+  s.post(u.body, ELLA);
+  t = phoneSync(s, TOM).todos[0];
+  assert.deepEqual([t.done, t.doneAt], [false, null]);
+  assert.deepEqual(NB.done(st, 'nope', true, T0, TODAY), { body: null, why: 'not-found' });
+  // a phone that had it open and syncs later: the Sheet's newer tick wins there (newest change wins)
+  s.post(NB.done(s.post(NB.read(TODAY), TOM), 't1', true, T0 + 9, TODAY).body, TOM);
+  const late = s.post(sync(s, { todos: [todo('t1', { date: TODAY, notes: 'About the tap', updated: T0 + 2 })], window: 90, today: TODAY }), ELLA);
+  assert.equal(late.todos[0].done, true);
 });
 
 console.log(passed + ' tests passed');

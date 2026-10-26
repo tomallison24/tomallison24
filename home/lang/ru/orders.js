@@ -53,6 +53,12 @@
     'Return': 'Возврат', 'Drop off by': 'Сдать до', 'Drop off at': 'Пункт приёма', 'Returning': 'Возвращается', 'Reason': 'Причина', 'Return number': 'Номер возврата',
     'Return tracking': 'Трек возврата', 'Refund to': 'Возврат на', 'Refund (estimated)': 'Возврат (примерно)', 'Refund': 'Сумма возврата',
     'Mark as sent back': 'Отметить как отправленный', 'Dropped off or posted': 'Сдан в пункт или отправлен почтой', 'Mark as refunded': 'Отметить как возмещённый',
+    // Remind me in Notes (a reminder in the family's Notes, through its Sheet)
+    'Remind me in Notes': 'Напомнить в Заметках', 'Adding to Notes…': 'Добавляем в Заметки…', 'A reminder the day before the drop-off date': 'Напоминание за день до срока сдачи',
+    'It’s in Notes already.': 'Это уже есть в Заметках.', 'Sign in to set a reminder in Notes.': 'Войдите, чтобы создать напоминание в Заметках.',
+    'Set up the Notes Sheet in aOS first (Account → Google Sheets).': 'Сначала настройте Таблицу Заметок в aOS (Профиль → Google Таблицы).',
+    'Offline. Try again when you’re back online.': 'Нет сети. Повторите, когда появится подключение.',
+    'Couldn’t reach the Notes Sheet. Try again later.': 'Не удалось связаться с Таблицей Заметок. Повторите позже.',
     'Open the return email in Mail': 'Открыть письмо о возврате в Почте', 'Open the email in Mail': 'Открыть письмо в Почте', 'Open in Gmail': 'Открыть в Gmail',
     'In the browser': 'В браузере', 'Ipsy is reading it…': 'Ипси читает…', 'Have Ipsy check this order': 'Попросить Ипси проверить заказ',
     'Mark as picked up': 'Отметить как полученный', 'Mark as delivered': 'Отметить как доставленный', 'Start a return': 'Оформить возврат',
@@ -132,6 +138,8 @@
     'Is anything late?': 'Что-нибудь задерживается?', 'Check Gmail for orders I’m missing': 'Поищи в Gmail заказы, которых здесь нет',
     'Ipsy runs on Claude, by Anthropic: your questions, orders and the emails it opens go there through the family server. It can change orders, each with Undo; Private ones stay hidden.': 'Ипси работает на Claude от Anthropic: ваши вопросы, заказы и письма, которые он открывает, уходят туда через семейный сервер. Он может менять заказы, каждый раз с возможностью отмены; личные заказы остаются скрытыми.',
   }, [
+    [/^Drop off the (.+) return$/, m => 'Сдать возврат: ' + m[1]],
+    [/^Reminder set in Notes for (.+)\.$/, m => 'Напоминание в Заметках: ' + dw(m[1]) + '.'],
     // "3 on the way · 1 return · Gmail checked 5 min ago", "24 окт. · arrives 26 окт.": each part on its own
     [/·/, m => m.input.split(/\s*·\s*/).map(x => x ? t(x) : x).join(' · ')],
     [/^(\d+) on the way$/, m => 'В пути: ' + m[1]],

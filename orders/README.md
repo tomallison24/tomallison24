@@ -201,6 +201,12 @@ confirmed*, *Your refund confirmation*, a store's *We received your return*, an
 (a request or a label), **Sent back** (dropped off, posted), **Store has it**
 and **Refunded**, each with its date.
 
+- **Remind me in Notes**, on the order's page while a return with a drop-off day is
+  open: a dated reminder (*Drop off the Amazon return*, the day before, or the day
+  itself when that's today) in the family's Notes, Home list, with the store, return
+  number and drop-off place in its notes, through the Notes Sheet (`home/sheet.js`
+  `AllisonOS.sheet.notes`, signed in). Its id comes from the order, so tapping again
+  adds nothing twice; signed out or with no Notes Sheet in aOS, the toast says so.
 - **What's read**: the day to drop it off or send it by (*Drop off by Thu, Nov
   19*), where (*Dropoff location*), the reason, the store's return number (RMA),
   the return parcel's tracking number, the refund (estimated until it's

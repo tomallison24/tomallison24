@@ -92,6 +92,7 @@ export async function installWeather(ctx, opts = {}) {
   await ctx.route('https://api.bigdatacloud.net/**', route => route.fulfill({ json: { city: PLACE.city, principalSubdivision: 'North Carolina' } }));
   await ctx.route('https://geocoding-api.open-meteo.com/**', route => {
     const q = new URL(route.request().url()).searchParams.get('name') || '';
+    if (q === 'Boston') return route.fulfill({ json: { results: [{ name: 'Boston', admin1: 'Massachusetts', country: 'United States', latitude: 42.36, longitude: -71.06 }] } });   // a Trip's destination (app-test.mjs)
     return route.fulfill({ json: { results: [{ name: q + 'ville', admin1: 'Ohio', country: 'United States', latitude: 39.96, longitude: -82.99 }, { name: q + ' City', admin1: 'Kansas', country: 'United States', latitude: 39.1, longitude: -94.58 }] } });
   });
   await ctx.route('https://mesonet.agron.iastate.edu/**', route => {

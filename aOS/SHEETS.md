@@ -152,3 +152,13 @@ notifications stop.
 
 The old phrase has been on every phone that synced, and this way it opens nothing any more. Nobody
 else has to do anything: each phone syncs through aOS once its app is signed in.
+
+## Writing into Notes from another app
+
+`AllisonOS.sheet.notes` (`home/sheet.js`, loaded after `account.js`) lets an app put things on the
+family's Notes Sheet in Notes' own sync protocol, signed in, through `/sheet/api/notes`:
+`addTodos({ list, items: [{ title, date?, time?, notes?, key? }], reopen? })` adds reminders to a
+list by name (ids are made from a key, so a repeat adds nothing twice) and `setDone(id, done)` ticks
+one off or back on. Both resolve `{ ok: false, why }` (signin, no-sheet, offline, ...) rather than
+throw, and never ask for Face ID. Notes merges them on its next open. Meals (Add to Notes), Orders
+(Remind me in Notes) and Calendar (Mark as done) use it.

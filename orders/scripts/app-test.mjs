@@ -478,11 +478,20 @@ for (const scheme of ['light', 'dark']) {
 const GS = path.join(ROOT, 'orders', 'google-sheet-sync.gs'), SECRET = 'test-secret-phrase';
 const PEOPLE = { 'tok-tom': { id: 'tom', name: 'Tom', role: 'owner' }, 'tok-ella': { id: 'ella', name: 'Ella', role: 'member' } };
 const session = tok => JSON.stringify({ token: tok, user: PEOPLE[tok], at: 1 });
+// Notes' Sheet (Remind me in Notes, home/sheet.js): the real Notes script on an in-memory Sheet of its own, at
+// /sheet/api/notes; notesSet false: not set up in aOS yet
+const notesSheet = fakeSheet(path.join(ROOT, 'notes', 'google-sheet-sync.gs'), SECRET), notesPosts = [];
+let notesSet = true;
 function sheetRoute(ctx, sheet, { calls = [], claims = [], answer = null } = {}) {
   return ctx.route('**/sheet/api/**', route => {
     const req = route.request(), tok = (req.headers().authorization || '').replace('Bearer ', ''), who = PEOPLE[tok];
     const json = (b, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
     if (!who) return json({ error: 'signin' }, 401);
+    if (/\/sheet\/api\/notes$/.test(new URL(req.url()).pathname)) {
+      if (!notesSet) return json({ ok: false, error: 'no-sheet' }, 409);
+      notesPosts.push({ who: who.id, body: JSON.parse(req.postData()) });
+      return json(notesSheet.post(req.postData(), { key: SECRET, who: who.id, name: who.name, ...(who.role === 'owner' ? { owner: '1' } : {}) }));
+    }
     if (req.url().endsWith('/claim')) { claims.push({ who: who.id, ...JSON.parse(req.postData()) }); return json({ configured: true }); }
     if (req.method() === 'GET') return json({ configured: true });
     const body = JSON.parse(req.postData());
@@ -893,6 +902,59 @@ await step('Calendar\'s Orders layer (home/welcome.js AllisonOS.layer, built by 
   // marking it delivered takes its arrival off the layer
   await page.evaluate(() => { const o = window.__orders.orders.find(x => x.id === 'o-c'); o.status = 'delivered'; o.steps.delivered = new Date().toISOString().slice(0, 10); window.__orders.save(); });
   assert.deepEqual((await page.evaluate(() => window.__orders.shared())).items.map(x => x.id), ['o-d/return_by']);
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+await step('Remind me in Notes: a return’s drop-off reminder in the family’s Notes, the day before (or today), once an order, through Notes’ Sheet; signed out or no Sheet, a plain word why', async () => {
+  const by = ymd(day(5)), eve = ymd(day(4)), today = ymd(day(0));
+  const { ctx, page, errs, open } = await phone('light');
+  await page.goto(BASE + '/orders/icon.svg');
+  await seedPhone(page, { 'allison-orders-v1': JSON.stringify({ kinds: { package: true }, orders: [
+    SEEDED('o-r1', 'Amazon', { status: 'delivered', steps: { delivered: ymd(day(-3)) }, ret: { status: 'started', steps: { started: ymd(day(-1)) }, by, rma: 'RMA-0001', where: 'The UPS Store' } }),
+    SEEDED('o-r2', 'Target', { status: 'delivered', steps: { delivered: ymd(day(-3)) }, ret: { status: 'started', steps: { started: ymd(day(-1)) }, by: today } }),
+    SEEDED('o-r3', 'Etsy', { status: 'delivered', steps: { delivered: ymd(day(-3)) }, ret: { status: 'started', steps: { started: ymd(day(-1)) } } }),
+  ] }) });
+  await open();
+  const openRet = async store => { await page.click('#whenChips [data-when="ret"]'); await page.click('#list .ocard:has(.ostore:text("' + store + '"))'); await page.waitForSelector('#opage:not([hidden]) .ohero'); };
+  const tap = async () => { await page.evaluate(() => { document.getElementById('toast').hidden = true; }); await page.click('#opRetNotes'); await page.waitForFunction(() => !document.getElementById('toast').hidden, null, { timeout: 8000 }); return page.textContent('#toastMsg'); };
+  await openRet('Etsy');
+  assert.equal(await page.$('#opRetNotes'), null, 'no drop-off date: nothing to remind of');
+  await page.click('#opBack');
+  await openRet('Amazon');
+  assert.match(await page.textContent('#opRetNotes'), /^Remind me in Notes/);
+  assert.equal(await tap(), 'Sign in to set a reminder in Notes.', 'signed out: a plain word why');
+  assert.equal(notesPosts.length, 0, 'and nothing sent');
+  await page.evaluate(s => localStorage.setItem('aos.session', s), session('tok-tom'));
+  await page.reload(); await page.waitForFunction(() => window.__orders); await page.waitForTimeout(400);
+  await openRet('Amazon');
+  const t1 = await tap();
+  assert.equal(t1, 'Reminder set in Notes for ' + new Date(eve + 'T12:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + '.');
+  assert.equal(notesPosts.length, 2, 'a read, then the reminder');
+  assert.deepEqual(notesPosts[0].body, { action: 'sync', v: 2, window: 90, today, notes: [], todos: [], lists: [], graves: {} }, 'the read is what a phone with nothing sends');
+  const b = notesPosts[1].body, t = b.todos[0];
+  assert.deepEqual([b.action, b.v, b.todos.length, b.notes, b.graves, notesPosts[1].who], ['sync', 2, 1, [], {}, 'tom']);
+  assert.deepEqual(b.lists.map(l => [l.id, l.name, l.color]), [['l2', 'Home', '#F59E0B']], 'no Home list yet: made with Notes’ sample id');
+  assert.deepEqual([t.title, t.date, t.time, t.list, t.done, t.doneAt, t.prio, t.flagged, t.tags], ['Drop off the Amazon return', eve, null, 'l2', false, null, 0, false, []]);
+  assert.match(t.id, /^t[0-9a-z]{8,16}$/); assert.equal(typeof t.created, 'number'); assert.equal(t.updated, t.created);
+  assert.equal(t.notes, 'Amazon\nReturn number RMA-0001\nDrop off at The UPS Store\nDrop off by ' + new Date(by + 'T12:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+  assert.deepEqual(notesSheet.tab('✓ Home').slice(1).map(r => r.slice(0, 4)), [['Tom', 'Drop off the Amazon return', t.notes, eve]], 'in the Sheet, as Tom’s, in its Home tab');
+  // again: the same order is one reminder
+  assert.equal(await tap(), 'It’s in Notes already.');
+  assert.equal(notesPosts.length, 3, 'read, and nothing to send');
+  assert.equal(notesSheet.post({ action: 'sync', notes: [], todos: [], lists: [], graves: {} }, { key: SECRET, who: 'tom' }).todos.length, 1);
+  await page.click('#opBack');
+  // due today: the reminder is for today
+  await openRet('Target');
+  assert.equal(await tap(), 'Reminder set in Notes for today.');
+  const t2 = notesPosts[4].body.todos[0];
+  assert.deepEqual([t2.title, t2.date, t2.notes, notesPosts[4].body.lists], ['Drop off the Target return', today, 'Target\nDrop off by ' + new Date(today + 'T12:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), []]);
+  assert.notEqual(t2.id, t.id);
+  // not set up in aOS yet
+  notesSet = false;
+  await page.click('#opBack'); await openRet('Amazon');
+  assert.equal(await tap(), 'Set up the Notes Sheet in aOS first (Account → Google Sheets).');
+  notesSet = true;
   assert.deepEqual(errs, []);
   await ctx.close();
 });

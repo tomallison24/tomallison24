@@ -165,7 +165,11 @@ Two ways of reading, best first:
    check-in / check-out lines of hotel emails; the pick-up / return lines of
    rental car emails. This works for the common layouts but can't be perfect,
    so these bookings are marked **Check details**. Open one, fix anything
-   that's off, and tap **Looks right**.
+   that's off, and tap **Looks right**. A time read from the words has no time
+   zone, so it is read as this phone's; once live status has the flight's leg
+   (`departure.scheduled.utc`), that true moment is what the countdown, Now,
+   the live window, the calendar file and the Calendar layer use, so a
+   text-read flight is right even when the phone is in another zone.
 
 Airlines it knows by flight number: the major US ones (United, Delta,
 American, Southwest, Alaska, JetBlue, Hawaiian, Spirit, Allegiant, Sun

@@ -47,9 +47,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 1. **More layers.** ~~Meals, Orders and News~~ done (aOS2.2); Clock's wake-up time (see
    Clock) still open: Calendar lists a layer in `LAYER`/`rebuild`, `functions/aOS/api` in `LAYERS`.
-2. **A reminder ticked off from Calendar.** The Notes layer is one way; an
-   `AllisonOS.layer.update('notes', id, { done: true })` that aOS stores and Notes reads
-   on sync would let the family finish a reminder from Calendar's day view (and Ipsy).
+2. ~~**A reminder ticked off from Calendar.**~~ Done (aOS2.2): Mark as done on a Notes reminder, with Undo, through the Notes Sheet
 3. **Weather without asking for your location.** `loadWeather` asks the phone for
    geolocation on every open until answered when Weather left no `wx.*` place;
    `wx.places` is synced by aOS, so read `wx.places[0]` first: a smoother first run on
@@ -108,18 +106,13 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 ## Meals
 
 1. ~~**Dinners on the family calendar.**~~ Done (aOS2.2): every meal of the plan, by day; `?date=` opens the day's recipe
-2. **The shopping list straight into Notes.** "Copy the list" goes through the
-   clipboard; Notes' grocery lists use the same `home/aisles.js` sections, so a direct
-   import into a Notes grocery list (a Notes import slot, or `/sheet/api/notes`) would
-   skip the paste and keep ticks in step in the store.
+2. ~~**The shopping list straight into Notes.**~~ Done (aOS2.2): Add to Notes, through the Notes Sheet (`AllisonOS.sheet.notes`)
 3. Confirm aOS validates a Sheet address handed over by Meals' `#sync=` link (the
    `adopt` path) against `script.google.com`.
 
 ## Money
 
-1. **One Gmail sign-in with Mail.** Money reads `mail.token` inside aOS but keeps its
-   own OAuth flow; when its own token expires it bounces the whole aOS window to Google.
-   Prefer Mail's token when present and skip Money's silent renew. Money only.
+1. ~~**One Gmail sign-in with Mail.**~~ Done (aOS2.2).
 2. **Ipsy's chat has arrived** (#393); its tools are read-only through the Money route,
    reader/viewer gated. Nothing further from the audit.
 3. `s.reader` at `money/app.js:679` is always false there (the server guarantees
@@ -135,7 +128,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## Notes
 
-1. **Two-way with Calendar** (Calendar, 2).
+1. ~~**Two-way with Calendar**~~ Done (aOS2.2).
 2. **"Add to Places" from a dated reminder.** Places and Notes share one Sheet; a
    Notes Ipsy tool or a `home/` helper writing a place row through `/sheet/api/places`
    (Photon lookup exists in Places).
@@ -151,9 +144,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 ## Orders
 
 1. ~~**Deliveries and pickups on the calendar.**~~ Done (aOS2.2): arrivals, delivery windows, pickup deadlines and return days; `?open=` opens the order
-2. **"Start a return" adds a Notes reminder** ("Drop off the Amazon return by Nov 19"),
-   which alerts the phone through Notes push: `/sheet/api/notes` with one todo works
-   today; a helper in `home/sheet.js` would make it clean.
+2. ~~**"Start a return" adds a Notes reminder**~~ Done (aOS2.2): Remind me in Notes on an order with a return
 3. **Pickups as Places.** A store pickup (and a Travel hotel) is a place the family
    went; `places/calendar.mjs` `plan()` is generic enough to feed.
 4. Ipsy's `create_order` ignores `kindOn`: a `food` order it adds is hidden when Food is
@@ -180,10 +171,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## Travel
 
-1. **Live UTC once known.** When `refreshLive` has a leg, `departure.scheduled.utc` is
-   the true moment: feed it into `startT`/`endT` and the Calendar layer's `depIso`, so the
-   countdown, "Now", the live window and Calendar are right for text-read bookings even
-   when the phone is in another zone. `travel/app.js` only.
+1. ~~**Live UTC once known.**~~ Done (aOS2.2).
 2. ~~**Quiet live status and calendar fetch**~~ Done (aOS2.2).
 3. Offset-less wall times are read as the phone's zone (documented); countdowns are off
    while away until 1 lands.
@@ -192,10 +180,7 @@ server's `PREF_ITEM`, `functions/sheet/api`, and Ipsy's tools.
 
 ## Weather
 
-1. **Weather for where you're going.** aOS holds each person's Travel layer (upcoming
-   bookings with `to`, `city`, `checkIn`); a "Trip" place (the destination for the trip's
-   days) without saving one of the 12 cities. `weather/app.js` reads the layer through
-   `account.fetch`, signed in only; `P.AIRPORTS` city names are in `travel/parse.js`.
+1. ~~**Weather for where you're going.**~~ Done (aOS2.2): a Trip place from your Travel layer
 2. ~~**`wx.view` follows you**~~ Done (aOS2.2).
 3. Dates in Weather, Mail, Travel, Notes, Podcasts, Places and Home show in the phone's
    own format; US on a US phone (`BACKLOG.md`).

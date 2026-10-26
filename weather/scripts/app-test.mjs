@@ -1,7 +1,7 @@
 // Drives the Weather app in headless Chromium at iPhone size, light and dark, against made-up weather
 // (scripts/fake-weather.mjs stands in for the National Weather Service, Open-Meteo, BigDataCloud and the map
 // tiles, so no network is used): it opens to where you are, the hourly, feels like, humidity, wind and radar
-// views, the hour and day sheets, the Places sheet (search, add a city, units, page dots), the alerts, the
+// views, the hour and day sheets, the Places sheet (search, add a city, units, page dots, and the Trip place from your Travel layer, signed in), the alerts, the
 // radar's forecast frames through Weather's own helper (../weather/api/hrrr), and that nothing trips the
 // page's Content Security Policy; that its storage is wx.*.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look: Futura, flat cream
@@ -516,6 +516,82 @@ for (const scheme of ['light', 'dark']) {
   });
   await step('both: no script errors', async () => assert.deepEqual(problems, []));
   await ctx.close();
+}
+
+{
+  // The Trip place: signed in, your next trip's destination from your Travel layer (aOS keeps it in the family
+  // account; a stand-in ../aOS/api/layer here), with its dates, not one of the saved places; signed out, or with no
+  // trip ahead, or signed out on the server (a 401), nothing, and no sign-in sheet.
+  const dayN = n => { const d = new Date((NOW || Date.now()) + n * 86400e3); return d.toLocaleDateString('en-CA'); };
+  const mon = s => new Date(s + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const bookings = [
+    { type: 'flight', status: 'confirmed', id: 'old', airlineCode: 'DL', flightNo: '88', from: 'RDU', to: 'DEN', fromName: 'Raleigh-Durham', toName: 'Denver', dep: dayN(-40) + 'T08:00', arr: dayN(-40) + 'T10:30' },
+    { type: 'flight', status: 'confirmed', id: 'f1', airlineCode: 'AA', flightNo: '1', from: 'RDU', to: 'BOS', fromName: 'Raleigh-Durham', toName: 'Boston', dep: dayN(10) + 'T07:05', arr: dayN(10) + 'T09:10' },
+    { type: 'hotel', status: 'confirmed', id: 'h1', name: 'Harbor Hotel', city: 'Boston', checkIn: dayN(10), checkOut: dayN(15) },
+    { type: 'flight', status: 'confirmed', id: 'f2', airlineCode: 'AA', flightNo: '2', from: 'BOS', to: 'RDU', fromName: 'Boston', toName: 'Raleigh-Durham', dep: dayN(15) + 'T18:00', arr: dayN(15) + 'T20:05' },
+    { type: 'flight', status: 'cancelled', id: 'x', airlineCode: 'AA', flightNo: '9', from: 'RDU', to: 'MIA', toName: 'Miami', dep: dayN(3) + 'T07:05' },
+  ];
+  const SESSION = JSON.stringify({ token: 'tok-tom', user: { id: 'OWNER1', name: 'Tom', role: 'owner' }, at: Date.now() });
+  const layerRoute = (answer, log) => ctx => ctx.route('**/aOS/api/layer', route => { log.push(route.request().headers().authorization || ''); return route.fulfill(answer); });
+  {
+    const asked = [];
+    const { ctx, page, problems, requests } = await newPage('light', { seed: { 'aos.seen': JSON.stringify({ weather: '999' }), 'aos.session': SESSION },
+      route: layerRoute({ json: { layers: { travel: { at: Date.now(), data: { bookings } } } } }, asked) });
+    await page.goto(BASE + '/weather/');
+    await ready(page);
+    await step('Trip: signed in, the next trip\'s destination is a place, with its dates, not one of the saved 12', async () => {
+      await page.waitForSelector('#dots .dot', { timeout: 8000 });
+      assert.deepEqual(asked, ['Bearer tok-tom'], 'the layer was read once, signed in');
+      assert.equal((await page.$$('#dots .dot')).length, 2, 'My Location and the trip');
+      await page.click('#hero .w3-place');
+      await page.waitForSelector('#sheetWrap.open #placesList .prow');
+      assert.deepEqual(await texts(page, '#placesList .prow b'), ['My Location', 'Boston']);
+      assert.equal(await text(page, '#placesList .prow:nth-child(2) small'), 'Trip · ' + mon(dayN(10)) + ' – ' + mon(dayN(15)), 'the trip\'s days, first departure to the flight home');
+      assert.equal(await page.$('#placesList .prow:nth-child(2) .prm'), null, 'no remove: it comes from Travel');
+      assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wx.places'))), [], 'not saved');
+      assert.equal(await page.$('.s-sheet'), null, 'no sign-in sheet');
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trip.png') });
+      await page.click('#placesList .prow:nth-child(2) .pmain');
+      await page.waitForFunction(() => document.querySelector('#hero .w3-place').textContent.trim() === 'Boston', null, { timeout: 8000 });
+      assert.equal(await page.$eval('#dots .dot.on', e => e.getAttribute('aria-label')), 'Boston, place 2 of 2');
+      assert.ok(requests.some(r => /geocoding-api\.open-meteo\.com.*name=Boston/.test(r.url)), 'geocoded the way a search is');
+    });
+    await step('Trip: no script errors', async () => assert.deepEqual(problems, []));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, problems, requests } = await newPage('light');
+    await page.goto(BASE + '/weather/');
+    await ready(page);
+    await step('Trip: signed out, Travel is not asked for and nobody is asked to sign in', async () => {
+      await page.click('#hero .w3-place');
+      await page.waitForSelector('#sheetWrap.open #placesList .prow');
+      assert.deepEqual(await texts(page, '#placesList .prow b'), ['My Location']);
+      assert.ok(requests.every(r => !/\/aOS\/api\/layer/.test(r.url)), 'no layer read');
+      assert.equal(await page.$('.s-sheet'), null, 'no sign-in sheet');
+      assert.equal(await page.$('#dots .dot'), null);
+    });
+    await step('Trip, signed out: no script errors', async () => assert.deepEqual(problems, []));
+    await ctx.close();
+  }
+  for (const [what, answer] of [['no trip ahead', { json: { layers: { travel: { at: Date.now(), data: { bookings: bookings.slice(0, 1) } } } } }], ['no Travel layer', { json: { layers: {} } }], ['the session has ended (401)', { status: 401, json: { error: 'signin' } }]]) {
+    const asked = [];
+    const { ctx, page, problems } = await newPage('light', { seed: { 'aos.seen': JSON.stringify({ weather: '999' }), 'aos.session': SESSION }, route: layerRoute(answer, asked) });
+    await page.goto(BASE + '/weather/');
+    await ready(page);
+    await step('Trip: signed in, ' + what + ': no Trip place, no error, no sign-in sheet', async () => {
+      await page.waitForFunction(() => performance.now() > 1500, null, { timeout: 8000 });   // the layer answer has landed by now
+      assert.equal(asked.length, 1, 'the layer was read');
+      await page.click('#hero .w3-place');
+      await page.waitForSelector('#sheetWrap.open #placesList .prow');
+      assert.deepEqual(await texts(page, '#placesList .prow b'), ['My Location']);
+      assert.equal(await page.$('.s-sheet'), null, 'no sign-in sheet');
+      assert.equal(await page.$('#dots .dot'), null);
+      assert.equal(await page.$('.msg'), null, 'no error');
+      assert.deepEqual(problems, []);
+    });
+    await ctx.close();
+  }
 }
 
 await browser.close();

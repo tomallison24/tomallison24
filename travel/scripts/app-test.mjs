@@ -251,6 +251,34 @@ for (const scheme of ['light', 'dark']) {
     const none = await page.evaluate(fl, ['2027-03-04T07:05', '', '2027-03-04T12:45', '']);
     assert.match(none, /DTSTART:20270304T070500/); assert.match(none, /DTEND:20270304T124500/);
   });
+  await step(scheme + ': a flight read from text, no zone: the live leg\'s UTC is the moment counted down to, in the layer too', async () => {
+    await page.click('#tpDone');   // a booking added ahead of the trip's first one renames the trip, so the trip page would close: close it first, open it again after
+    const r = await page.evaluate(() => {
+      const t = window.__travel, pad = n => String(n).padStart(2, '0');
+      const d = new Date(Date.now() + 2 * 3600e3), ymd = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      const b = { id: 'tz-live', type: 'flight', status: 'confirmed', airlineCode: 'F9', flightNo: '77', from: 'DEN', to: 'BOS', dep: ymd + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()), arr: ymd + 'T' + pad((d.getHours() + 3) % 24) + ':' + pad(d.getMinutes()) };
+      const wall = t.startT(b), wallEnd = t.endT(b);                                 // read as this phone's clock: in 2 h
+      const real = wall - 90 * 6e4, realEnd = real + 3 * 3600e3 + 40 * 6e4;       // Denver is behind this phone: it really leaves in 30 min
+      const u = ms => new Date(ms).toISOString().slice(0, 16).replace('T', ' ') + 'Z';   // the status server's "2027-03-04 14:05Z"
+      t.bookings.push(b);
+      const before = document.querySelector('.hero .k') && document.querySelector('.hero .k').textContent;
+      t.keepLive(b, { ok: true, found: true, legs: [{ number: 'F9 77', status: 'Scheduled', cargo: false, departure: { iata: 'DEN', scheduled: { utc: u(real) } }, arrival: { iata: 'BOS', scheduled: { utc: u(realEnd) } } }] });
+      t.render();
+      const hero = document.querySelector('.hero').textContent;
+      const lay = t.calLayer().bookings.find(x => x.id === 'tz-live');
+      const out = { wall, wallEnd, real, realEnd, after: t.startT(b), afterEnd: t.endT(b), lay, hero, before, bare: t.startT({ ...b, id: 'no-leg' }), own: t.startT({ ...b, id: 'no-leg', depIso: new Date(wall + 3600e3).toISOString() }) };
+      t.bookings.pop(); delete t.live['tz-live']; t.render();
+      return out;
+    });
+    assert.equal(r.after, r.real, 'startT is the live instant'); assert.equal(r.afterEnd, r.realEnd, 'endT too');
+    assert.match(r.hero, /F9 77/); assert.match(r.hero, /Next · in (29|30) min/, 'the countdown: ' + r.hero);
+    assert.equal(r.lay.depIso, new Date(r.real).toISOString(), 'the layer carries the instant'); assert.equal(r.lay.arrIso, new Date(r.realEnd).toISOString());
+    assert.equal(r.bare, r.wall, 'no live leg: the wall clock stays as this phone\'s');
+    assert.equal(r.own, r.wall + 3600e3, 'a zone the email gave comes first');
+    assert.match(await page.textContent('.hero'), /UA 1234/, 'the hero is back to the real next flight');
+    await page.click('.trip[data-trip]');
+    await page.waitForSelector('#tripPage:not([hidden]) #tpDone');
+  });
   await step(scheme + ': a deleted booking stays deleted when Gmail is read again', async () => {
     await page.click('#tpDone');
     await page.click('[data-when="upcoming"]');

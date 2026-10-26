@@ -155,8 +155,16 @@
     'Plan your meals with Ipsy first.': 'Сначала спланируйте меню с Ипси.',
     'You probably have': 'Скорее всего, уже есть',
     'Copy the list': 'Скопировать список',
+    'Add to Notes': 'Добавить в Заметки', 'Adding to Notes…': 'Добавляем в Заметки…',
     'Clear ticks': 'Снять отметки',
     'Couldn’t copy on this phone.': 'На этом телефоне скопировать не удалось.',
+    // Add to Notes (the Groceries list in Notes, through the family's Notes Sheet)
+    'Nothing to add: everything is ticked.': 'Добавлять нечего: всё отмечено.',
+    'They’re all in Groceries in Notes already.': 'Всё это уже есть в списке «Продукты» в Заметках.',
+    'Sign in to add the list to Notes.': 'Войдите, чтобы добавить список в Заметки.',
+    'Set up the Notes Sheet in aOS first (Account → Google Sheets).': 'Сначала настройте Таблицу Заметок в aOS (Профиль → Google Таблицы).',
+    'Offline. Try again when you’re back online.': 'Нет сети. Повторите, когда появится подключение.',
+    'Couldn’t reach the Notes Sheet. Try again later.': 'Не удалось связаться с Таблицей Заметок. Повторите позже.',
 
     // ---- Settings and signing in ----
     'Design': 'Дизайн',
@@ -267,6 +275,7 @@
     [/^AI: Unknown until you’re online\.$/, () => 'ИИ: неизвестно, пока нет сети.'],
     // toasts
     [/^Copied (\d+) items?\.$/, m => 'Скопировано: ' + P(+m[1], 'пункт', 'пункта', 'пунктов') + '.'],
+    [/^Added (\d+) items? to Groceries in Notes(?:; (\d+) (?:was|were) there already)?\.$/, m => 'В список «Продукты» в Заметках добавлено: ' + P(+m[1], 'пункт', 'пункта', 'пунктов') + (m[2] ? '; уже там: ' + m[2] : '') + '.'],
     [/^Saved for the family, from (.+)\. The shopping list is ready\.$/, m => 'Сохранено для семьи, с ' + m[1].replace(/\.$/, '') + '. Список покупок готов.'],
     [/^Found (\d+) older plans? in the family’s Google Sheet\.$/, m => 'В семейной Google Таблице найдено: ' + P(+m[1], 'старый план', 'старых плана', 'старых планов') + '.'],
     // Ipsy's changes and questions (ipsy-tools.js): meals as the plan names them

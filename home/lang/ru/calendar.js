@@ -227,6 +227,14 @@
     'Open in News': 'Открыть в Новостях',
     'Open in Drinks': 'Открыть в Напитках',
     'Add to the Family calendar': 'Добавить в семейный календарь',
+    // a Notes reminder ticked off from here (through the family's Notes Sheet)
+    'Mark as done': 'Отметить выполненным', 'Mark as not done': 'Снять отметку',
+    'Done in Notes': 'Выполнено в Заметках', 'Not done in Notes': 'Отметка снята в Заметках',
+    'Sign in to tick it off in Notes.': 'Войдите, чтобы отметить это в Заметках.',
+    'Set up the Notes Sheet in aOS first (Account → Google Sheets).': 'Сначала настройте Таблицу Заметок в aOS (Профиль → Google Таблицы).',
+    'Offline. Try again when you’re back online.': 'Нет сети. Повторите, когда появится подключение.',
+    'That reminder isn’t in the Notes Sheet any more.': 'Этого напоминания больше нет в Таблице Заметок.',
+    'Couldn’t reach the Notes Sheet. Try again later.': 'Не удалось связаться с Таблицей Заметок. Повторите позже.',
     // the editor
     'New Event': 'Новое событие',
     'Edit Event': 'Изменить событие',
