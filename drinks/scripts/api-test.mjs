@@ -14,6 +14,9 @@ import vm from 'vm';
 import { onRequest, clean } from '../../functions/drinks/api/[[route]].js';
 import { onRequest as accounts } from '../../functions/aOS/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
+// a forged session: a signature character changed well before the end (the last ones carry spare bits, so a change
+// there can decode to the same signature)
+const forge = t => t.slice(0, -6) + (t.at(-6) === 'A' ? 'B' : 'A') + t.slice(-5);
 import { fakeSheet } from './fake-sheet.mjs';
 
 vm.runInThisContext(fs.readFileSync(new URL('../calc.js', import.meta.url), 'utf8'));
@@ -81,7 +84,7 @@ const tom = await issue(db, 'OWNER1'), sam = await issue(db, 'KID1');
 
 await test('signed out, or a forged session: asks to sign in', async () => {
   assert.equal((await call('summary?from=2026-10-01&to=2026-10-02')).body.error, 'signin');
-  assert.equal((await call('summary?from=2026-10-01&to=2026-10-02', { token: tom.slice(0, -2) + 'xx' })).status, 401);
+  assert.equal((await call('summary?from=2026-10-01&to=2026-10-02', { token: forge(tom) })).status, 401);
 });
 
 await test('no Sheet set up yet: no days, as if nothing were logged, and Google isn’t asked', async () => {

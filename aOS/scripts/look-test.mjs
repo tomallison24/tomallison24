@@ -330,6 +330,27 @@ for (const scheme of ['light', 'dark']) {
     if (e2.length) pr.push('Web Audio ' + how + ': ' + e2.join('; '));
     await c2.close();
   }
+  // an iPhone that froze on the intro: before any tap, opening aOS doesn't start Web Audio, the intro isn't in the top
+  // layer, and with the page's clocks stopped (no setTimeout) it still fades away by itself
+  {
+    const c3 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mobile/15E148 Safari/604.1' });
+    await c3.addInitScript(() => { try { localStorage.setItem('aos.look', 'grid'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); } catch {}
+      window.__ac = 0; const A = window.AudioContext; window.AudioContext = function (...a) { window.__ac++; return new A(...a); }; });
+    await c3.route('**/*', r => { const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort(); return u.pathname.startsWith('/aOS/api/') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }) : r.continue(); });
+    const p3 = await c3.newPage(); await p3.goto(BASE + '/aOS/'); await p3.waitForTimeout(200);
+    const s = await p3.evaluate(() => { const e = document.getElementById('tronIntro'); return { intro: !!e, ac: window.__ac, top: !!(e && e.matches(':popover-open')) }; });
+    if (!s.intro) pr.push('frozen clocks: no intro');
+    if (s.ac) pr.push('opening aOS started Web Audio before any tap');
+    if (s.top) pr.push('the intro went into the top layer as aOS opened');
+    await c3.close();
+    const c4 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await c4.addInitScript(() => { try { localStorage.setItem('aos.look', 'grid'); localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); } catch {} window.setTimeout = () => 0; });
+    await c4.route('**/*', r => { const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort(); return u.pathname.startsWith('/aOS/api/') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }) : r.continue(); });
+    const p4 = await c4.newPage(); await p4.goto(BASE + '/aOS/'); await p4.waitForTimeout(8000);
+    const gone = await p4.evaluate(() => { const e = document.getElementById('tronIntro'); return !e || getComputedStyle(e).visibility === 'hidden'; });
+    if (!gone) pr.push('with the page\'s clocks stopped, the intro stayed over aOS');
+    await c4.close();
+  }
   report('a Tron phone\'s first open: the intro, then the welcome to its end (no Light or dark); the intro ends whatever Web Audio does', pr);
 }
 

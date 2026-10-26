@@ -360,6 +360,10 @@
       'В Троне помощник — Арес, гонщик из «Трон: Арес»: светящийся костюм и шлем, планшет для чтения, луч, бегущий по визору при поиске, и световой мотоцикл, на котором он проносится по строке на главной aOS',
     'aOS opens with a short Tron intro and its own sound, nothing to tap (Account > Appearance > Tron intro: Sound, Silent or Off)':
       'aOS открывается короткой заставкой Трона со своим звуком, ничего нажимать не нужно («Аккаунт» > «Оформление» > «Заставка Трона»: звук, без звука или выкл.)',
+    'Tron\'s intro always ends, even on a phone that refuses to start its sound (before, that could leave aOS stuck on the intro), and the welcome and update screens now wait for it instead of playing underneath; a Tron welcome no longer offers Light or dark':
+      'Заставка Трона всегда заканчивается, даже на телефоне, который не даёт включить её звук (раньше aOS мог застрять на заставке), а приветствие и экраны обновлений теперь ждут её, а не идут под ней; приветствие в Троне больше не предлагает светлую или тёмную тему',
+    'Tron\'s intro no longer freezes aOS on its opening screen on an iPhone: as aOS opens it no longer starts the sound system (an iPhone can\'t play the sound before a tap anyway; Play the intro in Account still plays it), it stays out of the way of the rest of aOS, and it fades away by itself after seven seconds whatever happens':
+      'Заставка Трона больше не замораживает aOS на первом экране на iPhone: при открытии aOS она больше не запускает звук (до нажатия iPhone всё равно не может его воспроизвести; «Показать заставку» в Аккаунте по-прежнему играет его), не мешает остальному aOS и сама исчезает через семь секунд, что бы ни случилось',
     'Run through setup in Account: language, look and your helper': 'Пройдите настройку в Аккаунте: язык, стиль и помощник',
     'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: language, look, light or dark, and your helper and its name':
       'aOS: «Пройти настройку» в начале Аккаунта проводит по вашим настройкам по одной: язык, стиль, светлая или тёмная тема, помощник и его имя',

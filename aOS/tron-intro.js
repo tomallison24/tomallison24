@@ -5,7 +5,7 @@
 //
 // The sound is made here (Web Audio): a low swell, the cycle's whoosh, a hit as the name locks in, a quick
 // rising arpeggio and a chord, played as the intro starts, with nothing to tap (a phone that won't let a page
-// start sound by itself, before any tap, shows the intro without it). Account > Appearance > Tron intro: Sound
+// start sound by itself, before any tap, shows the intro without it, and an iPhone doesn't try). Account > Appearance > Tron intro: Sound
 // (the default), Silent, or Off (localStorage aos.tron.intro = 'sound' | 'silent' | 'off'). Skip ends it.
 // With Reduce Motion it's a short fade, no streak or flicker.
 //
@@ -51,6 +51,7 @@
   const CSS = `
 #tronIntro{position:fixed;inset:0;z-index:2147483000;margin:0;border:0;padding:0;width:auto;height:auto;max-width:none;max-height:none;background:#030304;color:#F1F3F5;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-family:"Exo 2","Avenir Next",system-ui,sans-serif;transition:opacity .5s ease;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#tronIntro{animation:tiGone .4s 7s forwards}
 #tronIntro.out{opacity:0;pointer-events:none}
 #tronIntro::backdrop{background:transparent}
 #tronIntro .ti-floor{position:absolute;left:-60%;right:-60%;bottom:0;height:46%;transform-origin:bottom;transform:perspective(220px) rotateX(58deg);
@@ -70,7 +71,7 @@
 @keyframes tiTrail{to{transform:scaleX(1)}} @keyframes tiFade{to{opacity:.25}}
 @keyframes tiCycle{to{transform:translateX(calc(100vw + 40px))}}
 @keyframes tiName{0%{opacity:0}12%{opacity:1}20%{opacity:.2}30%{opacity:1}38%{opacity:.5}46%,100%{opacity:1}}
-@keyframes tiLine{to{width:min(220px,60vw)}} @keyframes tiIn{to{opacity:1}}
+@keyframes tiLine{to{width:min(220px,60vw)}} @keyframes tiIn{to{opacity:1}} @keyframes tiGone{to{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion:reduce){#tronIntro .ti-floor,#tronIntro .ti-trail,#tronIntro .ti-cycle{animation:none}#tronIntro .ti-cycle,#tronIntro .ti-trail{display:none}
   #tronIntro .ti-name{animation:tiIn .5s .1s ease forwards}#tronIntro .ti-line{animation:tiLine .01s .3s forwards}#tronIntro .ti-hi{animation:tiIn .5s .3s ease forwards}}`;
 
@@ -89,9 +90,10 @@
       + '<button type="button" class="ti-skip"></button>';
     el.querySelector('.ti-hi').textContent = T('Greetings, programs.');
     el.querySelector('.ti-skip').textContent = T('Skip');
-    el.setAttribute('popover', 'manual');
     root.appendChild(el);   // on <html>, so it covers aOS from its very first paint (the body may not be there yet)
-    try { el.showPopover(); } catch {}   // and in the top layer, over Account (a dialog) when it's played again from there
+    // played again from Account (a dialog): in the top layer, over it. Not as aOS opens: nothing is over aOS then, and
+    // the top layer, before the page has a body, is one more thing an iPhone could stall on.
+    if (force) { el.setAttribute('popover', 'manual'); try { el.showPopover(); } catch {} }
     // Its way out comes first, before anything that could fail: the screen covers all of aOS, so Skip and the clock
     // must be in place whatever the sound does (a phone that refuses Web Audio, say), and a hard stop ends it regardless.
     let played = false, end = performance.now() + (still() ? 1600 : 2700);
@@ -99,9 +101,12 @@
     el.querySelector('.ti-skip').addEventListener('click', close);
     const tick = () => { if (!el) return; if (performance.now() >= end) close(); else setTimeout(tick, 120); };
     setTimeout(tick, 400); setTimeout(close, 6000);
-    // the sound: only while the intro is up (a phone may let the context start on a later tap: not then)
+    // the sound: only while the intro is up (a phone may let the context start on a later tap: not then). As aOS opens,
+    // before any tap, a phone that says so (navigator.userActivation: an iPhone) can't start sound anyway, so Web Audio
+    // isn't touched at all: an iPhone that hung starting it on launch left aOS frozen on this screen.
+    const tapped = !navigator.userActivation || navigator.userActivation.hasBeenActive;
     const tryPlay = () => { if (played || m !== 'sound' || !el) return; try { if (play()) { played = true; el.dataset.sound = 'playing'; end = Math.max(end, performance.now() + 1900); } } catch {} };
-    if (m === 'sound') {
+    if (m === 'sound' && (force || tapped)) {
       try { const a = audio(); if (a) { if (a.state === 'running') tryPlay(); else a.resume().then(tryPlay, () => {}); } } catch {}
     }
   }
