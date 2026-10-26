@@ -743,8 +743,12 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   const ava = JSON.parse(JSON.stringify(AVA)); ava.pet = { food: 70, clean: 90, fun: 70, rest: 90, at: Date.now(), asleep: false, pantry: {}, toys: ['ball'] };
   const { ctx, p, errs } = await phone({ seed: seedOf(ava), motion: 'no-preference' }); const pr = [];
   await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
+  // her first move is left to chance (a walk, a nod or a nibble), so the dice are set for a walk until she takes one:
+  // otherwise a run of nods can outlast the wait
+  await p.evaluate(() => { const r = Math.random; window.__dice = r; Math.random = () => 0.1; });
   await sp(p, () => window.sparkle.openStable());
   const walked = await p.waitForFunction(() => { const u = document.getElementById('uni'); return u && u.classList.contains('walk') && u.style.getPropertyValue('--x') !== '0px'; }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+  await p.evaluate(() => { Math.random = window.__dice; });
   if (!walked) pr.push('her unicorn never walked about the stable');
   else {
     const legs = await sp(p, () => document.querySelector('#uni .l92').getAnimations().length > 0 && document.querySelector('#uni .tl').getAnimations().length > 0);
