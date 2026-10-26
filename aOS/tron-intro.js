@@ -92,16 +92,18 @@
     el.setAttribute('popover', 'manual');
     root.appendChild(el);   // on <html>, so it covers aOS from its very first paint (the body may not be there yet)
     try { el.showPopover(); } catch {}   // and in the top layer, over Account (a dialog) when it's played again from there
+    // Its way out comes first, before anything that could fail: the screen covers all of aOS, so Skip and the clock
+    // must be in place whatever the sound does (a phone that refuses Web Audio, say), and a hard stop ends it regardless.
     let played = false, end = performance.now() + (still() ? 1600 : 2700);
-    const tryPlay = () => { if (played || m !== 'sound') return; if (play()) { played = true; el.dataset.sound = 'playing'; end = Math.max(end, performance.now() + 1900); } };
-    if (m === 'sound') {
-      const a = audio();
-      if (a) { if (a.state === 'running') tryPlay(); else a.resume().then(tryPlay, () => {}); }
-    }
     const close = () => { if (!el) return; const e = el; el = null; e.classList.add('out'); setTimeout(() => { try { e.hidePopover(); } catch {} e.remove(); st.remove(); }, 520); };
     el.querySelector('.ti-skip').addEventListener('click', close);
     const tick = () => { if (!el) return; if (performance.now() >= end) close(); else setTimeout(tick, 120); };
-    setTimeout(tick, 400);
+    setTimeout(tick, 400); setTimeout(close, 6000);
+    // the sound: only while the intro is up (a phone may let the context start on a later tap: not then)
+    const tryPlay = () => { if (played || m !== 'sound' || !el) return; try { if (play()) { played = true; el.dataset.sound = 'playing'; end = Math.max(end, performance.now() + 1900); } } catch {} };
+    if (m === 'sound') {
+      try { const a = audio(); if (a) { if (a.state === 'running') tryPlay(); else a.resume().then(tryPlay, () => {}); } } catch {}
+    }
   }
   window.aosTronIntro = { show, play: () => { const a = audio(); if (a && a.state !== 'running') a.resume().then(play, () => {}); else play(); } };
   show();
