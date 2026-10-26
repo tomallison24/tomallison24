@@ -322,6 +322,14 @@ an iPhone, so notifications are turned on in each one you want them in.
   notes/scripts/push-app-test.mjs` drives the app's side in headless Chromium.
   Neither can test a real iPhone, aOS or Apple.
 
+**Behind Cloudflare Access** (the login wall in front of the site): the Worker asks the site
+whose phone a reminder is (`/aOS/api/state`), and a server can't sign in like a person, so it
+sends the Access service token with that call. Set the repository secrets `ACCESS_CLIENT_ID` and
+`ACCESS_CLIENT_SECRET` (the same ones the release's announcement uses; `calendar/README.md`,
+"Locking the server functions"), and the next deploy (Actions → Notes push) puts them on the
+Worker. Without them, behind Access, new subscriptions are refused as "not-family"; reminders
+already on keep alerting, since the Worker reads the Sheet directly.
+
 ## How it's built
 
 - **No build step.** `index.html` and `app.js` are the whole app (the script in a file of its own, for the page's Content-Security-Policy; with `../home/aisles.js`, the

@@ -175,9 +175,13 @@ async function familyMember(env, token, fetchImpl) {
   if (typeof token !== 'string' || !/^[\w.-]{10,4000}$/.test(token)) return 'signin';
   const site = String(env.SITE || String(env.ALLOWED_ORIGIN || '').split(',')[0] || '').trim().replace(/\/+$/, '');
   if (!/^(https:\/\/[\w.-]+|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/.test(site)) return 'not-family';
+  // Behind Cloudflare Access (the login wall in front of the site), a server can't sign in like a person: the
+  // Worker's own service token (ACCESS_CLIENT_ID and ACCESS_CLIENT_SECRET, Worker secrets set by the deploy
+  // from the repository's) goes along, and Access lets the call through to the site.
+  const access = env.ACCESS_CLIENT_ID && env.ACCESS_CLIENT_SECRET ? { 'CF-Access-Client-Id': env.ACCESS_CLIENT_ID, 'CF-Access-Client-Secret': env.ACCESS_CLIENT_SECRET } : {};
   let r, j = null;
   try {
-    r = await fetchImpl(site + '/aOS/api/state', { headers: { Authorization: 'Bearer ' + token }, signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(10000) : undefined });
+    r = await fetchImpl(site + '/aOS/api/state', { headers: { Authorization: 'Bearer ' + token, ...access }, signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(10000) : undefined });
     j = await r.json();
   } catch { return 'not-family'; }
   const u = j && j.user;
