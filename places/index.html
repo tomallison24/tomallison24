@@ -472,7 +472,7 @@ path.osm-dot{stroke:#FAFCFE}
   background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
   transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
 :root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
-:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px max(4px,env(safe-area-inset-bottom)) 4px;z-index:-1;pointer-events:none;border-radius:30px}
+:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px 4px 4px;z-index:-1;pointer-events:none;border-radius:30px 30px var(--tr-foot) var(--tr-foot);--tr-foot:max(30px,calc(env(safe-area-inset-bottom) + 14px))}
 :root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
 :root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);

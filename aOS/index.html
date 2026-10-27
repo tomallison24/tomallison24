@@ -455,6 +455,10 @@
   html[data-home="arc"] #hmain > .sec.arconly:not([hidden]) { display: flex; }
   html[data-home="arc"] #hmain > .hrest:not([hidden]) { display: grid; }
   html[data-home="arc"] #home { position: relative; z-index: 1; padding-bottom: calc(400px * var(--arck, 1) + env(safe-area-inset-bottom)); }
+  /* Tron's light trail round the screen (:root::before and ::after, <style id="grid">): behind everything on aOS's own
+     screens, and over an open app or sheet, so one trail still runs round the whole screen (an app opened here draws none
+     of its own, ../home/welcome.js: its own sat under the ‹ aOS bar, leaving the top of the screen without one) */
+  html[data-look="grid"]:has(#appwin[aria-hidden="false"], .page.on)::before, html[data-look="grid"]:has(#appwin[aria-hidden="false"], .page.on)::after { z-index: 42; }
   html[data-home="arc"] #home .head { margin-bottom: 14px; }
   /* the date is Home's title here (the word Home gives way, so every app fits above the rings) */
   html[data-home="arc"] #home .head h1 { font-size: 0; line-height: 0; padding-bottom: 14px; }
@@ -830,7 +834,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
   background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
   transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
 :root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
-:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px max(4px,env(safe-area-inset-bottom)) 4px;z-index:-1;pointer-events:none;border-radius:30px}
+:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px 4px 4px;z-index:-1;pointer-events:none;border-radius:30px 30px var(--tr-foot) var(--tr-foot);--tr-foot:max(30px,calc(env(safe-area-inset-bottom) + 14px))}
 :root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
 :root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
