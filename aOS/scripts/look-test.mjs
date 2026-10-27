@@ -348,7 +348,7 @@ for (const scheme of ['light', 'dark']) {
   report('a Tron phone\'s first open: the intro, then the welcome to its end (no Light or dark); the intro ends whatever Web Audio does', pr);
 }
 
-// In Tron, aOS Home's screen trail now and then sends a shot round an app's icon (aOS/tron-shots.js): drawn on its own
+// In Tron, aOS Home's screen trail now and then sends a shot round a section or widget (aOS/tron-shots.js): drawn on its own
 // canvas that never takes a tap, one at a time, and gone again a moment later; never in Vintage, nor with motion reduced
 {
   const pr = [];
@@ -359,7 +359,7 @@ for (const scheme of ['light', 'dark']) {
     const cv = document.getElementById('tronshots'); let lit = 0;
     if (cv) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 3] > 100) lit++; }
     const taps = cv ? getComputedStyle(cv).pointerEvents : null;
-    await new Promise(r => setTimeout(r, 1600));
+    await new Promise(r => setTimeout(r, 2500));
     return { fired, again, lit, taps, still: aosTronShots.running() };
   });
   const tron = await open('dark', { 'aos.look': 'grid', 'aos.tron.intro': 'off' }); pr.push(...tron.errs);
@@ -368,7 +368,7 @@ for (const scheme of ['light', 'dark']) {
   if (t.again) pr.push('a second shot while one was on screen');
   if (!t.lit) pr.push('the shot drew nothing');
   if (t.taps !== 'none') pr.push('the shots\' canvas takes taps: ' + t.taps);
-  if (t.still) pr.push('the shot was still on screen after 1.7 seconds');
+  if (t.still) pr.push('the shot was still on screen after 2.6 seconds');
   await tron.ctx.close();
   const vin = await open('dark', { 'aos.look': 'vintage' }); pr.push(...vin.errs);
   if ((await shoot(vin.p)).fired) pr.push('a shot in Vintage');
@@ -376,7 +376,7 @@ for (const scheme of ['light', 'dark']) {
   const calm = await open('dark', { 'aos.look': 'grid', 'aos.tron.intro': 'off' }, { still: true }); pr.push(...calm.errs);
   if ((await shoot(calm.p)).fired) pr.push('a shot with motion reduced');
   await calm.ctx.close();
-  report('Tron: the screen trail sends one shot at a time round an app\'s icon on Home, and not in Vintage or with motion reduced', pr);
+  report('Tron: the screen trail sends one shot at a time round a section or widget on Home, and not in Vintage or with motion reduced', pr);
 }
 
 await b.close(); server.close();

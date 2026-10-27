@@ -38,7 +38,7 @@ for (const app of pages) {
 // Night Drive: a deep neon-tinted ground in the app's own hue, a striped sunset for the disc, a magenta tube.
 // Tron (Trail frame): a near-black ground with a hint of the app's own hue, the drawing in the night palette's light, and
 // the screen's red light trail around the icon's edge, its light at the top right; the disc and the pill go, so it's calm.
-// The trail runs just inside the corners the phone rounds off (aOS/tron-shots.js traces the same line on aOS Home).
+// The trail runs just inside the corners the phone rounds off.
 // Masks (black and white) are left as they are.
 const SIZE = /viewBox="0 0 (\d+) (\d+)"/;
 // Tron's trail on a 512 icon: 26 in from each edge, its corners rounded at 94

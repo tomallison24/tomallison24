@@ -93,7 +93,7 @@
       } },
 
     { id: 'trail', name: 'Trail frame',
-      about: 'Picked, and now Tron’s icons: the screen’s light trail on every icon, a red trail around the edge with its light at the top right. The drawing stays white; the disc and pill go, so it’s calm. On aOS Home the screen’s trail sends a shot round one now and then.',
+      about: 'Picked, and now Tron’s icons: the screen’s light trail on every icon, a red trail around the edge with its light at the top right. The drawing stays white; the disc and pill go, so it’s calm. On aOS Home the screen’s trail now and then sends a shot round a section or widget.',
       make(svg, ground) {
         const L = layers(svg), id = 't' + (++n);
         // the trail: just inside the corners the phone rounds off; its light at the top right

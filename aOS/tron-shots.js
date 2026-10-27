@@ -1,16 +1,16 @@
 // In Tron, aOS's screen trail (the red light running round the screen's edge: the :root::after of its <style id="grid">)
-// now and then sends a shot to an app's icon: from where its light is, a light cycle's path (straight, with right-angle
-// turns) to one of the nearest icons, then once round the icon's own trail (its Tron icon has the same line,
-// aOS/scripts/make-looks.mjs: 26/512 in from the edge, corners rounded at 94/512), dying out as it goes. One at a time,
-// every 4 to 10 seconds, and only on aOS's own screens (not over an open app or a sheet), with the page in view and
-// motion allowed. Drawn on one canvas over the page, under the bar; it never takes a tap.
+// now and then sends a shot to a box on aOS Home: a section of apps (Family, Every day...) or the Weather or Calendar
+// widget. From where its light is, a light cycle's path (straight, with right-angle turns) to one of the nearest boxes,
+// then once round the box's edge, dying out as it goes. One at a time, every 4 to 10 seconds, and only on aOS's own
+// screens (not over an open app or a sheet), with the page in view and motion allowed. Drawn on one canvas over the
+// page, under the bar; it never takes a tap.
 //   window.aosTronShots: fire() (one now, if it can), running() (a shot is on screen)
 'use strict';
 (() => {
   if (window.aosTronShots) return;
   const root = document.documentElement;
   const RED = '255,42,42', HOT = '255,227,224';
-  const SPEED = 1.15, TAIL = 90, LOOP_MS = 900, WAIT = [4000, 10000];   // px per ms on the way; ms round the icon
+  const SPEED = 1.15, TAIL = 90, LOOP = [900, 1800], WAIT = [4000, 10000];   // px per ms; ms round a box, at least and at most
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   let cv = null, ctx = null, shot = null, timer = 0, last = null;
 
@@ -53,40 +53,42 @@
     return { x, y, side };
   }
 
-  // the app icons on screen now (each app's own icon-*.png; in Tron, icon-grid-*), fully in view and clear of the bar
-  const ICON = /\/icon(?:-[a-z]+)?-\d+\.png/;
-  function icons() {
+  // the boxes it can go to: Home's sections and its two widgets (in Thumb arc, the two glance cards and the list), on
+  // screen now, fully in view and clear of the bar
+  const BOXES = '.wid, .hcat, .hglance > button, .hgroup';
+  function boxes() {
     const tab = document.querySelector('.tab:not([hidden])') || document;
     const bar = document.querySelector('.bar'), floor = bar ? bar.getBoundingClientRect().top - 6 : innerHeight - 90;
-    return [...tab.querySelectorAll('img')].filter(img => ICON.test(img.getAttribute('src') || '')).map(img => ({ img, r: img.getBoundingClientRect() }))
-      .filter(({ r }) => r.width >= 28 && r.top >= 40 && r.left >= 8 && r.right <= innerWidth - 8 && r.bottom <= floor);
+    return [...tab.querySelectorAll(BOXES)].map(el => ({ el, r: el.getBoundingClientRect() }))
+      .filter(({ r }) => r.width >= 40 && r.height >= 30 && r.top >= 40 && r.left >= 4 && r.right <= innerWidth - 4 && r.bottom <= floor);
   }
+  const corner = (el, r) => Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0, r.width / 2, r.height / 2);
 
-  // an icon's trail as points, clockwise, starting nearest p
-  function ring(r, p) {
-    const w = r.width, ins = w * 26 / 512, rad = w * 94 / 512;
-    const x0 = r.left + ins, y0 = r.top + ins, x1 = r.right - ins, y1 = r.bottom - ins;
-    const pts = [], arc = (cx, cy, a0) => { for (let i = 0; i <= 8; i++) { const a = (a0 + i * 90 / 8) * Math.PI / 180; pts.push([cx + rad * Math.cos(a), cy + rad * Math.sin(a)]); } };
-    arc(x1 - rad, y0 + rad, -90); arc(x1 - rad, y1 - rad, 0); arc(x0 + rad, y1 - rad, 90); arc(x0 + rad, y0 + rad, 180);
+  // a box's edge as points, clockwise, starting nearest p
+  function ring(r, rad, p) {
+    const x0 = r.left + 0.75, y0 = r.top + 0.75, x1 = r.right - 0.75, y1 = r.bottom - 0.75, R = Math.max(0, rad - 0.75);
+    const pts = [], arc = (cx, cy, a0) => { for (let i = 0; i <= 10; i++) { const a = (a0 + i * 9) * Math.PI / 180; pts.push([cx + R * Math.cos(a), cy + R * Math.sin(a)]); } };
+    arc(x1 - R, y0 + R, -90); arc(x1 - R, y1 - R, 0); arc(x0 + R, y1 - R, 90); arc(x0 + R, y0 + R, 180);
     let k = 0, best = Infinity;
     pts.forEach(([x, y], i) => { const d = (x - p[0]) ** 2 + (y - p[1]) ** 2; if (d < best) { best = d; k = i; } });
     return pts.slice(k).concat(pts.slice(0, k + 1));
   }
 
-  // from the trail's light to the icon: out from the edge, one turn, in to the side of the icon facing it
-  function route(h, r) {
-    const w = r.width, ins = w * 26 / 512, mid = [(r.left + r.right) / 2, (r.top + r.bottom) / 2], gap = 14;
+  // from the trail's light to the box: straight in to the side facing it when it's level with it; else out from the
+  // edge halfway, one turn, and in
+  function route(h, r, rad) {
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     let e, pts;
     if (h.side === 'l' || h.side === 'r') {
-      const fromLeft = h.side === 'l' ? h.x < r.left : h.x < mid[0];
-      e = [fromLeft ? r.left + ins : r.right - ins, mid[1]];
-      const mx = e[0] + (fromLeft ? -gap : gap);
-      pts = [[h.x, h.y], [mx, h.y], [mx, e[1]], e];
+      const fromLeft = h.side === 'l';
+      e = [fromLeft ? r.left : r.right, clamp(h.y, r.top + rad, r.bottom - rad)];
+      const mx = (h.x + e[0]) / 2;
+      pts = Math.abs(e[1] - h.y) < 1 ? [[h.x, h.y], e] : [[h.x, h.y], [mx, h.y], [mx, e[1]], e];
     } else {
-      const fromTop = h.side === 't' ? h.y < r.top : h.y < mid[1];
-      e = [mid[0], fromTop ? r.top + ins : r.bottom - ins];
-      const my = e[1] + (fromTop ? -gap : gap);
-      pts = [[h.x, h.y], [h.x, my], [e[0], my], e];
+      const fromTop = h.side === 't';
+      e = [clamp(h.x, r.left + rad, r.right - rad), fromTop ? r.top : r.bottom];
+      const my = (h.y + e[1]) / 2;
+      pts = Math.abs(e[0] - h.x) < 1 ? [[h.x, h.y], e] : [[h.x, h.y], [h.x, my], [e[0], my], e];
     }
     return { pts, e };
   }
@@ -102,16 +104,17 @@
 
   function fire() {
     if (shot || !on()) return false;
-    const list = icons(); if (!list.length) return false;
+    const list = boxes(); if (!list.length) return false;
     const h = head();
-    // one of the three nearest icons (not the last one shot at, when there's another), so the paths stay short
-    const near = list.map(o => ({ ...o, d: Math.hypot((o.r.left + o.r.right) / 2 - h.x, (o.r.top + o.r.bottom) / 2 - h.y) }))
-      .sort((a, b) => a.d - b.d).filter(o => o.img !== last || list.length === 1).slice(0, 3);
+    // one of the two nearest boxes (not the last one shot at, when there's another), so the paths stay short
+    const gapTo = r => Math.hypot(Math.max(r.left - h.x, 0, h.x - r.right), Math.max(r.top - h.y, 0, h.y - r.bottom));
+    const near = list.map(o => ({ ...o, d: gapTo(o.r) })).sort((a, b) => a.d - b.d).filter(o => o.el !== last || list.length === 1).slice(0, 2);
     const pick = near[Math.floor(Math.random() * near.length)]; if (!pick) return false;
-    last = pick.img;
+    last = pick.el;
     canvas();
-    const way = route(h, pick.r), wl = lens(way.pts), loop = ring(pick.r, way.e), ll = lens(loop);
-    shot = { way: way.pts, wl, loop, ll, top: pick.r.top, img: pick.img, t0: performance.now(), wayMs: wl[wl.length - 1] / SPEED };
+    const rad = corner(pick.el, pick.r), way = route(h, pick.r, rad), wl = lens(way.pts), loop = ring(pick.r, rad, way.e), ll = lens(loop);
+    const loopMs = Math.max(LOOP[0], Math.min(LOOP[1], ll[ll.length - 1] / SPEED));
+    shot = { way: way.pts, wl, loop, ll, loopMs, top: pick.r.top, el: pick.el, t0: performance.now(), wayMs: wl[wl.length - 1] / SPEED };
     requestAnimationFrame(draw);
     return true;
   }
@@ -125,7 +128,7 @@
   function draw() {
     if (!shot) return;
     ctx.clearRect(0, 0, innerWidth, innerHeight);
-    if (!on() || Math.abs(shot.img.getBoundingClientRect().top - shot.top) > 2) return end();   // scrolled, or something opened over it
+    if (!on() || !shot.el.isConnected || Math.abs(shot.el.getBoundingClientRect().top - shot.top) > 2) return end();   // scrolled, or something opened over it
     const t = performance.now() - shot.t0;
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowColor = `rgb(${RED})`; ctx.shadowBlur = 10;
     let tip, k = 1;
@@ -133,11 +136,11 @@
       const s = t * SPEED, Lw = shot.wl;
       for (let i = 0; i < 6; i++) line(piece(shot.way, Lw, Math.max(0, s - TAIL * (1 - i / 6)), Math.max(0, s - TAIL * (1 - (i + 1) / 6))), (i + 1) / 6, 2);
       tip = at(shot.way, Lw, s);
-    } else {   // round the icon once, dying out
-      const f = Math.min(1, (t - shot.wayMs) / LOOP_MS), Ll = shot.ll, total = Ll[Ll.length - 1];
+    } else {   // round the box once, dying out
+      const f = Math.min(1, (t - shot.wayMs) / shot.loopMs), Ll = shot.ll, total = Ll[Ll.length - 1];
       const s = f * total, fade = Math.pow(1 - f, 1.4);
-      line(piece(shot.loop, Ll, Math.max(0, s - total * 0.55), s), 0.5 * fade, 2);
-      line(piece(shot.loop, Ll, Math.max(0, s - TAIL * 0.6), s), fade, 2.4);
+      line(piece(shot.loop, Ll, Math.max(0, s - Math.min(total * 0.5, 280)), s), 0.45 * fade, 2);
+      line(piece(shot.loop, Ll, Math.max(0, s - TAIL * 1.2), s), fade, 2.4);
       tip = at(shot.loop, Ll, s); k = fade;
       if (f >= 1) return end();
     }
