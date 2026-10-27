@@ -3,7 +3,8 @@
 //   repeating it and adding one, a "can't sync" email, a newsletter that isn't one), folds them
 //   in with what it had, and sends them to aOS through the real functions/money/api route (on an
 //   in-memory Workers KV with real sessions);
-// - This month: the number, the usual, where you could save, the categories and a category's list;
+// - This month: the number and its meter, where you could save and the categories (folded until
+//   opened) and a category's list; Trends (week by week, a week's categories, the month day by day);
 //   the "can't sync" card and Fixed it (with Undo); the months before;
 // - Transactions: a day at a time, search across months, a transaction's sheet;
 // - Cards and rewards: spending and cash back per card, the rewards chart and its table, the better
@@ -229,14 +230,50 @@ await test('Ipsy’s daily check: a misreading corrected from the email, one it 
   assert.match(await p.locator('#txBody').innerText(), /You kept the app’s reading/);
   await p.click('#txSheet .okbtn');
 });
-await test('This month: the number, the usual, where to save, the categories', async () => {
+await test('This month: the number and its meter; where to save and the categories folded until opened, and kept open', async () => {
   await p.waitForSelector('#main .sum');
-  const t = await mainText(p);
-  assert.match(t, /spent/); assert.match(t, /Usual:/);
-  assert.match(t, /Where you could save/i);
-  assert.match(t, /Online shopping on\s+Rocket Credit Card \(3%\)/, 'the better card for Amazon');
-  assert.match(t, /By category/i); assert.match(t, /Child Care/); assert.match(t, /Mortgage/);
+  let t = await mainText(p);
+  assert.match(t, /spent/); assert.match(t, /Usual\s+\$/); assert.ok(await p.locator('#main .sum .meter .mark').count(), 'the usual, marked on the meter');
+  assert.match(t, /Where you could save/i); assert.match(t, /By category/i);
+  assert.doesNotMatch(t, /Online shopping/, 'folded'); assert.doesNotMatch(t, /Mortgage/, 'folded');
+  assert.ok(await p.locator('#main details[data-sec="cats"] .strip i').count() >= 3, 'the categories’ shares, folded');
+  await snap(p, 'month-folded');
+  await p.click('#main details[data-sec="save"] summary');
+  await p.click('#main details[data-sec="cats"] summary');
+  t = await mainText(p);
+  assert.match(t, /Online shopping\s+on\s+Rocket Credit Card \(3%\)/, 'the better card for Amazon');
+  assert.match(t, /Child Care/); assert.match(t, /Mortgage/);
+  assert.ok(await p.locator('#main [data-cat="Child Care"] .bar u').count(), 'the usual, marked on its bar');
+  await p.waitForTimeout(450);
   await snap(p, 'month');
+  await p.evaluate(() => window.__money.render());
+  assert.equal(await p.locator('#main details.sec[open]').count(), 2, 'kept open');
+});
+await test('Trends: tap the number; week by week (tap a week, its categories, its charges), and the month day by day', async () => {
+  await p.click('#main #sumBtn');
+  await p.waitForSelector('#trSheet:not([hidden])');
+  const t = await p.locator('#trBody').innerText();
+  assert.match(t, /Spent/); assert.match(t, /Usual a month/); assert.match(t, /Week by week/i); assert.match(t, /Through the month/i);
+  assert.equal(await p.locator('#trBody [data-wk]').count(), 8, 'eight weeks');
+  assert.equal(await p.locator('#trBody [data-wk][aria-pressed="true"]').getAttribute('data-wk'), '7', 'this week first');
+  await snap(p, 'trends');
+  // the week with the most in it
+  const most = await p.evaluate(() => { const w = [...document.querySelectorAll('#trBody [data-wk]')].map(r => +r.getAttribute('aria-label').replace(/.*\$|,/g, '')); return w.indexOf(Math.max(...w)); });
+  await p.click('#trBody [data-wk="' + most + '"]', { force: true });
+  assert.equal(await p.locator('#trBody [data-wk][aria-pressed="true"]').getAttribute('data-wk'), String(most));
+  assert.ok(await p.locator('#trBody .wcat').count() >= 1, 'where that week went');
+  await p.locator('#trBody .wcat').first().click();
+  await p.waitForSelector('#txSheet:not([hidden])');
+  assert.ok(await p.locator('#txBody [data-tx]').count() >= 1);
+  await p.click('#txSheet .okbtn');
+  // a finger on the day-by-day chart reads off that day
+  const box = await p.locator('#runSvg').boundingBox();
+  await p.mouse.click(box.x + box.width * 0.2, box.y + box.height / 2);
+  assert.match(await p.locator('#runRead').innerText(), /^By \w{3} \d+: \$/);
+  await p.locator('#trBody').evaluate(b => { b.scrollTop = 1e4; });
+  await snap(p, 'trends-month');
+  await p.click('#trSheet .okbtn');
+  assert.ok(await p.locator('#trSheet').isHidden());
 });
 await test('the can’t-sync card: Rocket Bank, Fix in Monarch, and Fixed it with Undo', async () => {
   const card = p.locator('#main .alert');
@@ -358,6 +395,8 @@ await test('Ipsy’s ideas: once a month on its own; Accept, No thanks, asked ag
   assert.equal(ideasCalls.length, 1, 'once this month, on its own');
   assert.ok(ideasCalls[0].includes('Costco') && !ideasCalls[0].includes('9876'), 'categories and merchants; no card');
   await view(p, 'month');
+  assert.match(await mainText(p), /Ipsy’s ideas for your categories\s+2/i, 'folded, with how many');
+  await p.click('#main details[data-sec="ideas"] summary');
   const card = await mainText(p);
   assert.match(card, /Ipsy’s ideas for your categories/i); assert.match(card, /Move\s+Costco\s+to\s+Groceries/); assert.match(card, /Merge\s+Auto Maintenance\s+into\s+Car/);
   await snap(p, 'ideas');

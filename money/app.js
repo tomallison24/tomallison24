@@ -7,8 +7,9 @@
 //   every one), and a bank it can no longer sync. parse.js reads those emails;
 //   calc.js does the sums.
 // - One page, four views from the pill at the bottom (as Home's views):
-//   This month (spent, the pace, against the usual, where you could save, by
-//   category), Transactions (search them all), Cards and rewards (spending per
+//   This month (spent against the usual, with a meter and Trends behind it: week by
+//   week and day by day; where you could save and by category, folded until opened),
+//   Transactions (search them all), Cards and rewards (spending per
 //   card, rewards a month as a chart, a better card for a kind of spend) and
 //   Recurring (what repeats, and what it costs a year). A bank Monarch can't
 //   sync shows as a card at the top of This month until it syncs again or you
@@ -64,7 +65,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
-  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off' };
+  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open' };
   const FIRST_SCAN = 'newer_than:5y';   // as much as Money keeps (calc.js, KEEP_MONTHS)
   const API = '../money/api/';
 
@@ -239,50 +240,184 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<div class="chips"><a class="chip" href="https://app.monarch.com/settings/institutions" target="_blank" rel="noopener">' + I.ext + 'Fix in Monarch</a>'
       + '<button class="chip quiet" type="button" data-fixed="' + esc(a.id) + '">' + I.tick + 'Fixed it</button></div></div></div>').join('');
   }
+  // This month: the one number (tap it for the trends sheet), then each section folded away until you open it.
   function monthHtml() {
     const ym = st.ym, T = st.T, m = C.month(T, ym), cmp = C.compare(T, ym), pace = C.pace(T, ym, today()), min = C.minFor(T, ym, 'out');
+    const spent = cmp && cmp.likeForLike ? cmp.spent : m.spent;
     let delta = '';
     if (cmp && cmp.avg > 0) {
       const d = cmp.diff, pct = Math.round(Math.abs(d) / cmp.avg * 100);
       delta = '<span class="delta ' + (d > 0 ? 'more' : 'less') + '">' + (d > 0 ? '▲ ' : '▼ ') + esc(usdR(Math.abs(d))) + ' (' + pct + '%) <span>' + (d > 0 ? 'more than usual' : 'less than usual') + '</span></span>';
     }
-    const split = m.income > 0 ? '<span class="split"><span>Income <b>' + esc(usdR(m.income)) + '</b></span><span>Left over <b>' + esc(usdR(m.income - m.spent)) + '</b></span></span>' : '';
-    const usual = cmp ? '<span class="line">' + 'Usual: <b>' + esc(usdR(cmp.avg)) + '</b>' + ' <span>a month, ' + esc(cmp.months.slice().reverse().map(monthShort).join(', ')) + '</span>'
-      + (cmp.likeForLike ? '<span>. Counting charges over ' + esc(usdR(cmp.min)) + ' only, on both sides: Monarch emailed only those then.</span>' : '') + '</span>' : '';
-    const sum = '<div class="sum" role="group" aria-label="Spent in ' + esc(monthName(ym)) + '"><span class="big"><b>' + esc(usdR(cmp && cmp.likeForLike ? cmp.spent : m.spent)) + '</b><span>spent' + (cmp && cmp.likeForLike ? ' <span>(over ' + esc(usdR(cmp.min)) + ')</span>' : '') + '</span></span>'
-      + (delta ? delta : '') + usual
-      + (pace ? '<span class="line">At this rate: <b>' + esc(usdR(pace)) + '</b> <span>by the end of the month</span></span>' : '')
-      + split + '</div>';
+    // the meter: spent so far, the usual as a mark, and where this pace ends the month as a paler run
+    let meter = '';
+    if (cmp || pace) {
+      const scale = Math.max(spent, cmp ? cmp.avg : 0, pace || 0) * 1.04 || 1, pc = v => (Math.min(v, scale) / scale * 100).toFixed(1);
+      meter = '<span class="meter" aria-hidden="true">' + (pace > spent ? '<i class="pace" style="width:' + pc(pace) + '%"></i>' : '') + '<i class="fill' + (cmp && spent > cmp.avg ? ' over' : '') + '" style="width:' + pc(spent) + '%"></i>'
+        + (cmp ? '<i class="mark" style="left:' + pc(cmp.avg) + '%"></i>' : '') + '</span>'
+        + '<span class="mkey">' + (cmp ? '<span><i class="k-mark"></i>Usual <b>' + esc(usdR(cmp.avg)) + '</b></span>' : '') + (pace ? '<span><i class="k-pace"></i>On pace for <b>' + esc(usdR(pace)) + '</b></span>' : '') + '</span>';
+    }
+    const sum = '<button class="sum" type="button" id="sumBtn" aria-label="' + esc(usdR(spent) + ' spent in ' + monthName(ym) + (cmp ? ', usual ' + usdR(cmp.avg) : '') + (pace ? ', on pace for ' + usdR(pace) : '') + '. Open trends') + '">'
+      + '<span class="big"><b>' + esc(usdR(spent)) + '</b><span>spent' + (cmp && cmp.likeForLike ? ' <span>(over ' + esc(usdR(cmp.min)) + ')</span>' : '') + '</span><span class="more">' + I.trend + 'Trends' + I.chevR + '</span></span>'
+      + delta + meter + '</button>';
     const tips = C.tips(T, ym, today(), settings());
-    const tipsHtml = tips.length ? '<p class="sechead"><span>Where you could save</span></p><div class="rgroup">' + tips.map(tipHtml).join('') + '</div>' : '';
+    const save = tips.filter(t => t.kind === 'card').reduce((a, t) => a + t.more, 0);
+    const tipsHtml = tips.length ? section('save', 'Where you could save', I.trend, '<span class="badge">' + tips.length + '</span>' + (save >= 1 ? '<span class="sv">+' + esc(usdR(save)) + ' <span>back</span></span>' : ''),
+      '<div class="rgroup">' + tips.map(t => tipHtml(t, m)).join('') + '</div>') : '';
     const top = Math.max(1, ...m.cats.map(c => c.total)), avgOf = name => cmp && (cmp.cats.find(c => c.name === name) || {}).avg;
-    const cats = m.cats.length ? '<p class="sechead"><span>By category</span><span>' + esc(plural(m.out, 'charge')) + '</span></p><div class="rgroup">' + m.cats.map(c => {
+    const k = i => i < 6 ? String(i) : 'x';
+    // the summary's strip: each category's share of the month, in the same colours as its row
+    const strip = '<span class="strip" aria-hidden="true">' + m.cats.map((c, i) => '<i data-k="' + k(i) + '" style="flex:' + c.total.toFixed(2) + '"></i>').join('') + '</span>';
+    const cats = m.cats.length ? section('cats', 'By category', I.list, '<span class="cnt">' + esc(plural(m.out, 'charge')) + '</span>', '<div class="rgroup">' + m.cats.map((c, i) => {
       const a = avgOf(c.name);
-      return '<button class="row" type="button" data-cat="' + esc(c.name) + '"><span class="em" aria-hidden="true">' + esc(c.emoji || '•') + '</span><span class="rt"><b>' + no(c.name) + '</b><small><span>' + esc(plural(c.n, 'charge')) + '</span>'
-        + (a ? ' · <span>usual</span> ' + esc(usdR(a)) : '') + '</small><span class="bar" aria-hidden="true"><i style="width:' + (c.total / top * 100).toFixed(1) + '%"></i></span></span><span class="rv">' + esc(usdR(c.total)) + '</span></button>';
-    }).join('') + '</div>' : '<div class="empty"><strong>Nothing this month yet</strong>Monarch hasn’t emailed anything for ' + esc(monthName(ym)) + '.</div>';
+      return '<button class="row" type="button" data-cat="' + esc(c.name) + '"' + (a ? ' aria-label="' + esc(c.name + ': ' + usdR(c.total) + ', usual ' + usdR(a)) + '"' : '') + '><span class="em" aria-hidden="true" data-k="' + k(i) + '">' + esc(c.emoji || '•') + '</span><span class="rt"><b>' + no(c.name) + '</b><small><span>' + esc(plural(c.n, 'charge')) + '</span>'
+        + (a ? ' · <span>usual</span> ' + esc(usdR(a)) : '') + '</small><span class="bar" aria-hidden="true"><i data-k="' + k(i) + '" style="width:' + (c.total / top * 100).toFixed(1) + '%"></i>' + (a ? '<u style="left:' + Math.min(100, a / top * 100).toFixed(1) + '%"></u>' : '') + '</span></span><span class="rv">' + esc(usdR(c.total)) + '</span></button>';
+    }).join('') + '</div>', strip) : '<div class="empty"><strong>Nothing this month yet</strong>Monarch hasn’t emailed anything for ' + esc(monthName(ym)) + '.</div>';
     const cover = min >= 20 ? '<p class="note">Monarch emailed only charges over ' + esc(usdR(min)) + ' in ' + esc(monthName(ym)) + ', so smaller ones aren’t here.</p>' : '';
     const fixedN = D.tx.filter(x => C.ymOf(x.date) === ym && x.check && x.check.s === 'fixed').length, flagN = D.tx.filter(x => C.ymOf(x.date) === ym && x.check && x.check.s === 'flag').length;
     const checked = fixedN || flagN ? '<button class="tip row rgroup" type="button" data-act="checked"><span class="em" aria-hidden="true">' + I.tick + '</span><span class="tt"><b>Ipsy’s check</b> '
       + (fixedN ? '<span>' + esc(plural(fixedN, 'correction')) + '</span>' : '') + (fixedN && flagN ? ', ' : '') + (flagN ? '<span>' + esc(flagN + ' to look at') + '</span>' : '') + '</span><span class="tv">' + I.chevR + '</span></button>' : '';
     return alertsHtml() + navRow() + sum + checked + (ym === curYm() ? ideasHtml() : '') + tipsHtml + cats + cover;
   }
+  // A section of This month, folded away until it's opened (and kept open or shut on this phone).
+  const secOpen = id => { const o = ls.json(K.open, {}); return !!o[id]; };
+  const section = (id, title, icon, aside, body, under) => '<details class="sec" data-sec="' + id + '"' + (secOpen(id) ? ' open' : '') + '><summary><span class="si" aria-hidden="true">' + icon + '</span><span class="st">' + esc(title) + '</span>'
+    + aside + '<span class="chev" aria-hidden="true">' + I.chevR + '</span>' + (under || '') + '</summary>' + body + '</details>';
+  main.addEventListener('toggle', e => {
+    const d = e.target; if (!d.matches || !d.matches('details.sec')) return;
+    const o = ls.json(K.open, {}); if (!!o[d.dataset.sec] === d.open) return;
+    o[d.dataset.sec] = d.open; ls.set(K.open, JSON.stringify(o));
+  }, true);
   // Ipsy's ideas for the categories (Settings > Categories, and once a month): Accept or No thanks.
   const ideaWhat = i => i.kind === 'merge' ? '<span>Merge</span> ' + no(i.from) + ' <span>into</span> ' + no(i.to) : '<span>Move</span> ' + no(i.merchant) + ' <span>to</span> ' + no(i.to);
   function ideasHtml() {
     const list = (settings().ideas || {}).list || [];
     if (!list.length) return '';
-    return '<p class="sechead"><span>Ipsy’s ideas for your categories</span></p><div class="rgroup">' + list.map(i => '<div class="tip"><span class="em" aria-hidden="true">💡</span><span class="tt"><b>' + ideaWhat(i) + '</b> '
+    return section('ideas', 'Ipsy’s ideas for your categories', '<span>💡</span>', '<span class="badge">' + list.length + '</span>', '<div class="rgroup">' + list.map(i => '<div class="tip"><span class="em" aria-hidden="true">💡</span><span class="tt"><b>' + ideaWhat(i) + '</b> '
       + (i.why ? '<span translate="no">' + esc(i.why) + '</span>' : '')
-      + '<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="chip" type="button" data-idea-ok="' + esc(i.id) + '">' + I.tick + 'Accept</button><button class="chip quiet" type="button" data-idea-no="' + esc(i.id) + '">No thanks</button></span></span></div>').join('') + '</div>';
+      + '<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="chip" type="button" data-idea-ok="' + esc(i.id) + '">' + I.tick + 'Accept</button><button class="chip quiet" type="button" data-idea-no="' + esc(i.id) + '">No thanks</button></span></span></div>').join('') + '</div>');
   }
-  function tipHtml(t) {
-    if (t.kind === 'spike') return '<div class="tip"><span class="em" aria-hidden="true">' + esc(t.emoji || '•') + '</span><span class="tt"><b>' + no(t.cat) + '</b> <span>is well over its usual:</span> ' + esc(usdR(t.now)) + ' <span>against</span> ' + esc(usdR(t.avg)) + '<span>.</span></span><span class="tv">+' + esc(usdR(t.diff)) + '</span></div>';
-    if (t.kind === 'card') return '<div class="tip"><span class="em" aria-hidden="true">' + I.card + '</span><span class="tt"><b>' + esc(KIND[t.kindOf]) + '</b> <span>on</span> ' + no(t.from) + ' (' + t.fromRate + '%): <span>use</span> ' + no(t.to) + ' (' + t.rate + '%) <span>instead. The last 3 months:</span> ' + esc(usdR(t.spent)) + '<span>.</span></span><span class="tv save">+' + esc(usd2(t.more)) + '<small>back</small></span></div>';
-    if (t.kind === 'merchant') return '<div class="tip"><span class="em" aria-hidden="true">' + I.store + '</span><span class="tt"><b>' + no(t.merchant) + '</b> <span>is where the most went this month:</span> <span>' + esc(plural(t.n, 'charge')) + '</span><span>.</span></span><span class="tv">' + esc(usdR(t.total)) + '</span></div>';
-    if (t.kind === 'recurring') return '<button class="tip row" type="button" data-view="repeats"><span class="em" aria-hidden="true">' + I.repeat + '</span><span class="tt"><b>' + esc(plural(t.n, 'recurring charge')) + '</b> <span>add up to this a year. Any to cut?</span></span><span class="tv">' + esc(usdR(t.total)) + '<small>a year</small></span></button>';
+  // One way to save, drawn more than written: a category against its usual as two bars, a merchant's share of the month.
+  function tipHtml(t, m) {
+    const pair = (a, b, cls) => '<span class="cmp" aria-hidden="true"><i class="' + cls + '" style="width:' + (a / Math.max(a, b, 1) * 100).toFixed(1) + '%"></i><i class="was" style="width:' + (b / Math.max(a, b, 1) * 100).toFixed(1) + '%"></i></span>';
+    if (t.kind === 'spike') return '<div class="tip" role="group" aria-label="' + esc(t.cat + ' is well over its usual: ' + usdR(t.now) + ' against ' + usdR(t.avg)) + '"><span class="em" aria-hidden="true">' + esc(t.emoji || '•') + '</span><span class="tt"><b>' + no(t.cat) + '</b> <small><span>this month</span> ' + esc(usdR(t.now)) + ' · <span>usual</span> ' + esc(usdR(t.avg)) + '</small>' + pair(t.now, t.avg, 'now') + '</span><span class="tv">+' + esc(usdR(t.diff)) + '<small>over</small></span></div>';
+    if (t.kind === 'card') return '<div class="tip"><span class="em" aria-hidden="true">' + I.card + '</span><span class="tt"><b>' + esc(KIND[t.kindOf]) + '</b> <small><span>on</span> ' + no(t.from) + ' (' + t.fromRate + '%): <span>use</span> ' + no(t.to) + ' (' + t.rate + '%) <span>instead, on the last 3 months’</span> ' + esc(usdR(t.spent)) + '</small></span><span class="tv save">+' + esc(usd2(t.more)) + '<small>back</small></span></div>';
+    if (t.kind === 'merchant') { const share = m && m.spent ? Math.round(t.total / m.spent * 100) : 0; return '<div class="tip"><span class="em" aria-hidden="true">' + I.store + '</span><span class="tt"><b>' + no(t.merchant) + '</b> <small><span>where the most went:</span> ' + esc(plural(t.n, 'charge')) + (share ? ', ' + share + '% <span>of the month</span>' : '') + '</small>' + (share ? '<span class="cmp" aria-hidden="true"><i class="now" style="width:' + share + '%"></i></span>' : '') + '</span><span class="tv">' + esc(usdR(t.total)) + '</span></div>'; }
+    if (t.kind === 'recurring') return '<button class="tip row" type="button" data-view="repeats"><span class="em" aria-hidden="true">' + I.repeat + '</span><span class="tt"><b>' + esc(plural(t.n, 'recurring charge')) + '</b> <small>Any to cut?</small></span><span class="tv">' + esc(usdR(t.total)) + '<small>a year</small></span></button>';
     return '';
   }
+  // ---------------------------------------------------------------------
+  // Trends (tap This month's number): the month in four numbers, week by week against a usual week
+  // (tap a week for where it went), and the month day by day against the usual month.
+  // ---------------------------------------------------------------------
+  const tr = { sel: null, day: null, R: null };
+  // Weeks start on Sunday, unless Monday was picked in Calendar (as Drinks).
+  const weekStart = () => { const c = ls.json('allison-calendar-v1-settings', {}); return c.weekStart === 1 && c.weekStartPicked ? 1 : 0; };
+  const addDays = (s, n) => { const d = noon(s); d.setDate(d.getDate() + n); return ymd(d); };
+  function trData() {
+    const ym = st.ym, T = st.T, cur = ym === curYm(), cmp = C.compare(T, ym), min = cmp ? cmp.min : C.minFor(T, ym, 'out');
+    const days = C.daysIn(ym), upTo = cur ? +today().slice(8, 10) : days;
+    const weeks = C.weeks(T, cur ? today() : ym + '-' + pad(days), 8, weekStart(), min);
+    return { ym, cur, cmp, min, days, upTo, weeks, m: C.month(T, ym, min), all: C.month(T, ym), pace: C.pace(T, ym, today()),
+      usualWeek: cmp ? cmp.avg * 12 / 52 : null, run: C.byDay(T, ym, min), usual: cmp ? C.usualByDay(T, cmp.months, days, min) : null };
+  }
+  function openTrends() {
+    view(); tr.sel = null; tr.day = null;
+    $('trLbl').textContent = monthName(st.ym);
+    renderTrends(); openSheet('trSheet');
+  }
+  function renderTrends() {
+    const R = tr.R = trData(), cmp = R.cmp, spent = R.m.spent;
+    const kpi = (l, v, d, cls) => '<div class="kpi"><span class="kl">' + l + '</span><span class="kv">' + v + '</span><span class="kd' + (cls ? ' ' + cls : '') + '">' + (d || '&nbsp;') + '</span></div>';
+    const pct = cmp && cmp.avg > 0 ? Math.round((spent - cmp.avg) / cmp.avg * 100) : null;
+    const kpis = '<div class="kpis">'
+      + kpi('Spent', esc(usdR(spent)), pct == null ? esc(plural(R.m.out, 'charge')) : (pct > 0 ? '▲ ' : '▼ ') + Math.abs(pct) + '% <span>against the usual</span>', pct == null ? '' : pct > 0 ? 'bad' : 'good')
+      + kpi('Usual a month', cmp ? esc(usdR(cmp.avg)) : '—', cmp ? esc(cmp.months.slice().reverse().map(monthShort).join(', ')) : 'Not enough months yet')
+      + (R.pace ? kpi('At this rate', esc(usdR(R.pace)), '<span>by the end of the month</span>', cmp && R.pace > cmp.avg ? 'bad' : '') : kpi('Charges', String(R.m.out), esc(plural(R.m.cats.length, 'category'))))
+      + (R.all.income > 0 ? kpi('Left over', esc(usdR(R.all.income - R.all.spent)), '<span>of</span> ' + esc(usdR(R.all.income)) + ' <span>in</span>', R.all.income < R.all.spent ? 'bad' : 'good')
+        : kpi('A usual week', R.usualWeek ? esc(usdR(R.usualWeek)) : '—', R.usualWeek ? '<span>from the usual month</span>' : ''))
+      + '</div>';
+    const like = cmp && cmp.likeForLike ? '<p class="anote">Counting charges over ' + esc(usdR(cmp.min)) + ' only, on both sides: Monarch emailed only those then.</p>' : '';
+    $('trBody').innerHTML = kpis
+      + '<p class="sechead"><span>Week by week</span><span>Tap a week</span></p><div class="chartcard" id="trWeeks">' + weeksHtml(R) + '</div>'
+      + '<p class="sechead"><span>Through the month</span><span>Tap a day</span></p><div class="chartcard" id="trRun">' + runHtml(R) + '</div>' + like;
+  }
+  // The chart's frame, as Drinks' Analysis: grid, ticks, and a scale that ends on a round number.
+  const CW = 340, PL = 40, PR = 8, PT = 14, PB = 22;
+  function scale(max) {
+    const step = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000].find(s => Math.max(1, max) / s <= 4) || 100000;
+    return { top: Math.ceil(Math.max(1, max) / step) * step, step };
+  }
+  const money$ = v => v >= 1000 ? '$' + (v / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'k' : '$' + v;
+  function gridLines(sc, y, H) {
+    let g = '';
+    for (let v = 0; v <= sc.top; v += sc.step) g += '<line class="grid" x1="' + PL + '" x2="' + (CW - PR) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '"/><text class="tick" x="' + (PL - 6) + '" y="' + (y(v) + 3.5).toFixed(1) + '" text-anchor="end">' + money$(v) + '</text>';
+    return g;
+  }
+  function weeksHtml(R) {
+    const W = R.weeks, n = W.length, H = 170, ih = H - PT - PB, slot = (CW - PL - PR) / n, bw = Math.min(22, slot - 8);
+    const sel = tr.sel != null && tr.sel < n ? tr.sel : n - 1, u = R.usualWeek;
+    const sc = scale(Math.max(u || 0, ...W.map(w => w.spent))), y = v => PT + ih - v / sc.top * ih, x = i => PL + slot * (i + 0.5);
+    const last = W[n - 1], open = R.cur && last.end > today();
+    let g = '<svg class="chart" viewBox="0 0 ' + CW + ' ' + H + '" role="group" aria-label="Spent each week, the last ' + n + ' weeks">' + gridLines(sc, y, H)
+      + '<rect class="selbg" x="' + (PL + slot * sel).toFixed(1) + '" y="' + (PT - 6) + '" width="' + slot.toFixed(1) + '" height="' + (ih + 6) + '" rx="6"/>';
+    W.forEach((w, i) => {
+      if (w.spent > 0) {
+        const x0 = x(i) - bw / 2, y0 = y(w.spent), b = y(0), r = Math.min(4, b - y0);
+        g += '<path class="bar' + (u && w.spent > u * 1.25 ? ' over' : '') + (open && i === n - 1 ? ' part' : '') + (C.ymOf(w.end) !== R.ym && C.ymOf(w.start) !== R.ym ? ' dim' : '') + '" d="M' + x0.toFixed(1) + ' ' + b + 'V' + (y0 + r).toFixed(1) + 'Q' + x0.toFixed(1) + ' ' + y0.toFixed(1) + ' ' + (x0 + r).toFixed(1) + ' ' + y0.toFixed(1)
+          + 'H' + (x0 + bw - r).toFixed(1) + 'Q' + (x0 + bw).toFixed(1) + ' ' + y0.toFixed(1) + ' ' + (x0 + bw).toFixed(1) + ' ' + (y0 + r).toFixed(1) + 'V' + b + 'Z"/>';
+      }
+      if (i % 2 === (n - 1) % 2) g += '<text class="xl" x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '">' + esc(short(w.start)) + '</text>';
+    });
+    if (W[sel].spent > 0) g += '<text class="val" x="' + x(sel).toFixed(1) + '" y="' + (y(W[sel].spent) - 5).toFixed(1) + '">' + esc(money$(Math.round(W[sel].spent))) + '</text>';
+    if (u) g += '<line class="goal" x1="' + PL + '" x2="' + (CW - PR) + '" y1="' + y(u).toFixed(1) + '" y2="' + y(u).toFixed(1) + '"/><text class="lbl" x="' + (PL + 4) + '" y="' + (y(u) - 4).toFixed(1) + '">Usual week ' + esc(usdR(u)) + '</text>';
+    W.forEach((w, i) => { g += '<rect class="hit" data-wk="' + i + '" tabindex="0" role="button" aria-pressed="' + (i === sel) + '" aria-label="' + esc(short(w.start) + ' to ' + short(w.end) + ': ' + usdR(w.spent)) + '" x="' + (PL + slot * i).toFixed(1) + '" y="' + (PT - 6) + '" width="' + slot.toFixed(1) + '" height="' + (ih + PB + 6) + '"/>'; });
+    g += '</svg>';
+    // the week you tapped: its total against a usual week, and where it went
+    const w = W[sel], vs = u ? Math.round((w.spent - u) / u * 100) : null, topC = Math.max(1, ...w.cats.map(c => c.total));
+    const head = '<p class="readout"><b>' + esc(short(w.start) + ' – ' + short(w.end)) + '</b>' + (open && sel === n - 1 ? ' <span>(so far)</span>' : '') + ': <b>' + esc(usdR(w.spent)) + '</b>'
+      + (w.n ? ' · ' + esc(plural(w.n, 'charge')) : '') + (vs != null && w.n ? ' · <span class="' + (vs > 0 ? 'up' : 'dn') + '">' + (vs > 0 ? '▲ ' : '▼ ') + Math.abs(vs) + '%</span> <span>against a usual week</span>' : '') + '</p>';
+    const cats = w.cats.slice(0, 5).map(c => '<button class="wcat" type="button" data-wcat="' + esc(c.name) + '"><span class="wn">' + esc(c.emoji || '•') + ' ' + no(c.name) + '</span><span class="wb" aria-hidden="true"><i style="width:' + (c.total / topC * 100).toFixed(1) + '%"></i></span><span class="wv">' + esc(usdR(c.total)) + '</span></button>').join('');
+    return g + head + (cats ? '<div class="wcats">' + cats + (w.n ? '<button class="linkbtn" type="button" data-wall>' + esc('See the ' + plural(w.n, 'charge')) + '</button>' : '') + '</div>' : '');
+  }
+  function runHtml(R) {
+    const H = 170, ih = H - PT - PB, n = R.days, iw = CW - PL - PR, x = d => PL + iw * d / (n - 1), act = R.run.slice(0, R.upTo);
+    const sc = scale(Math.max(act[act.length - 1] || 0, R.usual ? R.usual[n - 1] : 0, R.pace || 0)), y = v => PT + ih - v / sc.top * ih;
+    const path = arr => arr.map((v, d) => (d ? 'L' : 'M') + x(d).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
+    let g = '<svg class="chart run" id="runSvg" viewBox="0 0 ' + CW + ' ' + H + '" role="img" aria-label="' + esc('Spent through ' + monthName(R.ym) + ', day by day' + (R.usual ? ', against the usual month' : '')) + '">' + gridLines(sc, y, H);
+    for (const d of [0, 7, 14, 21, n - 1]) g += '<text class="xl" x="' + x(d).toFixed(1) + '" y="' + (H - 6) + '">' + (d + 1) + '</text>';
+    if (R.usual) g += '<path class="usual" d="' + path(R.usual) + '"/>';
+    if (R.pace && R.upTo < n) g += '<path class="pace" d="M' + x(R.upTo - 1).toFixed(1) + ' ' + y(act[act.length - 1]).toFixed(1) + 'L' + x(n - 1).toFixed(1) + ' ' + y(R.pace).toFixed(1) + '"/>';
+    g += '<path class="area" d="' + path(act) + 'L' + x(act.length - 1).toFixed(1) + ' ' + y(0).toFixed(1) + 'L' + x(0).toFixed(1) + ' ' + y(0).toFixed(1) + 'Z"/><path class="ln" d="' + path(act) + '"/>';
+    const d = tr.day != null && tr.day < R.upTo ? tr.day : R.upTo - 1;
+    g += '<line class="cursor" x1="' + x(d).toFixed(1) + '" x2="' + x(d).toFixed(1) + '" y1="' + PT + '" y2="' + (PT + ih) + '"/>'
+      + (R.usual ? '<circle class="dot u" cx="' + x(d).toFixed(1) + '" cy="' + y(R.usual[d]).toFixed(1) + '" r="3.5"/>' : '') + '<circle class="dot" cx="' + x(d).toFixed(1) + '" cy="' + y(act[d]).toFixed(1) + '" r="4.5"/></svg>';
+    const legend = '<div class="legend"><span><i class="ln"></i>' + esc(monthShort(R.ym)) + '</span>' + (R.usual ? '<span><i class="usual"></i>Usual</span>' : '') + (R.pace && R.upTo < n ? '<span><i class="pace"></i>At this rate</span>' : '') + '</div>';
+    const u = R.usual && R.usual[d], diff = u != null ? act[d] - u : null;
+    const read = '<p class="readout" id="runRead">By <b>' + esc(short(R.ym + '-' + pad(d + 1))) + '</b>: <b>' + esc(usdR(act[d])) + '</b> <span>spent</span>'
+      + (u != null ? ' · <span>usual by then</span> ' + esc(usdR(u)) + (Math.abs(diff) >= 1 ? ' <span class="' + (diff > 0 ? 'up' : 'dn') + '">(' + (diff > 0 ? '+' : '−') + esc(usdR(Math.abs(diff))) + ')</span>' : '') : '') + '</p>';
+    return g + legend + read;
+  }
+  $('trBody').addEventListener('click', e => {
+    const h = e.target.closest('[data-wk]');
+    if (h) { tr.sel = +h.dataset.wk; $('trWeeks').innerHTML = weeksHtml(tr.R); const f = $('trWeeks').querySelector('[data-wk="' + tr.sel + '"]'); if (f && e.detail === 0) f.focus(); return; }
+    const R = tr.R, w = R.weeks[tr.sel != null && tr.sel < R.weeks.length ? tr.sel : R.weeks.length - 1];
+    const inWeek = x => x.dir === 'out' && x.amt >= R.min && x.date >= w.start && x.date <= w.end;
+    const c = e.target.closest('[data-wcat]');
+    if (c) { const cat = c.dataset.wcat; openList(cat + ', ' + short(w.start) + ' – ' + short(w.end), st.T.filter(x => inWeek(x) && (x.cat || 'Uncategorized') === cat)); return; }
+    if (e.target.closest('[data-wall]')) openList(short(w.start) + ' – ' + short(w.end), st.T.filter(inWeek));
+  });
+  $('trBody').addEventListener('keydown', e => { const h = e.target.closest('[data-wk]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); h.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 })); } });
+  // Through the month: a finger on the chart reads off that day.
+  function scrub(e) {
+    const svg = e.target.closest && e.target.closest('#runSvg'); if (!svg) return;
+    const R = tr.R, r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * CW;
+    const d = Math.max(0, Math.min(R.upTo - 1, Math.round((px - PL) / (CW - PL - PR) * (R.days - 1))));
+    if (d === tr.day) return;
+    tr.day = d; $('trRun').innerHTML = runHtml(R);
+  }
+  $('trBody').addEventListener('pointerdown', scrub);
+  $('trBody').addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'mouse') scrub(e); });
   function txRow(x, colour) {
     const acct = st.acct(x), r = st.rw.get(x.id);
     const bits = [acct.name ? no(acct.name) + (acct.guess ? '<span>?</span>' : '') : '', x.cat ? no(x.cat) : ''].filter(Boolean).join(' · ')
@@ -378,6 +513,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function setView(v) { st.view = v; ls.set(K.view, v); render(); animateIn(main); scrollTo(0, 0); }
 
   main.addEventListener('click', e => {
+    if (e.target.closest('#sumBtn')) { openTrends(); return; }
     const a = e.target.closest('[data-act]');
     if (a) {
       const act = a.dataset.act;
