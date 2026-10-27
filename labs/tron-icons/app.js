@@ -1,5 +1,5 @@
 // labs/tron-icons: draws every app's icon in each Tron style (styles.js). On the site the icons come from each
-// app's folder (icon.svg, and icon-grid.svg for today's); published elsewhere, from window.TRON_ICONS beside this page.
+// app's folder (icon.svg, and icon-grid.svg for its Tron ground); published elsewhere, from window.TRON_ICONS beside this page.
 'use strict';
 (async () => {
   const APPS = [['aos', 'aOS', 'aOS'], ['house', 'house', 'Home'], ['mail', 'mail', 'Mail'], ['weather', 'weather', 'Weather'],
@@ -22,7 +22,7 @@
     const { v, g } = icons[id], ground = (/<rect width="512" height="512" fill="(#[0-9A-Fa-f]{6})"/.exec(g) || [])[1];
     drawn[id] = {};
     for (const st of window.tronStyles) {
-      try { drawn[id][st.id] = url(st.make ? st.make(v, ground) : g); } catch { drawn[id][st.id] = ''; }
+      try { drawn[id][st.id] = url(st.make(v, ground)); } catch { drawn[id][st.id] = ''; }
     }
   }
 
@@ -43,7 +43,7 @@
   $('apps').addEventListener('click', e => { const b = e.target.closest('button'); if (b) choose(b.dataset.id); });
 
   $('styles').innerHTML = window.tronStyles.map((st, i) => `<section class="style" aria-labelledby="h-${st.id}">
-      <div class="words"><span class="tag">${i ? 'Idea ' + i : 'Today'}</span><h2 id="h-${st.id}">${st.name}</h2><p class="muted">${st.about}</p></div>
+      <div class="words"><span class="tag">${st.id === 'trail' ? 'Picked' : i ? 'Idea ' + i : 'Before'}</span><h2 id="h-${st.id}">${st.name}</h2><p class="muted">${st.about}</p></div>
       <div class="home">${ok.map(([id, , label]) => `<button type="button" data-id="${id}" aria-label="Show ${label} big"><img src="${drawn[id][st.id]}" alt=""><span>${label}</span></button>`).join('')}</div>
     </section>`).join('');
   $('styles').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (b) { choose(b.dataset.id); scrollTo({ top: 0, behavior: 'smooth' }); } });
