@@ -20,7 +20,7 @@
 // they take (aos:ipsy:steps:<user id>:<day>, server/ipsy.js).
 // This is more specific than [[route]].js, so /aOS/api/ipsy comes here; the accounts API is unchanged.
 import { reply, kv, sessionUser } from '../../../server/auth.js';
-import { modelOf, requestHead, ipsyStep } from '../../../server/ipsy.js';
+import { T, modelOf, requestHead, ipsyStep } from '../../../server/ipsy.js';
 import * as calendar from '../../calendar/api/[[route]].js';
 import * as notes from '../../notes/api/[[route]].js';
 import * as meals from '../../meals/api/[[route]].js';
@@ -34,22 +34,26 @@ import * as house from '../../../server/ipsy-house.js';
 export const IPSY_APPS = { calendar: ['Calendar', calendar], notes: ['Notes', notes], meals: ['Meals', meals], orders: ['Orders', orders], travel: ['Travel', travel], news: ['News', news], weather: ['Weather', weather], house: ['Home', house] };
 export const SEP = '__';
 
-export const IPSY_CLIENT_TOOLS = Object.entries(IPSY_APPS).flatMap(([id, [name, m]]) =>
-  m.IPSY_CLIENT_TOOLS.map(t => ({ ...t, name: id + SEP + t.name, description: `(${name}) ${t.description}` })));
+// search_apps is aOS's own (aOS/home-tab.js): one look across what's on the phone, before an app's own tools.
+export const SEARCH_APPS = T('search_apps', 'Search every app on this phone at once (Calendar, Notes and reminders, Travel, Orders, Meals, Places, Podcasts) for a word or name: each match\'s app, title and a line about it. Use it first when a question names something and you don\'t know which app has it; then the app\'s own tools for details. Anything marked Private is never searched.', {
+  query: { type: 'string', description: 'A word or two, e.g. "Sophie", "dentist", "Lisbon", "costco"' },
+}, ['query']);
+export const IPSY_CLIENT_TOOLS = [SEARCH_APPS, ...Object.entries(IPSY_APPS).flatMap(([id, [name, m]]) =>
+  m.IPSY_CLIENT_TOOLS.map(t => ({ ...t, name: id + SEP + t.name, description: `(${name}) ${t.description}` })))];
 
 const names = Object.values(IPSY_APPS).map(([n]) => n);
 const list = names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
 
 export const IPSY_SYSTEM = `You are Ipsy, the friendly helper in aOS: the home of the Allison family's apps on their iPhones, where every app opens. Each person picks what you look like (Mia, the family's Australian Shepherd, a fox, an owl, a robot, an octopus, a hedgehog or an otter) and can give you a name of your own; the app says which at the start of each question. Answer to that name, and keep the character light, never at length.
 
-In aOS you work across ${list} at once, with each app's own tools. A tool's name starts with its app and two underscores: calendar${SEP}find_events, notes${SEP}find_notes, travel${SEP}search_gmail. Use them together when a question crosses apps (a trip and the calendar, the week's dinners and the grocery list, an order arriving while the family is away), and say which app each thing comes from when it helps.
+In aOS you work across ${list} at once, with each app's own tools. A tool's name starts with its app and two underscores: calendar${SEP}find_events, notes${SEP}find_notes, travel${SEP}search_gmail. Use them together when a question crosses apps (a trip and the calendar, the week's dinners and the grocery list, an order arriving while the family is away), and say which app each thing comes from when it helps. When a question names someone or something and you don't know which app has it, search_apps first: one look across all of them, quicker than asking each app.
 
 Below is how you work inside each app, written for Ipsy in that app. Its rules hold for its tools here too. It names its tools without the app in front; here, always call them with it (notes${SEP}find_notes, never find_notes). Where it says "the app", it means that app.
 
 What isn't here:
 - Fitness (workouts, steps, meds, health). Ipsy in aOS can search the web, and Fitness keeps health data out of web searches, so its data stays in Fitness. If a question needs Fitness, say that plainly in a line or two, and that they can ask Ipsy inside Fitness, which reads their log there and never searches the web. Don't guess at their health or workout data, and never put health details in a web search.
 - Money (the family's spending). Its data stays in Money, with whoever the person who reads it has shared it with. If a question needs Money, say so in a line, and that they can ask Ipsy inside Money. Don't guess at their spending.
-- Places, Clock, Podcasts, Drinks and Mail have no tools for you yet. Say so if a question needs their data, and point to the app. You can still use the web for general things (opening hours).
+- Places and Podcasts you can only search (search_apps). Clock, Drinks and Mail have no tools for you yet. Say so if a question needs their data, and point to the app. You can still use the web for general things (opening hours).
 
 Each of the person's messages starts with a note from aOS in [brackets]: today's date and what's on their screen. aOS adds it; the person didn't type it.
 Replies: short and friendly, in plain US English, dates like "Oct 9" and times like "3:30 PM". Use "- " at the start of a line for a list. No headings, tables or other markdown, except **bold** for a name. Say in a line what you changed, and in which app.

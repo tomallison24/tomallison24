@@ -48,7 +48,7 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
 {
   const route = await import(path.join(R, 'functions/aOS/api/ipsy.js'));
   const names = route.IPSY_CLIENT_TOOLS.map(t => t.name);
-  check(names.length > 40 && new Set(names).size === names.length && names.every(n => /^(calendar|notes|meals|orders|travel|news|weather|house)__[a-z_]+$/.test(n)), `every Ipsy app's tools but Fitness's and Money's, and Weather's and Home's, each named with its app (${names.length})`);
+  check(names.length > 40 && new Set(names).size === names.length && names[0] === 'search_apps' && names.slice(1).every(n => /^(calendar|notes|meals|orders|travel|news|weather|house)__[a-z_]+$/.test(n)), `search_apps, then every Ipsy app's tools but Fitness's and Money's, and Weather's and Home's, each named with its app (${names.length})`);
   check(names.includes('travel__search_gmail') && names.includes('orders__search_gmail') && !names.some(n => /^fitness__/.test(n)), 'the same tool in two apps stays two tools; none from Fitness');
   check(/Fitness/.test(route.IPSY_SYSTEM) && /never put health details in a web search/.test(route.IPSY_SYSTEM), 'Ipsy is told why Fitness stays out, and to keep health out of web searches');
   check(names.includes('weather__get_forecast') && names.includes('house__control') && !names.some(n => /^money__/.test(n)) && /Money \(the family's spending\)/.test(route.IPSY_SYSTEM), 'Weather\'s and Home\'s tools, none from Money, and Ipsy is told why Money stays out');
@@ -230,6 +230,8 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(await pg.evaluate(async () => { const res = await AllisonOS.ipsy.mounted.tools['fitness__days']({}, {}); return !!res.error; }), `and has no Fitness tool ${tag}`);
   const wx = await pg.evaluate(async () => { const res = await AllisonOS.ipsy.mounted.tools['weather__get_places']({}, {}); return res && res.content && Array.isArray(res.content.places); });
   check(wx, `and Weather's, inside Weather, which has no chat of its own ${tag}`);
+  const sa = await pg.evaluate(async () => { const res = await AllisonOS.ipsy.mounted.tools['search_apps']({ query: 'no such thing at all' }, {}); return [res.content.found, /Private is never searched/.test(res.content.note), AllisonOS.ipsy.mounted.label('search_apps', {})]; });
+  check(sa[0] === 0 && sa[1] && sa[2] === 'Searching your apps', `search_apps: one look across the apps, on the phone ${tag}`);
 
   // moving in: what an app kept on its own icon's storage moves into aOS, whichever opens first
   if (look === 'vintage') {

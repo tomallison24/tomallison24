@@ -596,6 +596,17 @@
       return await fn(input, ctx);
     } finally { working.delete(id); }
   };
+  // search_apps: one look across the apps' own words on this phone (aOS/home-find.js, as the Ipsy bar's "In your
+  // apps"), so a question that names something needn't open each app to find which has it. What is marked
+  // Private is left out, as each app's own Ipsy leaves it out. Places and Podcasts are searched too (they have no
+  // tools of their own yet); Fitness and Money aren't searched at all (home-find.js doesn't read them).
+  async function searchApps(input) {
+    const q = String((input && input.query) || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
+    if (q.length < 2) throw new Error('Give a word or two to search for.');
+    const found = window.aosFind ? window.aosFind.search(q, { known, per: 8, max: 30, forIpsy: true }) : [];
+    return { content: { query: q, found: found.length, results: found.map(r => ({ app: r.app, app_name: name(r.app), title: r.title, details: r.sub, ...(r.at ? { opens: r.at } : {}) })),
+      note: 'Titles and a line each, as the apps list them; use the app\'s own tools for the details. Anything marked Private is never searched.' } };
+  }
   let ipsy = null;   // the Ipsy bar (above) asks it, once it's mounted
   if (AllisonOS.ipsy && IPSY_APPS.length) {
     ipsy = AllisonOS.ipsy.mount({
@@ -604,8 +615,9 @@
       suggestions: ['This week’s calendar', 'Orders on the way', 'Catch me up on the news'],
       consent: 'Your question, and what Ipsy reads in your apps, go to Claude, by Anthropic. Every change shows with Undo.',
       context: () => current ? `On screen: ${name(current)}, open inside aOS. Open in aOS: ${open.map(name).join(', ')}.` : `On screen: aOS Home.${open.length ? ' Open in aOS: ' + open.map(name).join(', ') + '.' : ''}`,
-      tools: new Proxy({}, { get: (t, key) => typeof key === 'string' && key.includes(SEP) ? runIn(key) : undefined }),
+      tools: new Proxy({}, { get: (t, key) => key === 'search_apps' ? searchApps : typeof key === 'string' && key.includes(SEP) ? runIn(key) : undefined }),
       label: (n, input) => {
+        if (n === 'search_apps') return 'Searching your apps';
         const i = n.indexOf(SEP), id = n.slice(0, i), m = mountedOf(id);
         let l = ''; try { l = m && m.label ? m.label(n.slice(i + SEP.length), input || {}) : ''; } catch {}
         return l ? `${name(id)}: ${l}` : `Looking in ${name(id)}`;
