@@ -380,7 +380,8 @@ for (const scheme of ['light', 'dark']) {
 }
 
 // In Tron, with an app open in aOS, aOS's trail comes over it, so it still runs round the whole screen (the top too,
-// round the ‹ aOS bar), and the app draws none of its own; on aOS's own screens it's behind everything
+// round the ‹ aOS bar), and the app draws none of its own; on aOS's own screens it's behind everything, its bottom edge
+// at the bottom of the screen
 {
   const pr = [];
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'dark', serviceWorkers: 'block' });
@@ -391,6 +392,9 @@ for (const scheme of ['light', 'dark']) {
   await p.goto(BASE + '/aOS/'); await p.waitForSelector('#home [data-open="weather"]');
   const z = () => p.evaluate(() => getComputedStyle(document.documentElement, '::after').zIndex);
   if (await z() !== '-1') pr.push('on aOS\'s screens the trail is not behind everything: z-index ' + await z());
+  // its bottom edge along the screen's very bottom, under the tab bars (not the home bar's inset, which ran through them)
+  const foot = await p.evaluate(() => getComputedStyle(document.documentElement, '::after').bottom);
+  if (foot !== '4px') pr.push('the trail\'s bottom edge is not at the bottom of the screen: ' + foot);
   await p.click('#home [data-open="weather"]');
   const app = () => p.evaluate(() => { const f = document.querySelector('#stage .frame[data-id="weather"] iframe'), d = f && f.contentDocument;
     return d && d.readyState !== 'loading' && d.documentElement.dataset.look === 'grid' ? f.contentWindow.getComputedStyle(d.documentElement, '::after').display : null; });
