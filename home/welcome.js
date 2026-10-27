@@ -108,6 +108,7 @@
         'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
         'Meals: cook a past plan again, or one meal from it: its meals come back on the Plan tab with their recipes, and their ingredients go on the shopping list, for the whole family (two weeks, or until you take them off)',
         'Meals: a recipe from a past plan opens on top of the plan, where before it opened hidden behind it',
+        'Meals: planning is one card now: a row for each choice (meals, food, how long, people, lunches, extras) showing what you picked, one open at a time; tap a row to change it. Quick notes (Quick, Kid-friendly, Not spicy, Budget-friendly, One pan) sit beside the fridge and anything-else boxes. Your choices stay on the phone until the plan is accepted, show while it plans and on the plan waiting, and Edit choices takes them back to the card',
         'Tron, Tesla style: always dark, as the car\'s screen goes, red only for what\'s lit, and a red light trail that runs around every screen behind everything, a light racing along it',
         'In Tron, your helper is Ares, the rider from Tron: Ares: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar',
         'aOS opens with a short Tron intro and its own sound, nothing to tap (Account > Appearance > Tron intro: Sound, Silent or Off)',
@@ -1013,8 +1014,8 @@
         },
         {
           "i": "calendar",
-          "t": "Ipsy asks the rest",
-          "d": "How many days, how many you're cooking for, lunches from leftovers or fresh, anything else. One question at a time."
+          "t": "Every choice in sight",
+          "d": "How many days, how many you're cooking for, lunches, anything else: one card, a row each, showing what you picked. Tap a row to change it."
         },
         {
           "i": "heart",
@@ -2089,8 +2090,8 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '#setBtn', t: 'Shared with the family', d: 'One phone reads Monarch’s emails from Gmail, read-only, and shares them with the family members it picks. Pick them in Settings, and set each card’s cash back.', g: 'tap' },
   ] };
   SPOTS.meals = { stops: [
-    { sel: ['#main .card.pick', '#tabs [data-tab="ipsy"]'], t: 'Ipsy plans it', d: 'Pick breakfast, lunch or dinner and what you’d like (chicken, lamb, vegetarian), or what’s in the fridge, and Ipsy writes the recipes.' },
-    { sel: ['#main [data-act="pick"]', '#tabs [data-tab="ipsy"]'], t: 'Ipsy asks the rest', d: 'Then it asks how many days, how many you’re cooking for, lunches from leftovers or fresh, and anything else. One question at a time.' },
+    { sel: ['#main .card.planner', '#tabs [data-tab="ipsy"]'], t: 'Ipsy plans it', d: 'Pick breakfast, lunch or dinner and what you’d like (chicken, lamb, vegetarian), or what’s in the fridge, and Ipsy writes the recipes.' },
+    { sel: ['#main .psteps', '#tabs [data-tab="ipsy"]'], t: 'Every choice in sight', d: 'How many days, how many you’re cooking for, lunches and anything else, on one card: a row each, showing what you picked. Tap a row to change it.' },
     { sel: '#tabs [data-tab="plan"]', t: 'Shared with the family', d: 'Your plan: each day’s meals, with their vegetables and protein. Tap one for its recipe. Everyone signed in sees the same plan and list, and Ipsy learns what you love.', g: 'tap' },
     { sel: '#tabs [data-tab="list"]', t: 'One shopping list', d: 'Everything the meals need in one list, sorted by aisle. Tick it off in the store.', g: 'tap' },
     { sel: '#setBtn', t: 'Healthy and safe', d: 'Every meal has the vegetables and protein your family’s rules ask for, and is checked against the family’s allergies. Set the rules here, with how many you cook for and how long on a weeknight.', g: 'tap' },
