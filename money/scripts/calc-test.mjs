@@ -254,4 +254,20 @@ test('your own categories: just one, always for a merchant, a merge on top; Mona
   assert.deepEqual(inp.saidNo, ['merge:a>b']);
 });
 
+test('week by week, and through the month against the usual', () => {
+  const list = [T('2026-10-04', 50, 'A', { cat: 'Food' }), T('2026-10-05', 20, 'B', { cat: 'Food' }), T('2026-10-11', 100, 'C'), T('2026-10-12', 7, 'D'),
+    T('2026-10-31', 30, 'E'), T('2026-10-12', 900, 'Pay', { dir: 'in' }), T('2026-09-30', 40, 'F'), T('2026-09-01', 10, 'G'), T('2026-08-31', 60, 'H')];
+  // Sundays: Oct 4 starts a week; Oct 31 is a Saturday
+  const w = C.weeks(list, '2026-10-31', 5);
+  assert.deepEqual(w.map(x => [x.start, x.end, x.spent, x.n]), [['2026-09-27', '2026-10-03', 40, 1], ['2026-10-04', '2026-10-10', 70, 2], ['2026-10-11', '2026-10-17', 107, 2], ['2026-10-18', '2026-10-24', 0, 0], ['2026-10-25', '2026-10-31', 30, 1]], 'money in left out');
+  assert.deepEqual(w[1].cats.map(c => [c.name, c.total, c.n]), [['Food', 70, 2]]);
+  assert.deepEqual(C.weeks(list, '2026-10-12', 2, 1).map(x => [x.start, x.spent]), [['2026-10-05', 120], ['2026-10-12', 7]], 'weeks from Monday');
+  assert.deepEqual(C.weeks(list, '2026-10-12', 2, 0, 25).map(x => x.spent), [50, 100], 'only what’s over the threshold');
+  const d = C.byDay(list, '2026-10');
+  assert.equal(d.length, 31); assert.equal(d[2], 0); assert.equal(d[3], 50); assert.equal(d[11], 177); assert.equal(d[30], 207);
+  const u = C.usualByDay(list, ['2026-09', '2026-08'], 31);
+  assert.equal(u[0], 5, '(10 + 0) / 2'); assert.equal(u[29], 25, '(50 + 0) / 2: August’s 30th had nothing'); assert.equal(u[30], 55, '(50 + 60) / 2: September holds its last day');
+  assert.equal(C.usualByDay(list, [], 31), null);
+});
+
 console.log(n + ' calc tests passed');

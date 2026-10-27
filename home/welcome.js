@@ -89,6 +89,7 @@
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
       notes: ['Vintage gets an intro too, Sunrise: as aOS opens, the sky comes up over two hills, the sun (the moon and stars after sunset) rises, and "aOS" says Good morning, Good afternoon or Good evening; then the sun goes up into the disc at the top of aOS. Once a launch, like Tron\'s, with its own sound (Account > Appearance > Sunrise intro: Sound, Silent or Off, and Play the intro)',
+        'aOS Home opens with your day: events, rain, deliveries and pickups, tonight\'s dinner and reminders due, in a line each, worked out on your phone. And when a trip is a week away or under way, a card for it (deliveries due while you\'re away, dinners planned, what\'s on the calendar) with Get ready with Ipsy',
         'Ipsy in aOS looks across your apps in one go (search_apps): Calendar, Notes, Travel, Orders, Meals, Places and Podcasts, on your phone, so answers that name someone or something come quicker. Anything marked Private is never searched',
         'Money: ask Ipsy to find a charge Monarch missed (a flight booking whose confirmation is the only email): on the phone that reads Monarch\'s emails it searches Gmail, shows exactly what it found, and adds it to your totals only when you say Yes (with Undo, and never twice)',
         'Ipsy in aOS knows the weather and the house: the forecast and alerts for your places (or any city), and Home\'s devices, which it changes for you with Undo (lights, thermostats, speakers, purifiers, dehumidifiers, vacuums), asks first about (heaters, blinds, automations) and never touches (the alarm, cameras, locks)',
@@ -96,6 +97,7 @@
         'Home: Favorites has no camera cards now; under the automations, a Yard camera pill pauses its motion detection (30 minutes to 4 hours), and the automation tiles are shorter to make room',
         'Money: your helper is there too: ask it where the money goes (a merchant, a category, a card, a month), what repeats and which card to use; it only reads, with no web search',
         'Money: change a transaction\'s category (always for its merchant, or just that one), shared with whoever sees Money; Ipsy suggests categories to merge and merchants to move, when asked and once a month, and nothing changes until you accept',
+        'Money: This month is calmer. Tap the number for Trends: spent against the usual, week by week (tap a week to see where it went) and the month day by day against the usual month. A meter under the number shows the usual and where this pace ends the month, and Where you could save, By category and Ipsy\'s ideas fold away until you open them, each with a glance at what\'s inside',
         'Money keeps five years of transactions, on your phone and in aOS, and stores them so they never crowd the other apps',
         'Money: once a day Ipsy checks this month\'s new transactions against their Monarch emails (the amount, in or out, the merchant, the card and the category). What passed is never checked again; a misreading is corrected from the email\'s own words, with Undo; one it can\'t confirm is marked Check. This month shows what it found',
         'Seven helpers: Mia, the family\'s Australian Shepherd, a fox, an owl, a robot, an octopus, a hedgehog and an otter. The first time you tap Ipsy you see them all, unnamed: pick one and give it a name (up to 16 letters). Until then they take turns peeking out of the corner',
@@ -108,6 +110,7 @@
         'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
         'Meals: cook a past plan again, or one meal from it: its meals come back on the Plan tab with their recipes, and their ingredients go on the shopping list, for the whole family (two weeks, or until you take them off)',
         'Meals: a recipe from a past plan opens on top of the plan, where before it opened hidden behind it',
+        'Meals: planning is one card now: a row for each choice (meals, food, how long, people, lunches, extras) showing what you picked, one open at a time; tap a row to change it. Quick notes (Quick, Kid-friendly, Not spicy, Budget-friendly, One pan) sit beside the fridge and anything-else boxes. Your choices stay on the phone until the plan is accepted, show while it plans and on the plan waiting, and Edit choices takes them back to the card',
         'Tron, Tesla style: always dark, as the car\'s screen goes, red only for what\'s lit, and a red light trail that runs around every screen behind everything, a light racing along it',
         'In Tron, your helper is Ares, the rider from Tron: Ares: a lit suit and helmet, a data pad to read, a light that sweeps the visor to search, and a Light Cycle to ride across aOS Home\'s bar',
         'aOS opens with a short Tron intro and its own sound, nothing to tap (Account > Appearance > Tron intro: Sound, Silent or Off)',
@@ -1013,8 +1016,8 @@
         },
         {
           "i": "calendar",
-          "t": "Ipsy asks the rest",
-          "d": "How many days, how many you're cooking for, lunches from leftovers or fresh, anything else. One question at a time."
+          "t": "Every choice in sight",
+          "d": "How many days, how many you're cooking for, lunches, anything else: one card, a row each, showing what you picked. Tap a row to change it."
         },
         {
           "i": "heart",
@@ -2089,8 +2092,8 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '#setBtn', t: 'Shared with the family', d: 'One phone reads Monarch’s emails from Gmail, read-only, and shares them with the family members it picks. Pick them in Settings, and set each card’s cash back.', g: 'tap' },
   ] };
   SPOTS.meals = { stops: [
-    { sel: ['#main .card.pick', '#tabs [data-tab="ipsy"]'], t: 'Ipsy plans it', d: 'Pick breakfast, lunch or dinner and what you’d like (chicken, lamb, vegetarian), or what’s in the fridge, and Ipsy writes the recipes.' },
-    { sel: ['#main [data-act="pick"]', '#tabs [data-tab="ipsy"]'], t: 'Ipsy asks the rest', d: 'Then it asks how many days, how many you’re cooking for, lunches from leftovers or fresh, and anything else. One question at a time.' },
+    { sel: ['#main .card.planner', '#tabs [data-tab="ipsy"]'], t: 'Ipsy plans it', d: 'Pick breakfast, lunch or dinner and what you’d like (chicken, lamb, vegetarian), or what’s in the fridge, and Ipsy writes the recipes.' },
+    { sel: ['#main .psteps', '#tabs [data-tab="ipsy"]'], t: 'Every choice in sight', d: 'How many days, how many you’re cooking for, lunches and anything else, on one card: a row each, showing what you picked. Tap a row to change it.' },
     { sel: '#tabs [data-tab="plan"]', t: 'Shared with the family', d: 'Your plan: each day’s meals, with their vegetables and protein. Tap one for its recipe. Everyone signed in sees the same plan and list, and Ipsy learns what you love.', g: 'tap' },
     { sel: '#tabs [data-tab="list"]', t: 'One shopping list', d: 'Everything the meals need in one list, sorted by aisle. Tick it off in the store.', g: 'tap' },
     { sel: '#setBtn', t: 'Healthy and safe', d: 'Every meal has the vegetables and protein your family’s rules ask for, and is checked against the family’s allergies. Set the rules here, with how many you cook for and how long on a weeknight.', g: 'tap' },

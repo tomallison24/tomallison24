@@ -249,6 +249,37 @@
     }).sort((a, b) => b.now - a.now || b.avg - a.avg);
     return { ym, months: have, min, likeForLike: min > minFor(txs, ym, 'out'), spent: now.spent, avg, diff: r2(now.spent - avg), cats };
   }
+  // Week by week (the trends sheet): the n weeks up to the one holding `last`, oldest first, each
+  // { start, end, spent, n, cats: [{ name, emoji, total, n }] } with only what went out over min. A week
+  // starts on day ws of the week (0 Sunday, 1 Monday).
+  const dayStr = n => { const d = new Date(n * 864e5); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); };
+  function weeks(txs, last, n, ws = 0, minAmt = 0) {
+    const l = dayNo(last), first = l - ((new Date(l * 864e5).getUTCDay() - ws + 7) % 7) - 7 * (n - 1);
+    const out = [];
+    for (let i = 0; i < n; i++) out.push({ start: dayStr(first + 7 * i), end: dayStr(first + 7 * i + 6), spent: 0, n: 0, cats: new Map() });
+    for (const x of txs) {
+      if (x.dir !== 'out' || x.amt < minAmt) continue;
+      const i = Math.floor((dayNo(x.date) - first) / 7), w = out[i];
+      if (!w) continue;
+      const k = x.cat || 'Uncategorized', c = w.cats.get(k) || { name: k, emoji: x.emoji, total: 0, n: 0 };
+      c.total = r2(c.total + x.amt); c.n++; w.cats.set(k, c);
+      w.spent = r2(w.spent + x.amt); w.n++;
+    }
+    return out.map(w => Object.assign(w, { cats: [...w.cats.values()].sort((a, b) => b.total - a.total) }));
+  }
+  // Through the month (the trends sheet): what had gone out by the end of each day, day 1 first.
+  function byDay(txs, ym, minAmt = 0) {
+    const out = new Array(daysIn(ym)).fill(0);
+    for (const x of txs) if (x.dir === 'out' && x.amt >= minAmt && ymOf(x.date) === ym) out[+x.date.slice(8, 10) - 1] += x.amt;
+    let acc = 0;
+    return out.map(v => r2(acc += v));
+  }
+  // The usual by each day: the months given, day by day, averaged (a shorter month holds its last day).
+  function usualByDay(txs, months, days, minAmt = 0) {
+    if (!months.length) return null;
+    const runs = months.map(m => byDay(txs, m, minAmt));
+    return Array.from({ length: days }, (_, d) => r2(sum(runs, r => r[Math.min(d, r.length - 1)]) / runs.length));
+  }
   // Where you could save, biggest first:
   //   { kind: 'spike', cat, emoji, now, avg, diff }        a category well over its usual
   //   { kind: 'merchant', merchant, total, n }              where the most went this month
@@ -428,6 +459,6 @@
   const csvCell = v => { const s = String(v == null ? '' : v); return '"' + (/^[=+\-@]/.test(s) && !/^[+-]?\d+(\.\d+)?$/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"'; };
 
   root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, sameCharge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
-    recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune, MAX_MONTH, newest, csvCell,
+    recurring, minFor, month, pace, compare, weeks, byDay, usualByDay, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune, MAX_MONTH, newest, csvCell,
     catKey, recat, categories, mergeSettings, ideasInput };
 })(typeof window !== 'undefined' ? window : globalThis);

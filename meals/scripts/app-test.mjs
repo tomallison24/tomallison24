@@ -1,7 +1,8 @@
 // Meals at iPhone size (390 x 844), against the real server code
 // (functions/meals/api) on an in-memory KV with a real family session, and a
-// stand-in for the AI service (no network, no key): no key yet, the Ipsy tab (what
-// you fancy, then Ipsy's questions one at a time), a plan (Try again, Accept), a
+// stand-in for the AI service (no network, no key): no key yet, the Ipsy tab (the
+// planner: one card, a row a step showing what's picked, kept on the phone; the plan
+// waiting shows what it was asked with, and Edit choices takes them back), a plan (Try again, Accept), a
 // recipe (rated, Swap), the shopping list (ticks kept, the list there offline), the
 // plan folded away and cleared (with Undo), a plan that keeps using coconut never
 // saved, the family's rules in Settings, the family's Google Sheet through aOS (the
@@ -131,16 +132,16 @@ const wide = page => page.evaluate(() => document.documentElement.scrollWidth > 
 // The Ipsy tab, from what you fancy to a plan: dinners for 3 days, for 4 (foods: picked first)
 const planIt = async (page, { foods = [], days = 3, people = 4 } = {}) => {
   if ((await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) !== 'true') { await page.click('#tabs [data-tab="ipsy"]'); await page.waitForTimeout(200); }
-  for (const f of foods) await page.click('[data-food="' + f + '"]');
-  await page.click('[data-act="pick"]'); await page.click('[data-days="' + days + '"]'); await page.click('[data-people="' + people + '"]');
+  if (foods.length) { await page.click('[data-step="foods"]'); for (const f of foods) await page.click('[data-food="' + f + '"]'); }
+  await page.click('[data-step="days"]'); await page.click('[data-days="' + days + '"]'); await page.click('[data-people="' + people + '"]');
   await page.click('[data-act="make"]');
 };
 const toPlan = async page => { if ((await page.getAttribute('#tabs [data-tab="plan"]', 'aria-pressed')) !== 'true') { await page.click('#tabs [data-tab="plan"]'); await page.waitForTimeout(300); } };
 
 { // no key yet
   const { ctx, page, errs } = await phone();
-  ok('it opens on Ipsy', (await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) === 'true' && await page.isVisible('#main .card.pick'));
-  ok('no AI key: Plan it is off', await page.locator('[data-act="pick"]').isDisabled());
+  ok('it opens on Ipsy', (await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) === 'true' && await page.isVisible('#main .card.planner'));
+  ok('no AI key: Make the plan is off', await page.locator('[data-act="make"]').isDisabled());
   await page.click('#setBtn'); await page.waitForTimeout(300);
   ok('no AI key: Settings say so', (await page.textContent('#setBody')).includes('Not set up yet'));
   ok('the family\'s rules and allergies show in Settings', (await page.textContent('#sVeg')) === '2' && (await page.getAttribute('[data-protein="good"]', 'aria-checked')) === 'true'
@@ -155,24 +156,34 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('Ipsy says hi by name and asks what we\'re eating', /^Hi Tom\. What are we eating\?/.test((await text(page, '#main .bub'))[0]));
   ok('Dinner is picked to start, and the family\'s rules show under the picks', (await page.getAttribute('[data-slot="dinner"]', 'aria-checked')) === 'true'
     && (await page.getAttribute('[data-slot="lunch"]', 'aria-checked')) === 'false' && /2\+ vegetables and about 30 g protein in every meal · never tree nuts and coconut/.test(await page.textContent('#main .rules')));
+  const row = async k => (await page.textContent('[data-val="' + k + '"]')).trim();
+  const open = async k => (await page.getAttribute('[data-step="' + k + '"]', 'aria-expanded')) === 'true';
+  ok('one card, a row a step, each with what\'s picked: the usual to start', (await page.locator('#main .prow').count()) === 5 && await row('meals') === 'Dinner' && await row('foods') === 'Surprise me'
+    && await row('days') === '3 days' && await row('people') === '4 people' && await row('extras') === 'Optional' && await open('meals') && !(await open('foods')), (await text(page, '#main .prow')).join(' | '));
+  await page.click('[data-act="next"]');
+  ok('Next opens the next step, and only it', await open('foods') && !(await open('meals')) && (await page.locator('[data-slot]').count()) === 0);
   await page.click('[data-food="beef"]'); await page.click('[data-food="surprise"]');
   ok('Surprise me and the foods take turns', (await page.getAttribute('[data-food="beef"]', 'aria-checked')) === 'false' && (await page.getAttribute('[data-food="surprise"]', 'aria-checked')) === 'true');
   await page.click('[data-food="beef"]');
-  ok('picking a food', (await page.getAttribute('[data-food="beef"]', 'aria-checked')) === 'true' && (await page.getAttribute('[data-food="surprise"]', 'aria-checked')) === 'false');
+  ok('picking a food, and its row says so', (await page.getAttribute('[data-food="beef"]', 'aria-checked')) === 'true' && (await page.getAttribute('[data-food="surprise"]', 'aria-checked')) === 'false' && await row('foods') === 'Beef');
+  await page.click('[data-step="meals"]');
+  ok('a row opens its step again (and closes the open one)', await open('meals') && !(await open('foods')));
   await page.click('[data-slot="dinner"]');
-  ok('no meal picked: nothing to plan', await page.locator('[data-act="pick"]').isDisabled());
+  ok('no meal picked: nothing to plan, and the row says so', await page.locator('[data-act="make"]').isDisabled() && await row('meals') === 'Pick at least one');
   await page.click('[data-slot="dinner"]');
+  await page.click('[data-step="days"]');
+  ok('how far ahead: three choices, 3 days to start', (await page.locator('[data-days]').count()) === 3 && (await page.getAttribute('[data-days="3"]', 'aria-checked')) === 'true');
+  await page.click('[data-days="1"]'); await page.waitForTimeout(200);
+  ok('a one-of choice picks, and the next step opens: how many, the usual number picked', await row('days') === 'Just today' && await open('people')
+    && (await page.getAttribute('[data-people="4"]', 'aria-checked')) === 'true' && /Usually it’s 4\./.test(await page.textContent('#pb-people')));
+  ok('no lunches step with dinners only', (await page.locator('[data-step="lunches"]').count()) === 0);
+  await page.click('[data-step="days"]'); await page.click('[data-days="3"]'); await page.click('[data-people="4"]'); await page.waitForTimeout(200);
+  ok('then the extras: quick notes, the fridge and anything else', await open('extras') && (await page.locator('[data-extra]').count()) === 5 && await page.isVisible('#fFridge') && await page.isVisible('#fNote'));
   await page.fill('#fFridge', 'half a cabbage');
-  await shot(page, 'ipsy-pick');
-  await page.click('[data-act="pick"]'); await page.waitForTimeout(300);
-  ok('then one question: how far ahead', (await text(page, '#main .bub')).at(-1) === 'Lovely. How far ahead should I plan?' && (await page.locator('[data-days]').count()) === 3
-    && (await text(page, '#main .bub.me'))[0] === 'Dinner · beef · use up half a cabbage', (await text(page, '#main .bub')).join(' | '));
-  await page.click('[data-days="3"]'); await page.waitForTimeout(200);
-  ok('then how many, the usual number picked', /^How many at the table\? Usually it’s 4\./.test((await text(page, '#main .bub')).at(-1)) && (await page.getAttribute('[data-people="4"]', 'aria-checked')) === 'true');
-  ok('no lunches question with dinners only', (await page.locator('[data-lunches]').count()) === 0);
-  await page.click('[data-people="4"]'); await page.waitForTimeout(200);
-  ok('then anything else, with what it will plan', /Planning 3 days of dinners for 4: 3 meals, each with 2\+ vegetables and about 30 g protein\./.test(await page.textContent('#main .card.ready')));
-  await shot(page, 'ipsy-questions');
+  ok('what it will plan, under the steps', /Planning 3 days of dinners for 4: 3 meals, each with 2\+ vegetables and about 30 g protein\./.test(await page.textContent('#pSum')) && await row('extras') === 'Use up half a cabbage');
+  await page.reload(); await page.waitForTimeout(800);
+  ok('the choices are kept on the phone (opened again, they\'re all still there)', await row('foods') === 'Beef' && await row('days') === '3 days' && await row('extras') === 'Use up half a cabbage' && await open('extras'));
+  await shot(page, 'ipsy-planner');
   await page.fill('#fNote', 'mild for the kids');
   const a0 = asked;
   await page.click('[data-act="make"]');
@@ -184,6 +195,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('one call to the AI, with the picks, the fridge and the note', asked === a0 + 1);
   ok('each says its vegetables and protein', (await text(page, '#main [data-meal] .tag.veg')).length === 3 && (await text(page, '#main [data-meal] .tag.pro')).every(t => /38 g/.test(t)), (await text(page, '#main [data-meal] .tags')).join(' | '));
   ok('a new plan is a draft: nothing saved, and the list waits for it', (await page.textContent('#main')).includes('not saved yet') && !m.get('meals:plan'));
+  ok('the plan waiting shows every choice it was asked with', (await text(page, '#main .card.accept .chosen .tag')).join('|') === 'Dinner|Beef|3 days|For 4|Use up half a cabbage|“mild for the kids”', (await text(page, '#main .card.accept .chosen .tag')).join('|'));
   const draft = JSON.parse(m.get('meals:draft'));
   ok('the draft keeps what was asked', draft.foods.join() === 'beef' && draft.days === 3 && draft.people === 4 && draft.fridge === 'half a cabbage' && draft.note === 'mild for the kids');
   // try again: another plan, the same choices
@@ -191,6 +203,11 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await page.click('[data-act="again"]');
   await page.waitForFunction(() => document.querySelectorAll('#main [data-meal]').length === 3, null, { timeout: 5000 });
   ok('try again asks for another plan with the same choices', asked === beforeAgain + 1 && JSON.parse(m.get('meals:draft')).fridge === 'half a cabbage');
+  // Edit choices: back to the planner, with them
+  await page.click('[data-act="edit"]'); await page.waitForTimeout(300);
+  ok('Edit choices: the planner, with what the plan was asked with', (await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) === 'true' && await row('foods') === 'Beef'
+    && await row('extras') === 'Use up half a cabbage · “mild for the kids”' && (await page.locator('.pstep.on').count()) === 0);
+  await toPlan(page);
   // accept it, starting tomorrow
   const tomorrow = await page.evaluate(() => document.querySelectorAll('#aStart option')[1].value);
   await page.selectOption('#aStart', tomorrow);
@@ -199,6 +216,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('accepting saves the plan for the family, from the day picked', saved.start === tomorrow && saved.dates.length === 3 && !m.get('meals:draft'), JSON.stringify(saved.dates));
   ok('its days show their dates', /^[A-Z][a-z]+day, [A-Z][a-z]{2} \d+$/.test((await text(page, '#main .card.dayc .night'))[0]), (await text(page, '#main .card.dayc .night'))[0]);
   ok('it\'s in Past plans, as the current one', (await page.locator('[data-past] .prime', { hasText: 'Current' }).count()) === 1);
+  ok('accepted: the planner starts afresh next time', await page.evaluate(() => JSON.parse(localStorage.getItem('allison-meals-v1-flow')).foods.length === 0));
   await shot(page, 'accepted');
   await page.click('#main [data-meal="1"]'); await page.waitForTimeout(400);
   const recipe = await page.textContent('#recipeBody'), title = saved.meals[1].title;
@@ -264,13 +282,17 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
 { // a week of breakfast, lunch and dinner: Ipsy asks about lunches, and leftover lunches point to the dinner before
   const { ctx, page, errs } = await phone();
   await page.click('[data-slot="breakfast"]'); await page.click('[data-slot="lunch"]');
-  await page.click('[data-act="pick"]'); await page.click('[data-days="7"]'); await page.click('[data-people="2"]'); await page.waitForTimeout(200);
-  ok('with lunch and dinner, Ipsy asks about lunches', (await text(page, '#main .bub')).at(-1).startsWith('For lunches: the night before’s leftovers'));
+  ok('with lunch and dinner, a Lunches step', (await page.locator('[data-step="lunches"]').count()) === 1 && (await page.textContent('[data-val="meals"]')) === 'Breakfast, lunch and dinner');
+  await page.click('[data-step="days"]'); await page.click('[data-days="7"]'); await page.click('[data-people="2"]'); await page.waitForTimeout(200);
+  ok('it comes after how many, asking leftovers or fresh', (await page.getAttribute('[data-step="lunches"]', 'aria-expanded')) === 'true' && /leftovers, or something fresh/.test(await page.textContent('#pb-lunches')));
   await page.click('[data-lunches="leftovers"]'); await page.waitForTimeout(200);
-  ok('and plans 21 meals', /21 meals/.test(await page.textContent('#main .card.ready')));
+  await page.click('[data-extra="quick"]');
+  ok('and plans 21 meals', /21 meals/.test(await page.textContent('#pSum')) && (await page.textContent('[data-val="extras"]')) === 'Quick');
   await page.click('[data-act="make"]');
+  ok('while it plans, the choices show', (await text(page, '.busy .chosen .tag')).join('|') === 'Breakfast, lunch and dinner|Surprise me|A week|For 2|Leftover lunches|Quick', (await text(page, '.busy .chosen .tag')).join('|'));
   await page.waitForSelector('#main [data-meal]', { timeout: 8000 });
   const d = JSON.parse(m.get('meals:draft'));
+  ok('a quick note goes with the plan', JSON.parse(m.get('meals:draft')).note === 'quick to make');
   ok('21 meals, 6 of them leftover lunches', d.meals.length === 21 && d.meals.filter(x => x.leftover).length === 6 && (await page.locator('#main .card.dayc').count()) === 7);
   const li = d.meals.findIndex(x => x.leftover);
   await page.click('#main [data-meal="' + li + '"]'); await page.waitForTimeout(400);
@@ -399,8 +421,8 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await page.click('#tabs [data-tab="ipsy"]'); await page.waitForTimeout(300);
   ok('the Ipsy tab shows them', /3\+ vegetables and about 40 g protein in every meal · never tree nuts and shellfish/.test(await page.textContent('#main .rules')));
   // the next plan is asked for with them
-  await page.click('[data-act="pick"]'); await page.click('[data-days="1"]'); await page.waitForTimeout(200);
-  ok('Ipsy remembers how many were at the table last time', /Last time it was 4\./.test((await text(page, '#main .bub')).at(-1)));
+  await page.click('[data-step="days"]'); await page.click('[data-days="1"]'); await page.waitForTimeout(200);
+  ok('Ipsy remembers how many were at the table last time', /Last time it was 4\./.test(await page.textContent('#pb-people')));
   await page.click('[data-people="3"]'); await page.click('[data-act="make"]');
   await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
   ok('a plan made with the new rules', JSON.parse(m.get('meals:draft')).people === 3);
@@ -556,7 +578,7 @@ const SHEET_STEP = async () => {
     const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
     const teal = scheme === 'light' ? 'rgb(31, 111, 107)' : 'rgb(79, 179, 171)', orange = scheme === 'light' ? 'rgb(201, 80, 42)' : 'rgb(216, 87, 42)';
     const flat = v => v === 'none' || v === '';
-    await page.waitForSelector('#main .card.pick', { timeout: 5000 });
+    await page.waitForSelector('#main .card.planner', { timeout: 5000 });
     ok(scheme + ': Futura', /Futura/.test((await q('body', ['fontFamily']))[0]));
     ok(scheme + ': the ground is cream / walnut', (await q('body', ['backgroundColor']))[0] === ground);
     ok(scheme + ': a mustard sun, a teal dot and a burnt-orange pill behind the title', (await q('.ambient i:nth-child(1)', ['backgroundColor']))[0] === ('rgb(227, 167, 47)')
@@ -565,12 +587,11 @@ const SHEET_STEP = async () => {
     ok(scheme + ': the tabs have a mustard thumb', (await q('#tabs .slthumb', ['backgroundColor']))[0] === 'rgb(227, 167, 47)' && (await q('#tabs', ['backgroundColor']))[0] === cream);
     ok(scheme + ': the theme colour is the sky\'s ground (home/sky.js) and the status bar is not translucent', (await page.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#F1DFBB' : '#4A391E')
       && (await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content')) === 'default');
-    const [pbg, pshadow, pbackdrop, pradius] = await q('#main .card.pick', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
-    ok(scheme + ': the picks are a flat cream / walnut card, 20px round', pbg === cream && pshadow === 'none' && flat(pbackdrop) && pradius === '20px', [pbg, pshadow, pbackdrop, pradius].join(' | '));
-    ok(scheme + ': Ipsy\'s bubble is cream / walnut; a picked chip is mustard; Plan it is solid orange', (await q('#main .bub', ['backgroundColor']))[0] === cream
-      && (await q('[data-slot="dinner"]', ['boxShadow']))[0].includes('rgb(227, 167, 47)') && (await q('[data-act="pick"]', ['backgroundColor']))[0] === orange);
-    await page.click('[data-act="pick"]'); await page.waitForTimeout(300);
-    ok(scheme + ': your answer is a teal bubble', (await q('#main .bub.me', ['backgroundColor']))[0] === teal);
+    const [pbg, pshadow, pbackdrop, pradius] = await q('#main .card.planner', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    ok(scheme + ': the planner is a flat cream / walnut card, 20px round', pbg === cream && pshadow === 'none' && flat(pbackdrop) && pradius === '20px', [pbg, pshadow, pbackdrop, pradius].join(' | '));
+    ok(scheme + ': Ipsy\'s bubble is cream / walnut; a picked chip is mustard; Make the plan is solid orange', (await q('#main .bub', ['backgroundColor']))[0] === cream
+      && (await q('[data-slot="dinner"]', ['boxShadow']))[0].includes('rgb(227, 167, 47)') && (await q('[data-act="make"]', ['backgroundColor']))[0] === orange);
+    ok(scheme + ': the open step\'s number is teal', (await q('.pstep.on .pn', ['backgroundColor']))[0] === teal);
     await shot(page, 'retro-ipsy-' + scheme);
     await toPlan(page);
     await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
@@ -597,7 +618,7 @@ const SHEET_STEP = async () => {
 { // Standard: Sea glass, the Vintage block switched off, no sky; the icon and status bar follow
   for (const scheme of ['light', 'dark']) {
     const { ctx, page, errs } = await phone(scheme, { design: 'glass' });
-    await page.waitForSelector('#main .card.pick', { timeout: 5000 });
+    await page.waitForSelector('#main .card.planner', { timeout: 5000 });
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
     ok(scheme + ' Standard: data-look is glass, the Vintage styles are off, no sky', await page.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')));
     ok(scheme + ' Standard: the Sea glass ground and the system font', (await q('body', ['backgroundColor']))[0] === (scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)') && !/Futura/.test((await q('body', ['fontFamily']))[0]));

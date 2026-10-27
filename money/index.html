@@ -378,6 +378,61 @@ html.locked .ipsyslot{opacity:0;pointer-events:none}
 .sum .delta.more{color:var(--down)} .sum .delta.less{color:var(--up)}
 .sum .split{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .sum .split b{color:var(--text);font-variant-numeric:tabular-nums}
+/* the meter under it: spent, the usual as a mark, the pace as a paler run; tap the card for Trends */
+.sum .big span.more svg:first-child{margin-right:4px}
+.meter{position:relative;height:10px;border-radius:5px;background:var(--fill);margin-top:2px}
+.meter i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+.meter .fill{background:var(--accent);transition:width .5s var(--ease)} .meter .fill.over{background:var(--flag)}
+.meter .pace{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--accent) 34%,transparent) 0 4px,transparent 4px 7px)}
+.meter .mark{width:3px;top:-4px;bottom:-4px;margin-left:-1.5px;border-radius:2px;background:var(--text);right:auto}
+.sum .mkey{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--muted)}
+.mkey > span{display:inline-flex;align-items:center;gap:6px}
+.mkey b{color:var(--text);font-variant-numeric:tabular-nums}
+.mkey i{width:3px;height:12px;border-radius:2px;background:var(--text)} .mkey i.k-pace{width:12px;height:8px;background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--accent) 50%,transparent) 0 3px,transparent 3px 5px)}
+/* a section, folded until you open it */
+.sec{border-radius:22px;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge);overflow:hidden}
+.enter .sec{animation:rowIn .52s var(--ease) both}
+.sec > summary{list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;min-height:56px;padding:10px 12px 10px 14px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.sec > summary::-webkit-details-marker{display:none}
+.sec > summary:active{background:var(--fill)}
+.sec .si{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--fill);color:var(--icon);flex:none;font-size:15px}
+.sec .si svg{width:17px;height:17px}
+.sec .st{flex:1;min-width:0;font-size:16px;font-weight:600}
+.sec .badge{margin:0;font-size:12px;line-height:20px;min-width:20px;text-align:center}
+.sec .sv,.sec .cnt{font-size:13px;font-weight:600;color:var(--up);font-variant-numeric:tabular-nums} .sec .cnt{color:var(--faint);font-weight:500}
+.sec .chev{display:grid;place-items:center;color:var(--faint);transition:transform .25s var(--ease)}
+.sec .chev svg{width:18px;height:18px;transform:rotate(90deg)}
+.sec[open] .chev{transform:rotate(180deg)}
+.sec > .rgroup{border-radius:0;background:none;box-shadow:none;border-top:1px solid var(--hair-2)}
+.sec[open] > .rgroup{animation:rowIn .4s var(--ease) both}
+.strip{flex-basis:100%;display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden}
+.strip i{background:var(--k);min-width:3px}
+.row .bar{display:block;position:relative;overflow:visible}
+.row .bar i{border-radius:2px}
+.row .bar i[data-k]{background:var(--k)}
+.row .bar u{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:1px;background:var(--text);opacity:.6}
+/* two bars: this month against the usual, or a share of the month */
+.tip .tt small{display:block;font-size:13px;color:var(--muted)}
+.cmp{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.cmp i{display:block;height:5px;border-radius:3px;background:var(--fill)}
+.cmp i.now{background:var(--flag)} .cmp i.was{background:var(--faint);opacity:.45}
+/* Trends: a week's categories, and the month day by day */
+.chart .bar.dim{opacity:.45}
+.chart .usual{fill:none;stroke:var(--faint);stroke-width:2;stroke-dasharray:4 4;stroke-linecap:round}
+.chart .pace{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:2 5;stroke-linecap:round;opacity:.8}
+.chart .area{fill:color-mix(in srgb,var(--accent) 14%,transparent)}
+.chart .cursor{stroke:var(--hair);stroke-width:1.5}
+.chart .dot.u{fill:var(--faint)}
+svg.chart.run{touch-action:none;cursor:crosshair}
+.legend i.ln{height:3px;width:14px;border-radius:2px} .legend i.usual{height:0;width:14px;border-radius:0;background:none;border-top:2px dashed var(--faint)} .legend i.pace{height:0;width:14px;border-radius:0;background:none;border-top:2px dotted var(--accent)}
+.readout{margin:10px 4px 0;min-height:0}
+.readout .up{color:var(--down);font-weight:600} .readout .dn{color:var(--up);font-weight:600}
+.wcats{display:flex;flex-direction:column;margin-top:6px}
+.wcat{display:grid;grid-template-columns:minmax(0,42%) 1fr auto;align-items:center;gap:10px;min-height:40px;padding:4px;border-radius:10px;text-align:left;color:var(--text);font-size:14px}
+.wcat:active{background:var(--fill)}
+.wcat .wn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcat .wb{height:6px;border-radius:3px;background:var(--fill);overflow:hidden} .wcat .wb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.wcat .wv{font-weight:600;font-variant-numeric:tabular-nums}
 /* where you could save */
 .tip{display:flex;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--hair-2)}
 .tip:first-child{border-top:0}
@@ -546,7 +601,10 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .iconbtn.okbtn:active{filter:brightness(.92)}
 
 /* the week: cream cards, today a mustard disc */
-.rgroup,.empty,.sum,.kpis,.chartcard,.wstrip{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.rgroup,.empty,.sum,.kpis,.chartcard,.wstrip,.sec{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.sec > .rgroup{background:none;border-radius:0}
+.meter .fill{background:var(--mc-teal)} .meter .fill.over,.cmp i.now{background:var(--mc-orange)}
+.chart .area{fill:color-mix(in srgb,var(--mc-teal) 16%,transparent)}
 .navrow .lbl{font-weight:600;letter-spacing:.04em}
 .sum .big b{font-weight:600;letter-spacing:-.035em}
 .sum .big span.more{letter-spacing:.04em}
@@ -719,6 +777,16 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <button id="vBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="vMenu" aria-label="Show a view"><span class="vb-ic" id="vIcon"></span><span id="vName">This month</span><span class="vb-chev"><svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg></span></button>
     <div class="viewmenu" id="vMenu" role="listbox" aria-label="Show" hidden></div>
   </nav>
+
+  <!-- Trends: tap This month's number -->
+  <div class="sheetwrap" id="trSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="trLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="trLbl">Trends</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
+      <div class="sheetbody" id="trBody"></div>
+    </div>
+  </div>
 
   <!-- A transaction, or a category's or a card's transactions -->
   <div class="sheetwrap" id="txSheet" hidden>
