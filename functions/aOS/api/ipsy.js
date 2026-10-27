@@ -27,10 +27,11 @@ import * as meals from '../../meals/api/[[route]].js';
 import * as orders from '../../orders/api/[[route]].js';
 import * as travel from '../../travel/api/[[route]].js';
 import * as news from '../../news/api/[[route]].js';
-import * as weather from '../../../server/ipsy-weather.js';   // no chat of its own: tools for this one only
+import * as weather from '../../../server/ipsy-weather.js';   // no chat of their own: tools for this one only
+import * as house from '../../../server/ipsy-house.js';
 
 // the apps Ipsy works across in aOS, in the order Claude reads about them
-export const IPSY_APPS = { calendar: ['Calendar', calendar], notes: ['Notes', notes], meals: ['Meals', meals], orders: ['Orders', orders], travel: ['Travel', travel], news: ['News', news], weather: ['Weather', weather] };
+export const IPSY_APPS = { calendar: ['Calendar', calendar], notes: ['Notes', notes], meals: ['Meals', meals], orders: ['Orders', orders], travel: ['Travel', travel], news: ['News', news], weather: ['Weather', weather], house: ['Home', house] };
 export const SEP = '__';
 
 export const IPSY_CLIENT_TOOLS = Object.entries(IPSY_APPS).flatMap(([id, [name, m]]) =>
@@ -48,7 +49,7 @@ Below is how you work inside each app, written for Ipsy in that app. Its rules h
 What isn't here:
 - Fitness (workouts, steps, meds, health). Ipsy in aOS can search the web, and Fitness keeps health data out of web searches, so its data stays in Fitness. If a question needs Fitness, say that plainly in a line or two, and that they can ask Ipsy inside Fitness, which reads their log there and never searches the web. Don't guess at their health or workout data, and never put health details in a web search.
 - Money (the family's spending). Its data stays in Money, with whoever the person who reads it has shared it with. If a question needs Money, say so in a line, and that they can ask Ipsy inside Money. Don't guess at their spending.
-- Places, Home, Clock, Podcasts, Drinks and Mail have no tools for you yet. Say so if a question needs their data, and point to the app. You can still use the web for general things (opening hours).
+- Places, Clock, Podcasts, Drinks and Mail have no tools for you yet. Say so if a question needs their data, and point to the app. You can still use the web for general things (opening hours).
 
 Each of the person's messages starts with a note from aOS in [brackets]: today's date and what's on their screen. aOS adds it; the person didn't type it.
 Replies: short and friendly, in plain US English, dates like "Oct 9" and times like "3:30 PM". Use "- " at the start of a line for a list. No headings, tables or other markdown, except **bold** for a name. Say in a line what you changed, and in which app.

@@ -627,6 +627,30 @@ a list at the top (entity ids, colours). `devices.js` has what they share:
 `family()` adds a section to one of the views, and the cards, popup,
 sample states and preview are the family's own.
 
+## Ipsy in aOS
+
+Home has no chat of its own, but Ipsy in aOS works the house through it: `ipsy-tools.js` (the last
+script, so it reads the app's own lists and `ents` by name) offers aOS three tools as
+`AllisonOS.ipsyTools`, described to Claude in `server/ipsy-house.js`. aOS opens Home out of sight and
+runs them here, on this phone's own Home Assistant connection: the token never leaves the phone, and
+Claude only sees device names and states.
+
+- `list_devices`: every device on Home's cards, how it is now, and what Ipsy may do with it; the
+  automations with kind `automation`.
+- `control`: one device by its entity id, and only one on Home's cards. What it may do is decided here,
+  by what the device is, never by what Claude asks:
+  - **at once, with Undo** (it puts back how the device was): lights, thermostats, air purifiers,
+    dehumidifiers, speakers and the TVs, vacuums (Undo sends a started vacuum home);
+  - **asks first**, with Yes and No in the chat: heaters, the blinds, an automation on or off;
+  - **never**: the alarm, cameras and the doorbell, locks. Ipsy can say how they are, and `open_home`
+    opens Home for the person to do it.
+- `open_home`: Home on screen, behind the chat.
+
+In the preview (no Home Assistant on the phone) every tool says Home isn't connected. A change here
+doesn't change how a device works on Home's cards or the Signal dashboard (ha-config): it is the same
+service calls the cards make. `node house/scripts/ipsy-test.mjs` tests it against a stand-in Home
+Assistant.
+
 ## Icons
 
 `node house/scripts/make-icons.mjs` draws both designs' icons:

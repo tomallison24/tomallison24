@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['When the family\'s AI budget for the month is used up, every AI part of aOS (Ipsy, Orders, Travel, News, Meals, Money) says so, and when it\'s back, instead of "Something went wrong"',
+      notes: ['Ipsy in aOS knows the weather and the house: the forecast and alerts for your places (or any city), and Home\'s devices, which it changes for you with Undo (lights, thermostats, speakers, purifiers, dehumidifiers, vacuums), asks first about (heaters, blinds, automations) and never touches (the alarm, cameras, locks)',
+        'When the family\'s AI budget for the month is used up, every AI part of aOS (Ipsy, Orders, Travel, News, Meals, Money) says so, and when it\'s back, instead of "Something went wrong"',
         'Home: Favorites has no camera cards now; under the automations, a Yard camera pill pauses its motion detection (30 minutes to 4 hours), and the automation tiles are shorter to make room',
         'Money: your helper is there too: ask it where the money goes (a merchant, a category, a card, a month), what repeats and which card to use; it only reads, with no web search',
         'Money: change a transaction\'s category (always for its merchant, or just that one), shared with whoever sees Money; Ipsy suggests categories to merge and merchants to move, when asked and once a month, and nothing changes until you accept',

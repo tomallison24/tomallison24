@@ -52,6 +52,8 @@ window.WeatherIpsy = function (app) {
     const mine = places(), lw = w.toLowerCase();
     const hit = mine.find(p => p.id === w) || mine.find(p => p.name.toLowerCase() === lw) || mine.find(p => (p.name + ', ' + (p.sub || '')).toLowerCase().startsWith(lw));
     if (hit) return hit;
+    if (w === 'here') fail('Weather doesn\'t know where they are yet: Location may be off for it. Ask for a city instead.');
+    if (w === 'trip' || /^p\d+$/.test(w)) fail('They have no place ' + w + ': get_places lists them.');
     let j = null;
     try { j = await app.getJSON('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(w.split(',')[0].trim()) + '&count=8&language=en&format=json', { headers: {} }); }
     catch { fail('Couldn\'t look up ' + w + ' just now (no connection?).'); }

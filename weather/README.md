@@ -243,6 +243,18 @@ drawing an open sheet again and kept across a reload; and the old Weather
 Vintage address moving that app's data over once, or keeping Weather's own
 (CI: `apps-check.yml`).
 
+`node weather/scripts/ipsy-test.mjs` covers Weather's tools for Ipsy in aOS (below), against the
+same made-up weather.
+
+## Ipsy in aOS
+
+Weather has no chat of its own; Ipsy in aOS reads it through `ipsy-tools.js`, offered by `app.js` as
+`AllisonOS.ipsyTools` and described to Claude in `server/ipsy-weather.js`: `get_places` (where you
+are, your next trip, your saved cities), `get_forecast` (now, rain or snow soon, the hours and days,
+alerts, for one of them or any city, in your units and the place's own times; a forecast under 20
+minutes old comes from the app's cache, a city looked up isn't saved) and `show_place` (a place, or
+its radar, on screen). They only read.
+
 ## What could not be verified
 
 - **Futura on an iPhone** and **Safari on an iPhone**: the app was checked in
