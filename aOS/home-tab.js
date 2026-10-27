@@ -184,6 +184,7 @@
     $('hdate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     paintQuick();
     const F = window.aosFind || {}, wx = F.weather ? F.weather() : null, next = F.next ? F.next() : null;
+    paintBrief(F.brief ? F.brief() : null);
     if (arc()) return paintArc(wx, next);
     const tiles = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" aria-label="${label(f.id)}">${ic(f.id)}<i class="pin" aria-hidden="true">${STAR(f.why === 'pin')}</i><b>${esc(name(f.id))}</b></button>`).join('');
     setHTML($('favs'), (known('weather') ? `<button type="button" class="wid wx" data-open="weather" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
@@ -197,6 +198,23 @@
     setHTML($('spaces'), SPACES.filter(s => s[1].length).map(([title, ids]) => `<div class="hcat${ids.length <= 2 ? ' half' : ''}"><h3>${esc(title)}</h3><div class="hg" style="--n:${ids.length <= 2 ? 2 : 5}">${ids.map(id =>
       `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join('')}</div></div>`).join(''));
   }
+  // ---- the morning brief and the next trip (aOS/home-find.js brief): worked out on the phone each time Home is
+  // drawn, in both layouts; a line opens its app, and Get ready asks Ipsy in aOS to do the trip's chores (each
+  // change it makes shows with Undo) ----
+  let tripAsk = '';
+  function paintBrief(b) {
+    const lines = b ? b.lines.filter(l => known(l.app)) : [], t = b && b.trip;
+    tripAsk = t ? t.ask : '';
+    const hour = new Date().getHours(), part = hour < 12 ? 'This morning' : hour < 17 ? 'This afternoon' : 'This evening';
+    setHTML($('hbrief'), (lines.length ? `<div class="wid brief" style="--c:${appHue('calendar')}"><em>${part}</em>${lines.map(l =>
+        `<button type="button" class="bl" data-open="${l.app}" aria-label="${esc(name(l.app))}: ${esc(l.text)}"><img src="${icon(l.app)}" alt=""><span translate="no">${esc(l.text)}</span></button>`).join('')}</div>` : '')
+      + (t && known('travel') ? `<div class="wid trip" style="--c:${appHue('travel')}"><em>${esc(t.starts)}</em><b translate="no">${esc(t.name)}</b><small>${esc(t.dates)}</small>
+        <ul>${[t.deliveries.length ? `📦 ${t.deliveries.length === 1 ? 'A delivery' : t.deliveries.length + ' deliveries'} due while you're away: ${esc(t.deliveries.slice(0, 3).join(', '))}` : '',
+          t.dinners ? `🍽 ${t.dinners === 1 ? 'A dinner' : t.dinners + ' dinners'} planned for those days` : '', t.events ? `📅 ${t.events === 1 ? 'An event' : t.events + ' events'} on the calendar then` : ''].filter(Boolean).map(x => `<li>${x}</li>`).join('')}</ul>
+        ${window.AllisonOS && AllisonOS.ipsy ? `<button type="button" class="tgo" data-tripgo>Get ready with Ipsy</button>` : ''}</div>` : ''));
+  }
+  $('hbrief').addEventListener('click', e => { if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
+
   // ---- Thumb arc ----
   // Drawn at an iPhone's 390 x 844 and scaled to the screen (--arck): the ring's centre in the corner, a
   // little above the home indicator; the inner ring the fixed four, the outer one the four favorites,
