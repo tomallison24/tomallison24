@@ -283,11 +283,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const secOpen = id => { const o = ls.json(K.open, {}); return !!o[id]; };
   const section = (id, title, icon, aside, body, under) => '<details class="sec" data-sec="' + id + '"' + (secOpen(id) ? ' open' : '') + '><summary><span class="si" aria-hidden="true">' + icon + '</span><span class="st">' + esc(title) + '</span>'
     + aside + '<span class="chev" aria-hidden="true">' + I.chevR + '</span>' + (under || '') + '</summary>' + body + '</details>';
-  main.addEventListener('toggle', e => {
-    const d = e.target; if (!d.matches || !d.matches('details.sec')) return;
-    const o = ls.json(K.open, {}); if (!!o[d.dataset.sec] === d.open) return;
-    o[d.dataset.sec] = d.open; ls.set(K.open, JSON.stringify(o));
-  }, true);
   // Ipsy's ideas for the categories (Settings > Categories, and once a month): Accept or No thanks.
   const ideaWhat = i => i.kind === 'merge' ? '<span>Merge</span> ' + no(i.from) + ' <span>into</span> ' + no(i.to) : '<span>Move</span> ' + no(i.merchant) + ' <span>to</span> ' + no(i.to);
   function ideasHtml() {
@@ -513,6 +508,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function setView(v) { st.view = v; ls.set(K.view, v); render(); animateIn(main); scrollTo(0, 0); }
 
   main.addEventListener('click', e => {
+    // a section opened or shut: kept at once (not on its toggle event, which comes after a render that may land first)
+    const sm = e.target.closest('details.sec > summary');
+    if (sm) { const d = sm.parentElement, o = ls.json(K.open, {}); o[d.dataset.sec] = !d.open; ls.set(K.open, JSON.stringify(o)); return; }
     if (e.target.closest('#sumBtn')) { openTrends(); return; }
     const a = e.target.closest('[data-act]');
     if (a) {

@@ -252,6 +252,7 @@ await test('This month: the number and its meter; where to save and the categori
 await test('Trends: tap the number; week by week (tap a week, its categories, its charges), and the month day by day', async () => {
   await p.click('#main #sumBtn');
   await p.waitForSelector('#trSheet:not([hidden])');
+  await p.waitForFunction(() => document.querySelector('#trSheet .sheet').getAnimations().every(a => a.playState !== 'running'));   // risen all the way
   const t = await p.locator('#trBody').innerText();
   assert.match(t, /Spent/); assert.match(t, /Usual a month/); assert.match(t, /Week by week/i); assert.match(t, /Through the month/i);
   assert.equal(await p.locator('#trBody [data-wk]').count(), 8, 'eight weeks');
@@ -259,7 +260,8 @@ await test('Trends: tap the number; week by week (tap a week, its categories, it
   await snap(p, 'trends');
   // the week with the most in it
   const most = await p.evaluate(() => { const w = [...document.querySelectorAll('#trBody [data-wk]')].map(r => +r.getAttribute('aria-label').replace(/.*\$|,/g, '')); return w.indexOf(Math.max(...w)); });
-  await p.click('#trBody [data-wk="' + most + '"]', { force: true });
+  const bar = p.locator('#trBody [data-wk="' + most + '"]');
+  await bar.scrollIntoViewIfNeeded(); await bar.click();
   assert.equal(await p.locator('#trBody [data-wk][aria-pressed="true"]').getAttribute('data-wk'), String(most));
   assert.ok(await p.locator('#trBody .wcat').count() >= 1, 'where that week went');
   await p.locator('#trBody .wcat').first().click();
@@ -267,6 +269,7 @@ await test('Trends: tap the number; week by week (tap a week, its categories, it
   assert.ok(await p.locator('#txBody [data-tx]').count() >= 1);
   await p.click('#txSheet .okbtn');
   // a finger on the day-by-day chart reads off that day
+  await p.locator('#runSvg').scrollIntoViewIfNeeded();
   const box = await p.locator('#runSvg').boundingBox();
   await p.mouse.click(box.x + box.width * 0.2, box.y + box.height / 2);
   assert.match(await p.locator('#runRead').innerText(), /^By \w{3} \d+: \$/);
