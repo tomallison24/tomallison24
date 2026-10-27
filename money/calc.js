@@ -26,8 +26,12 @@
   // Folding in what was read. The same transaction can come twice: as its own
   // alert and in a summary (which has no account), or as two alerts with the
   // same Monarch id. The alert wins: it says which card.
+  // One Ipsy found in another email and the person added (src 'email', money/ipsy-tools.js) gives way
+  // to Monarch's, when Monarch emails it after all: the same amount, in or out, within three days, on
+  // the same card if both say (the merchant's name is the email's own, so it isn't compared).
   // ---------------------------------------------------------------------
   const sameTx = (a, b) => a.dir === b.dir && Math.abs(a.amt - b.amt) < 0.005 && norm(a.merchant) === norm(b.merchant) && Math.abs(a.at - b.at) <= 2 * 864e5;
+  const sameCharge = (a, b) => a.dir === b.dir && Math.abs(a.amt - b.amt) < 0.005 && Math.abs(dayNo(a.date) - dayNo(b.date)) <= 3 && (!a.last4 || !b.last4 || a.last4 === b.last4);
   function merge(list, items) {
     const out = list.filter(okTx).slice(), byId = new Map(out.map(x => [x.id, x]));
     let added = 0;
@@ -35,9 +39,14 @@
       if (!okTx(it) || byId.has(it.id)) continue;
       if (it.mid && out.some(x => x.mid === it.mid)) continue;
       if (it.src === 'summary' && out.some(x => x.src === 'alert' && sameTx(x, it))) continue;
+      if (it.src === 'email' && out.some(x => x.src !== 'email' && sameCharge(x, it))) continue;
       if (it.src === 'alert') {
         const dup = out.findIndex(x => x.src === 'summary' && sameTx(x, it));
         if (dup >= 0) { byId.delete(out[dup].id); out.splice(dup, 1); added--; }
+      }
+      if (it.src !== 'email') {
+        const found = out.findIndex(x => x.src === 'email' && sameCharge(x, it));
+        if (found >= 0) { byId.delete(out[found].id); out.splice(found, 1); added--; }
       }
       out.push(it); byId.set(it.id, it); added++;
     }
@@ -280,7 +289,7 @@
   // ---------------------------------------------------------------------
   function toCheck(txs, today) {
     const ym = ymOf(today), t = dayNo(today);
-    return txs.filter(x => !x.check && (ymOf(x.date) === ym || (t - dayNo(x.date) <= 3 && t >= dayNo(x.date)))).sort((a, b) => a.at - b.at);
+    return txs.filter(x => !x.check && x.src !== 'email' && (ymOf(x.date) === ym || (t - dayNo(x.date) <= 3 && t >= dayNo(x.date)))).sort((a, b) => a.at - b.at);
   }
   // A transaction with what the check said applied (a new object; the old one is left as it was).
   // parse: { account(s) -> { account, last4 }, category(s) -> { cat, emoji } } (money/parse.js).
@@ -418,7 +427,7 @@
   // injection); it gets a ' in front, as a spreadsheet keeps text, unless it is just a number (-12.50).
   const csvCell = v => { const s = String(v == null ? '' : v); return '"' + (/^[=+\-@]/.test(s) && !/^[+-]?\d+(\.\d+)?$/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"'; };
 
-  root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
+  root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, sameCharge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
     recurring, minFor, month, pace, compare, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune, MAX_MONTH, newest, csvCell,
     catKey, recat, categories, mergeSettings, ideasInput };
 })(typeof window !== 'undefined' ? window : globalThis);

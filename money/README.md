@@ -206,6 +206,30 @@ leaves the phone, and nothing is kept (questions a day are counted, `money:ipsy:
 a financial adviser, and says when Monarch's alert threshold or a bank it can't sync could change an
 answer.
 
+### A charge Monarch missed
+
+Some charges never get a Monarch alert (a flight or hotel booking, where the confirmation is the only
+email). Asked to find one ("the Frontier flight I booked last week isn't here"), Ipsy can search the
+reader's Gmail and add it, with these safety nets (`ipsy-tools.js`: `search_gmail`, `read_email`,
+`add_transaction`):
+
+- **Only when asked, only on the reader's phone**: it searches Gmail only when the person asks, and
+  only where Money reads Monarch's emails (that phone's Gmail sign-in, read only). On anyone else's
+  phone it says so.
+- **Only from an email it read, only its own amount**: an addition must come from an email read in
+  that chat, and its amount must be written in that email (`$1,052.10`, `1052.10 USD`); a card's last
+  four digits are kept only if the email has them too.
+- **Only on Yes**: the chat shows exactly what would be added (merchant, amount, date, card, and the
+  email it came from) with Yes and No; nothing is added on No. Each addition has Undo, and the reader
+  can Remove one later from its transaction sheet.
+- **Never twice**: one Money already has (the same amount, in or out, within three days, on the same
+  card if both say) isn't added; and if Monarch emails it after all, Monarch's copy stays and the
+  found one goes (`calc.js` merge, `sameCharge`).
+- Once added it is a transaction like the rest (`src: 'email'`): in every total, and shared with the
+  family with the next sync. It isn't sent to Ipsy's daily check (that compares Monarch's emails).
+- Emails are material, never instructions: an email that asks for something is ignored. One that
+  names an amount still can't be added without the person's Yes on the card showing it.
+
 ## Not yet
 
 - No notifications: a bank that stops syncing shows when Money is opened, not on the lock screen.
