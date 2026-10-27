@@ -10,10 +10,17 @@ turns those emails into something to act on.
 
 One page, and a pill at the bottom to pick the view (as Home's and Drinks' views):
 
-- **This month**: what's been spent, the pace for the month ("At this rate: $X by the end of the
-  month", once a week has gone), and the month against the usual (the average of the three months
-  before), then **Where you could save** and each category with its usual beside it. Tap a category
-  for its transactions. The arrows step back through the months.
+- **This month**: what's been spent and the month against the usual (the average of the three months
+  before), with a meter under it: spent so far, the usual as a mark, and where this pace ends the
+  month (once a week has gone) as a paler run. Then **Where you could save**, **By category** and
+  Ipsy's ideas, each folded until you open it (and kept open or shut on the phone): By category shows
+  each category's share of the month as a strip while folded, and opened, each category's bar with
+  its usual marked on it. Tap a category for its transactions. The arrows step back through the months.
+  - **Trends** (tap the number): spent, the usual, at this rate and what's left over (or a usual
+    week); **Week by week**, the last eight weeks against a usual week (tap one for its categories
+    and its charges; weeks start on Sunday, or Monday if Calendar says so); and **Through the
+    month**, what had gone by each day against the usual month by then, with the pace to the end
+    (tap or drag along it to read off a day).
   - **Where you could save**: a category well over its usual (30% more and at least $75), a better
     card for a kind of spend (below), where the most went this month, and what repeats, as a year.
   - **Income** and **Left over**, once Monarch's deposit alerts arrive.
