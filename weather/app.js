@@ -1548,6 +1548,12 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
+// Ipsy in aOS (../aOS/home-tab.js) reads the forecast and shows a place here: ipsy-tools.js, offered as
+// AllisonOS.ipsyTools (Weather has no chat of its own).
+if (window.WeatherIpsy) (window.AllisonOS = window.AllisonOS || {}).ipsyTools = { app: 'weather', name: 'Weather', ...window.WeatherIpsy({
+  S, keyOf, fetchBase, saveCache, soonLine, getJSON, pickPlace,
+  setView: v => { if (S.view !== v) { S.view = v; store.set('view', v); stopRadar(); render(); } } }) };
+
 // Open to where you are: the last known place at once, then its fresh forecast.
 if (S.loc) { render(); refresh(false); }
 else autoLocate(true);
