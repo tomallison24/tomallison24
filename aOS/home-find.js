@@ -11,6 +11,9 @@
 //                        turned into occurrences by ../calendar/ical.js, as Calendar does)
 //   aosFind.search(q)  -> [{ app, title, sub, at }]: what's in the apps (the Ipsy bar's "In your
 //                        apps"), best first; at: where to open the app ('?open=note:…'), when it has one
+//   aosFind.search(q, { forIpsy: true }) -> the same for Ipsy in aOS (its search_apps tool, aOS/home-tab.js),
+//                        with what is marked Private left out (as each app's own Ipsy leaves it out: a
+//                        private note, order or booking, a private event); not even how many matched
 //
 // Each app's data is read only from its main key (never its log or graves: Orders' log keeps hidden
 // orders too). What an app keeps out of its own search stays out here: hidden orders (gifts), the
@@ -79,7 +82,7 @@
     from = Math.max(from, C.win.from || from); to = Math.min(to, C.win.to || to);   // iCloud only sent what's in its window
     const k = from + ':' + to; if (occCache[k]) return occCache[k];
     const I = window.AllisonICal, tz = I.localTz(), out = [];
-    for (const { cal } of C.list) { try { for (const o of I.expand(cal, from, to, tz)) if (o.status !== 'CANCELLED') out.push(o); } catch {} }
+    for (const { name, cal } of C.list) { try { for (const o of I.expand(cal, from, to, tz)) if (o.status !== 'CANCELLED') out.push(Object.assign(o, { file: name })); } catch {} }
     out.sort((a, b) => a.start - b.start);
     return (occCache = { [k]: out })[k];
   }
@@ -98,21 +101,22 @@
 
   // ---- what's in the apps ----
   // each app: its things as { title, also (more words to match), sub, at, when (for the order, soonest first) }
+  // priv: marked Private in its app (calendar/app.js isPrivate: the event's own mark, or this phone's calendar.private list)
   const has = (s, q) => String(s || '').toLowerCase().includes(q);
   const SOURCES = {
     calendar(q) {
-      const now = Date.now(), seen = new Set(), out = [], all = occurrences(now - 60 * 864e5, now + 365 * 864e5);
+      const now = Date.now(), seen = new Set(), out = [], all = occurrences(now - 60 * 864e5, now + 365 * 864e5), mine = new Set(get('calendar.private') || []);
       for (const o of [...all.filter(o => o.end >= now), ...all.filter(o => o.end < now).reverse()]) {   // a repeating event once: its next time, else its last
         const id = o.uid || titleOf(o) + o.start;
         if (!has(titleOf(o) + ' ' + (o.location || ''), q) || seen.has(id)) continue;
         seen.add(id);
-        out.push({ title: titleOf(o), also: o.location, sub: day(o.start) + (o.allDay ? '' : ' · ' + time(o.start)), at: `?date=${o.startDate}&view=day`, when: o.end < now ? 1e15 - o.start : o.start });
+        out.push({ title: titleOf(o), also: o.location, sub: day(o.start) + (o.allDay ? '' : ' · ' + time(o.start)), at: `?date=${o.startDate}&view=day`, when: o.end < now ? 1e15 - o.start : o.start, priv: !!o.private || mine.has(o.file) });
       }
       return out;
     },
     notes(q) {
       const d = get('allison-notes-v1'); if (!d) return [];
-      const notes = (d.notes || []).filter(n => n && !n.deletedAt).map(n => ({ title: n.title || String(n.body || '').split('\n')[0].slice(0, 60) || 'Note', also: n.body + ' ' + (n.tags || []).join(' '), sub: n.archived ? 'Archived note' : 'Note', at: `?open=note:${n.id}`, when: -(n.updated || 0) }));
+      const notes = (d.notes || []).filter(n => n && !n.deletedAt).map(n => ({ title: n.title || String(n.body || '').split('\n')[0].slice(0, 60) || 'Note', also: n.body + ' ' + (n.tags || []).join(' '), sub: n.archived ? 'Archived note' : 'Note', at: `?open=note:${n.id}`, when: -(n.updated || 0), priv: !!n.private }));
       const todos = (d.todos || []).filter(x => x && !x.done).map(x => ({ title: x.title || 'Reminder', also: x.notes, sub: 'Reminder' + (x.date ? ' · ' + day(dayOf(x.date)) : ''), at: `?open=todo:${x.id}`, when: -(x.updated || 0) }));
       return [...notes, ...todos];
     },
@@ -122,7 +126,7 @@
         const start = b.depIso || b.checkIn || b.pickupIso || b.start || '', t = Date.parse(start) || 0;
         const title = b.type === 'flight' ? [b.airline, b.flightNo].filter(Boolean).join(' ') + (b.from || b.to ? ` ${b.from || ''} → ${b.to || ''}` : '')
           : b.type === 'hotel' ? b.name : b.type === 'car' ? [b.company, b.carClass].filter(Boolean).join(' ') : b.title;
-        return { title: (title || '').trim() || 'Booking', also: [b.fromName, b.toName, b.city, b.address, b.place, b.conf].join(' '), sub: (b.type === 'other' ? 'Booking' : b.type[0].toUpperCase() + b.type.slice(1)) + (t ? ' · ' + day(t) : ''), when: t > Date.now() ? t : 1e15 - t };
+        return { title: (title || '').trim() || 'Booking', also: [b.fromName, b.toName, b.city, b.address, b.place, b.conf].join(' '), sub: (b.type === 'other' ? 'Booking' : b.type[0].toUpperCase() + b.type.slice(1)) + (t ? ' · ' + day(t) : ''), when: t > Date.now() ? t : 1e15 - t, priv: !!b.private };
       });
     },
     orders(q) {
@@ -130,7 +134,7 @@
       const kinds = { package: true, pickup: true, food: false, digital: false, other: false, ...(d.kinds || {}), package: true };   // orders/app.js: the kinds switched off aren't shown
       return (d.orders || []).filter(o => o && !o.hide && kinds[o.kind || 'package'] !== false).map(o => {
         const items = (o.items || []).map(i => i && i.name).filter(Boolean);
-        return { title: items[0] ? items[0] + (items.length > 1 ? ` and ${items.length - 1} more` : '') : o.store || 'Order', also: [o.store, ...items, o.orderNo, o.tracking].join(' '), sub: [o.store, o.status].filter(Boolean).join(' · '), when: -(Date.parse(o.orderDate) || o.updated || 0) };
+        return { title: items[0] ? items[0] + (items.length > 1 ? ` and ${items.length - 1} more` : '') : o.store || 'Order', also: [o.store, ...items, o.orderNo, o.tracking].join(' '), sub: [o.store, o.status].filter(Boolean).join(' · '), when: -(Date.parse(o.orderDate) || o.updated || 0), priv: !!o.private };
       });
     },
     meals(q) {
@@ -147,12 +151,13 @@
       return (d.follows || []).filter(f => f && f.title).map(f => ({ title: f.title, also: [f.author, f.genre].join(' '), sub: f.author || 'Show', at: f.feed ? '?feed=' + encodeURIComponent(f.feed) : '', when: -(f.at || 0) }));
     },
   };
-  function search(q, { known = () => true, per = 3, max = 8 } = {}) {
+  function search(q, { known = () => true, per = 3, max = 8, forIpsy = false } = {}) {
     q = String(q || '').trim().toLowerCase(); if (q.length < 2) return [];
     const out = [];
     for (const [app, src] of Object.entries(SOURCES)) {
       if (!known(app)) continue;
       let list = []; try { list = src(q); } catch {}
+      if (forIpsy) list = list.filter(r => !r.priv);
       const rank = r => { const t = r.title.toLowerCase(); return t.startsWith(q) ? 0 : t.split(/[^a-z0-9]+/).some(w => w.startsWith(q)) ? 1 : t.includes(q) ? 2 : has(r.also, q) ? 3 : 9; };
       const hits = list.map(r => ({ ...r, app, rank: rank(r) })).filter(r => r.rank < 9).sort((a, b) => a.rank - b.rank || (a.when < b.when ? -1 : a.when > b.when ? 1 : 0)).slice(0, per);
       out.push(...hits);
