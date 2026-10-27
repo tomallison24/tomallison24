@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Tron: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <defs>
+  <defs><filter id="trg" filterUnits="userSpaceOnUse" x="-40" y="-40" width="592" height="592"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <path d="M150 440C138 360 146 286 186 232C212 196 248 174 290 168L270 116L312 156C350 166 386 186 404 220C420 248 418 280 398 294C380 306 354 302 334 292C318 286 306 290 298 304C282 334 282 384 300 440Z" fill="#fff"/>
       <path d="M300 172L366 44L338 184Z" fill="#fff"/>
@@ -10,8 +10,7 @@
     </mask>
   </defs>
   <rect width="512" height="512" fill="#200B15"/>
-  <g><circle cx="420" cy="96" r="126.0" fill="none" stroke="#FF2A2A" stroke-width="16.8"/><circle cx="420" cy="96" r="72.8" fill="none" stroke="#FF2A2A" stroke-width="9.8"/><circle cx="420" cy="96" r="16.8" fill="#FF2A2A"/></g>
   <circle cx="92" cy="96" r="30" fill="#CB504C"/>
-  <rect x="330" y="420" width="150" height="50" rx="25" fill="#FF2A2A" transform="rotate(-18 405 445)"/>
   <rect width="512" height="512" fill="#F6F7F9" mask="url(#cut)"/>
+  <g transform="scale(1)" fill="none" filter="url(#trg)"><path d="M120 26H392A94 94 0 0 1 486 120V392A94 94 0 0 1 392 486H120A94 94 0 0 1 26 392V120A94 94 0 0 1 120 26Z" stroke="#FF2A2A" stroke-width="8"/><path d="M120 26H392A94 94 0 0 1 486 120V392A94 94 0 0 1 392 486H120A94 94 0 0 1 26 392V120A94 94 0 0 1 120 26Z" stroke="#FFE3E0" stroke-width="10" stroke-linecap="round" stroke-dasharray="168 1679" stroke-dashoffset="-252"/></g>
 </svg>

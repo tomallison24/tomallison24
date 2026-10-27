@@ -36,10 +36,13 @@ for (const app of pages) {
 
 // ---- the icons ----
 // Night Drive: a deep neon-tinted ground in the app's own hue, a striped sunset for the disc, a magenta tube.
-// Tron: a near-black ground with a hint of the
-// app's own hue, the night palette's light, the disc a red identity disc and the pill a red light trail. Masks (black and white)
-// are left as they are.
+// Tron (Trail frame): a near-black ground with a hint of the app's own hue, the drawing in the night palette's light, and
+// the screen's red light trail around the icon's edge, its light at the top right; the disc and the pill go, so it's calm.
+// The trail runs just inside the corners the phone rounds off (aOS/tron-shots.js traces the same line on aOS Home).
+// Masks (black and white) are left as they are.
 const SIZE = /viewBox="0 0 (\d+) (\d+)"/;
+// Tron's trail on a 512 icon: 26 in from each edge, its corners rounded at 94
+const TRAIL = 'M120 26H392A94 94 0 0 1 486 120V392A94 94 0 0 1 392 486H120A94 94 0 0 1 26 392V120A94 94 0 0 1 120 26Z';
 function iconFor(look, svg) {
   const masks = [];
   svg = svg.replace(/<mask[\s\S]*?<\/mask>/g, m => { masks.push(m); return `\u0000${masks.length - 1}\u0000`; });
@@ -56,10 +59,7 @@ function iconFor(look, svg) {
       const bars = [0.12, 0.3, 0.46, 0.6, 0.72, 0.84].map((y, i) => `<rect x="${cx - r}" y="${(cy + r * y).toFixed(1)}" width="${2 * r}" height="${(r * (0.04 + i * 0.012)).toFixed(1)}" fill="@BG@"/>`).join('');
       return `<g clip-path="url(#ndc)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#nds)"/>${bars}</g>`;
     }
-    if (look === 'grid') {
-      const ring = (rr, w) => `<circle cx="${cx}" cy="${cy}" r="${(r * rr).toFixed(1)}" fill="none" stroke="@CY@" stroke-width="${(r * w).toFixed(1)}"/>`;   // its own red, not repainted below
-      return `<g>${ring(0.9, 0.12)}${ring(0.52, 0.07)}<circle cx="${cx}" cy="${cy}" r="${(r * 0.12).toFixed(1)}" fill="@CY@"/></g>`;
-    }
+    if (look === 'grid') return '';
     return m;
   });
   // every other colour (the masks are out of the way)
@@ -72,10 +72,14 @@ function iconFor(look, svg) {
     svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`).split('@BG@').join(deep);
     svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF3D9A${b}`);
   }
-  if (look === 'grid' && bg) {   // the ground: all but black, a hint of the app's hue; the pill a red light trail
+  if (look === 'grid' && bg) {   // the ground: all but black, a hint of the app's hue; no pill; the light trail round the edge
     const deep = deepen(mapColor('neon', bg, true), 0.2);
     svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`);
-    svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF2A2A${b}`);
+    svg = svg.replace(/[ \t]*<rect[^>]*rx="\d+"[^>]*transform="rotate[^"]*"\/>\n?/, '');
+    svg = svg.replace(/\n[ \t]*(?=\n)/g, '');   // the lines the disc and the pill left
+    const k = +full / 512, len = 4 * 272 + 2 * Math.PI * 94;
+    defs += `<filter id="trg" filterUnits="userSpaceOnUse" x="-40" y="-40" width="592" height="592"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+    svg = svg.replace(/<\/svg>\s*$/, `  <g transform="scale(${k})" fill="none" filter="url(#trg)"><path d="${TRAIL}" stroke="#FF2A2A" stroke-width="8"/><path d="${TRAIL}" stroke="#FFE3E0" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(len * 0.1).toFixed(0)} ${len.toFixed(0)}" stroke-dashoffset="${(-len * 0.15).toFixed(0)}"/></g>\n</svg>\n`);
   }
   svg = svg.split('@BG@').join('#120B1F');
   svg = svg.split('@CY@').join('#FF2A2A');

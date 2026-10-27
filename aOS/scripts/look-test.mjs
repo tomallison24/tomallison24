@@ -24,7 +24,7 @@ let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
 
 async function open(scheme = 'light', seed = {}, o = {}) {
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme,
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme, reducedMotion: o.still ? 'reduce' : 'no-preference',
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mobile/15E148 Safari/604.1' });
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps: {} };
   await ctx.addInitScript(s => { try { localStorage.setItem('aos.sky', 'day'); if (!s.__fresh) localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); if (!s.__install) sessionStorage.setItem('aos.later.aos', '1');
@@ -346,6 +346,37 @@ for (const scheme of ['light', 'dark']) {
     await c4.close();
   }
   report('a Tron phone\'s first open: the intro, then the welcome to its end (no Light or dark); the intro ends whatever Web Audio does', pr);
+}
+
+// In Tron, aOS Home's screen trail now and then sends a shot round an app's icon (aOS/tron-shots.js): drawn on its own
+// canvas that never takes a tap, one at a time, and gone again a moment later; never in Vintage, nor with motion reduced
+{
+  const pr = [];
+  const shoot = p => p.evaluate(async () => {
+    aosTabs.show('home'); await new Promise(r => setTimeout(r, 300));
+    const fired = aosTronShots.fire(), again = aosTronShots.fire();
+    await new Promise(r => setTimeout(r, 120));
+    const cv = document.getElementById('tronshots'); let lit = 0;
+    if (cv) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 3] > 100) lit++; }
+    const taps = cv ? getComputedStyle(cv).pointerEvents : null;
+    await new Promise(r => setTimeout(r, 1600));
+    return { fired, again, lit, taps, still: aosTronShots.running() };
+  });
+  const tron = await open('dark', { 'aos.look': 'grid', 'aos.tron.intro': 'off' }); pr.push(...tron.errs);
+  const t = await shoot(tron.p);
+  if (!t.fired) pr.push('no shot in Tron');
+  if (t.again) pr.push('a second shot while one was on screen');
+  if (!t.lit) pr.push('the shot drew nothing');
+  if (t.taps !== 'none') pr.push('the shots\' canvas takes taps: ' + t.taps);
+  if (t.still) pr.push('the shot was still on screen after 1.7 seconds');
+  await tron.ctx.close();
+  const vin = await open('dark', { 'aos.look': 'vintage' }); pr.push(...vin.errs);
+  if ((await shoot(vin.p)).fired) pr.push('a shot in Vintage');
+  await vin.ctx.close();
+  const calm = await open('dark', { 'aos.look': 'grid', 'aos.tron.intro': 'off' }, { still: true }); pr.push(...calm.errs);
+  if ((await shoot(calm.p)).fired) pr.push('a shot with motion reduced');
+  await calm.ctx.close();
+  report('Tron: the screen trail sends one shot at a time round an app\'s icon on Home, and not in Vintage or with motion reduced', pr);
 }
 
 await b.close(); server.close();

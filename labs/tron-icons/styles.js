@@ -2,7 +2,8 @@
 // makes today's Tron icon), so a style picked here can become the generator's. Every Vintage icon is the same
 // four layers: the ground (a full-size rect), a big disc (a circle, r 90 or more), a pill (a rotated rounded
 // rect) and the cream drawing on top (cut out with masks). Each style redraws those four.
-//   window.tronStyles = [{ id, name, about, make(svgText, ground) }]   ground: today's Tron ground for that app
+// Trail frame was picked: it's Tron's icon now (make-looks.mjs), and Identity disc is how they were before.
+//   window.tronStyles = [{ id, name, about, make(svgText, ground) }]   ground: the Tron ground for that app
 'use strict';
 (() => {
   const RED = '#FF2A2A', HOT = '#FFE3E0', NS = 'http://www.w3.org/2000/svg';
@@ -52,8 +53,11 @@
   const rings = (d, w = 1) => d ? `<circle cx="${d.cx}" cy="${d.cy}" r="${(d.r * 0.9).toFixed(1)}" fill="none" stroke="${RED}" stroke-width="${(d.r * 0.12 * w).toFixed(1)}"/><circle cx="${d.cx}" cy="${d.cy}" r="${(d.r * 0.52).toFixed(1)}" fill="none" stroke="${RED}" stroke-width="${(d.r * 0.07 * w).toFixed(1)}"/><circle cx="${d.cx}" cy="${d.cy}" r="${(d.r * 0.12).toFixed(1)}" fill="${RED}"/>` : '';
 
   const styles = [
-    { id: 'today', name: 'Identity disc', about: 'Today’s Tron icons: the drawing in white on near-black, the sun an identity disc, the pill a red bar.',
-      make: null },   // the page shows each app's own icon-grid.svg
+    { id: 'today', name: 'Identity disc', about: 'Tron’s icons before Trail frame: the drawing in white on near-black, the sun an identity disc, the pill a red bar.',
+      make(svg, ground) {
+        const L = layers(svg);
+        return wrap(`<rect width="512" height="512" fill="${ground || '#07090B'}"/>${rings(L.disc)}${pillEl(L.pill, `fill="${RED}"`)}<g>${L.art.replace(/(fill|stroke)="#FBF5E9"/gi, (m, k) => `${k}="#F6F7F9"`)}</g>`, L.defs);
+      } },
 
     { id: 'lines', name: 'Light lines',
       about: 'Only light: the drawing traced as a glowing red line on black, over a faint grid. The disc and the pill become thin rings and a light trail.',
@@ -89,7 +93,7 @@
       } },
 
     { id: 'trail', name: 'Trail frame',
-      about: 'The screen’s light trail on every icon: a red trail around the edge with a bright light racing along it. The drawing stays white; the disc and pill go, so it’s calm.',
+      about: 'Picked, and now Tron’s icons: the screen’s light trail on every icon, a red trail around the edge with its light at the top right. The drawing stays white; the disc and pill go, so it’s calm. On aOS Home the screen’s trail sends a shot round one now and then.',
       make(svg, ground) {
         const L = layers(svg), id = 't' + (++n);
         // the trail: just inside the corners the phone rounds off; its light at the top right
