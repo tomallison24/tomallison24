@@ -211,7 +211,9 @@ await page.fill('#filter', ''); await page.dispatchEvent('#filter', 'input');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '3-want.png') });
 
 // ---- searching for businesses from the top search box ----
-await page.fill('#filter', 'pizza'); await page.waitForTimeout(900);
+// (the businesses come a moment after your own places: wait for them, not a set time, which a busy machine can outrun)
+const found = sel => page.waitForFunction(s => (document.querySelector(s) || {}).textContent?.includes('Pizzeria Locale'), sel, { timeout: 8000 }).catch(() => {});
+await page.fill('#filter', 'pizza'); await found('#list');
 let lt = await page.textContent('#list');
 ok('the search box finds businesses after your own places', lt.includes('None of your places match') && lt.includes('Businesses') && lt.includes('Pizzeria Locale'), lt.slice(0, 160));
 await page.click('#list [data-found="0"]'); await page.waitForTimeout(400);
@@ -225,7 +227,7 @@ const nPins = await page.$$eval('.pin.want', p => p.length);
 ok('the map shows a pin for each Want to go place', await page.isVisible('#map') && nPins === 2, nPins + ' pins');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '4-map.png') });
 // ---- searching on the map ----
-await page.fill('#filter', 'pizza'); await page.waitForTimeout(900);
+await page.fill('#filter', 'pizza'); await found('#mapResults');
 ok('on the map the search box stays, and results drop down under it', await page.isVisible('#filter') && await page.isVisible('#mapResults') && (await page.textContent('#mapResults')).includes('Pizzeria Locale'));
 await page.click('#mapResults [data-found="0"]'); await page.waitForTimeout(1600);
 ok('tapping a result flies there and opens its card', await page.isHidden('#mapResults') && (await page.textContent('.bizcard')).includes('Pizzeria Locale'));
