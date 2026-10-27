@@ -1532,6 +1532,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         d = await res.json();
       } catch { if (quiet) { out.stop = 'offline'; break; } continue; }
       if (d && d.error === 'no-key') { aiAvail = false; out.stop = 'no-key'; break; }
+      if (d && d.error === 'ai-budget') { out.stop = 'ai-budget'; out.until = d.until; break; }
       if (!d || d.error === 'limit') { out.stop = 'limit'; break; }
       out.done.add(q.bid);
       if (d.error === 'too-big') { out.unread++; continue; }      // the server would not take the email: not read, said so (below), not asked again
@@ -1594,7 +1595,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const r = await aiPass(queue);
       await findNumbers();
       const bits = [];
-      if (r.filled) bits.push('Ipsy filled in ' + plural(r.filled, 'detail') + '. They’re marked to check.');
+      if (r.stop === 'ai-budget') bits.push(AllisonOS.budgetSay(r.until));
+      else if (r.filled) bits.push('Ipsy filled in ' + plural(r.filled, 'detail') + '. They’re marked to check.');
       else if (r.asked > r.unread) bits.push('Ipsy read the email. It doesn’t say anything more.');
       else if (r.unread) bits.push('Ipsy couldn’t read the emails just now.');
       else if (r.nothing) bits.push('The email doesn’t state what’s missing, so Ipsy has nothing to read. Your calendar, or you, can add it.');
@@ -1699,7 +1701,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (ipsy) ipsy.working(true);
     const list = all.slice(0, 8), mine2 = list.filter(b => !b.edited);
     const changes = [], said = [];
-    let read = 0, cancelled = 0, stop = '';
+    let read = 0, cancelled = 0, stop = '', until = '';
     try {
       if (aiAvail === null) await pingLive();
       if (!aiAvail) { toast('AI isn’t set up on this copy of the site.'); return; }
@@ -1712,7 +1714,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         let d = null;
         try { d = await (await aosFetch(API + 'extract', init)).json(); } catch { stop = 'offline'; break; }
         if (d && d.error === 'no-key') { aiAvail = false; stop = 'no-key'; break; }
-        if (d && (d.error === 'limit' || d.error === 'signin')) { stop = d.error; break; }
+        if (d && (d.error === 'limit' || d.error === 'signin' || d.error === 'ai-budget')) { stop = d.error; until = d.until; break; }
         if (!d || !d.ok) continue;
         read++; noteModel('check', d.model);
         const cur = bookings.find(x => x.id === b.id);
@@ -1733,6 +1735,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (changes.length) bits.push('Ipsy updated ' + plural(changes.length, 'booking') + (cancelled ? ' (' + cancelled + ' cancelled)' : '') + '. Marked Check.');
       else if (read) bits.push('Ipsy read ' + plural(read, 'email') + '. Everything matches.');
       if (stop === 'limit') bits.push('That’s enough AI for today. Try again tomorrow.');
+      else if (stop === 'ai-budget') bits.push(AllisonOS.budgetSay(until));
       else if (stop === 'signin') bits.push('Sign in with Face ID in aOS to use Ipsy.');
       else if (stop === 'offline') bits.push('Couldn’t reach Ipsy. Try again in a moment.');
       else if (!read && !changes.length && mine2.length) bits.push('Ipsy couldn’t read the emails just now.');
@@ -1785,6 +1788,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       ipsy.hint('I filled in ' + plural(r.filled, 'detail') + ' on ' + plural(r.changes.length, 'booking') + '. They’re in To check for you to look over.');
     } else if (r && r.done.size) ipsy.note('Checked ' + plural(r.done.size, 'booking') + ' missing details: ' + (r.done.size === 1 ? 'its email doesn’t' : 'their emails don’t') + ' say any more.');
     else if (stop === 'signin') ipsy.hint('Sign in with Face ID in aOS and I can fill in what your bookings are missing.');
+    else if (stop === 'ai-budget') ipsy.hint(AllisonOS.budgetSay(r.until));
   }
   // -- Changes Ipsy makes (ipsy-tools.js): "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
   // A short list of changes (set or clear a field, add a booking, delete, cancel or bring back, mark checked, join trips, take a

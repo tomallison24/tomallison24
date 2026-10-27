@@ -153,6 +153,9 @@ await test('fallbacks the API rejects (a 400) are retried without them', async (
   assert.equal(r.status, 200); assert.equal(asked.length - before, 2);
   assert.equal(asked.at(-1).body.fallbacks, undefined); assert.equal(asked.at(-1).headers['anthropic-beta'], undefined);
 });
+// The month's AI budget used up: Anthropic's answer to every request until the 1st (server/ipsy.js, budgetUntil).
+const back = (d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString())(new Date());
+const spent = () => new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits. You will regain access on ' + back.slice(0, 10) + ' at 00:00 UTC.' } }), { status: 400 });
 await test('errors from Anthropic: a bad key, a busy API, anything else', async () => {
   for (const [status, error] of [[401, 'ai-key'], [429, 'ai-busy'], [500, 'ai-500']]) {
     forget();
@@ -160,6 +163,14 @@ await test('errors from Anthropic: a bad key, a busy API, anything else', async 
     const r = await call('summarize', { token, body: { url: URL1 } });
     assert.equal(r.status, 502); assert.equal(r.body.error, error);
   }
+});
+
+await test('the month\'s AI budget used up: ai-budget, and when it\'s back, with no second try without fallbacks', async () => {
+  forget();
+  const before = asked.length;
+  answers = [spent(), spent()];
+  const r = await call('summarize', { token, body: { url: URL1 } });
+  assert.equal(r.status, 503); assert.deepEqual(r.body, { error: 'ai-budget', until: back }); assert.equal(asked.length - before, 1);
 });
 
 await test('ask: the question is answered from the article, which rides first with a cache breakpoint', async () => {

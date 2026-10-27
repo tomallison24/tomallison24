@@ -36,7 +36,7 @@
 // The X-Orders header stops other web pages calling this (as X-News does).
 
 import { reply, kv, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, modelOf as ipsyModelFor, turnKind, requestHead, ipsyStep, fail, today } from '../../../server/ipsy.js';
+import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, modelOf as ipsyModelFor, turnKind, requestHead, ipsyStep, fail, aiFail, today } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-haiku-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -145,7 +145,7 @@ export async function read(env, { subject, from, date, text }, f = fetch) {
   const body = { model: modelOf(env), max_tokens: 4000, system: SYSTEM, messages: [{ role: 'user', content: user }],
     output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } } };
   const r = await post(env, body, f);
-  if (!r.ok) throw fail(r.status === 401 || r.status === 403 ? 'ai-key' : r.status === 429 ? 'ai-busy' : 'ai-' + r.status, 502);
+  if (!r.ok) throw await aiFail(r);
   const j = await r.json();
   if (j.stop_reason === 'refusal') throw fail('ai-refused', 422);
   if (j.stop_reason === 'max_tokens') throw fail('ai-format', 502);
@@ -274,6 +274,6 @@ export async function onRequest({ request, params, env }, f = fetch) {
     const fact = await read(env, { subject: str(b.subject, 300), from: str(b.from, 200), date, text }, f);
     return reply(fact ? { fact } : { fact: null, reason: 'not-an-order' });
   } catch (e) {
-    return reply({ error: e.status ? e.message : 'server' }, e.status || 500);
+    return reply({ error: e.status ? e.message : 'server', ...(e.until ? { until: e.until } : {}) }, e.status || 500);
   }
 }

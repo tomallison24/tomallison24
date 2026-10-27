@@ -43,7 +43,7 @@
 // _middleware.js locks it to signed-in family.
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
-import { T, DAY, persona, modelOf, requestHead, ipsyStep, today } from '../../../server/ipsy.js';
+import { T, DAY, persona, modelOf, requestHead, ipsyStep, budgetOf, today } from '../../../server/ipsy.js';
 
 // ---- Ipsy, the helper you chat with: its tools in Money (money/ipsy-tools.js runs them, read only) ----
 const MONTH = { type: 'string', description: 'YYYY-MM' };
@@ -420,13 +420,13 @@ async function check(request, env, db, me) {
     'Subject: ' + it.subject,
     'Email text:', '<<<', it.text, '>>>', '</item>'].join('\n')).join('\n\n');
   const r = await claude(env, key, CHECK_SYSTEM, prompt, CHECK_SCHEMA);
-  if (r.error) return reply({ error: r.error }, r.status);
+  if (r.error) return reply({ error: r.error, ...(r.until ? { until: r.until } : {}) }, r.status);
   if (r.refused) return reply({ results: {}, refused: true });
   if (!r.out) return reply({ results: {}, unreadable: true });
   return reply({ results: keepResults(r.out, items) });
 }
 
-// One call to Claude for a JSON answer: { out } (null when unreadable), { refused }, or { error, status }.
+// One call to Claude for a JSON answer: { out } (null when unreadable), { refused }, or { error, status } (the AI budget: with until).
 async function claude(env, key, system, prompt, schema) {
   const model = String(env.MONEY_AI_MODEL || '').trim() || CHECK_MODEL, fallback = !/haiku/i.test(model);
   let res;
@@ -437,6 +437,8 @@ async function claude(env, key, system, prompt, schema) {
         output_config: { effort: 'low', format: { type: 'json_schema', schema } }, ...(fallback ? { fallbacks: 'default' } : {}) }),
       signal: AbortSignal.timeout(28000) });
   } catch { return { error: 'unreachable', status: 502 }; }
+  const until = await budgetOf(res);
+  if (until) return { error: 'ai-budget', until, status: 503 };
   if (res.status === 429 || res.status === 529) return { error: 'busy', status: 503 };
   if (res.status === 401 || res.status === 403) return { error: 'key-refused', status: 502 };
   if (!res.ok) return { error: 'upstream-' + res.status, status: 502 };
@@ -507,7 +509,7 @@ async function ideas(request, env, db, me) {
     + '\n\nThe family\'s own changes:\n' + JSON.stringify(input.yourChanges)
     + '\n\nIdeas they said no to (kind:from-or-merchant>to, lower case):\n' + JSON.stringify(input.saidNo);
   const r = await claude(env, key, IDEAS_SYSTEM, prompt, IDEAS_SCHEMA);
-  if (r.error) return reply({ error: r.error }, r.status);
+  if (r.error) return reply({ error: r.error, ...(r.until ? { until: r.until } : {}) }, r.status);
   if (r.refused || !r.out) return reply({ ideas: [] });
   return reply({ ideas: keepIdeas(r.out, input) });
 }

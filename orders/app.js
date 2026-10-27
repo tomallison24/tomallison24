@@ -808,7 +808,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { r = acct && !quiet ? await acct.fetch('../orders/api/read', opts) : await fetch('../orders/api/read', opts); }
     catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let j = {}; try { j = await r.json(); } catch {}
-    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'no-ai' : 'server') });
+    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'no-ai' : 'server'), until: j.until });
     return j;
   }
   // What Claude found goes onto the order: whatever it found replaces what is there, except what
@@ -869,7 +869,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (changed.length && ipsy) ipsy.change('Fixed ' + (o.store || 'an order') + ': ' + changed.slice(0, 4).join(', '), undoTo(o, before));
       return { changed, undo: undoTo(o, before) };
     } catch (e) {
-      return { error: e instanceof AuthError ? 'auth' : e.code || 'server', message: e.message };
+      return { error: e instanceof AuthError ? 'auth' : e.code || 'server', message: e.message, until: e.until };
     }
   }
   // "Have Ipsy check this order", on its page.
@@ -882,6 +882,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const r = await checkOrder(o);
     st.aiBusy = false; if (ipsy) ipsy.working(false); if (st.order === o) renderOrder(); render();
     if (r.error === 'auth') { toast('Gmail needs you to sign in again.'); openSettings(); }
+    else if (r.error === 'ai-budget') toast(AllisonOS.budgetSay(r.until), null, 8000);
     else if (r.error) toast(AI_SAY[r.error] || (r.error !== 'server' ? 'Something went wrong. Try again in a minute.' : r.message));
     else if (r.none) toast('Ipsy doesn’t think that email is about an order.');
     else toast(r.changed.length ? 'Ipsy fixed the ' + r.changed.slice(0, 4).join(', ') + '.' : 'Ipsy agrees with what’s there.', r.changed.length ? r.undo : null, 6000);
@@ -893,7 +894,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Settings > Ipsy turns it on or off. A fix shows in Ipsy's chat with Undo, and Ipsy says in its corner
   // what it did. What it can't fix stays in To check.
   let autoBusy = false, autoOffered = false;     // offered once each time Orders opens
-  const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy'];
+  const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy', 'ai-budget'];
   const when = o => (o.source && o.source.date) || 0;
   async function autoCheck() {
     if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken()) return;
@@ -914,11 +915,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return;
     }
     autoBusy = true; ipsy.working(true);
-    let checked = 0, fixed = 0, left = 0, stop = '';
+    let checked = 0, fixed = 0, left = 0, stop = '', until = '';
     for (const o of todo) {
       if (!orders.includes(o)) continue;
       const r = await checkOrder(o, true);
-      if (r.error && AUTO_STOP.includes(r.error)) { stop = r.error; break; }      // not marked tried: next time
+      if (r.error && AUTO_STOP.includes(r.error)) { stop = r.error; until = r.until; break; }      // not marked tried: next time
       tried.add(o.id + ':' + o.source.msgId); checked++;
       if (r.changed && r.changed.length) fixed++;
       if (needsCheck(o)) left++;
@@ -930,6 +931,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (fixed) ipsy.hint('I updated ' + plural(fixed, 'order') + (left ? '; ' + need(left) + ' in To check.' : '.'));
     else if (left) ipsy.hint(left === 1 ? 'I couldn’t fix the one in To check: it needs you.' : 'I couldn’t fix those in To check: they need you.');
     else if (stop === 'signin') ipsy.hint('Sign in with Face ID in aOS and I can keep your orders up to date.');
+    else if (stop === 'ai-budget') ipsy.hint(AllisonOS.budgetSay(until));
   }
 
   // ---------------------------------------------------------------------

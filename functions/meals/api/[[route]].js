@@ -85,7 +85,7 @@
 // The X-Meals header stops other web pages calling this (as X-Drinks does).
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, IPSY_DAILY, T, DAY, persona, modelOf as ipsyModelFor, requestHead, ipsyStep, fail, today } from '../../../server/ipsy.js';
+import { IPSY_MODEL, IPSY_DAILY, T, DAY, persona, modelOf as ipsyModelFor, requestHead, ipsyStep, fail, aiFail, today } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-haiku-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -167,7 +167,7 @@ export async function ask(env, { system, prompt, maxTokens = 4000 }, f = fetch) 
         headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: prompt }] }) });
     } catch { throw fail('ai-unreachable', 502); }
-    if (!r.ok) throw fail(r.status === 401 || r.status === 403 ? 'ai-key' : r.status === 429 ? 'ai-busy' : 'ai-' + r.status, 502);
+    if (!r.ok) throw await aiFail(r);
     const j = await r.json();
     return (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
   } finally { clearTimeout(timer); }
@@ -585,6 +585,6 @@ export async function onRequest({ request, params, env }, f = fetch) {
     }
     return reply({ error: 'not-found' }, 404);
   } catch (e) {
-    return reply({ error: e.status ? e.message : 'server' }, e.status || 500);
+    return reply({ error: e.status ? e.message : 'server', ...(e.until ? { until: e.until } : {}) }, e.status || 500);
   }
 }

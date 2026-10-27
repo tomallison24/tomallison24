@@ -41,6 +41,13 @@
   'use strict';
   const AOS = window.AllisonOS = window.AllisonOS || {};
   if (AOS.ipsy) return;
+  // The family's AI budget for the month is used up (server/ipsy.js, budgetUntil): why AI stopped, and
+  // when it's back (until, from Anthropic). Every AI part of the apps says this (Orders, Meals, News, Travel, Money).
+  AOS.budgetSay = until => {
+    const t = new Date(until), when = isNaN(t) ? 'the 1st'
+      : t.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '');
+    return 'aOS’s AI budget for this month is used up, so AI is off until ' + when + '. The owner can raise it in Anthropic’s Console.';
+  };
   const me = document.currentScript;
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
@@ -1041,7 +1048,7 @@
       try { r = acct ? await acct.fetch(o.endpoint, opts) : await fetch(o.endpoint, opts); }
       catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
       let j = null; try { j = await r.json(); } catch {}
-      if (!r.ok || !j) throw Object.assign(new Error((j && (j.why || j.error)) || 'http-' + r.status), { code: (j && j.error) || (r.status === 404 ? 'no-ai' : 'server'), why: j && j.why });
+      if (!r.ok || !j) throw Object.assign(new Error((j && (j.why || j.error)) || 'http-' + r.status), { code: (j && j.error) || (r.status === 404 ? 'no-ai' : 'server'), why: j && j.why, until: j && j.until });
       return j;
     }
     // A tool that changes something the person should approve first (Calendar's events) asks here:
@@ -1150,7 +1157,7 @@
         // and the conversation stays one Claude can carry on from.
         messages.length = mark;
         const code = failed.code || 'server';
-        add({ t: 'err', text: ERRORS[code] || ('Something went wrong' + (failed.why ? ': ' + failed.why : '') + '. Try again in a minute.') });
+        add({ t: 'err', text: code === 'ai-budget' ? AOS.budgetSay(failed.until) : ERRORS[code] || ('Something went wrong' + (failed.why ? ': ' + failed.why : '') + '. Try again in a minute.') });
         if (code === 'full') { /* nothing more to say */ }
       }
       busy = false; persist(); mood(document.activeElement === input ? 'listen' : 'idle'); say(''); draw();
