@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- page -->
+<title>Tron icon styles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600&family=Orbitron:wght@700&display=swap">
+<!--
+  labs/tron-icons: a test page for the owner, not an app. Five ways to draw the app icons in Tron, each made from
+  every app's own Vintage icon.svg (styles.js), as aOS/scripts/make-looks.mjs makes today's: Identity disc (today's),
+  Light lines, Lit edges, Ares red and Trail frame. Tap an app to see it big in every style. Nothing here changes the
+  apps' icons. See ../index.html.
+-->
+<style>
+  /* Layout: the chosen app big in every style across the top, then each style as a phone's Home Screen of every app.
+     Tron only, as the look is: dark, red light on near-black. */
+  :root {
+    --ground: #050608; --panel: #0C0E11; --edge: rgba(238,240,242,.10); --text: #EEF0F2; --muted: rgba(238,240,242,.62);
+    --red: #FF2A2A; --hot: #FFE3E0;
+    --display: "Orbitron", "Exo 2", "Avenir Next", system-ui, sans-serif;
+    --body: "Exo 2", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--text); font: 15px/1.45 var(--body); }
+  main { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 28px; }
+  h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .03em; margin: 0; text-wrap: balance; }
+  h1 { font-size: clamp(26px, 6vw, 38px); }
+  h1 b { color: var(--red); text-shadow: 0 0 14px rgba(255,42,42,.55); font-weight: 700; }
+  h2 { font-size: 17px; }
+  p { margin: 0; max-width: 62ch; }
+  .muted { color: var(--muted); }
+  header { display: grid; gap: 10px; }
+
+  /* the chosen app, big, in every style */
+  .compare { display: grid; gap: 14px; }
+  .apps { display: flex; flex-wrap: wrap; gap: 6px; }
+  .apps button { font: 600 13px var(--body); color: var(--muted); background: transparent; border: 1px solid var(--edge);
+    border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .apps button[aria-pressed="true"] { color: var(--text); border-color: var(--red); box-shadow: 0 0 10px rgba(255,42,42,.35) inset; }
+  .apps button:focus-visible, .home button:focus-visible { outline: 2px solid var(--hot); outline-offset: 2px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .big { display: grid; gap: 8px; justify-items: center; text-align: center; }
+  .big img { width: 100%; max-width: 168px; aspect-ratio: 1; border-radius: 22.5%; display: block; }
+  .big span { font-family: var(--display); font-size: 12px; letter-spacing: .04em; }
+
+  /* a style: its name, what it is, and a Home Screen of every app */
+  .style { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; align-items: start;
+    padding-top: 24px; border-top: 1px solid var(--edge); }
+  .style .words { display: grid; gap: 8px; }
+  .tag { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--red); }
+  .home { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 10px; padding: 20px 16px;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 28px; }
+  .home button { all: unset; display: grid; gap: 5px; justify-items: center; cursor: pointer; border-radius: 14px; }
+  .home img { width: 100%; max-width: 62px; aspect-ratio: 1; border-radius: 22.5%; display: block; }
+  .home span { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  #styles { display: grid; gap: 28px; }
+  .note { font-size: 13px; }
+  @media (max-width: 720px) { .style { grid-template-columns: minmax(0, 1fr); } }
+  @media (min-width: 560px) { .home { grid-template-columns: repeat(6, minmax(0, 1fr)); } .style .home { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (min-width: 900px) { .style .home { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Tron <b>icons</b></h1>
+    <p class="muted">Five ways to draw the app icons in Tron. Each is made from the app’s own Vintage icon, like today’s, so whichever you pick works for every app, new ones too. Tap an app to see it big in all five.</p>
+  </header>
+
+  <section class="compare" aria-label="One app in every style">
+    <div class="apps" id="apps" role="group" aria-label="App"></div>
+    <div class="row" id="big"></div>
+  </section>
+
+  <div id="styles"></div>
+
+  <p class="note muted">On a phone the icons sit on your wallpaper and the phone rounds their corners, as here. Pick one (or say what to mix) and it becomes the Tron icons for every app.</p>
+</main>
+<script src="styles.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
