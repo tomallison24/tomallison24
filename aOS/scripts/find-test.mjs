@@ -54,4 +54,56 @@ test('only the apps asked about, and nothing for a word too short', () => {
   assert.deepEqual([...new Set(aosFind.search('sophie', { forIpsy: true, per: 8, max: 30, known: a => a === 'notes' }).map(x => x.app))], ['notes']);
   assert.deepEqual(aosFind.search('s', { forIpsy: true }), []);
 });
+
+// ---- the morning brief and the next trip (brief) ----
+const pad = x => String(x).padStart(2, '0');
+const dayAt = k => { const x = new Date(); x.setHours(12, 0, 0, 0); x.setDate(x.getDate() + k); return x; };
+const ymdOf = x => x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate());
+const T0 = ymdOf(dayAt(0)), T3 = ymdOf(dayAt(3)), T4 = ymdOf(dayAt(4)), T6 = ymdOf(dayAt(6));
+const floating = (k, h) => ymdOf(dayAt(k)).replace(/-/g, '') + 'T' + pad(h) + '0000';   // the phone's own clock
+const vevent = (uid, summary, k, h) => ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:' + uid, 'DTSTAMP:20260101T000000Z', 'DTSTART:' + floating(k, h), 'DTEND:' + floating(k, h + 1), 'SUMMARY:' + summary, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+function seedDay({ tripIn = 3 } = {}) {
+  store.clear();
+  put('allison-calendar-v1-items', { at: Date.now() + tripIn, win: {}, items: [{ name: 'e1.ics', ics: vevent('e1', 'School run', 0, 23) }, { name: 'e2.ics', ics: vevent('e2', 'Museum', tripIn + 1, 10) }] });
+  put('allison-orders-v1', { orders: [
+    { id: 'o1', store: 'Target', status: 'shipped', eta: T0 }, { id: 'o2', store: 'Costco', status: 'pickup' },
+    { id: 'o3', store: 'Gift shop', status: 'shipped', eta: T0, hide: true }, { id: 'o4', store: 'Old', status: 'delivered', eta: T0 },
+    { id: 'o5', store: 'Away Co', status: 'shipped', eta: ymdOf(dayAt(tripIn + 1)) }] });
+  put('allison-meals-v2', { plan: { dates: [T0], meals: [{ day: 1, title: 'Tacos', slot: 'dinner' }, { day: 1, title: 'Soup', slot: 'lunch' }] } });
+  put('allison-notes-v1', { notes: [], todos: [{ id: 't1', title: 'Call the dentist', date: ymdOf(dayAt(-1)) }, { id: 't2', title: 'Bins out', date: T0 }, { id: 't3', title: 'Done', date: T0, done: true }, { id: 't4', title: 'Later', date: ymdOf(dayAt(1)) }] });
+  const here = { lat: 35.78, lon: -78.638 };
+  put('wx.here', here);
+  put('wx.cache', { '35.780,-78.638': { cur: { tF: 60, c: 'rainy' }, rKind: 'pop', fetchedAt: Date.now(), daily: [{ t: Math.floor(dayAt(0).getTime() / 1000), c: 'rainy', r: 70 }], hourly: [] } });
+  const d0 = ymdOf(dayAt(tripIn)), d3 = ymdOf(dayAt(tripIn + 3));
+  put('allison-travel-v1', { trips: [{ id: 'f1', name: 'Boston weekend' }], bookings: [
+    { id: 'f1', type: 'flight', dep: d0 + 'T08:00', arr: d0 + 'T11:00', from: 'RDU', to: 'BOS', toName: 'Boston' },
+    { id: 'h1', type: 'hotel', name: 'Harbor Inn', city: 'Boston', checkIn: d0, checkOut: d3 },
+    { id: 'x1', type: 'hotel', name: 'Cancelled place', city: 'Nowhere', checkIn: d0, checkOut: d3, status: 'cancelled' }] });
+}
+test('the brief: the day\'s events, deliveries due, pickups, tonight\'s dinner, reminders due or late, rain', () => {
+  seedDay();
+  const b = aosFind.brief(), say = b.lines.map(l => l.app + ': ' + l.text);
+  assert.ok(say.some(x => /^calendar: 1 event today/.test(x)), say.join(' | '));
+  assert.ok(say.includes('orders: A delivery due today: Target'), 'not the hidden gift, not the delivered one');
+  assert.ok(say.includes('orders: A pickup waiting: Costco'));
+  assert.ok(say.includes('meals: Dinner tonight: Tacos'), 'the dinner, not lunch');
+  assert.ok(say.includes('notes: 2 reminders due (1 late): Call the dentist and more'), 'not one done, not tomorrow\'s');
+  assert.ok(say.includes('weather: Rain likely today (70%)'));
+  assert.deepEqual(b.lines.map(l => l.app), ['calendar', 'weather', 'orders', 'orders', 'meals', 'notes'], 'in that order, six at most');
+});
+test('the trip card: the next trip within a week, with what happens while away, and the words for Ipsy', () => {
+  seedDay();
+  const t = aosFind.brief().trip;
+  assert.equal(t.name, 'Boston weekend'); assert.equal(t.starts, 'In 3 days'); assert.equal(t.days, 3);
+  assert.deepEqual(t.deliveries, ['Away Co']); assert.equal(t.events, 1); assert.equal(t.dinners, 0);
+  assert.match(t.dates, / – /);
+  assert.match(t.ask, /^Help me get ready for the trip to Boston weekend, .+ a packing list in Notes/);
+  seedDay({ tripIn: 10 }); assert.equal(aosFind.brief().trip, null, 'over a week away: no card yet');
+  seedDay({ tripIn: -1 }); assert.equal(aosFind.brief().trip.starts, 'Under way', 'and while it\'s on');
+  seedDay({ tripIn: -6 }); assert.equal(aosFind.brief().trip, null, 'over: gone');
+});
+test('an empty phone: no lines, no trip', () => {
+  store.clear();
+  assert.deepEqual(aosFind.brief(), { lines: [], trip: null });
+});
 console.log(n + ' find tests passed');

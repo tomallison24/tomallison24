@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['Ipsy in aOS looks across your apps in one go (search_apps): Calendar, Notes, Travel, Orders, Meals, Places and Podcasts, on your phone, so answers that name someone or something come quicker. Anything marked Private is never searched',
+      notes: ['aOS Home opens with your day: events, rain, deliveries and pickups, tonight\'s dinner and reminders due, in a line each, worked out on your phone. And when a trip is a week away or under way, a card for it (deliveries due while you\'re away, dinners planned, what\'s on the calendar) with Get ready with Ipsy',
+        'Ipsy in aOS looks across your apps in one go (search_apps): Calendar, Notes, Travel, Orders, Meals, Places and Podcasts, on your phone, so answers that name someone or something come quicker. Anything marked Private is never searched',
         'Money: ask Ipsy to find a charge Monarch missed (a flight booking whose confirmation is the only email): on the phone that reads Monarch\'s emails it searches Gmail, shows exactly what it found, and adds it to your totals only when you say Yes (with Undo, and never twice)',
         'Ipsy in aOS knows the weather and the house: the forecast and alerts for your places (or any city), and Home\'s devices, which it changes for you with Undo (lights, thermostats, speakers, purifiers, dehumidifiers, vacuums), asks first about (heaters, blinds, automations) and never touches (the alarm, cameras, locks)',
         'When the family\'s AI budget for the month is used up, every AI part of aOS (Ipsy, Orders, Travel, News, Meals, Money) says so, and when it\'s back, instead of "Something went wrong"',

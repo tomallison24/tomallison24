@@ -11,6 +11,12 @@
 //                        turned into occurrences by ../calendar/ical.js, as Calendar does)
 //   aosFind.search(q)  -> [{ app, title, sub, at }]: what's in the apps (the Ipsy bar's "In your
 //                        apps"), best first; at: where to open the app ('?open=note:…'), when it has one
+//   aosFind.brief()    -> { lines: [{ app, text }], trip } the morning brief on aOS Home: today, in a line an app,
+//                        from what the apps keep (the day's events, rain, deliveries due, tonight's dinner,
+//                        reminders due), at most six, worked out here every time Home is drawn. Nothing is sent anywhere and no AI
+//                        is asked. trip: the next trip, when it starts within a week or is under way:
+//                        { name, dates, starts, days, deliveries: [store], dinners, events, ask } (ask: the words
+//                        for Ipsy's "Get ready" button, aOS/home-tab.js), else null
 //   aosFind.search(q, { forIpsy: true }) -> the same for Ipsy in aOS (its search_apps tool, aOS/home-tab.js),
 //                        with what is marked Private left out (as each app's own Ipsy leaves it out: a
 //                        private note, order or booking, a private event); not even how many matched
@@ -165,5 +171,76 @@
     return out.sort((a, b) => a.rank - b.rank).slice(0, max).map(({ app, title, sub, at }) => ({ app, title, sub, at: at || '' }));
   }
 
-  window.aosFind = { weather, refreshWeather, next, search };
+  // ---- the morning brief, and the next trip ----
+  const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+  const list = a => a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const OPEN = s => !['delivered', 'pickedup', 'cancelled'].includes(s || 'ordered');
+  const orders = () => { const d = get('allison-orders-v1'); return d && Array.isArray(d.orders) ? d.orders.filter(o => o && !o.hide && OPEN(o.status)) : []; };
+  const storeOf = o => o.store || ((o.items || [])[0] || {}).name || 'an order';
+  const plan = () => { const d = get('allison-meals-v2'), p = d && d.plan; return p && Array.isArray(p.meals) && Array.isArray(p.dates) ? p : null; };
+  const mealsOn = (p, date, slot) => p.meals.filter(m => m && m.title && p.dates[(m.day || 1) - 1] === date && (!slot || (m.slot || 'dinner') === slot));
+  const eventsOn = (from, to) => occurrences(from, to).filter(o => o.start < to && o.end > from);
+  // Travel's bookings: when each starts and ends, as its own startOf / endOf (travel/app.js), on the phone's clock
+  const bStart = b => b.type === 'flight' ? b.dep : b.type === 'hotel' ? (b.checkIn ? b.checkIn + 'T' + (b.checkInTime || '15:00') : '') : b.type === 'car' ? b.pickup : b.start;
+  const bEnd = b => (b.type === 'flight' ? b.arr : b.type === 'hotel' ? (b.checkOut ? b.checkOut + 'T' + (b.checkOutTime || '11:00') : '') : b.type === 'car' ? b.dropoff : b.end) || bStart(b);
+  const ms = s => { const t = Date.parse(String(s || '').length === 10 ? s + 'T12:00' : s); return isNaN(t) ? null : t; };
+  function nextTrip(now) {
+    const d = get('allison-travel-v1'); if (!d || !Array.isArray(d.bookings)) return null;
+    const bs = d.bookings.filter(b => b && b.status !== 'cancelled' && ms(bStart(b)) != null).map(b => ({ b, s: ms(bStart(b)), e: Math.max(ms(bEnd(b)) || 0, ms(bStart(b))) })).sort((x, y) => x.s - y.s);
+    // a trip: bookings back to back (each starting within two days of the one before ending), the first that isn't over
+    for (let i = 0; i < bs.length; i++) {
+      const g = [bs[i]]; let end = bs[i].e;
+      while (i + 1 < bs.length && bs[i + 1].s - end <= 2 * 864e5) { g.push(bs[++i]); end = Math.max(end, bs[i].e); }
+      if (end < now) continue;
+      if (g[0].s - now > 7 * 864e5) return null;   // the next one is over a week away: no card yet
+      const named = (Array.isArray(d.trips) ? d.trips : []).find(t => t && g.some(x => x.b.id === t.id) && t.name);
+      const away = g.find(x => x.b.type === 'flight' && (x.b.toName || x.b.to)) || g.find(x => x.b.type === 'hotel' && (x.b.city || x.b.name));
+      const name = (named && named.name) || (away ? (away.b.type === 'flight' ? away.b.toName || away.b.to : away.b.city || away.b.name) : '') || 'Your trip';
+      return { name, start: g[0].s, end };
+    }
+    return null;
+  }
+  function brief() {
+    const now = Date.now(), t = new Date(); t.setHours(0, 0, 0, 0);
+    const today = ymd(t), sod = t.getTime(), eod = sod + 864e5, lines = [];
+    // the calendar: how much is on today (the widget beside it says what's next)
+    const ev = eventsOn(sod, eod).filter(o => !o.allDay);
+    if (ev.length) { const left = ev.filter(o => o.end > now).length; lines.push({ app: 'calendar', text: plural(ev.length, 'event') + ' today' + (left && left < ev.length ? ', ' + left + ' still to come' : !left ? ', all done' : '') }); }
+    // rain: the chance (or amount) for today where Weather is
+    const cache = get('wx.cache'), here = get('wx.here'), places = get('wx.places'), at = q => okPlace(q) && cache ? cache[keyOf(q)] : null;
+    const b = cache ? [at(here), at(Array.isArray(places) && places[0])].find(ok) : null;
+    if (b && Array.isArray(b.daily) && Date.now() - (b.fetchedAt || 0) < 6 * 3600e3) {
+      const d0 = b.daily.find(x => x && Number.isFinite(x.t) && ymd(new Date(x.t * 1000)) === today);
+      if (d0 && (b.rKind === 'pop' ? d0.r >= 50 : d0.r >= 0.1)) lines.push({ app: 'weather', text: (/snow/.test(d0.c || '') ? 'Snow' : 'Rain') + ' likely today' + (b.rKind === 'pop' ? ' (' + Math.round(d0.r) + '%)' : '') });
+    }
+    // deliveries due today, and pickups waiting
+    const os = orders(), due = os.filter(o => o.status !== 'pickup' && o.eta && o.eta <= today && (o.etaEnd || o.eta) >= today), held = os.filter(o => o.status === 'pickup');
+    if (due.length) lines.push({ app: 'orders', text: (due.length === 1 ? 'A delivery' : due.length + ' deliveries') + ' due today: ' + list(due.slice(0, 3).map(storeOf)) });
+    if (held.length) lines.push({ app: 'orders', text: (held.length === 1 ? 'A pickup' : plural(held.length, 'pickup')) + ' waiting: ' + list(held.slice(0, 3).map(storeOf)) });
+    // tonight's dinner
+    const p = plan(), dinner = p ? mealsOn(p, today, 'dinner')[0] : null;
+    if (dinner) lines.push({ app: 'meals', text: 'Dinner tonight: ' + dinner.title });
+    // reminders due today or late
+    const n = get('allison-notes-v1'), rem = n && Array.isArray(n.todos) ? n.todos.filter(x => x && !x.done && x.date && x.date <= today) : [];
+    if (rem.length) { const late = rem.filter(x => x.date < today).length; lines.push({ app: 'notes', text: plural(rem.length, 'reminder') + ' due' + (late ? ' (' + late + ' late)' : ' today') + ': ' + (rem[0].title || 'Reminder') + (rem.length > 1 ? ' and more' : '') }); }
+    // the next trip, within a week or under way
+    let trip = null;
+    const tr = nextTrip(now);
+    if (tr) {
+      const s0 = new Date(tr.start); s0.setHours(0, 0, 0, 0);
+      const e1 = new Date(tr.end); e1.setHours(0, 0, 0, 0); e1.setDate(e1.getDate() + 1);
+      const from = ymd(s0), to = ymd(new Date(e1.getTime() - 864e5));
+      const days = Math.round((s0.getTime() - sod) / 864e5);
+      const short = x => new Date(x).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const away = os.filter(o => o.status !== 'pickup' && o.eta && o.eta >= from && o.eta <= to);
+      const dinners = p ? p.dates.filter(x => x >= from && x <= to).reduce((a, x) => a + mealsOn(p, x, 'dinner').length, 0) : 0;
+      const events = eventsOn(s0.getTime(), e1.getTime()).length;
+      const dates = short(tr.start) + (to !== from ? ' – ' + short(tr.end) : '');
+      trip = { name: tr.name, dates, starts: days <= 0 ? 'Under way' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days', days, deliveries: away.map(storeOf), dinners, events,
+        ask: 'Help me get ready for the trip to ' + tr.name + ', ' + dates + ': the forecast there, a packing list in Notes, any deliveries arriving while we\'re away, the dinners planned for those days, and what\'s on the calendar then.' };
+    }
+    return { lines: lines.slice(0, 6), trip };
+  }
+
+  window.aosFind = { weather, refreshWeather, next, search, brief };
 })();
