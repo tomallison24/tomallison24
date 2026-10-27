@@ -35,6 +35,22 @@ test('merge: a summary’s copy of an alert is dropped, whichever comes first; n
   assert.equal(r.list.length, 1);
 });
 
+test('merge: a charge Ipsy found in an email gives way to Monarch’s, whichever comes first; never counted twice', () => {
+  const found = T('2026-10-20', 1052.1, 'Frontier Airlines', { src: 'email', id: 'e:bk1:105210', last4: '4242' });
+  const monarch = T('2026-10-21', 1052.1, 'FRONTIER AIRLINES INC', { account: 'Visa', last4: '4242', id: 'm1' });
+  let r = C.merge([], [found]); assert.equal(r.list.length, 1);
+  r = C.merge(r.list, [monarch]);
+  assert.deepEqual(r.list.map(x => x.id), ['m1'], 'Monarch emailed it after all: its copy stays, the found one goes');
+  r = C.merge([monarch], [found]); assert.deepEqual(r.list.map(x => x.id), ['m1'], 'and found after Monarch’s, it isn’t added');
+  // another card, or four days apart, or another amount: a different charge
+  assert.equal(C.merge([found], [T('2026-10-21', 1052.1, 'Frontier', { last4: '1111', id: 'm2' })]).list.length, 2);
+  assert.equal(C.merge([found], [T('2026-10-25', 1052.1, 'Frontier', { id: 'm3' })]).list.length, 2);
+  assert.equal(C.merge([found], [T('2026-10-20', 1052.11, 'Frontier', { id: 'm4' })]).list.length, 2);
+  assert.ok(C.sameCharge(found, monarch));
+  // never sent to Ipsy's daily check against Monarch's emails
+  assert.deepEqual(C.toCheck([found, monarch], '2026-10-22').map(x => x.id), ['m1']);
+});
+
 test('accounts: a summary’s spend takes the card its merchant’s alerts nearly always used, as a guess', () => {
   const list = [T('2026-09-01', 391.5, 'Little Learners', ROCKET), T('2026-09-08', 391.5, 'Little Learners', ROCKET), T('2026-09-15', 391.5, 'Little Learners', { src: 'summary' }),
     T('2026-09-02', 40, 'Corner Shop', ROCKET), T('2026-09-03', 40, 'Corner Shop', CUSTOM), T('2026-09-04', 40, 'Corner Shop', { src: 'summary' })];

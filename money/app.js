@@ -414,13 +414,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<dt>Category</dt><dd>' + esc(x.emoji) + ' ' + no(x.cat || '—') + (x.how ? '<br><small><span>Monarch said:</span> ' + no(x.mcat || '—') + '</small>' : '')
       + ' <button class="chip quiet" type="button" data-recat="' + esc(x.id) + '" style="margin-top:6px">Change</button></dd>'
       + (x.dir === 'out' ? '<dt>Cash back</dt><dd>' + (r && r.rate != null ? esc(usd2(r.earned)) + ' (' + r.rate + '%' + (r.capped ? ', <span>over the bonus limit</span>' : '') + ')' : 'Not set for this card') + '</dd>' : '')
-      + '<dt>From</dt><dd>' + (x.src === 'summary' ? 'Monarch’s summary email' : 'Monarch’s alert email') + '</dd>'
-      + '<dt>Checked</dt><dd>' + checkHtml(x) + '</dd></dl>'
+      + '<dt>From</dt><dd>' + (x.src === 'summary' ? 'Monarch’s summary email' : x.src === 'email' ? 'An email Ipsy found (Monarch didn’t email about it), added when you said yes' : 'Monarch’s alert email') + '</dd>'
+      + (x.src === 'email' ? '' : '<dt>Checked</dt><dd>' + checkHtml(x) + '</dd>') + '</dl>'
       + '<div id="recatBox" hidden></div>'
       + (x.check && x.check.s === 'fixed' && mayRead() && hasGmail() ? '<button class="chip quiet" type="button" data-undocheck="' + esc(x.id) + '" style="align-self:center">' + I.chevL + 'Undo Ipsy’s correction</button>' : '')
       + '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">'
-      + '<a class="chip" href="' + esc(x.mid ? 'https://app.monarch.com/links/transactions/' + x.mid : 'https://app.monarch.com/transactions') + '" target="_blank" rel="noopener">' + I.ext + 'Open in Monarch</a>'
-      + (hasGmail() && mayRead() ? '<a class="chip quiet" href="https://mail.google.com/mail/u/0/#all/' + esc(gid) + '" target="_blank" rel="noopener">' + I.mail + 'The email</a>' : '') + '</div>';
+      + (x.src === 'email' ? '' : '<a class="chip" href="' + esc(x.mid ? 'https://app.monarch.com/links/transactions/' + x.mid : 'https://app.monarch.com/transactions') + '" target="_blank" rel="noopener">' + I.ext + 'Open in Monarch</a>')
+      + (hasGmail() && mayRead() ? '<a class="chip quiet" href="https://mail.google.com/mail/u/0/#all/' + esc(x.src === 'email' ? x.id.split(':')[1] : gid) + '" target="_blank" rel="noopener">' + I.mail + 'The email</a>' : '')
+      + (x.src === 'email' && st.server && st.server.reader ? '<button class="chip quiet" type="button" data-unfound="' + esc(x.id) + '">Remove</button>' : '') + '</div>';
     if ($('txSheet').hidden) openSheet('txSheet');
   }
   const FIELD_NAME = { amount: 'Amount', direction: 'In or out', merchant: 'Merchant', account: 'Card', category: 'Category' };
@@ -559,6 +560,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('txBody').addEventListener('click', e => {
     const u = e.target.closest('[data-undocheck]'); if (u) { undoCheck(u.dataset.undocheck); return; }
+    const rf = e.target.closest('[data-unfound]');
+    if (rf) { const x = D.tx.find(t => t.id === rf.dataset.unfound); if (!x) return; removeFound(x.id); closeSheet('txSheet'); toast('Removed ' + x.merchant + '.', () => addFound(x)); return; }
     if (e.target.closest('[data-back]') && st.list) { view(); openList(st.list.title, st.list.ids.map(byId).filter(Boolean)); return; }
     const rb = e.target.closest('[data-recat]'); if (rb) { recatOpen(rb.dataset.recat); return; }
     const pk = e.target.closest('[data-pick]'); if (pk) { setCat(st.txId, pk.dataset.pick, pk.dataset.emoji || ''); return; }
@@ -1087,8 +1090,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // Ipsy (../home/ipsy.js), the helper you chat with: for whoever is signed in and sees Money. Its tools
-  // (ipsy-tools.js) only read the transactions as the family sees them; Claude answers through
-  // ../money/api (ipsy), with no web search.
+  // (ipsy-tools.js) read the transactions as the family sees them, and on the reader's phone search
+  // Gmail for a charge Monarch missed, added only on Yes; Claude answers through ../money/api (ipsy),
+  // with no web search.
+  // A charge Ipsy found in an email (src 'email'): one more transaction, in every total and shared with the
+  // family like Monarch's, until Monarch emails the same charge (calc.js merge: Monarch's then wins).
+  function addFound(x) {
+    D.tx = C.merge(D.tx, [x]).list;
+    D.dirty = [...new Set([...D.dirty, C.ymOf(x.date)])]; persist(); render(); scheduleSync();
+  }
+  function removeFound(id) {
+    const x = D.tx.find(t => t.id === id && t.src === 'email'); if (!x) return;
+    D.tx = D.tx.filter(t => t !== x);
+    D.dirty = [...new Set([...D.dirty, C.ymOf(x.date)])]; persist(); render(); scheduleSync();
+  }
   let ipsy = null;
   function placeIpsy() {
     const slot = $('ipsySlot'), on = !!slot && signedIn() && !!(st.server && st.server.can) && !!window.MoneyIpsy && !!(window.AllisonOS && AllisonOS.ipsy);
@@ -1099,6 +1114,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       app: 'money', name: 'Money', endpoint: '../money/api/ipsy', headers: { 'X-Money': '1' }, slot,
       ...window.MoneyIpsy({
         calc: C, view: () => st.T || view(), raw: () => D.tx, settings, today, reader: () => D.reader,
+        // a charge Monarch missed, from this phone's Gmail (the reader's only), added once the person says Yes
+        isReader: () => !!(st.server && st.server.reader), gmail, bodies, header, getToken, AuthError, htmlText: P.htmlText, addTx: addFound, removeTx: removeFound,
         alerts: () => C.openAlerts(D.alerts, D.tx, settings().dismissed, today()),
         screen: () => (VIEWS.find(v => v.id === st.view) || { name: st.view }).name + (st.view !== 'repeats' ? ', ' + monthName(st.ym) : '')
           + (!$('txSheet').hidden && st.txId && !st.list ? ', a transaction open (' + ((byId(st.txId) || {}).merchant || '') + ')' : !$('txSheet').hidden && st.list ? ', a list open (' + st.list.title + ')' : ''),
@@ -1107,5 +1124,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (money/scripts/app-test.mjs) only.
-  window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings, dailyCheck, askIdeas };
+  window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings, dailyCheck, askIdeas, addFound, removeFound };
 })();
