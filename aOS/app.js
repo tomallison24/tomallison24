@@ -314,12 +314,13 @@
     <div class="fbody" id="${id}" hidden>${body}</div>`;
   const unfold = (b, on) => { if (!b) return; on = on == null ? b.getAttribute('aria-expanded') !== 'true' : on; b.setAttribute('aria-expanded', String(on)); const x = $(b.getAttribute('aria-controls')); if (x) x.hidden = !on; };
   const THEME_NAME = t => (W.theme.list.find(([v]) => v === t) || [, 'Automatic'])[1];
-  // Tron's intro as aOS opens (tron-intro.js): with its sound, silent, or off
+  // Tron's intro as aOS opens (tron-intro.js), and Vintage's, Sunrise (vintage-intro.js): with its sound, silent, or off
   // Home's layout (aOS/home-tab.js): Classic, or Thumb arc for the right hand or the left
   const HOME_LAYOUTS = [['classic', 'Classic'], ['arc', 'Thumb arc'], ['arc-left', 'Left-handed arc']];
   const homeLayout = () => (window.aosHomeTab && aosHomeTab.layout ? aosHomeTab.layout() : 'classic');
   const TRON_INTRO = [['sound', 'Sound'], ['silent', 'Silent'], ['off', 'Off']];
-  const tronIntro = () => { try { const m = localStorage.getItem('aos.tron.intro'); return m === 'silent' || m === 'off' ? m : 'sound'; } catch { return 'sound'; } };
+  const introMode = k => { try { const m = localStorage.getItem(k); return m === 'silent' || m === 'off' ? m : 'sound'; } catch { return 'sound'; } };
+  const tronIntro = () => introMode('aos.tron.intro'), vintageIntro = () => introMode('aos.vintage.intro');
   const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
   const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
@@ -329,7 +330,7 @@
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
       <div class="group acct"><button type="button" class="soft runsetup" data-setup>Run through setup</button></div>
       <div class="group acct">
-        ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p><p class="lnote tronnote">Tron intro, as aOS opens</p><div class="seg tronnote" id="tronIntroPick" role="group" aria-label="Tron intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-ti="${m}" aria-pressed="${m === tronIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft tronnote" data-tiplay>Play the intro</button>
+        ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p><p class="lnote tronnote">Tron intro, as aOS opens</p><div class="seg tronnote" id="tronIntroPick" role="group" aria-label="Tron intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-ti="${m}" aria-pressed="${m === tronIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft tronnote" data-tiplay>Play the intro</button><p class="lnote vintnote">Sunrise intro, as aOS opens</p><div class="seg vintnote" id="vintageIntroPick" role="group" aria-label="Sunrise intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-vi="${m}" aria-pressed="${m === vintageIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft vintnote" data-viplay>Play the intro</button>
           <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>
           <p class="lnote">Home layout</p>
           <div class="seg" id="homeLayout">${HOME_LAYOUTS.map(([v, n]) => `<button type="button" data-hl="${v}" aria-pressed="${v === homeLayout()}">${n}</button>`).join('')}</div>
@@ -346,6 +347,8 @@
       const hl = ev.target.closest('[data-hl]'); if (hl && window.aosHomeTab) { aosHomeTab.layout(hl.dataset.hl); el.querySelectorAll('[data-hl]').forEach(b => b.setAttribute('aria-pressed', String(b === hl))); }
       const ti = ev.target.closest('[data-ti]'); if (ti) { try { localStorage.setItem('aos.tron.intro', ti.dataset.ti); } catch {} el.querySelectorAll('[data-ti]').forEach(b => b.setAttribute('aria-pressed', String(b === ti))); }
       if (ev.target.closest('[data-tiplay]') && window.aosTronIntro) aosTronIntro.show({ force: true });
+      const vi = ev.target.closest('[data-vi]'); if (vi) { try { localStorage.setItem('aos.vintage.intro', vi.dataset.vi); } catch {} el.querySelectorAll('[data-vi]').forEach(b => b.setAttribute('aria-pressed', String(b === vi))); }
+      if (ev.target.closest('[data-viplay]') && window.aosVintageIntro) aosVintageIntro.show({ force: true });
       const lk = ev.target.closest('[data-look]');
       if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS }))
         .then(() => { el.querySelector('#looks').innerHTML = lookOpts(); $('lookSub').textContent = looksLine(); });

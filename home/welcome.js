@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['Money: ask Ipsy to find a charge Monarch missed (a flight booking whose confirmation is the only email): on the phone that reads Monarch\'s emails it searches Gmail, shows exactly what it found, and adds it to your totals only when you say Yes (with Undo, and never twice)',
+      notes: ['Vintage gets an intro too, Sunrise: as aOS opens, the sky comes up over two hills, the sun (the moon and stars after sunset) rises, and "aOS" says Good morning, Good afternoon or Good evening; then the sun goes up into the disc at the top of aOS. Once a launch, like Tron\'s, with its own sound (Account > Appearance > Sunrise intro: Sound, Silent or Off, and Play the intro)',
+        'Money: ask Ipsy to find a charge Monarch missed (a flight booking whose confirmation is the only email): on the phone that reads Monarch\'s emails it searches Gmail, shows exactly what it found, and adds it to your totals only when you say Yes (with Undo, and never twice)',
         'Ipsy in aOS knows the weather and the house: the forecast and alerts for your places (or any city), and Home\'s devices, which it changes for you with Undo (lights, thermostats, speakers, purifiers, dehumidifiers, vacuums), asks first about (heaters, blinds, automations) and never touches (the alarm, cameras, locks)',
         'When the family\'s AI budget for the month is used up, every AI part of aOS (Ipsy, Orders, Travel, News, Meals, Money) says so, and when it\'s back, instead of "Something went wrong"',
         'Home: Favorites has no camera cards now; under the automations, a Yard camera pill pauses its motion detection (30 minutes to 4 hours), and the automation tiles are shorter to make room',
@@ -1784,9 +1785,9 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     el.querySelector('.w-skip').onclick = close;
     return { el, q: s => el.querySelector(s), close, closers };
   }
-  // In Tron, aOS opens with its intro (aOS/tron-intro.js) over everything: a welcome waits for it to end, so none of its
+  // In Tron and Vintage, aOS opens with its intro (aOS/tron-intro.js, aOS/vintage-intro.js) over everything: a welcome waits for it to end, so none of its
   // opening plays unseen underneath (at most a few seconds, whatever happens to the intro).
-  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.getElementById('tronIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
+  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
   const run = (label, inner, onClose, body) => {
     if (open) return open;
     open = introDone().then(() => new Promise(resolve => { const o = mount(label, inner, resolve, onClose); body(o).catch(() => o.close()); }));

@@ -405,5 +405,71 @@ for (const scheme of ['light', 'dark']) {
   report('Tron: with an app open, aOS\'s trail runs round the whole screen over it, and the app draws none of its own', pr); await ctx.close();
 }
 
+// 11. Vintage's intro, Sunrise (aOS/vintage-intro.js): aOS opens with the sky coming up and "aOS" with a greeting by the
+// clock (morning, afternoon from noon, evening after sunset), then the sun goes up into the disc at the top of aOS; once a
+// launch; Sound, Silent or Off and Play in Account (in Vintage only); and none for a browser test that didn't ask for it
+{
+  const pr = [];
+  const launch = async (seed, o = {}) => {
+    const c = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: o.scheme || 'light', reducedMotion: o.still ? 'reduce' : 'no-preference' });
+    await c.addInitScript(s => { try { localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); sessionStorage.setItem('aos.later.aos', '1');
+      for (const k in s) if (!localStorage.getItem('seeded.' + k)) { localStorage.setItem(k, s[k]); localStorage.setItem('seeded.' + k, '1'); } } catch {}   // once a context: a new tab keeps what was picked
+      window.__vi = {}; new MutationObserver(() => { const e = document.getElementById('vintageIntro'); if (!e) return; const v = window.__vi; v.shown = true;
+        v.name = (e.querySelector('.vi-name') || {}).textContent; v.hi = (e.querySelector('.vi-hi') || {}).textContent; if (e.classList.contains('home')) v.home = getComputedStyle(e.querySelector('.vi-sun')).transform; if (e.classList.contains('lost')) v.lost = true; })
+        .observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }, seed);
+    await c.route('**/*', r => { const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort(); return u.pathname.startsWith('/aOS/api/') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{"storage":true,"setup":true,"user":{"id":"u1","name":"Sarah","role":"member","apps":{}}}' }) : r.continue(); });
+    const p = await c.newPage(); p.on('pageerror', e => pr.push('script error: ' + e.message)); await p.goto(BASE + '/aOS/');
+    return { c, p };
+  };
+  // a browser test that didn't pick it: no intro (Vintage is the look aOS opens in, so it would cover every other test)
+  { const { c, p } = await launch({ 'aos.sky': 'day' }); await p.waitForTimeout(400);
+    if ((await p.evaluate(() => window.__vi)).shown) pr.push('the intro played for a browser test that did not ask for it'); await c.close(); }
+  // Sound picked, by day: the intro, its greeting, and the sun going up into aOS's disc as it ends
+  const { c, p } = await launch({ 'aos.sky': 'day', 'aos.vintage.intro': 'sound' });
+  await p.waitForTimeout(200);
+  let v = await p.evaluate(() => ({ ...window.__vi, want: aosVintageIntro.greeting() }));
+  if (!v.shown || v.name !== 'aOS' || v.hi !== v.want) pr.push('aOS did not open with the Sunrise intro: ' + JSON.stringify(v));
+  await p.waitForFunction(() => !document.getElementById('vintageIntro'), null, { timeout: 6000 }).catch(() => pr.push('the intro did not end by itself'));
+  v = await p.evaluate(() => window.__vi);
+  if (!v.home || v.home === 'none' || v.lost) pr.push('the sun did not go up into aOS\'s disc: ' + JSON.stringify(v));
+  // the greeting, by the clock and the sky
+  const g = await p.evaluate(() => { const r = document.documentElement, at = h => aosVintageIntro.greeting(new Date(2026, 9, 27, h, 30)), out = { day: [at(7), at(12), at(18)] };
+    r.setAttribute('data-sky', 'night'); out.night = [at(5), at(12), at(21)]; r.setAttribute('data-sky', 'day'); return out; });
+  if (g.day.join() !== 'Good morning,Good afternoon,Good afternoon' || g.night.join() !== 'Good morning,Good evening,Good evening') pr.push('the greeting: ' + JSON.stringify(g));
+  // once a launch
+  await p.reload(); await p.waitForTimeout(300);
+  if ((await p.evaluate(() => window.__vi)).shown) pr.push('the intro played again on a reload');
+  // Account, in Vintage: Sound picked, Play plays it (with its sound), Skip ends it, Off stops it on the next launch
+  await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
+  await openLook(p);
+  if (!(await p.isVisible('#vintageIntroPick [data-vi="sound"][aria-pressed="true"]'))) pr.push('Account has no Sunrise intro setting, Sound picked');
+  if (await p.isVisible('#tronIntroPick')) pr.push('Account shows the Tron intro setting in Vintage');
+  await p.click('[data-viplay]');
+  await p.waitForSelector('#vintageIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
+  await p.click('#vintageIntro:not(.out) .vi-skip', { timeout: 3000 }).catch(() => pr.push('no Skip on the intro'));
+  await p.waitForFunction(() => !document.getElementById('vintageIntro'), null, { timeout: 2000 }).catch(() => pr.push('Skip did not end the intro'));
+  await p.click('[data-vi="off"]');
+  if (await p.evaluate(() => localStorage.getItem('aos.vintage.intro')) !== 'off') pr.push('Off was not kept');
+  const p2 = await c.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
+  if (await p2.evaluate(() => !!document.getElementById('vintageIntro'))) pr.push('the intro played with Off picked');
+  await c.close();
+  // at night, in Dark: the moon (the sky's disc colour) and stars, no rays
+  { const { c, p } = await launch({ 'aos.sky': 'night', 'aos.vintage.intro': 'silent' }, { scheme: 'dark' }); await p.waitForTimeout(1500);
+    const n = await p.evaluate(() => { const e = document.getElementById('vintageIntro'); if (!e) return null; const cs = s => getComputedStyle(e.querySelector(s));
+      return { moon: cs('.vi-sun').backgroundColor, rays: cs('.vi-rays').display, stars: cs('.vi-stars').display, sound: e.dataset.sound || '' }; });
+    if (!n || n.moon !== 'rgb(233, 221, 196)' || n.rays !== 'none' || n.stars !== 'block') pr.push('the night intro in Dark: ' + JSON.stringify(n));
+    if (n && n.sound) pr.push('Silent played its sound');
+    await c.close(); }
+  // Sea glass or Tron: not this intro
+  { const { c, p } = await launch({ 'aos.look': 'glass', 'aos.vintage.intro': 'sound' }); await p.waitForTimeout(400);
+    if ((await p.evaluate(() => window.__vi)).shown) pr.push('the Sunrise intro played in Sea glass'); await c.close(); }
+  // Reduce Motion: a short fade, and still gone in time
+  { const { c, p } = await launch({ 'aos.sky': 'day', 'aos.vintage.intro': 'silent' }, { still: true }); await p.waitForTimeout(200);
+    if (!(await p.evaluate(() => window.__vi)).shown) pr.push('no intro with Reduce Motion');
+    await p.waitForFunction(() => !document.getElementById('vintageIntro'), null, { timeout: 4000 }).catch(() => pr.push('with Reduce Motion, the intro did not end within 4 seconds'));
+    await c.close(); }
+  report('Vintage\'s Sunrise intro: the sky, "aOS" and a greeting by the clock, the sun into aOS\'s disc; once a launch, Account\'s Sound, Silent, Off and Play', pr);
+}
+
 await b.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed'); process.exit(failed ? 1 : 0);
