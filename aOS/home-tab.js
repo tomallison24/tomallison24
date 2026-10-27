@@ -568,12 +568,14 @@
 
   // ---- Ipsy in aOS: one helper across the apps that have Ipsy (functions/aOS/api/ipsy.js) ----
   // Claude names a tool with its app in front ("travel__search_gmail"). aOS opens that app out of
-  // sight if it isn't open (../home/ipsy.js keeps the tools an app mounted, AllisonOS.ipsy.mounted)
-  // and runs the tool there, with the app's own data, rules and sign-ins. Not Fitness (see the route).
-  const IPSY_APPS = ['calendar', 'notes', 'meals', 'orders', 'travel', 'news'].filter(known);
+  // sight if it isn't open (../home/ipsy.js keeps the tools an app mounted, AllisonOS.ipsy.mounted;
+  // Weather and Home have no chat of their own, only tools for this one: AllisonOS.ipsyTools, from their
+  // ipsy-tools.js) and runs the tool there, with the app's own data, rules and sign-ins. Not Fitness or
+  // Money (see the route).
+  const IPSY_APPS = ['calendar', 'notes', 'meals', 'orders', 'travel', 'news', 'weather', 'house'].filter(known);
   const SEP = '__';
   const working = new Set();   // apps Ipsy is using right now: not put away to open another
-  const mountedOf = id => { try { const m = frames[id].firstChild.contentWindow.AllisonOS.ipsy.mounted; return m && m.app === id ? m : null; } catch { return null; } };
+  const mountedOf = id => { try { const A = frames[id].firstChild.contentWindow.AllisonOS, m = (A.ipsy && A.ipsy.mounted) || A.ipsyTools; return m && m.app === id ? m : null; } catch { return null; } };
   async function ipsyOf(id) {
     if (!frames[id]) { load(id); used = used.filter(x => x !== id); used.unshift(id); }   // opened out of sight: first in line to be put away
     for (let t = 0; t < 100; t++) {   // up to 20 seconds for the app to start
