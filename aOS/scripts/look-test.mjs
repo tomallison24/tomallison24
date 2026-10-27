@@ -379,5 +379,27 @@ for (const scheme of ['light', 'dark']) {
   report('Tron: the screen trail sends one shot at a time round a section or widget on Home, and not in Vintage or with motion reduced', pr);
 }
 
+// In Tron, with an app open in aOS, aOS's trail comes over it, so it still runs round the whole screen (the top too,
+// round the ‹ aOS bar), and the app draws none of its own; on aOS's own screens it's behind everything
+{
+  const pr = [];
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'dark', serviceWorkers: 'block' });
+  await ctx.route('**/*', r => { const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort(); if (u.pathname.includes('/api/')) return r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }); return r.continue(); });
+  await ctx.addInitScript(() => { localStorage.setItem('aos.seen', JSON.stringify({ aos: '999', weather: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); sessionStorage.setItem('aos.later.aos', '1');
+    localStorage.setItem('aos.look', 'grid'); localStorage.setItem('aos.tron.intro', 'off'); localStorage.setItem('design.weather', 'grid'); });
+  const p = await ctx.newPage(); p.on('pageerror', e => pr.push('script error: ' + e.message));
+  await p.goto(BASE + '/aOS/'); await p.waitForSelector('#home [data-open="weather"]');
+  const z = () => p.evaluate(() => getComputedStyle(document.documentElement, '::after').zIndex);
+  if (await z() !== '-1') pr.push('on aOS\'s screens the trail is not behind everything: z-index ' + await z());
+  await p.click('#home [data-open="weather"]');
+  const app = () => p.evaluate(() => { const f = document.querySelector('#stage .frame[data-id="weather"] iframe'), d = f && f.contentDocument;
+    return d && d.readyState !== 'loading' && d.documentElement.dataset.look === 'grid' ? f.contentWindow.getComputedStyle(d.documentElement, '::after').display : null; });
+  await p.waitForFunction(() => { const f = document.querySelector('#stage .frame[data-id="weather"] iframe'), d = f && f.contentDocument; return d && d.readyState !== 'loading' && d.documentElement.dataset.look === 'grid'; }, null, { timeout: 10000 }).catch(() => pr.push('Weather did not open in Tron inside aOS'));
+  if (await z() !== '42') pr.push('with an app open, aOS\'s trail is not over it: z-index ' + await z());
+  const own = await app();
+  if (own !== 'none') pr.push('the app draws its own trail inside aOS too: ' + own);
+  report('Tron: with an app open, aOS\'s trail runs round the whole screen over it, and the app draws none of its own', pr); await ctx.close();
+}
+
 await b.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed'); process.exit(failed ? 1 : 0);

@@ -455,6 +455,10 @@
   html[data-home="arc"] #hmain > .sec.arconly:not([hidden]) { display: flex; }
   html[data-home="arc"] #hmain > .hrest:not([hidden]) { display: grid; }
   html[data-home="arc"] #home { position: relative; z-index: 1; padding-bottom: calc(400px * var(--arck, 1) + env(safe-area-inset-bottom)); }
+  /* Tron's light trail round the screen (:root::before and ::after, <style id="grid">): behind everything on aOS's own
+     screens, and over an open app or sheet, so one trail still runs round the whole screen (an app opened here draws none
+     of its own, ../home/welcome.js: its own sat under the ‹ aOS bar, leaving the top of the screen without one) */
+  html[data-look="grid"]:has(#appwin[aria-hidden="false"], .page.on)::before, html[data-look="grid"]:has(#appwin[aria-hidden="false"], .page.on)::after { z-index: 42; }
   html[data-home="arc"] #home .head { margin-bottom: 14px; }
   /* the date is Home's title here (the word Home gives way, so every app fits above the rings) */
   html[data-home="arc"] #home .head h1 { font-size: 0; line-height: 0; padding-bottom: 14px; }
