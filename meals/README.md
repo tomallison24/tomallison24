@@ -2,22 +2,31 @@
 
 AI first: tell Ipsy what you fancy, and it plans the family's meals. One screen, three tabs:
 
-- **Ipsy** (where it opens): the chat is the app. Ipsy asks what to plan:
-  **Breakfast**, **Lunch** and **Dinner** (any of them; Dinner to start) and the
-  foods you'd like (chicken, beef, pork, turkey, lamb, fish, shrimp, vegetarian;
-  none picked is a mix), with an optional **What's in the fridge?** line. The
-  family's rules show under it (**Edit** opens Settings). **Plan it**, and Ipsy
-  asks the rest, one question at a time: how many days (1, 3 or a week), how many
-  you're cooking for (it remembers the last answer), lunches from the night
-  before's leftovers or fresh (only when both lunch and dinner are picked), then
-  anything else (a note, e.g. *quick on Tuesday*). **Make it** writes the plan.
-  **Or just tell Ipsy** under the questions, and **Change anything…** once a plan
-  is waiting, go to the full Ipsy chat, in your own words.
+- **Ipsy** (where it opens): the **planner**, one card with a row for each
+  choice, each showing what's picked, so nothing is forgotten on the way. One
+  row is open at a time, with its chips; tap any row to open it again:
+  1. **Meals**: Breakfast, Lunch, Dinner (any of them; Dinner to start).
+  2. **Food**: chicken, lamb, beef, pork, turkey, fish, shrimp, vegetarian, or
+     **Surprise me** (none picked is a mix).
+  3. **How long**: Just today, 3 days (to start) or A week.
+  4. **People**: how many you're cooking for (the last plan's number to start).
+  5. **Lunches** (only with both lunch and dinner): Leftovers, Fresh each day or A mix.
+  6. **Extras** (optional): quick notes as chips (Quick, Kid-friendly, Not
+     spicy, Budget-friendly, One pan), **In the fridge?** and **Anything else?**.
+  Several-at-once steps have **Next**; a one-of choice opens the next step itself.
+  Under the steps: what it will plan ("3 days of dinners for 4: 3 meals…") and
+  the family's rules (**Edit** opens Settings). **Make the plan** writes it.
+  The choices are kept on the phone (`allison-meals-v1-flow`) until the plan is
+  accepted or **Start over**, so they're still there after Try again, Discard or
+  closing the app. **Or just tell Ipsy** under the card, and **Change
+  anything…** once a plan is waiting, go to the full Ipsy chat, in your own words.
 - **Plan**: the plan, a card a day, a row a meal, each with its vegetables,
   protein and minutes, and "From the fridge" or "Leftovers" when it is. A new plan
-  comes back **not saved yet**: **Accept plan** (from today, or a day you pick)
+  comes back **not saved yet**, with every choice it was asked with as tags (they
+  show while it plans, too): **Accept plan** (from today, or a day you pick)
   saves it for the family with each day's date; **Try again** makes different
-  meals with the same answers; **Discard** drops it. Every accepted plan is kept
+  meals with the same answers; **Edit choices** takes them back to the planner;
+  **Discard** drops it. Every accepted plan is kept
   under **Past plans**: the last 52 from the family server, and older ones from
   the family's Google Sheet (**Older plans**, below). Tap a meal for its recipe:
   ingredients and steps, **Loved it** / **Not again** (Ipsy learns from it),
@@ -147,7 +156,7 @@ more a question (below).
 ## Ipsy
 
 **Ipsy** is your helper (the one you picked and named) in the bottom left corner: the full chat about
-the family's meals, in the design picked in Settings. The Ipsy tab's questions are
+the family's meals, in the design picked in Settings. The Ipsy tab's planner is
 the quick way in; the chat takes anything in your own words, e.g. *What's for
 dinner tonight?*, *Swap Thursday's dinner for something quicker*, *A week of
 vegetarian dinners for 3*, *What can I make with ground beef?*, *Tick off the
@@ -267,7 +276,7 @@ script on a fake Sheet), and steps in `app-test.mjs` and `ipsy-test.mjs` (what t
 node meals/scripts/api-test.mjs     # the server: sign-in, the rules, what each meal is asked for, parts side by side, leftover lunches, the rules and the allergy check sent back once, taste, and Ipsy's step and routes
 node meals/scripts/logic-test.mjs   # sections, the shopping list, amounts
 node meals/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sheet (drinks/scripts/fake-sheet.mjs): who gets in, whose rows, Planned by and Who, rows from before aOS, the 90 days and range, newest copy, a plan taken back
-node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI: the Ipsy tab's questions, a plan, a recipe, the list, the rules, the family's Google Sheet through a stand-in for aOS, both designs, Settings > Design, the old Meals Vintage address
+node meals/scripts/app-test.mjs     # the app at iPhone size, against the real server code and a stand-in AI: the planner (its steps, kept on the phone, Edit choices), a plan, a recipe, the list, the rules, the family's Google Sheet through a stand-in for aOS, both designs, Settings > Design, the old Meals Vintage address
 node meals/scripts/ipsy-test.mjs    # Ipsy in both designs, light and dark, on the real server code with a stand-in Claude: every tool, the allergy check, ask-first, Undo, its changes reaching the Sheet
 node meals/scripts/make-icons.mjs   # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```

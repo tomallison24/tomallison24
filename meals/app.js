@@ -40,7 +40,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     // sheet and sheetSent are the link, phrase and sent list from before aOS kept them (handed over, then gone)
     sheetAt: 'allison-meals-v1-sheet-synced', sheetHas: 'allison-meals-v1-sheet-has', sheetGraves: 'allison-meals-v1-sheet-graves',
     sheet: 'allison-meals-v1-sheet', sheetSent: 'allison-meals-v1-sheet-sent', sheetOldAt: 'allison-meals-v1-sheet-at',
-    fold: 'allison-meals-v1-fold' };   // the plan folded away (this phone only)
+    fold: 'allison-meals-v1-fold',   // the plan folded away (this phone only)
+    flow: 'allison-meals-v1-flow' };  // the planner's choices, until the plan is accepted (this phone only)
   const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
   const cap = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
   const join = a => a.length <= 2 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
@@ -130,7 +131,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return '<div class="card" style="--i:0"><p>' + esc(say(st.error)) + '</p>' + (signin ? '<div class="btns"><button class="btn" type="button" data-act="signin">Sign in with Face ID</button></div>' : '') + '</div>';
   };
   const noAI = () => data.ai === null && st.state === 'ok';
-  const busyCard = (title, line) => '<div class="card busy" role="status" style="--i:1"><span class="spin" aria-hidden="true"></span><strong>' + esc(title) + '</strong>' + esc(line) + '</div>';
+  const busyCard = (title, line, asked) => '<div class="card busy" role="status" style="--i:1"><span class="spin" aria-hidden="true"></span><strong>' + esc(title) + '</strong>' + esc(line) + (asked ? chosen(asked) : '') + '</div>';
 
   function render() {
     document.querySelectorAll('#tabs [data-tab]').forEach(b => { const on = b.dataset.tab === st.tab; b.setAttribute('aria-pressed', on); b.setAttribute('aria-selected', on); });
@@ -188,67 +189,96 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + '<span class="ct" translate="no">' + esc(m.title) + '</span>' + tags(m) + '</button>').join('') + '</div>').join('');
   }
 
-  // ---- the Ipsy tab: what you fancy, then Ipsy's questions, one at a time ----
-  const flow = { step: 'pick', slots: ['dinner'], foods: [], fridge: '', days: 0, people: 0, lunches: '', note: '' };
+  // ---- the Ipsy tab: the planner, one card: a row a step, each showing what's picked; one step open at a time ----
+  // Kept on this phone (K.flow) until the plan is accepted or you start over, so the choices are still there
+  // after a plan comes back, after Try again or Discard, or when the app is opened again.
+  const FLOW = () => ({ open: 'meals', slots: ['dinner'], foods: [], days: 3, people: 0, lunches: 'leftovers', fridge: '', extras: [], note: '' });
+  const DAYS = [[1, 'Just today'], [3, '3 days'], [7, 'A week']];
+  const LUNCH = [['leftovers', 'Leftovers'], ['fresh', 'Fresh each day'], ['mix', 'A mix']];
+  // quick notes, as chips: each adds its words to the note the plan is asked with
+  const EXTRAS = [['quick', 'Quick', 'quick to make'], ['kids', 'Kid-friendly', 'kid-friendly'], ['mild', 'Not spicy', 'not spicy'], ['budget', 'Budget-friendly', 'budget-friendly'], ['onepan', 'One pan', 'one pan, easy cleanup']];
+  const flow = Object.assign(FLOW(), ls.json(K.flow, {}));
+  ['slots', 'foods', 'extras'].forEach(k => { if (!Array.isArray(flow[k])) flow[k] = FLOW()[k]; });
+  const saveFlow = () => ls.set(K.flow, flow);
   const rules = () => data.settings;
   const proteinG = () => (PROTEIN.find(x => x[0] === rules().protein) || PROTEIN[1])[2];
   const rulesLine = () => (rules().veg ? plural(rules().veg, 'vegetable').replace(/^(\d+)/, '$1+') + ' and about ' + proteinG() + ' g protein in every meal' : 'About ' + proteinG() + ' g protein in every meal')
     + ((rules().avoid || []).length ? ' · never ' + join(rules().avoid) : '');
   const lastPeople = () => (data.plan && +data.plan.people) || rules().people || 4;
-  // the questions still to ask, in order: how far ahead, how many, leftovers (lunch and dinner both), anything else
-  const QUESTIONS = () => ['days', 'people', ...(flow.slots.includes('lunch') && flow.slots.includes('dinner') ? ['lunches'] : []), 'note'];
-  const ASK = {
-    days: ['Lovely. How far ahead should I plan?', [[1, 'Just today'], [3, 'Next 3 days'], [7, 'The week']]],
-    people: [null, [1, 2, 3, 4, 5, 6, 8].map(n => [n, String(n)])],
-    lunches: ['For lunches: the night before’s leftovers, or something fresh each day?', [['leftovers', 'Leftovers are great'], ['fresh', 'Fresh each day'], ['mix', 'A mix']]],
-  };
-  const answerWords = q => q === 'days' ? (ASK.days[1].find(x => x[0] === flow.days) || [0, ''])[1] : q === 'people' ? plural(flow.people, 'person').replace('persons', 'people')
-    : q === 'lunches' ? (ASK.lunches[1].find(x => x[0] === flow.lunches) || [0, ''])[1] : flow.note || 'Nothing else';
-  const pickWords = () => [cap(join(SLOTS.filter(s => flow.slots.includes(s[0])).map(s => s[1].toLowerCase()))),
-    flow.foods.length ? join(flow.foods.map(f => f === 'surprise' ? 'surprise me' : f)) : 'surprise me', flow.fridge ? 'use up ' + flow.fridge : ''].filter(Boolean).join(' · ');
+  const people = () => flow.people || lastPeople();
+  const both = o => o.slots.includes('lunch') && o.slots.includes('dinner');
+  // the note the plan is asked with: the quick notes' words, then your own
+  const noteOf = o => [...EXTRAS.filter(x => (o.extras || []).includes(x[0])).map(x => x[2]), o.note].filter(Boolean).join('; ').slice(0, 200);
+  // and back (Edit choices on a plan waiting): the quick notes it starts with, and the rest
+  const fromNote = s => { const parts = String(s || '').split('; '), extras = [];
+    while (parts.length) { const x = EXTRAS.find(e => e[2] === parts[0]); if (!x) break; extras.push(x[0]); parts.shift(); }
+    return { extras, note: parts.join('; ') }; };
+  // what was picked, in words, for each step's row and for the tags on the plan
+  const slotsWords = o => cap(join(SLOTS.filter(s => o.slots.includes(s[0])).map(s => s[1].toLowerCase())));
+  const foodsWords = o => o.foods.length && !(o.foods.length === 1 && o.foods[0] === 'surprise') ? cap(join(o.foods.filter(f => f !== 'surprise'))) : 'Surprise me';
+  const daysWords = o => (DAYS.find(x => x[0] === o.days) || [0, plural(o.days, 'day')])[1];
+  const peopleWords = n => plural(n, 'person').replace('persons', 'people');
+  const lunchWords = o => ({ leftovers: 'Leftover lunches', fresh: 'Fresh lunches', mix: 'Some leftover lunches' })[o.lunches] || '';
+  const extraWords = o => [o.fridge ? 'Use up ' + o.fridge : '', ...EXTRAS.filter(x => (o.extras || []).includes(x[0])).map(x => x[1]), o.note ? '“' + o.note + '”' : ''].filter(Boolean);
+  const STEPS = () => ['meals', 'foods', 'days', 'people', ...(both(flow) ? ['lunches'] : []), 'extras'];
   const chip = (attr, v, label, on, multi) => '<button class="opt" type="button" role="' + (multi ? 'checkbox' : 'radio') + '" ' + attr + '="' + esc(v) + '" aria-checked="' + !!on + '">' + esc(label) + '</button>';
+  const STEP = {
+    meals: { name: 'Meals', ask: 'Which meals', multi: true, val: () => flow.slots.length ? slotsWords(flow) : 'Pick at least one',
+      body: () => SLOTS.map(([k, n]) => chip('data-slot', k, n, flow.slots.includes(k), true)).join('') },
+    foods: { name: 'Food', ask: 'What do you fancy', multi: true, val: () => foodsWords(flow),
+      body: () => FOODS.map(([k, n]) => chip('data-food', k, n, flow.foods.includes(k), true)).join('') + chip('data-food', 'surprise', 'Surprise me', flow.foods.includes('surprise'), true) },
+    days: { name: 'How long', ask: 'How far ahead', val: () => daysWords(flow), body: () => DAYS.map(([v, n]) => chip('data-days', v, n, v === flow.days)).join('') },
+    people: { name: 'People', ask: 'How many at the table', val: () => peopleWords(people()),
+      hint: () => data.plan && data.plan.people ? 'Last time it was ' + data.plan.people + '.' : 'Usually it’s ' + rules().people + '.',
+      body: () => [1, 2, 3, 4, 5, 6, 8].map(n => chip('data-people', n, String(n), n === people())).join('') },
+    lunches: { name: 'Lunches', ask: 'Lunches', val: () => (LUNCH.find(x => x[0] === flow.lunches) || LUNCH[0])[1],
+      hint: () => 'The night before’s leftovers, or something fresh each day?', body: () => LUNCH.map(([v, n]) => chip('data-lunches', v, n, v === flow.lunches)).join('') },
+    extras: { name: 'Extras', ask: 'Anything else', multi: true, val: () => extraWords(flow).join(' · ') || 'Optional',
+      body: () => EXTRAS.map(([k, n]) => chip('data-extra', k, n, flow.extras.includes(k), true)).join(''),
+      after: () => '<div class="rgroup pfields"><div class="frow"><label class="vh" for="fFridge">In the fridge</label><input class="txt" id="fFridge" maxlength="300" placeholder="In the fridge? Half a cabbage, feta…" value="' + esc(flow.fridge) + '"></div>'
+        + '<div class="frow"><label class="vh" for="fNote">Anything else</label><input class="txt" id="fNote" maxlength="160" placeholder="Anything else? Quick on Tuesday…" value="' + esc(flow.note) + '"></div></div>' },
+  };
   const bub = (who, html) => '<div class="bub' + (who === 'me' ? ' me' : '') + '">' + html + '</div>';
   function talk() {
-    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.n, 'meal') + '…', st.planning.n > 6 ? 'About a minute.' : 'About half a minute.');
-    const user = A() && A().user(), hi = 'Hi' + (user && user.name ? ' ' + user.name.split(' ')[0] : '') + '. What are we eating? Pick a few things and I’ll ask the rest.';
-    let h = '<div class="chat">' + bub('ipsy', esc(hi));
-    if (flow.step === 'pick') {
-      h += '<div class="card pick" style="--i:1">'
-        + '<p class="label" id="lSlots">Which meals</p><div class="opts" role="group" aria-labelledby="lSlots">' + SLOTS.map(([k, n]) => chip('data-slot', k, n, flow.slots.includes(k), true)).join('') + '</div>'
-        + '<p class="label" id="lFoods">What do you fancy</p><div class="opts" role="group" aria-labelledby="lFoods">' + FOODS.map(([k, n]) => chip('data-food', k, n, flow.foods.includes(k), true)).join('')
-        + chip('data-food', 'surprise', 'Surprise me', flow.foods.includes('surprise'), true) + '</div>'
-        + '<label class="label" for="fFridge">In the fridge (optional)</label><div class="rgroup"><div class="frow"><input class="txt" id="fFridge" maxlength="300" placeholder="Half a cabbage, feta, eggs…" value="' + esc(flow.fridge) + '"></div></div>'
-        + '<div class="rules"><p>' + esc('Family rules: ' + rulesLine()) + '</p><button class="linkbtn" type="button" data-act="rules">Edit</button></div>'
-        + '<div class="btns"><button class="btn okbtn" type="button" data-act="pick"' + (noAI() || !flow.slots.length ? ' disabled' : '') + '>Plan it</button></div></div>';
-    } else {
-      h += bub('me', esc(pickWords()));
-      const qs = QUESTIONS();
-      for (const q of qs) {
-        const asked = q === 'people' ? 'How many at the table?' + (data.plan && data.plan.people ? ' Last time it was ' + data.plan.people + '.' : ' Usually it’s ' + rules().people + '.') : q === 'note' ? 'Anything else? (No spicy food, kid-friendly…)' : ASK[q][0];
-        h += bub('ipsy', esc(asked));
-        const answered = q === 'note' ? flow.step === 'done' : !!flow[q];
-        if (answered) { h += bub('me', esc(answerWords(q))); continue; }
-        if (q === 'note') {
-          h += '<div class="card ready"><p>' + esc(summary()) + '</p>'
-            + '<div class="rgroup"><div class="frow"><label class="vh" for="fNote">Anything else</label><input class="txt" id="fNote" maxlength="200" placeholder="Anything else? (optional)" value="' + esc(flow.note) + '"></div></div>'
-            + '<div class="btns"><button class="btn okbtn" type="button" data-act="make"' + (noAI() ? ' disabled' : '') + '>Make it</button></div></div>';
-        } else {
-          const cur = q === 'people' ? lastPeople() : null;
-          h += '<div class="opts answers" role="radiogroup" aria-label="' + esc(q === 'days' ? 'How far ahead' : q === 'people' ? 'How many at the table' : 'Lunches') + '">'
-            + ASK[q][1].map(([v, n]) => chip('data-' + q, v, n, v === cur, false)).join('') + '</div>';
-        }
-        break;
-      }
-      h += '<button class="linkbtn" type="button" data-act="restart">Start over</button>';
-    }
+    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.n, 'meal') + '…', st.planning.n > 6 ? 'About a minute.' : 'About half a minute.', st.planning);
+    const user = A() && A().user(), hi = 'Hi' + (user && user.name ? ' ' + user.name.split(' ')[0] : '') + '. What are we eating? Your choices are below: tap any to change it.';
+    const steps = STEPS();
+    if (!steps.includes(flow.open)) flow.open = '';
+    let h = '<div class="chat">' + bub('ipsy', esc(hi)) + '<div class="card planner" style="--i:1">'
+      + '<div class="phead"><strong>Your choices</strong><button class="linkbtn" type="button" data-act="restart">Start over</button></div><div class="psteps">';
+    steps.forEach((k, i) => {
+      const s = STEP[k], on = flow.open === k;
+      h += '<div class="pstep' + (on ? ' on' : '') + '"><button class="prow" type="button" data-step="' + k + '" aria-expanded="' + on + '" aria-controls="pb-' + k + '">'
+        + '<span class="pn" aria-hidden="true">' + (i + 1) + '</span><span class="pl">' + esc(s.name) + '</span><span class="pv" data-val="' + k + '">' + esc(s.val()) + '</span>'
+        + '<span class="chev" aria-hidden="true">' + ICON.chev + '</span></button>';
+      if (on) h += '<div class="pbody" id="pb-' + k + '">' + (s.hint ? '<p class="hint">' + esc(s.hint()) + '</p>' : '')
+        + '<div class="opts" role="' + (s.multi ? 'group' : 'radiogroup') + '" aria-label="' + esc(s.ask) + '">' + s.body() + '</div>' + (s.after ? s.after() : '')
+        + (s.multi && i < steps.length - 1 ? '<button class="linkbtn pnext" type="button" data-act="next">Next</button>' : '') + '</div>';
+      h += '</div>';
+    });
+    h += '</div><p class="psum" id="pSum">' + esc(summary()) + '</p>'
+      + '<div class="rules"><p>' + esc('Family rules: ' + rulesLine()) + '</p><button class="linkbtn" type="button" data-act="rules">Edit</button></div>'
+      + '<div class="btns"><button class="btn okbtn" type="button" data-act="make"' + (noAI() || !flow.slots.length ? ' disabled' : '') + '>Make the plan</button></div></div>';
     h += '</div>' + askBar('Or just tell Ipsy…', 'tell');
     return h;
   }
-  function summary() {
-    const n = flow.days * flow.slots.length, which = join(SLOTS.filter(s => flow.slots.includes(s[0])).map(s => ({ breakfast: 'breakfasts', lunch: 'lunches', dinner: 'dinners' })[s[0]]));
-    return 'Planning ' + (flow.days === 1 ? 'today’s ' + which : flow.days + ' days of ' + which) + ' for ' + flow.people
-      + (flow.lunches === 'leftovers' && flow.days > 1 ? ', lunches from the night before' : '') + ': ' + plural(n, 'meal') + ', each with ' + rulesLine().split(' · ')[0].replace(/ in every meal$/, '') + '.';
+  // a choice changed: each row's words, the summary and the button, in place (so typing keeps its place)
+  function refreshPlanner() {
+    saveFlow();
+    main.querySelectorAll('[data-val]').forEach(e => { e.textContent = STEP[e.dataset.val].val(); });
+    const sum = $('pSum'); if (sum) sum.textContent = summary();
+    const go = main.querySelector('[data-act="make"]'); if (go) go.disabled = noAI() || !flow.slots.length;
   }
+  function summary() {
+    if (!flow.slots.length) return 'Pick breakfast, lunch or dinner to start.';
+    const n = flow.days * flow.slots.length, which = join(SLOTS.filter(s => flow.slots.includes(s[0])).map(s => ({ breakfast: 'breakfasts', lunch: 'lunches', dinner: 'dinners' })[s[0]]));
+    return 'Planning ' + (flow.days === 1 ? 'today’s ' + which : flow.days + ' days of ' + which) + ' for ' + people()
+      + (both(flow) && flow.lunches === 'leftovers' && flow.days > 1 ? ', lunches from the night before' : '') + ': ' + plural(n, 'meal') + ', each with ' + rulesLine().split(' · ')[0].replace(/ in every meal$/, '') + '.';
+  }
+  // what a plan was asked with, as tags: on the plan waiting and while it's planned, so the choices stay in sight
+  const chosen = o => { if (!o || !o.slots) return '';
+    const t = [slotsWords(o), foodsWords(o), daysWords(o), 'For ' + o.people, ...(both(o) ? [lunchWords(o)] : []), ...extraWords(Object.assign({ fridge: o.fridge }, fromNote(o.note)))];
+    return '<span class="tags chosen" aria-label="Your choices">' + t.filter(Boolean).map(x => '<span class="tag">' + esc(x) + '</span>').join('') + '</span>'; };
   const askBar = (ph, act) => '<div class="rgroup askbar"><div class="frow"><label class="vh" for="askIn">' + esc(ph) + '</label><input class="txt" id="askIn" maxlength="300" placeholder="' + esc(ph) + '">'
     + '<button class="btn" type="button" data-act="' + act + '">Ask</button></div></div>';
 
@@ -260,15 +290,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function planTab() {
     const p = data.plan, d = data.draft;
-    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.n, 'meal') + '…', st.planning.n > 6 ? 'About a minute.' : 'About half a minute.');
+    if (st.busy === 'plan') return busyCard('Planning ' + plural(st.planning.n, 'meal') + '…', st.planning.n > 6 ? 'About a minute.' : 'About half a minute.', st.planning);
     let h = '';
     if (d && d.meals && d.meals.length) {
       // a new plan to look over: nothing is saved until someone accepts it; the choice first, where it's seen
+      // with what it was asked for (Edit choices takes them back to the planner)
       h += '<div class="card accept" style="--i:1"><strong>New plan · not saved yet</strong>'
-        + '<p>' + esc(about(d) + (d.by ? ' · by ' + d.by : '')) + '</p>'
+        + (d.slots ? chosen(d) : '<p>' + esc(about(d)) + '</p>') + (d.by ? '<p class="cm">Planned by ' + esc(d.by) + '</p>' : '')
         + '<div class="frow storepick"><label for="aStart">Starting</label><select id="aStart">' + startOptions(d.start && d.start >= isoDay(new Date()) ? d.start : isoDay(new Date())) + '</select></div>'
         + '<div class="btns"><button class="btn okbtn" type="button" data-act="accept">Accept plan</button><button class="btn" type="button" data-act="again"' + (noAI() ? ' disabled' : '') + '>Try again</button></div>'
-        + '<div class="btns" style="margin-top:0"><button class="btn quiet" type="button" data-act="discard">Discard</button></div></div>'
+        + '<div class="btns" style="margin-top:0"><button class="btn quiet" type="button" data-act="edit">Edit choices</button><button class="btn quiet" type="button" data-act="discard">Discard</button></div></div>'
         + days(d, 'draft', 2) + (d.tip ? '<div class="card"><p><b>Tip:</b> <span translate="no">' + esc(d.tip) + '</span></p></div>' : '')
         + askBar('Change anything…', 'change');
     } else if (p && p.meals && p.meals.length) {
@@ -362,7 +393,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const toggle = (a, v) => { const i = a.indexOf(v); if (i < 0) a.push(v); else a.splice(i, 1); };
   main.addEventListener('click', async e => {
-    const b = e.target.closest('[data-act], [data-meal], [data-unagain], [data-key], [data-past], [data-slot], [data-food], [data-days], [data-people], [data-lunches]'); if (!b) return;
+    const b = e.target.closest('[data-act], [data-meal], [data-unagain], [data-key], [data-past], [data-step], [data-slot], [data-food], [data-extra], [data-days], [data-people], [data-lunches]'); if (!b) return;
     if (b.dataset.meal) return openRecipe(+b.dataset.meal, b.dataset.src === 'draft' ? data.draft : b.dataset.src === 'again' ? AGAIN() : data.plan);
     if (b.dataset.unagain) return unAgain([b.dataset.unagain]);
     if (b.dataset.past) return openPast(b.dataset.past);
@@ -372,20 +403,23 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       ls.set(K.ticks, ticks); b.setAttribute('aria-checked', i < 0);
       return;
     }
-    // what you fancy: the chips toggle in place (Surprise me and the foods take turns)
-    if (b.dataset.slot) { toggle(flow.slots, b.dataset.slot); b.setAttribute('aria-checked', flow.slots.includes(b.dataset.slot)); const go = main.querySelector('[data-act="pick"]'); if (go) go.disabled = noAI() || !flow.slots.length; return; }
-    if (b.dataset.food) {
-      const f = b.dataset.food; toggle(flow.foods, f);
-      if (f === 'surprise' && flow.foods.includes('surprise')) flow.foods = ['surprise']; else if (f !== 'surprise') flow.foods = flow.foods.filter(x => x !== 'surprise');
-      main.querySelectorAll('[data-food]').forEach(x => x.setAttribute('aria-checked', flow.foods.includes(x.dataset.food)));
-      return;
+    // the planner: a step's row opens it (and closes the one open); several-at-once chips toggle in place
+    // (Surprise me and the foods take turns); a one-of chip picks and opens the next step
+    if (b.dataset.step) { flow.open = flow.open === b.dataset.step ? '' : b.dataset.step; saveFlow(); render(); return refocus('[data-step="' + b.dataset.step + '"]'); }
+    const multi = { slot: 'slots', food: 'foods', extra: 'extras' };
+    for (const [a, k] of Object.entries(multi)) if (b.dataset[a]) {
+      const v = b.dataset[a]; toggle(flow[k], v);
+      if (a === 'food') { if (v === 'surprise' && flow.foods.includes('surprise')) flow.foods = ['surprise']; else if (v !== 'surprise') flow.foods = flow.foods.filter(x => x !== 'surprise'); }
+      if (a === 'slot') { flow.slots = SLOTS.map(s => s[0]).filter(s => flow.slots.includes(s)); saveFlow(); render(); return refocus('[data-slot="' + v + '"]'); }   // Lunches comes and goes with lunch and dinner
+      main.querySelectorAll('[data-' + a + ']').forEach(x => x.setAttribute('aria-checked', flow[k].includes(x.dataset[a])));
+      return refreshPlanner();
     }
-    // an answer to Ipsy's question: the next question comes
-    for (const q of ['days', 'people', 'lunches']) if (b.dataset[q] != null) { flow[q] = q === 'lunches' ? b.dataset[q] : +b.dataset[q]; return next(); }
+    for (const q of ['days', 'people', 'lunches']) if (b.dataset[q] != null) { flow[q] = q === 'lunches' ? b.dataset[q] : +b.dataset[q]; return nextStep(q); }
     const act = b.dataset.act;
-    if (act === 'pick') { flow.fridge = ($('fFridge') || {}).value || ''; flow.fridge = flow.fridge.trim(); flow.step = 'ask'; return next(); }
-    if (act === 'make') { flow.note = (($('fNote') || {}).value || '').trim(); return makePlan(); }
-    if (act === 'restart') { Object.assign(flow, { step: 'pick', days: 0, people: 0, lunches: '', note: '' }); return render(); }
+    if (act === 'next') return nextStep(flow.open);
+    if (act === 'make') { flow.fridge = flow.fridge.trim(); flow.note = flow.note.trim(); saveFlow(); return makePlan(); }
+    if (act === 'restart') { Object.assign(flow, FLOW()); saveFlow(); return render(); }
+    if (act === 'edit') return editChoices();
     if (act === 'rules') return openSettings();
     if (act === 'tell' || act === 'change') { const t = (($('askIn') || {}).value || '').trim(); return askIpsy(act === 'change' && t && data.draft ? t + ' (on the new plan waiting)' : t); }
     if (act === 'new') return goTab('ipsy');
@@ -404,10 +438,23 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       catch { toast('Couldn’t copy on this phone.'); }
     }
   });
-  main.addEventListener('input', e => { if (e.target.id === 'fFridge') flow.fridge = e.target.value; if (e.target.id === 'fNote') flow.note = e.target.value; });
+  main.addEventListener('input', e => { const k = { fFridge: 'fridge', fNote: 'note' }[e.target.id]; if (k) { flow[k] = e.target.value; refreshPlanner(); } });
   main.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'askIn') { e.preventDefault(); main.querySelector('.askbar [data-act]').click(); } });
-  // the next question, scrolled into sight
-  function next() { render(); const last = [...main.querySelectorAll('.bub')].pop(); if (last && last.scrollIntoView) last.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  // the planner's next step opened (none after the last), scrolled into sight
+  function nextStep(from) {
+    const s = STEPS(); flow.open = s[s.indexOf(from) + 1] || ''; saveFlow(); render();
+    const row = flow.open ? main.querySelector('[data-step="' + flow.open + '"]') : main.querySelector('[data-act="make"]');
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  // after a redraw, the button you pressed keeps the focus (VoiceOver and keyboards stay where they were)
+  function refocus(sel) { const el = main.querySelector(sel); if (el && el.focus) el.focus({ preventScroll: true }); }
+  // Edit choices on a plan waiting: what it was asked with, back in the planner
+  function editChoices() {
+    const d = data.draft; if (!d) return goTab('ipsy');
+    Object.assign(flow, FLOW(), { open: '', slots: (d.slots || ['dinner']).slice(), foods: (d.foods || []).slice(), days: d.days || flow.days, people: +d.people || 0,
+      lunches: d.lunches || 'leftovers', fridge: d.fridge || '' }, fromNote(d.note));
+    saveFlow(); goTab('ipsy');
+  }
   function goTab(t) { st.tab = t; ls.set(K.tab, t); render(); slideTabs(false); scrollTo(0, 0); }
   async function signIn() {
     try { await A().signIn(); toast('Signed in.'); load(); }
@@ -417,14 +464,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // A new plan: what was picked and answered, or (Try again) the draft's own choices
   async function makePlan(more) {
-    const ask = more || { slots: flow.slots.slice(), foods: flow.foods.length ? flow.foods.slice() : ['surprise'], days: flow.days, people: flow.people, lunches: flow.lunches || 'leftovers',
-      fridge: flow.fridge, note: flow.note, start: isoDay(new Date()) };
+    const ask = more || { slots: flow.slots.slice(), foods: flow.foods.length ? flow.foods.slice() : ['surprise'], days: flow.days, people: people(), lunches: flow.lunches || 'leftovers',
+      fridge: flow.fridge, note: noteOf(flow), start: isoDay(new Date()) };
     const n = ask.days * ask.slots.length;
     st.busy = 'plan'; st.planning = { ...ask, n }; st.tab = 'plan'; ls.set(K.tab, st.tab); render(); slideTabs(false); scrollTo(0, 0);
     try {
       const j = await api('plan', ask);
       data.draft = j.draft; ls.set(KEY, data);
-      Object.assign(flow, { step: 'pick', days: 0, people: 0, lunches: '', note: '', fridge: '' });
       st.busy = null; toast('Here’s a plan. Accept it to save it.', null, 6000);
     } catch (e) { st.busy = null; toast(say(e.code), null, 8000); }
     render();
@@ -438,6 +484,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const j = await api('accept', { start });
       data.plan = j.plan; data.log = j.log; data.draft = null; data.got = Date.now(); ls.set(KEY, data);
       ticks = { at: j.plan.at, keys: [] }; ls.set(K.ticks, ticks);
+      Object.assign(flow, FLOW()); saveFlow();   // planned: the planner starts afresh next time
       scheduleSheet();
       toast('Saved for the family, from ' + dayLabel(j.plan.start) + '. The shopping list is ready.', null, 5000);
     } catch (e) { toast(say(e.code), null, 6000); }
