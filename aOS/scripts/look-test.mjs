@@ -396,9 +396,10 @@ for (const scheme of ['light', 'dark']) {
   const foot = await p.evaluate(() => getComputedStyle(document.documentElement, '::after').bottom);
   if (foot !== '4px') pr.push('the trail\'s bottom edge is not at the bottom of the screen: ' + foot);
   await p.click('#home [data-open="weather"]');
+  // 'complete', not just parsed: the app's welcome.js (deferred) is what hides its own trail inside aOS
   const app = () => p.evaluate(() => { const f = document.querySelector('#stage .frame[data-id="weather"] iframe'), d = f && f.contentDocument;
-    return d && d.readyState !== 'loading' && d.documentElement.dataset.look === 'grid' ? f.contentWindow.getComputedStyle(d.documentElement, '::after').display : null; });
-  await p.waitForFunction(() => { const f = document.querySelector('#stage .frame[data-id="weather"] iframe'), d = f && f.contentDocument; return d && d.readyState !== 'loading' && d.documentElement.dataset.look === 'grid'; }, null, { timeout: 10000 }).catch(() => pr.push('Weather did not open in Tron inside aOS'));
+    return d && d.readyState === 'complete' && d.documentElement.dataset.look === 'grid' ? f.contentWindow.getComputedStyle(d.documentElement, '::after').display : null; });
+  await p.waitForFunction(() => { const f = document.querySelector('#stage .frame[data-id="weather"] iframe'), d = f && f.contentDocument; return d && d.readyState === 'complete' && d.documentElement.dataset.look === 'grid'; }, null, { timeout: 10000 }).catch(() => pr.push('Weather did not open in Tron inside aOS'));
   if (await z() !== '42') pr.push('with an app open, aOS\'s trail is not over it: z-index ' + await z());
   const own = await app();
   if (own !== 'none') pr.push('the app draws its own trail inside aOS too: ' + own);
