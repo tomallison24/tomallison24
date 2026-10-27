@@ -622,7 +622,8 @@
     'ai-refused': 'Claude wouldn’t read this one.',
     'ai-format': 'That didn’t come back right. Try again.',
   };
-  const aiSay = code => AI_SAY[code] || 'Something went wrong. Try again in a minute.';
+  let aiUntil = '';                        // when the month's AI budget is back (an ai-budget answer)
+  const aiSay = code => code === 'ai-budget' ? AllisonOS.budgetSay(aiUntil) : AI_SAY[code] || 'Something went wrong. Try again in a minute.';
   const accountApi = () => window.AllisonOS && window.AllisonOS.account;
   async function aiCall(route, body) {
     const opts = { method: 'POST', cache: 'no-store', headers: { 'X-News': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
@@ -630,6 +631,7 @@
     try { r = accountApi() ? await accountApi().fetch(API + route, opts) : await fetch(API + route, opts); }
     catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let j = {}; try { j = await r.json(); } catch {}
+    if (j.error === 'ai-budget') aiUntil = j.until;
     if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'off' : 'server') });
     return j;
   }

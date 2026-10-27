@@ -13,6 +13,9 @@
 import assert from 'assert/strict';
 import { onRequest, AGAIN_DAYS, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
+// The month's AI budget used up: Anthropic's answer to every request until the 1st (server/ipsy.js, budgetUntil).
+const back = (d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString())(new Date());
+const spent = () => new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits. You will regain access on ' + back.slice(0, 10) + ' at 00:00 UTC.' } }), { status: 400 });
 
 function fakeKV() {
   const m = new Map(); let writes = 0;
@@ -259,7 +262,9 @@ await test('a model that answers in words, or an AI service that refuses the key
   answers = ['Sorry, I can\'t help with that.'];
   assert.equal((await call('plan', { token, body: DIN({ foods: ['pork'] }) })).body.error, 'ai-format');
   answers = [new Response('{}', { status: 401 })];
-  assert.equal((await call('plan', { token, body: DIN({ foods: ['pork'] }) })).body.error, 'ai-key');
+  assert.equal((await call('plan', { token, body: DIN({ foods: ['pork'] }) })).body.error, 'ai-key');  answers = [spent()];
+  const r = await call('plan', { token, body: DIN({ foods: ['pork'] }) });
+  assert.equal(r.status, 503); assert.deepEqual(r.body, { error: 'ai-budget', until: back }, 'the month\'s AI budget used up');
 });
 await test('ask: Anthropic\'s API with the key and version headers', async () => {
   const seen = [];

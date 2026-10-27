@@ -27,6 +27,38 @@ const FALLBACK_OK = /^claude-(sonnet-5-5|opus-5-5|opus-5|fable-5-1|fable-5)$/;
 const WEB_NEW = /^claude-(sonnet-5-5|sonnet-5|sonnet-4-6|opus-5-5|opus-5|opus-4-[678]|fable-5-1|fable-5)$/;
 
 export const fail = (message, status) => Object.assign(new Error(message), { status });
+
+// The family's AI budget: a monthly spend limit the owner sets in Anthropic's Console (Billing > Spend
+// limits; aOS/RELEASING.md, "The AI budget"). Once it is used up, Anthropic turns every request down
+// until the 1st of the next month, 00:00 UTC: a 400 "You have reached your specified API usage limits"
+// (the limit the owner set; "workspace API usage limits" for a workspace's) or a 429 whose error_code
+// is enforced_spend_limit_reached (the account tier's own cap). Every AI route answers either with
+// { error: 'ai-budget', until }: until is when Anthropic says access comes back (else the 1st, 00:00
+// UTC), so the phone says why AI stopped and when it's back (home/ipsy.js, budgetSay).
+const BUDGET = /reached your specified (?:workspace )?API usage limits/i;
+export function budgetUntil(status, body, now = Date.now()) {
+  const e = body && body.error;
+  if (!e || typeof e !== 'object') return '';
+  const msg = String(e.message || '');
+  if (!(status === 400 && BUDGET.test(msg)) && !(status === 429 && e.details && e.details.error_code === 'enforced_spend_limit_reached')) return '';
+  const m = /(\d{4}-\d{2}-\d{2})(?:,?\s+(?:at\s+)?(\d{2}:\d{2}))?\s*UTC/i.exec(msg);
+  const t = m ? Date.parse(m[1] + 'T' + (m[2] || '00:00') + ':00Z') : NaN;
+  if (t > now) return new Date(t).toISOString();
+  const d = new Date(now);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString();
+}
+// Anthropic's answer, not ok: the budget's until, or '' (read from a copy, so the answer can still be read).
+export async function budgetOf(r, now) {
+  if (!r || (r.status !== 400 && r.status !== 429)) return '';
+  let b = null; try { b = await r.clone().json(); } catch {}
+  return budgetUntil(r.status, b, now);
+}
+// The error a route throws for Anthropic's answer, not ok: the budget, the key, busy, or the status.
+export async function aiFail(r) {
+  const until = await budgetOf(r);
+  if (until) return Object.assign(fail('ai-budget', 503), { until });
+  return fail(r.status === 401 || r.status === 403 ? 'ai-key' : r.status === 429 ? 'ai-busy' : 'ai-' + r.status, 502);
+}
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, n);
 // The day it is on the family's calendar (Apex, NC), YYYY-MM-DD: every per-person daily count is keyed by it.
 export const today = (now = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(now));
@@ -149,7 +181,10 @@ export async function ipsyStep({ env, request, db, me, app, head, daily = IPSY_D
         'anthropic-version': '2023-06-01', ...(head.fallbacks ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}) } });
     } catch { throw fail('ai-unreachable', 502); } finally { clearTimeout(timer); }
     if (!r.ok) {
-      let why = ''; try { const e = await r.json(); why = str(e && e.error && e.error.message, 300); } catch {}
+      let e = null; try { e = await r.json(); } catch {}
+      const until = budgetUntil(r.status, e);
+      if (until) return reply({ error: 'ai-budget', until }, 503);
+      const why = str(e && e.error && e.error.message, 300);
       const code = r.status === 401 || r.status === 403 ? 'ai-key' : r.status === 429 || r.status === 529 ? 'ai-busy' : r.status === 413 ? 'too-long' : 'ai-' + r.status;
       return reply({ error: code, ...(why ? { why } : {}) }, 502);
     }

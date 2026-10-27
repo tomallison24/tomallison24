@@ -76,6 +76,8 @@ function claude(msgs) {
     got[u.name] = { r, json: (() => { try { return JSON.parse(r.content); } catch { return null; } })() };
   }
   const step = Object.keys(got).length;
+  // the month's AI budget used up: the route says so (server/ipsy.js), with when it's back
+  if (/budget/.test(q)) return { status: 503, json: { error: 'ai-budget', until: '2026-12-01T00:00:00.000Z' } };
   if (/grocer/.test(q)) {
     if (!step) return use(think, tu('get_lists', {}), tu('find_reminders', { list: 'Groceries' }));
     if (!got.set_done) {
@@ -348,6 +350,13 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.equal(await page.$$eval('.ipsy-msg', e => e.length), 0);
     await page.click('.ipsy-speaker');
     await page.waitForFunction(() => document.querySelector('.ipsy-wrap').hidden, null, { timeout: 2000 });
+  });
+
+  await step(tag + ': the month’s AI budget used up: Ipsy says why, and when it’s back', async () => {
+    if (await page.$eval('.ipsy-wrap', e => e.hidden)) await page.click('.ipsy-btn');
+    await ask('Is the budget gone?', 'AI budget for this month is used up');
+    const t = await page.textContent('.ipsy-log');
+    assert.match(t, /aOS’s AI budget for this month is used up, so AI is off until Nov 30 at 7 PM\. The owner can raise it in Anthropic’s Console\./);
   });
 
   await step(tag + ': picking the other design in Settings changes Ipsy at once', async () => {

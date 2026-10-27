@@ -172,6 +172,25 @@ A change reaches the app that keeps it: in aOS, an app open out of sight closes 
 old setting over the new one, then opens again (`aosHomeTab.around`); the app Ipsy is in is drawn again
 after Ipsy answers. Adding a setting means adding it in both lists.
 
+## The AI budget
+
+The family's AI (every Ipsy, Orders' and Travel's reading of emails, News' summaries, Meals' plans,
+Money's checks and ideas) has a monthly budget: **$80**. The owner sets it once in Anthropic's Console,
+on the account whose key is `ANTHROPIC_API_KEY` (aOS is the only thing that uses it):
+
+1. Open the [Billing](https://platform.claude.com/settings/billing) page.
+2. Under **Spend limits**, click **Set limit** (or **Adjust limit**) and enter 80.
+
+From then on Anthropic itself stops every AI request once the month's spending reaches it, until the 1st
+of the next month at 00:00 UTC (7 or 8 PM Eastern the evening before), so aOS can never spend more.
+Anthropic answers each request with a 400 ("You have reached your specified API usage limits"; its own
+tier cap is a 429, `enforced_spend_limit_reached`): `server/ipsy.js` (`budgetUntil`, `aiFail`) turns
+either into `{ error: 'ai-budget', until }` in every route, and the apps say, with Ipsy's words
+(`AllisonOS.budgetSay` in `home/ipsy.js`): "aOS's AI budget for this month is used up, so AI is off until
+Nov 30 at 7 PM. The owner can raise it in Anthropic's Console." The rest of aOS works as before; Orders'
+and Travel's own checking stops and tries again the next time. To give AI back sooner, raise or remove
+the limit on the same page. A warning email before it runs out is the owner's to set up in the Console.
+
 ## Notifications
 
 Everyone can turn on (and off) notifications under **Your account → Notifications**, and the

@@ -450,7 +450,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const todo = C.toCheck(D.tx, today());
     if (!todo.length) { D.checkDay = today(); persist(); if (loud) toast('Nothing new to check this month.'); return; }
     st.checking = true; busyPill('Ipsy is checking');
-    let n = 0, fixed = 0, flagged = 0, stop = '';
+    let n = 0, fixed = 0, flagged = 0, stop = '', until = '';
     const cache = new Map();
     try {
       for (let k = 0; k < todo.length && !stop; k += 20) {
@@ -464,7 +464,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         if (!items.length) continue;
         let r;
         try { r = await api('check', { items }); }
-        catch (err) { stop = err.message || 'error'; break; }
+        catch (err) { stop = err.message || 'error'; until = err.until; break; }
         const at = Date.now();
         for (const [id, res] of Object.entries(r.results || {})) {
           const i = D.tx.findIndex(t => t.id === id); if (i < 0) continue;
@@ -477,7 +477,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       D.lastCheck = { at: Date.now(), n, fixed, flagged };
       persist();
       pillDone(n ? 'Checked ' + plural(n, 'transaction') : 'Nothing checked');
-      if (stop && stop !== 'limit' && loud) toast(stop === 'no-ai' ? 'Ipsy isn’t set up in aOS yet (its key).' : 'Ipsy couldn’t check just now. Try again later.', null, 5000);
+      if (stop && stop !== 'limit' && loud) toast(stop === 'no-ai' ? 'Ipsy isn’t set up in aOS yet (its key).' : stop === 'ai-budget' ? AllisonOS.budgetSay(until) : 'Ipsy couldn’t check just now. Try again later.', null, 5000);
       else if (fixed || flagged) toast((fixed ? 'Ipsy corrected ' + plural(fixed, 'transaction') : '') + (fixed && flagged ? '. ' : '') + (flagged ? flagged + ' to look at' : '') + '.', null, 5000);
     } finally {
       st.checking = false; busyPill(null); render(); if (!$('setSheet').hidden) renderSettings();
@@ -538,7 +538,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       changeSettings(s => { s.ideas = { at: Date.now(), ym: curYm(), list: r.ideas || [], no: (s.ideas && s.ideas.no) || [] }; });
       if (loud) { pillDone(n ? plural(n, 'idea') : 'No ideas'); toast(n ? 'Ipsy’s ideas are on This month.' : 'No ideas this time: your categories look clear.', null, 5000); }
     } catch (err) {
-      if (loud) { busyPill(null); toast(err.message === 'no-ai' ? 'Ipsy isn’t set up in aOS yet (its key).' : err.message === 'limit' ? 'That’s all Ipsy’s ideas for today. Try again tomorrow.' : 'Ipsy couldn’t look just now. Try again later.', null, 5000); }
+      if (loud) { busyPill(null); toast(err.message === 'no-ai' ? 'Ipsy isn’t set up in aOS yet (its key).' : err.message === 'ai-budget' ? AllisonOS.budgetSay(err.until) : err.message === 'limit' ? 'That’s all Ipsy’s ideas for today. Try again tomorrow.' : 'Ipsy couldn’t look just now. Try again later.', null, 5000); }
     } finally {
       st.ideasBusy = false; render(); if (!$('setSheet').hidden) renderSettings();
     }
@@ -761,7 +761,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (loud) r = await A().fetch(API + path, opts);
     else { const t = A() && A().token(); if (t) opts.headers.Authorization = 'Bearer ' + t; r = await fetch(API + path, opts); }
     let j = {}; try { j = await r.json(); } catch {}
-    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { status: r.status, until: j.until });
     return j;
   }
   let syncing = null, syncTimer = null;

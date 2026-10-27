@@ -40,7 +40,7 @@
 // The X-News header stops other web pages calling this (as X-Meals does).
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, IPSY_DAILY, T, modelOf as ipsyModelFor, persona, requestHead, ipsyStep, fail, today } from '../../../server/ipsy.js';
+import { IPSY_MODEL, IPSY_DAILY, T, modelOf as ipsyModelFor, persona, requestHead, ipsyStep, fail, aiFail, budgetOf, today } from '../../../server/ipsy.js';
 
 export const MODEL = 'claude-sonnet-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -141,9 +141,9 @@ export async function ask(env, { system, messages, maxTokens = 1500 }, f = fetch
   if (!aiOf(env)) throw fail('no-ai', 503);
   const body = { model: modelOf(env), max_tokens: maxTokens, system, messages, output_config: { effort: 'low' } };
   let r = await post(env, { ...body, fallbacks: 'default' }, f, FALLBACK_BETA);
-  // A model or account that doesn't take fallbacks says so with a 400: go on without them.
-  if (r.status === 400) r = await post(env, body, f);
-  if (!r.ok) throw fail(r.status === 401 || r.status === 403 ? 'ai-key' : r.status === 429 ? 'ai-busy' : 'ai-' + r.status, 502);
+  // A model or account that doesn't take fallbacks says so with a 400: go on without them (not the budget's 400).
+  if (r.status === 400 && !(await budgetOf(r))) r = await post(env, body, f);
+  if (!r.ok) throw await aiFail(r);
   const j = await r.json();
   if (j.stop_reason === 'refusal') throw fail('ai-refused', 422);
   return (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
@@ -306,6 +306,6 @@ export async function onRequest({ request, params, env }, f = fetch) {
       .map(t => ({ q: str(t && t.q, 500), a: str(t && t.a, 2000) })).filter(t => t.q && t.a);
     return reply({ answer: await answer(env, story, read, question, history, f), basis: read.basis });
   } catch (e) {
-    return reply({ error: e.status ? e.message : 'server' }, e.status || 500);
+    return reply({ error: e.status ? e.message : 'server', ...(e.until ? { until: e.until } : {}) }, e.status || 500);
   }
 }

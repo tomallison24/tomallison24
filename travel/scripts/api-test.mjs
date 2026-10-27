@@ -176,6 +176,14 @@ await test('extract, check: every detail is read against the booking on file, an
   globalThis.fetch = async () => claude({ cancelled: 'yes' }, [{ field: 'cancelled', quote: 'was canceled by the airline' }])();
   assert.deepEqual((await post({ check: true, type: 'flight', missing: ['from'], text: CX })).body.fields, {});
 });
+// The month's AI budget used up: Anthropic's answer to every request until the 1st (server/ipsy.js, budgetUntil).
+const back = (d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString())(new Date());
+const spent = () => new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits. You will regain access on ' + back.slice(0, 10) + ' at 00:00 UTC.' } }), { status: 400 });
+await test('extract: the month\'s AI budget used up: ai-budget, and when it\'s back', async () => {
+  globalThis.fetch = async () => spent();
+  const r = await post({ type: 'flight', missing: ['date'], text: EMAIL });
+  assert.equal(r.status, 503); assert.deepEqual(r.body, { error: 'ai-budget', until: back });
+});
 await test('extract: limits, refusals and garbage come back as plain answers', async () => {
   globalThis.fetch = async () => new Response('', { status: 429 });
   assert.equal((await post({ type: 'flight', missing: ['date'], text: EMAIL })).body.error, 'limit');

@@ -2,12 +2,12 @@
 // accounts on, a signed-in family member, the Anthropic key), Ipsy's step going to Sonnet 5.5 with
 // Notes' instructions, tools and caching, the phone's conversation passed on exactly as sent, the
 // answer passed back untouched, what counts as a question, the daily limits (questions, and the steps they take), turns that aren't a
-// conversation, Anthropic's errors, and NOTES_IPSY_MODEL. Plain Node, no network.
+// conversation, Anthropic's errors (the month's AI budget among them), and NOTES_IPSY_MODEL. Plain Node, no network.
 //   node notes/scripts/ipsy-api-test.mjs
 import assert from 'assert/strict';
 import { onRequest, IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, IPSY_SYSTEM, IPSY_CLIENT_TOOLS } from '../../functions/notes/api/[[route]].js';
 import { onRequest as middleware } from '../../functions/notes/api/_middleware.js';
-import { ANTHROPIC_URL, IPSY_STEPS } from '../../server/ipsy.js';
+import { ANTHROPIC_URL, IPSY_STEPS, budgetUntil } from '../../server/ipsy.js';
 import { issue, putJSON } from '../../server/auth.js';
 
 function fakeKV() {
@@ -159,6 +159,24 @@ await test('Anthropic’s errors come back as short codes, with its reason', asy
     const r = await call(body, { tok: token });
     assert.equal(r.status, 502); const j = JSON.parse(r.text); assert.equal(j.error, code); assert.equal(j.why, 'messages.1: something');
   }
+});
+await test('the month\'s AI budget used up: ai-budget, with when Anthropic says it comes back', async () => {
+  const d = new Date(), back = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString(), day = back.slice(0, 10);
+  const own = { type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits. You will regain access on ' + day + ' at 00:00 UTC.' } };
+  const tier = { type: 'error', error: { type: 'rate_limit_error', message: 'You have reached your API usage limits: your organization has crossed its monthly API usage threshold. You will regain access on ' + day + ' at 00:00 UTC.', details: { error_code: 'enforced_spend_limit_reached' } } };
+  for (const [status, j] of [[400, own], [429, tier]]) {
+    answers = [new Response(JSON.stringify(j), { status })];
+    const r = await call(body, { tok: token });
+    assert.equal(r.status, 503); assert.deepEqual(JSON.parse(r.text), { error: 'ai-budget', until: back });
+  }
+  // the workspace's own limit, and a message that names no time: the 1st of next month, 00:00 UTC
+  assert.equal(budgetUntil(400, { error: { message: 'You have reached your specified workspace API usage limits.' } }), back);
+  // not the budget: any other 400, a rate limit, a 400 that only mentions limits
+  assert.equal(budgetUntil(400, { error: { message: 'messages.1: something' } }), '');
+  assert.equal(budgetUntil(429, { error: { type: 'rate_limit_error', message: 'Number of request tokens has exceeded your per-minute rate limit' } }), '');
+  assert.equal(budgetUntil(500, own), ''); assert.equal(budgetUntil(400, null), ''); assert.equal(budgetUntil(400, { error: 'x' }), '');
+  // a time already past (a stale message) still means the 1st of next month
+  assert.equal(budgetUntil(400, { error: { message: 'You have reached your specified API usage limits. You will regain access on 2020-01-01 at 00:00 UTC.' } }), back);
 });
 await test('NOTES_IPSY_MODEL names another model; one without the newest web tools or fallback gets what it takes', async () => {
   answers = [ANSWER];

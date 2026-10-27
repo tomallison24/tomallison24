@@ -76,6 +76,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Meals' route (functions/meals/api), named from the site root's side so it is the same from the old
   // Meals Vintage address, which opens this same app (../home/design.js)
   const API = '../meals/api/';
+  let aiUntil = '';                        // when the month's AI budget is back (an ai-budget answer)
   async function api(path, body) {
     const opts = { method: body === undefined ? 'GET' : 'POST', headers: { 'X-Meals': '1' }, cache: 'no-store' };
     if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
@@ -83,6 +84,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { r = A() ? await A().fetch(API + path, opts) : await fetch(API + path, opts); }
     catch { throw Object.assign(new Error('offline'), { code: 'offline' }); }
     let j = {}; try { j = await r.json(); } catch {}
+    if (j.error === 'ai-budget') aiUntil = j.until;
     if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { code: j.error || (r.status === 404 ? 'off' : 'server'), body: j });
     return j;
   }
@@ -102,7 +104,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     'owner-only': 'Only the owner can change what the family avoids. Your other rules were kept.',
     'changed': 'Someone in the family changed the plan just now. Here’s the plan as it is.',
   };
-  const say = code => SAY[code] || 'Something went wrong. Try again in a minute.';
+  const say = code => code === 'ai-budget' ? AllisonOS.budgetSay(aiUntil) : SAY[code] || 'Something went wrong. Try again in a minute.';
 
   async function load() {
     st.state = 'loading';

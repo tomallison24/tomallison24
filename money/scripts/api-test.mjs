@@ -13,6 +13,9 @@ import assert from 'assert/strict';
 import { onRequest, cleanTx, cleanSettings, keepResults, keepIdeas, keepFrom, CHECK_MODEL, CHECK_DAILY, IDEAS_DAILY, IPSY_CLIENT_TOOLS } from '../../functions/money/api/[[route]].js';
 import { onRequest as accounts } from '../../functions/aOS/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
+// The month's AI budget used up: Anthropic's answer to every request until the 1st (server/ipsy.js, budgetUntil).
+const back = (d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString())(new Date());
+const spent = () => new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits. You will regain access on ' + back.slice(0, 10) + ' at 00:00 UTC.' } }), { status: 400 });
 
 function fakeKV() {
   const m = new Map(); let writes = 0;
@@ -157,6 +160,9 @@ await test('Ipsy’s check: the reader only, Sonnet 5.5, and a correction kept o
     const words = b.messages[0].content;
     assert.ok(words.includes('Corner Hardwar') && words.includes('$1,052.10'));
     assert.ok(!/pat@example|https?:|Hi Pat/.test(words), 'no address, link or greeting goes to Anthropic');
+    // the month's AI budget used up: ai-budget, and when it's back
+    globalThis.fetch = async () => spent();
+    { const r = await call('check', { token: pat, body: { items: [item] }, e: AI }); assert.equal(r.status, 503); assert.deepEqual(r.body, { error: 'ai-budget', until: back }); }
     // a refusal checks nothing (the phone sends them again tomorrow)
     answer = null;
     globalThis.fetch = async () => new Response(JSON.stringify({ stop_reason: 'refusal', content: [] }), { status: 200 });

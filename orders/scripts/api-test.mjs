@@ -131,6 +131,9 @@ await test('control characters and a very long email are cleaned and cut before 
   const u = asked.at(-1).body.messages[0].content;
   assert.ok(!/[\u0000-\u0008]/.test(u)); assert.ok(u.length < MAX_TEXT + 1000);
 });
+// The month's AI budget used up: Anthropic's answer to every request until the 1st (server/ipsy.js, budgetUntil).
+const back = (d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString())(new Date());
+const spent = () => new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits. You will regain access on ' + back.slice(0, 10) + ' at 00:00 UTC.' } }), { status: 400 });
 await test('a refusal, a cut-off answer, a bad answer, a bad key and a busy API each say so', async () => {
   const cases = [
     [{ content: [], stop_reason: 'refusal' }, 'ai-refused', 422],
@@ -141,6 +144,11 @@ await test('a refusal, a cut-off answer, a bad answer, a bad key and a busy API 
     [new Response('{}', { status: 500 }), 'ai-500', 502],
   ];
   for (const [a, error, status] of cases) { answers = [a]; const r = await call('read', { token }); assert.equal(r.body.error, error); assert.equal(r.status, status); }
+});
+await test('the month\'s AI budget used up: ai-budget, and when it\'s back', async () => {
+  answers = [spent()];
+  const r = await call('read', { token });
+  assert.equal(r.status, 503); assert.deepEqual(r.body, { error: 'ai-budget', until: back });
 });
 await test('the daily limit counts every call, failing ones too', async () => {
   const db2 = fakeKV(); await db2.put('owner', 'u1'); await putJSON(db2, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });

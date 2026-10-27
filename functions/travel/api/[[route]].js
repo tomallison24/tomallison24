@@ -45,7 +45,7 @@
 // tools on the bookings there (IPSY_CLIENT_TOOLS, IPSY_SYSTEM; server/ipsy.js does the rest).
 
 import { reply, kv, sessionUser } from '../../../server/auth.js';
-import { IPSY_MODEL, T, DAY as YMD, modelOf, persona, requestHead, ipsyStep, today } from '../../../server/ipsy.js';
+import { IPSY_MODEL, T, DAY as YMD, modelOf, persona, requestHead, ipsyStep, budgetOf, today } from '../../../server/ipsy.js';
 
 const HOST = 'aerodatabox.p.rapidapi.com';
 const TIMEOUT_MS = 15000;
@@ -398,6 +398,8 @@ export async function onRequestPost({ request, params, env }) {
   try {
     res = await fetch(AI_URL, aiRequest(key, String(env.TRAVEL_AI_MODEL || '').trim() || CHECK_MODEL, check ? SYSTEM_CHECK : SYSTEM, prompt, 'low', schemaFor(wanted)));
   } catch { return reply({ error: 'unreachable' }, 502); }
+  const until = await budgetOf(res);
+  if (until) return reply({ error: 'ai-budget', until }, 503);
   if (res.status === 429 || res.status === 529) return reply({ error: 'limit' }, 429);
   if (res.status === 401 || res.status === 403) return reply({ error: 'key-refused' }, 502);
   if (!res.ok) return reply({ error: 'upstream-' + res.status }, 502);
