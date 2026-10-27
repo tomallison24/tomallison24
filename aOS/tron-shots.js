@@ -1,7 +1,7 @@
 // In Tron, aOS's screen trail (the red light running round the screen's edge: the :root::after of its <style id="grid">)
 // now and then sends a shot to a box on aOS Home: a section of apps (Family, Every day...) or the Weather or Calendar
 // widget. From where its light is, a light cycle's path (straight, with right-angle turns) to one of the nearest boxes,
-// then once round the box's edge, dying out as it goes. One at a time, every 4 to 10 seconds, and only on aOS's own
+// then once round the box's edge, dying out as it goes. One at a time, every 2.5 to 6 seconds, and only on aOS's own
 // screens (not over an open app or a sheet), with the page in view and motion allowed. Drawn on one canvas over the
 // page, under the bar; it never takes a tap.
 //   window.aosTronShots: fire() (one now, if it can), running() (a shot is on screen)
@@ -10,7 +10,7 @@
   if (window.aosTronShots) return;
   const root = document.documentElement;
   const RED = '255,42,42', HOT = '255,227,224';
-  const SPEED = 1.15, TAIL = 90, LOOP = [900, 1800], WAIT = [4000, 10000];   // px per ms; ms round a box, at least and at most
+  const SPEED = 1.15, TAIL = 90, LOOP = [900, 1800], WAIT = [2500, 6000];   // px per ms; ms round a box, at least and at most
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   let cv = null, ctx = null, shot = null, timer = 0, last = null;
 

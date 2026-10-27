@@ -111,7 +111,7 @@
         'Tron\'s intro no longer freezes aOS on its opening screen on an iPhone: as aOS opens it no longer starts the sound system (an iPhone can\'t play the sound before a tap anyway; Play the intro in Account still plays it), it stays out of the way of the rest of aOS, and it fades away by itself after seven seconds whatever happens',
         'aOS is in English only, and has four looks: Russian and the Folk look are gone (a phone that had either picked opens in English and Vintage)',
         'Every app, and aOS, stays put side to side: a sideways swipe no longer slides an app\'s page over and its controls off the screen, and two quick taps on a control (a light, the thermostat) no longer zoom the page in; in Home, a device drawn wider than the phone no longer lets the page slide sideways, and neither does the Night Drive and Tron grid floor behind its title',
-        'Tron\'s app icons are new: each app\'s drawing in white inside a red light trail round the icon\'s edge, like the trail round the screen, and on aOS Home that trail now and then sends a shot of light to a section of apps or the Weather or Calendar widget, which runs round it and dies out (one at a time; not with Reduce Motion on)',
+        'Tron\'s app icons are new: each app\'s drawing in white inside a red light trail round the icon\'s edge, like the trail round the screen, and on aOS Home that trail now and then sends a shot of light to a section of apps or the Weather or Calendar widget, which runs round it and dies out (one at a time, every few seconds; not with Reduce Motion on); and in an app opened in aOS, the trail runs round the top of the screen again, over the ‹ aOS bar; and its bottom edge runs along the very bottom of the screen, round the phone\'s corners, instead of through the tab bars and icons just above it',
         'aOS Home: try Thumb arc (Account > Appearance > Home layout): Home, Mail, Weather and Calendar on an inner ring and your four favorites on an outer one, in the corner your thumb rests on, with what\'s next and every other app above them, so every app is on one screen. Left-handed arc puts it in the other corner',
         'aOS: Run through setup, at the top of Account, walks you through your own settings one at a time: look, light or dark, and your helper and its name',
         'Fixes from a review of every app: Places no longer re-syncs a place that came back unchanged (it sent it again every second while open); Calendar\'s Year view steps from Feb 29 to Feb 28; Travel says "tomorrow" by your own day, not UTC, and drops a Gmail sign-in Google refused instead of failing for an hour; Podcasts\' mini player shows the right show for an episode with a repeated title; Weather\'s My Location no longer waits out another place\'s forecast; Mail\'s Add tag keeps its name after a failed add',
@@ -1197,6 +1197,10 @@
   // double-tap zoom (touch-action: manipulation): two quick taps on a control (a light, the thermostat's
   // +) zoomed the page in on an iPhone, and a zoomed page drifts side to side; taps answer at once too.
   addCss('aos-nosideways', 'html,body{overflow-x:clip;overscroll-behavior-x:none}html{touch-action:manipulation}');
+  // Tron's light trail round the screen (the <style id="grid"> blocks' :root::before and ::after): opened in aOS, the app
+  // draws none of its own, as aOS's runs round the whole screen over an open app (aOS/index.html); its own would sit
+  // under aOS's bar, the inset aOS gives it, leaving the top of the screen without one
+  if (inHome) addCss('aos-intrail', 'html[data-look="grid"]::before,html[data-look="grid"]::after{display:none}');
   // Under an iPhone's solid status bar (aOS's: data-bar="solid" on it, ../home/sky.js), aOS colours
   // the bar with this app's own background (#barcap, aOS/home-tab.js). The top of the app, where
   // "‹ aOS" floats over nothing of the app's own, fades into that same colour, so the bar and the
