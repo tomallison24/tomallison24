@@ -372,7 +372,8 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     assert.ok(read.includes('Manage your trip: [link to united.com]') && read.includes('Check in: [link to checkin.united.com]'), read);
     assert.ok(!/cn=KQ7T2M|pnr=|https?:/.test(read), 'never a link\'s address');
     const b = JSON.parse(mine[2].at(-1).content[1].content).bookings[0];
-    assert.equal(b.seat, '14A'); assert.deepEqual(b.email, { message_id: 'e1', subject: 'Your trip confirmation - KQ7T2M', from: 'United Airlines <unitedairlines@united.com>', date: b.email.date });
+    assert.equal(b.seat, '14A'); assert.deepEqual({ ...b.email, from: '' }, { message_id: 'e1', subject: 'Your trip confirmation - KQ7T2M', from: '', date: b.email.date });
+    assert.match(b.email.from, /^United Airlines <\[email-\d+\]>$/, 'the sender\'s address goes to Claude as a placeholder (home/redact.js)');
     assert.equal(b.live.status, 'Delayed 35 min'); assert.equal(b.trip.id, 'f-ua110');
     assert.equal(await T(() => !document.getElementById('tripPage').hidden), true, 'the trip is open behind the chat');
     await page.click('.ipsy-x');

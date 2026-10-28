@@ -595,19 +595,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const cache = new Map();
     try {
       for (let k = 0; k < todo.length && !stop; k += 20) {
-        const batch = todo.slice(k, k + 20), items = [];
+        // email addresses, phone, card and account numbers stay on the phone (home/redact.js): placeholders go, the real ones come back
+        const batch = todo.slice(k, k + 20), items = [], M = (window.AllisonOS && AllisonOS.redact ? AllisonOS.redact.make() : { hide: x => x, show: x => x });
         await pool(batch, 4, async x => {
           const gid = x.id.split(':')[0];
           if (!cache.has(gid)) cache.set(gid, gmail('/messages/' + gid, { format: 'full' }).then(m => ({ subject: header(m, 'subject'), text: emailText(bodies(m.payload)) })).catch(() => null));
           const e = await cache.get(gid);
-          if (e && e.text.length >= 20) items.push({ id: x.id, subject: e.subject, text: e.text, parsed: { amt: x.amt, dir: x.dir, merchant: x.merchant, account: x.account, last4: x.last4, cat: x.cat } });
+          if (e && e.text.length >= 20) items.push({ id: x.id, subject: M.hide(e.subject), text: M.hide(e.text), parsed: { amt: x.amt, dir: x.dir, merchant: x.merchant, account: M.hide(x.account), last4: x.last4, cat: x.cat } });
         });
         if (!items.length) continue;
         let r;
         try { r = await api('check', { items }); }
         catch (err) { stop = err.message || 'error'; until = err.until; break; }
         const at = Date.now();
-        for (const [id, res] of Object.entries(r.results || {})) {
+        for (const [id, res] of Object.entries(M.show(r.results || {}))) {
           const i = D.tx.findIndex(t => t.id === id); if (i < 0) continue;
           D.tx[i] = C.applyCheck(D.tx[i], res, at, PARSE);
           n++; if (D.tx[i].check.s === 'fixed') fixed++; else if (D.tx[i].check.s === 'flag') flagged++;

@@ -847,8 +847,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const fromHtml = html ? P.htmlToText(html) : '';
     const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
       .replace(/https?:\/\/\S+/g, '[link]').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000);
-    const j = await aiCall({ subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: body }, quiet);
-    return j.fact || null;
+    // email addresses, phone, card and account numbers stay on the phone (home/redact.js): placeholders go, the real ones
+    // come back. Not the sender: that's the store's own address, which says which store it is.
+    const M = (window.AllisonOS && AllisonOS.redact ? AllisonOS.redact.make() : { hide: x => x, show: x => x });
+    const j = await aiCall({ subject: M.hide(header(msg, 'subject')), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: M.hide(body) }, quiet);
+    return j.fact ? M.show(j.fact) : null;
   }
   // Ipsy checks an order: its email read again by Claude (functions/orders/api read: Haiku 5.5, every
   // number checked against the email's own words), what it found put onto the order, with Undo in
