@@ -12,6 +12,8 @@
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
 //   - Thumb arc (Home layout): the fixed four and four favorites on two rings in the corner, every app on the
 //     first screen (a small phone too), the orb going to the Ipsy bar, Edit, the left hand, and Classic again
+//   - Layers' grid (Classic, in Layers): every app as a round button, the top row your pins, Edit swaps two and
+//     it's kept, Thumb arc still there, and Classic's Favorites again out of Layers
 //   - no dock, nothing floats over Home (Home floats at the bottom on Today); Mail's unread count on
 //     its icon; Today beside the account; Home scrolls in its own box, the page never moves
 //   - Ipsy in aOS runs an app's own tool inside that app (Notes' lists), opening it out of sight
@@ -400,6 +402,48 @@ for (const [w, h, look] of [[390, 844, 'vintage'], [375, 667, 'glass']]) {
   check(orb.x + orb.width / 2 < w / 2 && meals.x > orb.x, `Left-handed arc: the rings in the bottom left corner ${tag}`);
   await pg.evaluate(() => aosHomeTab.layout('classic')); await pg.waitForTimeout(100);
   check(await pg.isVisible('#favs') && await pg.locator('#harc').isHidden() && (await pg.evaluate(() => [...document.querySelectorAll('#favs .fav')].map(f => f.dataset.open))).slice(0, 2).join() === 'mail,drinks', `Classic again: Mail, pinned there, is back in Favorites ${tag}`);
+  check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
+  await ctx.close();
+}
+// ---- Layers' grid (Classic, in Layers): every app on one screen as round buttons, the top row yours, nothing moves unless you move it ----
+for (const [w, h, scheme] of [[390, 844, 'light'], [375, 667, 'dark']]) {
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, hasTouch: true, serviceWorkers: 'block', colorScheme: scheme });
+  await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
+  await ctx.route('**/api/**', r => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' }));
+  await ctx.addInitScript(apps => { if (window.top !== window || sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+    const s = { aos: '999' }; for (const a of apps) s[a] = '999';
+    localStorage.setItem('aos.seen', JSON.stringify(s)); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.look', 'layers'); localStorage.setItem('aos.layers.intro', 'off');
+    localStorage.setItem('aos.home.picks', '["drinks"]'); }, APPS);
+  const pg = await ctx.newPage(), errs = [], tag = `(${w}x${h}, ${scheme})`;
+  pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(900);
+  const order = () => pg.evaluate(() => [...document.querySelectorAll('#hgrid .gapp')].map(a => a.dataset.gapp));
+  let o = await order();
+  check(await pg.evaluate(() => document.documentElement.dataset.home) === 'grid' && await pg.isVisible('#hgrid') && await pg.locator('#favs').isHidden() && await pg.locator('#spaces').isHidden(), `in Layers, Home is its grid, not Favorites and groups ${tag}`);
+  check(o.length === APPS.length && new Set(o).size === APPS.length && o.slice(0, 4).join() === 'drinks,mail,calendar,weather', `every app once; the top row your pin, then Mail, Calendar and Weather (${o.slice(0, 5)}) ${tag}`);
+  const fit = await pg.evaluate(() => { const rs = [...document.querySelectorAll('#hgrid .orb')].map(e => e.getBoundingClientRect());
+    return { big: rs.every(r => r.width >= 44 && r.height >= 44), on: rs.every(r => r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth), sky: !!document.querySelector('#hgsky [data-open="weather"]') && !!document.querySelector('#hgsky [data-open="calendar"]') }; });
+  check(fit.big && fit.sky, `buttons 44 pt or more; the weather and what's next on the sky ${tag}`);
+  if (h > 800) check(fit.on, `every app on the first screen ${tag}`);
+  await pg.evaluate(() => window.aosHome.unread('mail', 3)); await pg.waitForTimeout(100);
+  check(await pg.textContent('#hgrid [data-gapp="mail"] em') === '3', `Mail's unread count on its button ${tag}`);
+  await pg.locator('#hgrid [data-gapp="mail"]').click(); await pg.waitForTimeout(900);
+  check(await pg.evaluate(() => document.body.classList.contains('in-app') && [...document.querySelectorAll('.frame')].some(f => !f.hidden && f.dataset.id === 'mail')), `one tap opens Mail inside aOS ${tag}`);
+  await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
+  // Edit: tap two apps to swap them; nothing opens while editing; kept over a reload
+  const [x, y] = [o[5], o[9]];
+  await pg.click('#gridEdit'); await pg.locator(`#hgrid [data-gapp="${x}"]`).click(); await pg.locator(`#hgrid [data-gapp="${y}"]`).click(); await pg.waitForTimeout(150);
+  check(await pg.evaluate(() => !document.body.classList.contains('in-app')), `in Edit, a tap doesn't open the app ${tag}`);
+  await pg.click('#gridEdit'); o = await order();
+  check(o[5] === y && o[9] === x && JSON.parse(await pg.evaluate(() => localStorage.getItem('aos.home.grid')))[5] === y, `Edit: ${x} and ${y} swapped, and kept ${tag}`);
+  await pg.reload(); await pg.waitForTimeout(900);
+  check((await order())[5] === y, `the order is kept over a reload ${tag}`);
+  // Thumb arc still there in Layers; and out of Layers, Classic's Favorites again
+  await pg.evaluate(() => aosHomeTab.layout('arc')); await pg.waitForTimeout(100);
+  check(await pg.evaluate(() => document.documentElement.dataset.home) === 'arc' && await pg.locator('#hgrid').isHidden(), `Thumb arc, picked, in Layers too ${tag}`);
+  await pg.evaluate(() => aosHomeTab.layout('classic')); await pg.waitForTimeout(100);
+  await pg.evaluate(() => aosLook.set('vintage')); await pg.waitForTimeout(200);
+  check(!(await pg.evaluate(() => document.documentElement.dataset.home)) && await pg.isVisible('#favs') && await pg.locator('#hgrid').isHidden(), `out of Layers: Classic's Favorites and groups again ${tag}`);
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }

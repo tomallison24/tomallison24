@@ -477,6 +477,30 @@
   /* Thumb arc (aOS/home-tab.js, html[data-home="arc"]): the fixed four on an inner ring and four favorites on an outer one,
      in the bottom corner your thumb rests on (data-hand="left": the other), every other app above them; the rest of Home gives way */
   .arconly, html[data-home="arc"] #hmain > :not(.arconly) { display: none; }
+  /* Layers' grid (aOS/home-tab.js, html[data-home="grid"]): Classic in Layers. The weather and what's next on the sky, then
+     every app on one screen as raised round buttons, its line drawing tinted by its group; the top row is yours */
+  .gridonly, html[data-home="grid"] #hmain > :not(.gridonly):not(#hbrief) { display: none; }
+  html[data-home="grid"] #hmain > .gridonly:not([hidden]) { display: block; }
+  html[data-home="grid"] #hmain > .sec.gridonly { display: flex; }
+  html[data-home="grid"] #hmain > .hgsky.gridonly { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; margin: 2px 2px 18px; }
+  .hgsky button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 44px; min-width: 0; padding: 0 4px; border: 0; background: none; font: inherit; text-align: left; color: var(--text); cursor: pointer; }
+  .hgsky b { font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
+  .hgsky span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; color: var(--muted); }
+  html[data-home="grid"] #hmain > .hgrid.gridonly { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 6px; padding: 4px 0 8px; }
+  :root { --sp-family: #2B7262; --sp-every: #3B5896; --sp-out: #9A5A52; --sp-you: #806224; --sp-games: #6B5B95; --orb-hi: #FFFFFF; --orb: #FDFDFE; --orb-edge: rgba(16,24,40,.08); --orb-on: #FFFFFF; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sp-family: #7FC6B4; --sp-every: #A3B6E0; --sp-out: #E3A79F; --sp-you: #D9BE86; --sp-games: #BBAEE0; --orb-hi: #262C37; --orb: #1B2029; --orb-edge: rgba(255,255,255,.08); --orb-on: #10141A; } }
+  :root[data-theme="dark"] { --sp-family: #7FC6B4; --sp-every: #A3B6E0; --sp-out: #E3A79F; --sp-you: #D9BE86; --sp-games: #BBAEE0; --orb-hi: #262C37; --orb: #1B2029; --orb-edge: rgba(255,255,255,.08); --orb-on: #10141A; }
+  .gapp { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 500; line-height: 1.15; text-align: center; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .gapp .orb { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; color: var(--tint); background: radial-gradient(circle at 50% 30%, var(--orb-hi), var(--orb) 70%);
+    box-shadow: inset 0 0 0 1px var(--orb-edge), var(--ly-lift, 0 1px 2px rgba(16,24,40,.08), 0 10px 22px -12px rgba(16,24,40,.4)), inset 0 -3px 0 color-mix(in srgb, var(--tint) 24%, transparent); transition: transform .1s, box-shadow .1s; }
+  .gapp .orb svg { width: 26px; height: 26px; }
+  .gapp:active .orb { transform: translateY(2px) scale(.96); }
+  .gapp > b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 100%; font-weight: 500; }
+  .gapp em { position: absolute; top: -3px; left: calc(50% + 14px); min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--sp-every); color: var(--orb-on); font: 700 12px/20px -apple-system, system-ui, sans-serif; font-style: normal; }
+  .editing .gapp .orb { box-shadow: inset 0 0 0 1.5px var(--orb-edge), 0 1px 2px rgba(16,24,40,.08); }
+  .editing .gapp.sel .orb { box-shadow: 0 0 0 3px var(--sp-every), var(--ly-lift, 0 6px 14px -6px rgba(16,24,40,.4)); }
+  .hgrid .grule { grid-column: 1 / -1; height: 1px; margin: 0 8px; background: rgba(127,127,127,.22); }
+  @media (prefers-reduced-motion: reduce) { .gapp .orb { transition: none; } .gapp:active .orb { transform: none; } }
   html[data-home="arc"] #hmain > .arconly:not([hidden]) { display: block; }
   html[data-home="arc"] #hmain > .sec.arconly:not([hidden]) { display: flex; }
   html[data-home="arc"] #hmain > .hrest:not([hidden]) { display: grid; }
@@ -990,6 +1014,10 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <div class="arconly hg hrest" id="hrest"></div>
     <div class="arconly harc harcbg" id="harcbg" aria-hidden="true"></div>   <!-- the rings, behind the apps above them -->
     <div class="arconly harc" id="harc"></div>
+    <div class="gridonly hgsky" id="hgsky"></div>   <!-- Layers' grid (aOS/home-tab.js, html[data-home="grid"]): the weather and what's next, on the sky -->
+    <div class="sec gridonly"><h2 id="gridHead">Your apps</h2><button type="button" id="gridEdit">Edit</button></div>
+    <p class="hint gridonly" id="gridHint" hidden>Tap one app, then another, to swap them. Nothing moves unless you move it.</p>
+    <div class="gridonly hgrid" id="hgrid"></div>
   </div>
 </section>
 </main>
