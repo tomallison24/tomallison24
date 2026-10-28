@@ -7,7 +7,7 @@
   const pick = (o, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);   // a message of the list itself, never 'constructor'
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   // Every app carries both its designs itself (picked in its own Settings, ../home/design.js), so its folder has
-  // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-neon-512.png, icon-grid-512.png. aOS shows
+  // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-layers-512.png, icon-grid-512.png. aOS shows
   // the one for its own look. The app's own icon (what a Home Screen shows) follows the design picked in the app.
   const lookNow = () => (window.aosLook ? aosLook.get() : 'vintage');
   const icon = id => `../${id}/icon-${lookNow() === 'vintage' ? '' : lookNow() + '-'}512.png`;
@@ -16,10 +16,10 @@
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
   const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104', sparkle: '184,140,192', money: '82,138,116' };   // each icon's Sea glass tint
   const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42', sparkle: '194,87,127', money: '47,93,98' };   // each mid-century icon's colour
-  const NEON_HUE = { notes: '86,73,110', podcasts: '145,63,113', places: '29,142,174', meals: '146,42,94', news: '135,109,217', fitness: '51,35,76', travel: '51,35,76', drinks: '135,109,217', weather: '135,109,217', calendar: '101,98,159', mail: '34,113,137', house: '251,162,74', orders: '223,56,142', sparkle: '205,72,136', money: '52,97,113' };   // the same, in Night Drive (aOS/scripts/looks.mjs)
+  const LAYERS_HUE = { notes: '74,81,90', podcasts: '136,74,102', places: '27,142,123', meals: '135,63,60', news: '91,130,203', fitness: '38,45,54', travel: '38,45,54', drinks: '91,130,203', weather: '91,130,203', calendar: '81,106,152', mail: '48,110,97', house: '216,171,99', orders: '207,92,89', sparkle: '191,97,92', money: '55,93,85' };   // the same, in Layers (aOS/scripts/looks.mjs)
   const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33', money: '120,58,54' };   // and in Tron
   // the glow behind an app: its icon's tint, for aOS's look
-  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => ({ glass: o, neon: NEON_HUE, grid: GRID_HUE }[lookNow()] || VINTAGE_HUE)[id] || o[id] });
+  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => ({ glass: o, layers: LAYERS_HUE, grid: GRID_HUE }[lookNow()] || VINTAGE_HUE)[id] || o[id] });
   const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games', money: 'Finance' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals', 'money'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
@@ -304,8 +304,8 @@
     if ((b = ev.target.closest('[data-plan-stop]'))) return setPlan(b, { cancel: true });
     if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
   }
-  // Look: Vintage (mid-century, the default), Sea glass, Night Drive or Tron, kept on this phone (look.js); every app takes it too
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
+  // Look: Vintage (mid-century, the default), Sea glass, Layers or Tron, kept on this phone (look.js); every app takes it too
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['layers', 'Layers', 'A still sky by the time of day'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
   const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${id === 'grid' ? 'Tron <span class="se">Special Edition</span>' : esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
   // a link to Updates or Subscription (a notification, the plan card) opens that one
@@ -498,9 +498,9 @@
       <circle cx="42.5" cy="22" r="6.2" opacity=".9"/><path d="M31 46c0-7.4 5.2-12.6 11.5-12.6S54 38.6 54 46z" opacity=".9"/></g>
       <g fill="#fff" stroke="#9FB0C9" stroke-width="1.2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
       <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
-  // Night Drive and Tron: the mid-century one, repainted (aOS/scripts/looks.mjs)
+  // Layers and Tron: the mid-century one, repainted (aOS/scripts/looks.mjs)
   const FAMILY_PAINT = {
-    neon: { '#1F6F6B': '#227189', '#A9D3C7': '#AAD7E7', '#B9C6E0': '#C8C2D6', '#D8572A': '#DF388E', '#E3A72F': '#FBA24A', '#E3C5C3': '#D1CBDD', '#E9D6B4': '#FAD8BB', '#FBF5E9': '#FBF9FF' },
+    layers: { '#1F6F6B': '#306E61', '#A9D3C7': '#ACD2C8', '#B9C6E0': '#C2C5CA', '#D8572A': '#CF5C59', '#E3A72F': '#D8AB63', '#E3C5C3': '#CBCED3', '#E9D6B4': '#E6D6BF', '#FBF5E9': '#F9FBFE' },
     grid: { '#1F6F6B': '#973835', '#A9D3C7': '#F2AEA8', '#B9C6E0': '#C4C7CA', '#D8572A': '#E41F24', '#E3A72F': '#FB6049', '#E3C5C3': '#CDD0D3', '#E9D6B4': '#E9AEA3', '#FBF5E9': '#FAFCFE' },
   };
   const familyIcon = () => { const l = aosLook.get(); return l === 'glass' ? FAMILY_ICON_GLASS : FAMILY_PAINT[l] ? FAMILY_ICON_VINTAGE.replace(/#[0-9A-F]{6}/g, c => FAMILY_PAINT[l][c] || c) : FAMILY_ICON_VINTAGE; };

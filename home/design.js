@@ -1,23 +1,26 @@
-// Every app's design: Vintage (mid-century modern, the default), Standard (Sea glass), Night Drive
-// (neon) or Tron (light cycles), picked in the app's own Settings > Design, as in Clock, or
+// Every app's design: Vintage (mid-century modern, the default), Standard (Sea glass), Layers
+// (a still sky by the time of day, frosted glass over it) or Tron (light cycles), picked in the app's own Settings > Design, as in Clock, or
 // for every app at once in aOS (Account > Appearance: aOS/look.js writes each app's design.<id>). Shared by every app (like sky.js), so they can't
 // drift apart. Loaded in <head> after the styles, before ../home/sky.js, so the page is drawn once,
 // in the right design:
 //   <script src="../home/design.js" data-app="<id>"></script>
 //
 //   - Vintage is the page's <style id="vintage"> block; Standard is that block switched off, the
-//     Sea glass styles above it showing as they are; Night Drive and Tron keep the Vintage block on
-//     (its shapes) and switch on their own block after it, <style id="neon"> or <style id="grid">,
+//     Sea glass styles above it showing as they are; Layers and Tron keep the Vintage block on
+//     (its shapes) and switch on their own block after it, <style id="layers"> or <style id="grid">,
 //     which repaints it (generated from it by aOS/scripts/make-looks.mjs);
-//   - data-look="vintage" | "glass" | "neon" | "grid" on <html>: sky.js draws the day and night sky
+//   - data-look="vintage" | "glass" | "layers" | "grid" on <html>: sky.js draws the day and night sky
 //     only in Vintage, and an app's own CSS or script can tell them apart by it (every look but
 //     glass is flat: aosDesign.flat());
 //   - what iOS reads when the app is added to the Home Screen follows it too: the icon
-//     (icon-<n>.png is Vintage, icon-glass-<n>.png Sea glass, icon-neon-<n>.png, icon-grid-<n>.png),
+//     (icon-<n>.png is Vintage, icon-glass-<n>.png Sea glass, icon-layers-<n>.png, icon-grid-<n>.png),
 //     the status bar style, the bar colours (each theme-color meta's own content is Sea glass;
-//     data-vintage on it, else cream or walnut; the new looks' own grounds).
-// The choice is kept on this phone: localStorage design.<id> = 'vintage' | 'glass' | 'neon' | 'grid'
-// (nothing kept means Vintage). A change made elsewhere (aOS's Appearance, another frame) is followed
+//     data-vintage on it, else cream or walnut; Tron's ground; Layers' sky at the top, by the time of day);
+//   - data-tod="morning" | "afternoon" | "evening" | "night" on <html>, in every look, for Layers' sky
+//     (aOS/scripts/looks.mjs, SKIES): set when the page opens and again when you come back to it, never in between,
+//     so the sky never changes while you look at it.
+// The choice is kept on this phone: localStorage design.<id> = 'vintage' | 'glass' | 'layers' | 'grid'
+// (nothing kept means Vintage; 'neon', Night Drive's, which Layers replaced, opens Layers and is rewritten so). A change made elsewhere (aOS's Appearance, another frame) is followed
 // at once (the storage event).
 //
 // The Vintage designs used to be apps of their own (mealsvintage/ and the rest), each with its own
@@ -30,7 +33,7 @@
 //   data-dbs="allison-mealsv=allison-meals"            IndexedDB databases, old=new (copied store by store)
 // Nothing old is deleted. aosDesign.moved resolves once the databases are copied (at once when none).
 //
-// window.aosDesign: get() 'vintage' | 'glass' | 'neon' | 'grid'; flat(); set(look); picker() the Settings > Design rows (html,
+// window.aosDesign: get() 'vintage' | 'glass' | 'layers' | 'grid'; flat(); set(look); picker() the Settings > Design rows (html,
 // the same in every app, as in Clock: put it in the app's own group box, e.g. its .rgroup); bind(box)
 // wires the [data-design] buttons in box, now and after box is re-rendered (aria-checked, and a tap
 // sets that design); 'aos:design' fires on window on a change.
@@ -42,9 +45,12 @@
   const APP = data.app || '';
   const KEY = 'design.' + APP;
   const root = document.documentElement;
-  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], neon: ['#F5F2FD', '#140A22'], grid: ['#050608', '#050608'] };
-  const LOOKS = ['vintage', 'glass', 'neon', 'grid'];
-  const ok = v => LOOKS.includes(v) ? v : 'vintage';
+  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], grid: ['#050608', '#050608'] };
+  const LOOKS = ['vintage', 'glass', 'layers', 'grid'];
+  const ok = v => v === 'neon' ? 'layers' : LOOKS.includes(v) ? v : 'vintage';
+  // Layers' sky: the time of day, and the colour at the top of each sky (aOS/scripts/looks.mjs, SKIES), for the bars
+  const tod = (h = new Date().getHours()) => h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night';
+  const SKY_TOP = { morning: ['#F4DCCB', '#42302A'], afternoon: ['#B9DCD2', '#1F3B35'], evening: ['#EDCDC9', '#3F2B2E'], night: ['#D2D7EE', '#0F1426'] };
   const pairs = s => String(s || '').split(',').map(p => p.split('=').map(x => x.trim())).filter(p => p.length === 2 && p[0] && p[1]);
 
   // ---- The old Vintage app's data, moved once ----
@@ -108,28 +114,31 @@
   }
 
   // ---- The design ----
-  let stored = null; try { stored = localStorage.getItem(KEY); } catch {}
+  let stored = null; try { stored = localStorage.getItem(KEY); if (stored === 'neon') localStorage.setItem(KEY, 'layers'); } catch {}
   function apply(look) {
     look = ok(look);
     root.setAttribute('data-look', look);
+    root.setAttribute('data-tod', tod());
     if (look === 'grid') root.setAttribute('data-theme', 'dark'); else if (root.getAttribute('data-theme') === 'dark' && root.dataset.tron) root.removeAttribute('data-theme');   // Tron is dark only, as in the car (welcome.js keeps it so, and puts your own back after)
     if (look === 'grid') root.dataset.tron = '1'; else delete root.dataset.tron;
     const v = document.getElementById('vintage'); if (v) v.media = look === 'glass' ? 'not all' : 'all';
-    for (const id of ['neon', 'grid']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
+    for (const id of ['layers', 'grid']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
     for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
       if (!m.dataset.glass) m.dataset.glass = m.content;
       const dark = /dark/.test(m.dataset.media || m.getAttribute('media') || '');   // welcome.js keeps the original media there
-      m.content = look === 'glass' ? m.dataset.glass : look === 'vintage' && m.dataset.vintage || GROUND[look][dark ? 1 : 0];
+      m.content = look === 'glass' ? m.dataset.glass : look === 'vintage' && m.dataset.vintage || (look === 'layers' ? SKY_TOP[root.dataset.tod] : GROUND[look])[dark ? 1 : 0];
     }
     const bar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
     if (bar) { if (!bar.dataset.glass) bar.dataset.glass = bar.content; bar.content = look === 'glass' ? bar.dataset.glass : 'default'; }   // black-translucent's white clock would vanish on the cream
     for (const l of document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]')) {
       const h = l.getAttribute('href') || '';
-      l.setAttribute('href', h.replace(/icon(?:-(?:glass|neon|grid))?-(\d+)\.png/, look === 'vintage' ? 'icon-$1.png' : `icon-${look}-$1.png`));
+      l.setAttribute('href', h.replace(/icon(?:-(?:glass|neon|layers|grid))?-(\d+)\.png/, look === 'vintage' ? 'icon-$1.png' : `icon-${look}-$1.png`));
     }
     return look;
   }
   let look = apply(stored);
+  // back to the page after a while: the sky catches up with the time of day (only then, so it never changes as you look)
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && root.dataset.tod !== tod()) apply(look); });
 
   // ---- Settings > Design: the same two rows in every app (as in Clock), in the app's own tokens ----
   const css = document.createElement('style');
@@ -143,7 +152,7 @@
 .aos-design .sw{flex:none;width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--hair,rgba(128,128,128,.25))}
 .aos-design .sw.vintage{background:conic-gradient(#E3A72F 0 25%,#1F6F6B 0 50%,#D8572A 0 75%,#4A3426 0)}
 .aos-design .sw.glass{background:linear-gradient(135deg,#6FA597,#8193BC 40%,#BE918F 70%,#BC9C68)}
-.aos-design .sw.neon{background:repeating-linear-gradient(to bottom,transparent 0 3px,#120B1F 3px 5px) 0 100%/100% 45% no-repeat,linear-gradient(#FFC75A,#FF8A4C 45%,#FF3D9A)}
+.aos-design .sw.layers{background:radial-gradient(circle at 50% 78%,#F6F7F9 0 30%,transparent 31%),linear-gradient(160deg,#B9DCD2,#C6D1E7 45%,#EAD0CE 75%,#EEDFC4)}
 .aos-design .sw.grid{background:radial-gradient(circle,#FF2A2A 0 12%,#08090B 13% 38%,#FF2A2A 39% 49%,#08090B 50% 70%,#E9EDF1 71% 76%,#08090B 77%)}
 .aos-design .sw.grid{position:relative}
 .aos-design .sw.grid::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;background:conic-gradient(transparent 0 70%,rgba(255,42,42,.25) 80%,#FF2A2A 92%,#fff 95%,transparent 96%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));filter:drop-shadow(0 0 3px #FF2A2A);animation:aosSeSpin 1.8s linear infinite}
@@ -163,7 +172,7 @@
   const ROWS = [
     ['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'],
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
-    ['neon', 'Night Drive', '80s neon: a striped sunset, magenta and cyan on midnight'],
+    ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'],
     ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares'],
   ];
   const picker = () => '<div class="aos-design" role="radiogroup" aria-label="Design">' + ROWS.map(([id, name, note]) =>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Layers: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#717989"/><stop offset="1" stop-color="#344056"/></linearGradient>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <circle cx="256" cy="268" r="104" fill="#fff"/>
+      <g stroke="#fff" stroke-width="14" stroke-linecap="round">
+        <path d="M256 152V70M256 384v82M140 268H58M372 268h82"/>
+        <path d="M314 167.5l25-43.3M198 368.5l-25 43.3M156.5 210l-43.3-25M355.5 326l43.3 25M198 167.5l-25-43.3M314 368.5l25 43.3M156.5 326l-43.3 25M355.5 210l43.3-25"/>
+      </g>
+      <g fill="#fff"><circle cx="256" cy="66" r="18"/><circle cx="256" cy="470" r="18"/><circle cx="54" cy="268" r="18"/><circle cx="458" cy="268" r="18"/>
+        <circle cx="341" cy="121" r="12"/><circle cx="171" cy="415" r="12"/><circle cx="110" cy="183" r="12"/><circle cx="402" cy="353" r="12"/><circle cx="171" cy="121" r="12"/><circle cx="341" cy="415" r="12"/><circle cx="110" cy="353" r="12"/><circle cx="402" cy="183" r="12"/></g>
+      <g stroke="#000" stroke-linecap="round" fill="none"><path d="M256 268v-70" stroke-width="20"/><path d="M256 268l52 30" stroke-width="20"/></g>
+      <circle cx="256" cy="268" r="15" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="url(#lyg)"/>
+  <circle cx="420" cy="96" r="128" fill="#FFFFFF" fill-opacity=".24"/>
+  <rect width="512" height="512" fill="#F9FBFE" mask="url(#cut)"/>
+</svg>

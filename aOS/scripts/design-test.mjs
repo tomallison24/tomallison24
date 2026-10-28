@@ -1,9 +1,9 @@
 // home/design.js, shared by every app (Clock has its own clock/design.js), at iPhone size:
 //   - every app loads it in <head> with its own data-app, and the old Vintage app's id, keys and
 //     databases (data-was, data-keys, data-dbs), with a <style id="vintage"> to switch;
-//   - every app opens in Vintage, and in Standard, Night Drive or Tron when design.<app> says so, with
-//     the matching blocks (Night Drive and Tron keep Vintage on under their own), icon, status bar and
-//     bar colour, and no script errors any way; a change aOS makes (design.<app> written while the app
+//   - every app opens in Vintage, and in Standard, Layers (light and dark) or Tron when design.<app> says so, with
+//     the matching blocks (Layers and Tron keep Vintage on under their own), icon, status bar and
+//     bar colour (Layers': the top of its sky, by the time of day), an app still set to Night Drive (gone) in Layers, and no script errors any way; a change aOS makes (design.<app> written while the app
 //     is open) is followed at once, and Settings > Design offers all four;
 //   - at an old Vintage address (the deploy copies the app there, news.yml), the old app's data is
 //     moved over once: localStorage by prefix, what it had seen, and its IndexedDB databases, store by
@@ -15,6 +15,8 @@
 import { createRequire } from 'module'; import { execSync } from 'child_process'; import http from 'http'; import fs from 'fs'; import path from 'path';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/'); const { chromium } = require('playwright');
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
+const { SKIES } = await import(new URL('./looks.mjs', import.meta.url));
+const SKY_TOP = Object.fromEntries(Object.keys(SKIES.light).map(t => [t, [SKIES.light[t][3], SKIES.dark[t][3]]]));   // Layers' bar colours, by the time of day
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.css': 'text/css', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
@@ -63,20 +65,23 @@ const BORN = ['sparkle', 'money'];
 }
 
 // 2. every app in each design, light and dark: the right look, icon, status bar and bar colour, no script errors
-const NAME = { vintage: 'Vintage', glass: 'Standard', neon: 'Night Drive', grid: 'Tron' };
-for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['neon', 'dark'], ['grid', 'dark']]) {
+const NAME = { vintage: 'Vintage', glass: 'Standard', layers: 'Layers', grid: 'Tron' };
+for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['layers', 'light'], ['layers', 'dark'], ['grid', 'dark']]) {
   const pr = [];
   for (const id of APPS) {
     const seed = { 'aos.seen': JSON.stringify({ [id]: '999' }), 'aos.signin.asked': '1', 'aos.sky': 'day' };
     if (design !== 'vintage') seed['design.' + id] = design;
     const { ctx, p, errs } = await phone(scheme, seed);
     await p.goto(BASE + '/' + id + '/'); await p.waitForTimeout(700);
-    const st = await p.evaluate(() => ({ look: document.documentElement.dataset.look, media: (document.getElementById('vintage') || {}).media, own: ['neon', 'grid'].map(k => (document.getElementById(k) || {}).media).join(),
+    const st = await p.evaluate(() => ({ look: document.documentElement.dataset.look, media: (document.getElementById('vintage') || {}).media, own: ['layers', 'grid'].map(k => (document.getElementById(k) || {}).media).join(), tod: document.documentElement.dataset.tod,
+      tint: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content).join(),
       icon: (document.querySelector('link[rel="apple-touch-icon"]') || {}).href || '', bar: (document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') || {}).content }));
     const glass = design === 'glass';
     if (st.look !== design) pr.push(`${id}: data-look ${st.look}`);
     if (st.media !== (glass ? 'not all' : 'all')) pr.push(`${id}: the Vintage styles are "${st.media}"`);
-    if (st.own !== ['neon', 'grid'].map(k => k === design ? 'all' : 'not all').join()) pr.push(`${id}: the Night Drive and Tron blocks are "${st.own}"`);
+    if (st.own !== ['layers', 'grid'].map(k => k === design ? 'all' : 'not all').join()) pr.push(`${id}: the Layers and Tron blocks are "${st.own}"`);
+    if (!/^(morning|afternoon|evening|night)$/.test(st.tod || '')) pr.push(`${id}: no time of day for Layers' sky (data-tod ${st.tod})`);
+    if (design === 'layers' && !st.tint.split(',').every(c => SKY_TOP[st.tod].includes(c.toUpperCase()))) pr.push(`${id}: Layers' bar colours ${st.tint} are not the top of its ${st.tod} sky`);
     if (!new RegExp(`/icon-${design === 'vintage' ? '' : design + '-'}180\\.png`).test(st.icon)) pr.push(`${id}: icon ${st.icon}`);
     const own = (/name="apple-mobile-web-app-status-bar-style" content="([^"]+)"/.exec(fs.readFileSync(path.join(ROOT, id, 'index.html'), 'utf8')) || [])[1];   // Standard keeps the page's own (Mail's is default)
     if (st.bar !== (glass ? own : 'default')) pr.push(`${id}: status bar ${st.bar}`);
@@ -94,11 +99,11 @@ for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['neon'
   const { ctx, p, errs } = await phone('light', { 'aos.seen': JSON.stringify({ meals: '999' }), 'aos.signin.asked': '1', 'aos.sky': 'day' });
   await p.goto(BASE + '/meals/'); await p.waitForTimeout(500);
   const other = await ctx.newPage(); await other.goto(BASE + '/meals/'); await other.waitForTimeout(300);
-  await other.evaluate(() => localStorage.setItem('design.meals', 'neon'));   // what aOS's Appearance does
+  await other.evaluate(() => localStorage.setItem('design.meals', 'layers'));   // what aOS's Appearance does
   await p.waitForTimeout(300);
-  if (await p.evaluate(() => document.documentElement.dataset.look + '/' + document.getElementById('neon').media) !== 'neon/all') pr.push('an open app did not follow a look written elsewhere: ' + await p.evaluate(() => document.documentElement.dataset.look));
+  if (await p.evaluate(() => document.documentElement.dataset.look + '/' + document.getElementById('layers').media) !== 'layers/all') pr.push('an open app did not follow a look written elsewhere: ' + await p.evaluate(() => document.documentElement.dataset.look));
   const rows = await p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = aosDesign.picker(); return [...d.querySelectorAll('[data-design]')].map(b => b.dataset.design).join(); });
-  if (rows !== 'vintage,glass,neon,grid') pr.push('Settings > Design offers ' + rows);
+  if (rows !== 'vintage,glass,layers,grid') pr.push('Settings > Design offers ' + rows);
   pr.push(...errs);
   report('a look aOS writes is followed at once by an open app; Settings > Design offers all four', pr); await ctx.close();
 }
@@ -112,6 +117,17 @@ for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['neon'
   if (st !== 'vintage/all/false') pr.push('an app set to Folk opened as ' + st);
   pr.push(...errs);
   report('an app still set to Folk (gone) opens in Vintage', pr); await ctx.close();
+}
+
+// 2d. Night Drive is gone: Layers replaced it, so an app still set to it opens in Layers, and keeps Layers from then on
+{
+  const pr = [];
+  const { ctx, p, errs } = await phone('dark', { 'aos.seen': JSON.stringify({ drinks: '999' }), 'aos.signin.asked': '1', 'aos.sky': 'day', 'design.drinks': 'neon' });
+  await p.goto(BASE + '/drinks/'); await p.waitForTimeout(500);
+  const st = await p.evaluate(() => [document.documentElement.dataset.look, document.getElementById('layers').media, !!document.getElementById('neon'), localStorage.getItem('design.drinks')].join('/'));
+  if (st !== 'layers/all/false/layers') pr.push('an app set to Night Drive opened as ' + st);
+  pr.push(...errs);
+  report('an app still set to Night Drive (gone) opens in Layers, and is kept so', pr); await ctx.close();
 }
 
 // 3. the move at an old address: localStorage by prefix, what it had seen, IndexedDB store by store; once only

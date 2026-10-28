@@ -68,7 +68,7 @@
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
-  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} return `../${id}/icon${/^(glass|neon|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };
+  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} if (d === 'neon') d = 'layers'; return `../${id}/icon${/^(glass|layers|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };   // neon: Night Drive's, which Layers replaced
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
   // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
@@ -176,7 +176,7 @@
   function prefsCame(apps) {
     for (const id of apps) {
       if (id === 'aos') {
-        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|neon|grid)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
+        try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|layers|grid)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
         if (W.theme) W.theme.set(W.theme.read());
         pins = readPins();
         setLayout(readLayout(), false);
@@ -498,7 +498,7 @@
       const m = [...d.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || w.matchMedia(m.media).matches);
       bar = c || (m && m.content);
     } catch {}
-    if (!f && window.aosLook && aosLook.flat()) bar = see(document.body);   // Sea glass draws under the bar: its metas stay as they are
+    if (!f && window.aosLook && aosLook.flat()) bar = see(document.body) || see(document.documentElement);   // Sea glass draws under the bar: its metas stay as they are (Layers: the page's colour, its sky's top)
     $('appwin').style.setProperty('--tint', c || 'var(--bg)');
     // the status bar, when it's solid (an iPhone's, aOS's: ../home/sky.js): iOS colours it from the fixed
     // element at the top of the screen, and keeps that colour once nothing's there. #barcap is always
@@ -506,7 +506,8 @@
     // ../home/welcome.js), else aOS's. iOS reads the bar's colour again only when a fixed element comes or
     // goes (WebKit: didAddOrRemoveViewportConstrainedObjects), so once #barcap's colour changes it is taken
     // off and put back: without that the bar kept the colour it had at launch (another look's, the day sky's)
-    document.documentElement.style.setProperty('--barcap', (f && c) || 'var(--bg)');
+    // (in Layers aOS's own is its sky's top: the page's colour, aOS/scripts/looks.mjs, as its bar metas are)
+    document.documentElement.style.setProperty('--barcap', (f && c) || (window.aosLook && aosLook.get() === 'layers' && see(document.documentElement)) || 'var(--bg)');
     const cap = $('barcap'), now = cap && getComputedStyle(cap).backgroundColor;
     if (cap && now !== capWas) { capWas = now; cap.style.display = 'none'; void cap.offsetHeight; cap.style.display = ''; }
     for (const m of metas) {
