@@ -89,6 +89,7 @@
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
       notes: ['Vintage gets an intro too, Sunrise: as aOS opens, the sky comes up over two hills, the sun (the moon and stars after sunset) rises, and "aOS" says Good morning, Good afternoon or Good evening; then the sun goes up into the disc at the top of aOS. Once a launch, like Tron\'s, with its own sound (Account > Appearance > Sunrise intro: Sound, Silent or Off, and Play the intro)',
+        'Sea glass gets an intro too, Tide: as aOS opens, three waves in the sea glass colours roll in over the sand, five pieces of frosted sea glass wash up and settle, and "aOS" says Good morning, Good afternoon or Good evening; then the water fades and "aOS" glides up into its place at the top of the page. With a soft wave and glass chimes, where the phone lets it play. Account > Appearance: Sound, Silent or Off, and Play the intro',
         'aOS Home opens with your day: events, rain, deliveries and pickups, tonight\'s dinner and reminders due, in a line each, worked out on your phone. And when a trip is a week away or under way, a card for it (deliveries due while you\'re away, dinners planned, what\'s on the calendar) with Get ready with Ipsy',
         'Ipsy in aOS looks across your apps in one go (search_apps): Calendar, Notes, Travel, Orders, Meals, Places and Podcasts, on your phone, so answers that name someone or something come quicker. Anything marked Private is never searched',
         'Money: ask Ipsy to find a charge Monarch missed (a flight booking whose confirmation is the only email): on the phone that reads Monarch\'s emails it searches Gmail, shows exactly what it found, and adds it to your totals only when you say Yes (with Undo, and never twice)',
@@ -1790,9 +1791,9 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     el.querySelector('.w-skip').onclick = close;
     return { el, q: s => el.querySelector(s), close, closers };
   }
-  // In Tron and Vintage, aOS opens with its intro (aOS/tron-intro.js, aOS/vintage-intro.js) over everything: a welcome waits for it to end, so none of its
+  // In Tron, Vintage and Sea glass, aOS opens with its intro (aOS/tron-intro.js, aOS/vintage-intro.js, aOS/glass-intro.js) over everything: a welcome waits for it to end, so none of its
   // opening plays unseen underneath (at most a few seconds, whatever happens to the intro).
-  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
+  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro, #glassIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
   const run = (label, inner, onClose, body) => {
     if (open) return open;
     open = introDone().then(() => new Promise(resolve => { const o = mount(label, inner, resolve, onClose); body(o).catch(() => o.close()); }));
