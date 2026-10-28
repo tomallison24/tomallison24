@@ -40,8 +40,9 @@
 //     connect-src 'self'; with ipsy-tools.js (Ipsy to chat with) it lists that too,
 //     and its functions/<app>/api answers ipsy
 //   - your helper's name: loads ../home/names.js in <head>, listed in sw.js SHELL
-// And for the repository: every <folder>/scripts/*test*.mjs is run by a workflow; the Night Drive and Tron
-// blocks and icons are up to date with Vintage (make-looks.mjs --check).
+// And for the repository: every <folder>/scripts/*test*.mjs is run by a workflow; the Layers and Tron
+// blocks and icons are up to date with Vintage (make-looks.mjs --check), and the colour at the top of each of
+// Layers' skies (the status bar's) is the same in home/design.js, aOS/look.js and clock/design.js as in looks.mjs.
 //   - Sea glass, not the old iOS look: no --bg #F2F2F7 / #08080B, no blue --accent
 import fs from 'fs';
 import { execFileSync } from 'child_process';
@@ -186,7 +187,7 @@ for (const id of ids) {
     rule(own || list.includes('../home/design.js'), 'sw.js SHELL should list ../home/design.js');
     rule(/<style id="vintage">/.test(html), 'has no <style id="vintage">: the Vintage design, switched off for Standard');
     for (const f of ['icon-glass-180.png', 'icon-glass-512.png']) rule(exists(dir + '/' + f), 'no ' + f + ': the Standard (Sea glass) design\'s icon');
-    for (const f of ['neon', 'grid']) rule(new RegExp('<style id="' + f + '"').test(html), 'has no <style id="' + f + '">: run node aOS/scripts/make-looks.mjs');
+    for (const f of ['layers', 'grid']) rule(new RegExp('<style id="' + f + '"').test(html), 'has no <style id="' + f + '">: run node aOS/scripts/make-looks.mjs');
   }
   // your helper's name where the words say Ipsy (../home/names.js), in <head>, offline too
   rule(/<script\s+src="\.\.\/home\/names\.js"/.test(html) && html.indexOf('../home/names.js') < html.indexOf('<body'), 'loads ../home/names.js in <head>: your helper\'s name where the words say Ipsy');
@@ -241,9 +242,18 @@ for (const id of ids) {
   }
 }
 
-// Night Drive and Tron are generated from each page's Vintage block and icon (make-looks.mjs): they must be up to date
+// Layers and Tron are generated from each page's Vintage block and icon (make-looks.mjs): they must be up to date
 try { execFileSync(process.execPath, [path.join(ROOT, 'aOS/scripts/make-looks.mjs'), '--check'], { stdio: 'pipe' }); }
 catch (e) { err(null, String(e.stdout || e.message).trim().replace(/\n\s*/g, ' ')); }
+// Layers' status bar takes the top of its sky: the scripts that set it carry the same colours as the skies
+{
+  const { SKIES } = await import(new URL('./looks.mjs', import.meta.url));
+  const want = Object.keys(SKIES.light).map(t => `${t}: ['${SKIES.light[t][3]}', '${SKIES.dark[t][3]}']`).join(', ');
+  for (const f of ['home/design.js', 'aOS/look.js', 'clock/design.js']) {
+    const m = /const SKY_TOP = \{ ([^}]*) \};/.exec(fs.readFileSync(path.join(ROOT, f), 'utf8'));
+    if (!m || m[1] !== want) err(null, f + ': SKY_TOP should be { ' + want + ' } (the tops of Layers\' skies, aOS/scripts/looks.mjs)');
+  }
+}
 
 for (const w of warnings) console.log('warning - ' + w);
 for (const e of errors) console.log('error   - ' + e);

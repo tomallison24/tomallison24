@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['Your personal details stay on your phone: when Ipsy, or Orders, Travel and Money\'s checks of their emails, send something to Claude, email addresses, phone numbers, and card, account and ID numbers go as placeholders like [email-1], and your phone puts the real ones back in what comes back. Names, addresses, and order, tracking and booking numbers still go, since Ipsy needs them',
+      notes: ['A new look, Layers, in place of Night Drive, in aOS and every app: a still sky behind the page, its colours by the time of day (sunrise, sea glass, dusk and night), clear behind the title and frosted glass from there down, in the AllisonOS colours, light or dark with your phone. Its own app icons, and your helper dressed for it. A phone that had Night Drive opens in Layers',
+        'Your personal details stay on your phone: when Ipsy, or Orders, Travel and Money\'s checks of their emails, send something to Claude, email addresses, phone numbers, and card, account and ID numbers go as placeholders like [email-1], and your phone puts the real ones back in what comes back. Names, addresses, and order, tracking and booking numbers still go, since Ipsy needs them',
         'Moving between apps in aOS no longer cuts off an app reading Gmail: Orders, Travel, Money and Mail aren\'t put away to open another app, or started again for a setting from another device or a new look, until they\'re done. Orders and Travel keep what they\'ve read as they go, and a read that was cut off goes on from where it stopped as soon as you\'re back in the app (renewing the Gmail sign-in first if it ran out)',
         'Vintage gets an intro too, Sunrise: as aOS opens, the sky comes up over two hills, the sun (the moon and stars after sunset) rises, and "aOS" says Good morning, Good afternoon or Good evening; then the sun goes up into the disc at the top of aOS. Once a launch, like Tron\'s, with its own sound (Account > Appearance > Sunrise intro: Sound, Silent or Off, and Play the intro)',
         'Sea glass gets an intro too, Tide: as aOS opens, three waves in the sea glass colours roll in over the sand, five pieces of frosted sea glass wash up and settle, and "aOS" says Good morning, Good afternoon or Good evening; then the water fades and "aOS" glides up into its place at the top of the page. With a soft wave and glass chimes, where the phone lets it play. Account > Appearance: Sound, Silent or Off, and Play the intro',
@@ -1112,7 +1113,7 @@
         {
           "i": "sliders",
           "t": "Four designs",
-          "d": "Vintage, Standard in Sea glass, Night Drive or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
+          "d": "Vintage, Standard in Sea glass, Layers or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
         }
       ]
     }
@@ -1503,7 +1504,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   const DIR = id => id === 'aos' ? 'aOS' : id;   // aOS lives at /aOS/
   // an app's icon in its design here (design.<id>, Clock's set.design; aOS: aos.look): icon-512.png is Vintage
   const lookOf = id => { try { return id === 'aos' ? localStorage.getItem('aos.look') : id === 'clock' ? ((JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {}).design : localStorage.getItem('design.' + id); } catch { return null; } };
-  const icon = id => { const l = lookOf(id); return url(`../${DIR(id)}/icon-${/^(glass|neon|grid)$/.test(l || '') ? l + '-' : ''}512.png`); };
+  const icon = id => { let l = lookOf(id); if (l === 'neon') l = 'layers'; return url(`../${DIR(id)}/icon-${/^(glass|layers|grid)$/.test(l || '') ? l + '-' : ''}512.png`); };   // neon: Night Drive's, which Layers replaced
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
 
   const CSS = `
@@ -1687,7 +1688,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-sw { position: relative; flex: 0 0 44px; height: 56px; border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--w-edge); }
 #aos-welcome .c-sw.vintage { background: #F4ECDD; } #aos-welcome .c-sw.vintage::after { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
 #aos-welcome .c-sw.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.95), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.95), transparent 70%), #EEF2F0; }
-#aos-welcome .c-sw.neon { background: #120B1F; } #aos-welcome .c-sw.neon::after { content: ''; position: absolute; right: -12px; top: -12px; width: 32px; height: 32px; border-radius: 50%; background: repeating-linear-gradient(to bottom, transparent 0 4px, #120B1F 4px 6px) 0 100%/100% 45% no-repeat, linear-gradient(#FFC75A, #FF8A4C 45%, #FF3D9A); }
+#aos-welcome .c-sw.layers { background: linear-gradient(to bottom, transparent 0 22px, rgba(246,247,249,.85) 34px), linear-gradient(150deg, #B9DCD2, #C6D1E7 40%, #EAD0CE 75%, #EEDFC4); }
 #aos-welcome .c-sw.grid { background: #08090B; } #aos-welcome .c-sw.grid::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #FF2A2A 0 12%, transparent 13% 38%, #FF2A2A 39% 50%, transparent 51% 70%, #E9EDF1 71%); filter: drop-shadow(0 0 4px #FF2A2A); }
 #aos-welcome .c-sw.grid::after { animation: aosSePulse 1.1s ease-in-out infinite alternate; } #aos-welcome .c-sw.grid::before {content:'';position:absolute;left:-60%;bottom:9px;width:60%;height:2px;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent,#FF2A2A 80%,#fff);box-shadow:0 0 6px #FF2A2A;animation:aosSeRide 2.2s cubic-bezier(.5,0,.5,1) infinite}
 #aos-welcome .c-look .se {display:inline-block;margin-left:7px;padding:2px 7px 1px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.5;vertical-align:2px;white-space:nowrap;color:#fff;background:linear-gradient(100deg,#9E0A14 0%,#FF2A2A 38%,#FF8F8F 50%,#FF2A2A 62%,#9E0A14 100%) 0 0/260% 100%;box-shadow:0 0 8px rgba(255,42,42,.6);text-shadow:0 1px 2px rgba(90,0,0,.55);animation:aosSeShine 2.6s linear infinite}
@@ -1765,18 +1766,18 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
 #aos-welcome.mc::after { left: -30px; bottom: 90px; width: 130px; height: 36px; border-radius: 18px; background: #D8572A; transform: rotate(-18deg); opacity: .85; }
 #aos-welcome.mc .c-panel { box-shadow: inset 0 0 0 1.5px var(--w-edge); -webkit-backdrop-filter: none; backdrop-filter: none; }
 #aos-welcome.mc .w-btn { background: #D8572A !important; color: #FFF8EC !important; box-shadow: none; }
-/* Night Drive and Tron (data-look on <html>, home/design.js): the same screens in their colours */
-html[data-look="neon"] #aos-welcome.mc.mc { --w-bg: #F6F0FF; --w-text: #22123A; --w-muted: #5A4A78; --w-glass: #FFFFFF; --w-edge: rgba(34,18,58,.14); --w-dot: rgba(34,18,58,.2);
-  --w-pastel: linear-gradient(100deg, #C21E78, #C21E78); --w-glow: rgba(255,180,67,.45); --w-hot: linear-gradient(120deg, #0A8AA6 0%, #0A8AA6 45%, #C21E78 100%); --w-hot-glow: rgba(255,61,154,.6); --w-hot-glow2: rgba(34,211,238,.5);
-  --w-tube: #C21E78; font-family: "Avenir Next", "Avenir", system-ui, sans-serif; }
-@media (prefers-color-scheme: dark) { html[data-look="neon"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #120B1F; --w-text: #F5ECFF; --w-muted: #B9A9D6; --w-glass: #1B1230; --w-edge: rgba(255,61,154,.32); --w-dot: rgba(245,236,255,.24);
-  --w-pastel: linear-gradient(100deg, #FF3D9A, #FF3D9A); --w-hot: linear-gradient(120deg, #22D3EE 0%, #22D3EE 45%, #FF3D9A 100%); --w-tube: #FF3D9A; } }
-html[data-look="neon"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #120B1F; --w-text: #F5ECFF; --w-muted: #B9A9D6; --w-glass: #1B1230; --w-edge: rgba(255,61,154,.32); --w-dot: rgba(245,236,255,.24);
-  --w-pastel: linear-gradient(100deg, #FF3D9A, #FF3D9A); --w-hot: linear-gradient(120deg, #22D3EE 0%, #22D3EE 45%, #FF3D9A 100%); --w-tube: #FF3D9A; }
-html[data-look="neon"] #aos-welcome.mc::before { opacity: 1; background: repeating-linear-gradient(to bottom, transparent 0 10px, var(--w-bg) 10px 15px) 0 100%/100% 46% no-repeat, linear-gradient(#FFC75A, #FF8A4C 42%, #FF3D9A 78%); }
-html[data-look="neon"] #aos-welcome.mc::after { background: var(--w-tube); box-shadow: 0 0 18px var(--w-tube); opacity: 1; }
-html[data-look="neon"] #aos-welcome.mc .w-btn { background: var(--w-tube) !important; color: #FFFFFF !important; }
-html[data-look="neon"] #aos-welcome.mc :is(h1, h2) { font-family: "Avenir Next Condensed", "Avenir Next", system-ui, sans-serif; font-style: italic; font-weight: 800; }
+/* Layers and Tron (data-look on <html>, home/design.js): the same screens in their colours. Layers: the sky as the disc, no pill */
+html[data-look="layers"] #aos-welcome.mc.mc { --w-bg: #F4F6F9; --w-text: #12161C; --w-muted: #4C525B; --w-glass: #FFFFFF; --w-edge: rgba(18,22,28,.12); --w-dot: rgba(18,22,28,.16);
+  --w-pastel: linear-gradient(100deg, #306E61, #306E61); --w-glow: rgba(150,200,186,.5); --w-hot: linear-gradient(120deg, #306E61 0%, #306E61 45%, #CF5C59 100%); --w-hot-glow: rgba(150,200,186,.6); --w-hot-glow2: rgba(226,182,178,.5);
+  --w-btn: #306E61; --w-on-btn: #FFFFFF; --w-sky: linear-gradient(150deg, #B9DCD2, #C6D1E7 40%, #EAD0CE 75%, #EEDFC4); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="layers"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #10141A; --w-text: #E8ECF2; --w-muted: #A9B0BC; --w-glass: #1B2029; --w-edge: rgba(255,255,255,.12); --w-dot: rgba(232,236,242,.2);
+  --w-pastel: linear-gradient(100deg, #7FC6B4, #7FC6B4); --w-hot: linear-gradient(120deg, #7FC6B4 0%, #7FC6B4 45%, #E3A79F 100%); --w-btn: #7FC6B4; --w-on-btn: #10141A; --w-sky: linear-gradient(150deg, #1F3B35, #252F48 40%, #3F2D2C 75%, #3C3424); } }
+html[data-look="layers"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #10141A; --w-text: #E8ECF2; --w-muted: #A9B0BC; --w-glass: #1B2029; --w-edge: rgba(255,255,255,.12); --w-dot: rgba(232,236,242,.2);
+  --w-pastel: linear-gradient(100deg, #7FC6B4, #7FC6B4); --w-hot: linear-gradient(120deg, #7FC6B4 0%, #7FC6B4 45%, #E3A79F 100%); --w-btn: #7FC6B4; --w-on-btn: #10141A; --w-sky: linear-gradient(150deg, #1F3B35, #252F48 40%, #3F2D2C 75%, #3C3424); }
+html[data-look="layers"] #aos-welcome.mc::before { opacity: 1; background: var(--w-sky); }
+html[data-look="layers"] #aos-welcome.mc::after { display: none; }
+html[data-look="layers"] #aos-welcome.mc .w-btn { background: var(--w-btn) !important; color: var(--w-on-btn) !important; box-shadow: 0 10px 22px -12px rgba(16,24,40,.45); }
+html[data-look="layers"] #aos-welcome.mc :is(h1, h2) { font-weight: 700; letter-spacing: -.02em; }
 html[data-look="grid"] #aos-welcome.mc.mc { --w-bg: #F3F5F7; --w-text: #15171B; --w-muted: #50555D; --w-glass: #FFFFFF; --w-edge: rgba(208,16,30,.28); --w-dot: rgba(21,23,27,.18);
   --w-pastel: linear-gradient(100deg, #D0101E, #D0101E); --w-glow: rgba(208,16,30,.3); --w-hot: linear-gradient(120deg, #D0101E 0%, #D0101E 45%, #2A2E35 100%); --w-hot-glow: rgba(208,16,30,.5); --w-hot-glow2: rgba(42,46,53,.4);
   --w-line: #D0101E; --w-heat: #D0101E; --w-shine: 0px; font-family: "Exo 2", "Avenir Next", system-ui, sans-serif; }
@@ -1796,7 +1797,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     addCss('aos-welcome-css', CSS);
     const el = document.createElement('div');
     el.id = 'aos-welcome'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label);
-    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage' || /^(neon|grid)$/.test(document.documentElement.dataset.look || '')) el.classList.add('mc');   // aOS2's screens: mid-century (in Night Drive, Folk and Tron, theirs)
+    if ((RELEASES.find(r => !r.silent) || {}).look === 'vintage' || /^(layers|grid)$/.test(document.documentElement.dataset.look || '')) el.classList.add('mc');   // aOS2's screens: mid-century (in Layers and Tron, theirs)
     el.innerHTML = `<button class="w-skip" type="button">Skip</button>${inner}
       <div class="c-fly"></div>
       <div class="c-panel"><div class="c-body"></div><div class="w-dots"></div>
@@ -2146,7 +2147,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: ['#players .pcard', '#players'], t: 'Just hard enough', d: 'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.' },
     { sel: ['#players .pcard', '#players'], t: 'Earned by learning', d: 'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.' },
     { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for the Parent corner: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
-    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Night Drive or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
+    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
   const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
@@ -2355,7 +2356,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['neon', 'Night Drive', '80s neon, magenta and cyan'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['layers', 'Layers', 'A still sky by the time of day'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
   const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now

@@ -5,7 +5,7 @@
 // services behind it. Run after changing an app's page, its scripts or its
 // policy (the new-aos-app skill says when). Also: no app pans sideways (home/welcome.js,
 // "Never sideways"), so a stray swipe can't carry its controls off the screen, and a double tap doesn't
-// zoom it in (a zoomed page drifts side to side). Also in Night Drive and Tron, whose generated styles draw
+// zoom it in (a zoomed page drifts side to side). Also in Layers (light and dark) and Tron, whose generated styles draw
 // things of their own (Tron's grid floor was three phones wide, and the phone widened Home's page to fit it).
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -37,9 +37,9 @@ const BASE = 'http://localhost:' + server.address().port;
 
 const browser = await chromium.launch();
 let failed = 0;
-// light and dark in the default design (Vintage), then Night Drive and Tron (dark only)
-const RUNS = [['light', null], ['dark', null], ['light', 'neon'], ['dark', 'grid']];
-const label = (scheme, look) => scheme + (look ? ', ' + { neon: 'Night Drive', grid: 'Tron' }[look] : '');
+// light and dark in the default design (Vintage), then Layers, light and dark (it follows the phone), and Tron (dark only)
+const RUNS = [['light', null], ['dark', null], ['light', 'layers'], ['dark', 'layers'], ['dark', 'grid']];
+const label = (scheme, look) => scheme + (look ? ', ' + { layers: 'Layers', grid: 'Tron' }[look] : '');
 for (const id of ids) {
   for (const [scheme, look] of RUNS) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme });

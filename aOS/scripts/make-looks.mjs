@@ -1,20 +1,21 @@
-// Writes the Night Drive and Tron looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
+// Writes the Layers and Tron looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
 // says how a colour moves). Run it after changing a page's <style id="vintage"> block or an icon.svg:
 //
-//   node aOS/scripts/make-looks.mjs            the <style id="neon"> and <style id="grid">
-//                                               blocks, right after each page's Vintage block; icon-neon.svg
+//   node aOS/scripts/make-looks.mjs            the <style id="layers"> and <style id="grid">
+//                                               blocks, right after each page's Vintage block; icon-layers.svg
 //                                               and icon-grid.svg beside each icon.svg, and their 180 and 512
 //                                               pngs (needs Playwright with Chromium: npm i -g playwright)
 //   node aOS/scripts/make-looks.mjs --check     only says what is out of date (check-apps.mjs runs it), exit 1 if any
 //
 // The blocks are generated: don't edit them by hand, change the Vintage block (or looks.mjs) and run this.
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { lookBlock, signature, mapColor, LOOKS } from './looks.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const NEW = ['neon', 'grid'];
+const NEW = ['layers', 'grid'];
+const GONE = ['neon'];   // Night Drive, which Layers replaced: its old blocks and icons are taken out
 const check = process.argv.includes('--check');
 const pages = readdirSync(ROOT, { withFileTypes: true }).filter(d => d.isDirectory() && existsSync(path.join(ROOT, d.name, 'index.html')))
   .map(d => d.name).filter(d => /^<style id="vintage">/m.test(readFileSync(path.join(ROOT, d, 'index.html'), 'utf8')));
@@ -28,14 +29,15 @@ for (const app of pages) {
   const s = html.search(VSTART), e = html.indexOf('</style>', s) + '</style>'.length;
   const vintage = html.slice(s, e).replace(VSTART, '').replace(/<\/style>$/, '');
   let rest = html.slice(e);
-  for (const look of NEW) rest = rest.replace(new RegExp(`^\\n?<style id="${look}"[^>]*>[\\s\\S]*?</style>`), '');   // the old ones, regenerated
+  for (const look of [...NEW, ...GONE]) rest = rest.replace(new RegExp(`^\\n?<style id="${look}"[^>]*>[\\s\\S]*?</style>`), '');   // the old ones, regenerated
   const blocks = NEW.map(look => `\n<style id="${look}" media="not all">\n/* ${LOOKS[look].name}: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */\n${lookBlock(look, vintage)}${signature(look)}</style>`).join('');
   const out = html.slice(0, e) + blocks + rest;
   if (out !== html) { stale.push(`${app}/index.html`); if (!check) writeFileSync(file, out); }
 }
 
 // ---- the icons ----
-// Night Drive: a deep neon-tinted ground in the app's own hue, a striped sunset for the disc, a magenta tube.
+// Layers: the app's own ground in sea glass tones, lit from the top left; the disc a soft glow of light, the pill gone, the
+// drawing white.
 // Tron (Trail frame): a near-black ground with a hint of the app's own hue, the drawing in the night palette's light, and
 // the screen's red light trail around the icon's edge, its light at the top right; the disc and the pill go, so it's calm.
 // The trail runs just inside the corners the phone rounds off.
@@ -54,24 +56,21 @@ function iconFor(look, svg) {
   svg = svg.replace(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)" fill="(#[0-9A-Fa-f]{6})"\/>/g, (m, cx, cy, r, fill) => {
     if (+r < 90) return m;   // the big disc only
     [cx, cy, r] = [+cx, +cy, +r];
-    if (look === 'neon') {
-      defs += `<linearGradient id="nds" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC75A"/><stop offset=".45" stop-color="#FF8A4C"/><stop offset=".85" stop-color="#FF3D9A"/></linearGradient><clipPath id="ndc"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>`;
-      const bars = [0.12, 0.3, 0.46, 0.6, 0.72, 0.84].map((y, i) => `<rect x="${cx - r}" y="${(cy + r * y).toFixed(1)}" width="${2 * r}" height="${(r * (0.04 + i * 0.012)).toFixed(1)}" fill="@BG@"/>`).join('');
-      return `<g clip-path="url(#ndc)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#nds)"/>${bars}</g>`;
-    }
     if (look === 'grid') return '';
+    if (look === 'layers') return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#FFFFFF" fill-opacity=".24"/>`;
     return m;
   });
+  if (look === 'layers' && bg) {   // the ground: a gradient of the app's own colour, lighter at the top left; no pill
+    const g = mapColor('layers', bg, false);
+    defs += `<linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(g, '#FFFFFF', 0.3)}"/><stop offset="1" stop-color="${g}"/></linearGradient>`;
+    svg = svg.replace(bgRe, m => m.replace(`fill="${bg}"`, 'fill="url(#lyg)"'));
+    svg = svg.replace(/[ \t]*<rect[^>]*rx="\d+"[^>]*transform="rotate[^"]*"\/>\n?/, '');
+  }
   // every other colour (the masks are out of the way)
   svg = svg.replace(/(fill|stroke|stop-color)="(#[0-9A-Fa-f]{3,8})"/g, (m, k, c) => {
-    if ((look === 'neon' || look === 'grid') && c === bg) return m;
+    if (look === 'grid' && c === bg) return m;
     return `${k}="${mapColor(look, c, look === 'grid')}"`;
   });
-  if (look === 'neon' && bg) {   // the ground: the app's hue, deep, under the sunset
-    const deep = deepen(mapColor('neon', bg, true));
-    svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`).split('@BG@').join(deep);
-    svg = svg.replace(/(<rect[^>]*rx="(\d+)"[^>]*fill=")(#[0-9A-F]{6})("[^>]*transform="rotate[^"]*")/, (m, a, rx, c, b) => `${a}#FF3D9A${b}`);
-  }
   if (look === 'grid' && bg) {   // the ground: all but black, a hint of the app's hue; no pill; the light trail round the edge
     const deep = deepen(mapColor('neon', bg, true), 0.2);
     svg = svg.split(`fill="${bg}"`).join(`fill="${deep}"`);
@@ -86,11 +85,18 @@ function iconFor(look, svg) {
   if (defs) svg = /<defs>/.test(svg) ? svg.replace('<defs>', '<defs>' + defs) : svg.replace(/(<svg[^>]*>)/, `$1<defs>${defs}</defs>`);
   return svg.replace(/\u0000(\d+)\u0000/g, (_, i) => masks[+i]);
 }
-// a colour taken down to a deep ground, keeping its hue (for Night Drive's icon grounds)
+// a colour taken down to a deep ground, keeping its hue (for Tron's icon grounds)
 function deepen(hex, f = 0.55) {
   const n = parseInt(hex.slice(1), 16), rgb = [n >> 16, (n >> 8) & 255, n & 255];
   const k = 0.32 / Math.max(0.32, (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255);
   return '#' + rgb.map(v => Math.round(v * k * f).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+// two colours mixed (k of the second), for Layers' lit ground
+function mix(a, b, k) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [p(a), p(b)];
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 
 const icons = pages.filter(app => existsSync(path.join(ROOT, app, 'icon.svg')));
@@ -103,6 +109,10 @@ for (const app of icons) {
     const noPng = !existsSync(path.join(ROOT, app, `icon-${look}-512.png`)) || !existsSync(path.join(ROOT, app, `icon-${look}-180.png`));
     if (was !== out || noPng) { stale.push(`${app}/icon-${look}.svg`); if (!check) { writeFileSync(f, out); pngs.push([app, look, out]); } }
   }
+}
+for (const app of icons) for (const look of GONE) for (const f of [`icon-${look}.svg`, `icon-${look}-180.png`, `icon-${look}-512.png`]) {
+  const file = path.join(ROOT, app, f);
+  if (existsSync(file)) { stale.push(`${app}/${f} (gone)`); if (!check) unlinkSync(file); }
 }
 if (!check && pngs.length) {
   const { createRequire } = await import('module');

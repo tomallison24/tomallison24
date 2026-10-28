@@ -3,9 +3,10 @@
 // opens in Sea glass with the right look from the first paint; Vintage brings the new one back.
 // Before aOS is added to the Home Screen (iPhone, in Safari) its install steps start with the look:
 // the pick sets the icon, the status bar and the address that are added, and the installed app
-// (empty storage of its own) opens in the look the address or the cookie carries. Night Drive and Tron:
+// (empty storage of its own) opens in the look the address or the cookie carries. Layers and Tron:
 // picked in Appearance, each is aOS's look and every app's (each app's design.<id>, Clock's set.design),
-// with its own block, ground, icons and (Tron) fonts. Tron, as in the car: dark only, its light trail behind everything,
+// with its own block, ground (Layers: its sky's top, by the time of day), icons and (Tron) fonts; Night Drive, which
+// Layers replaced, opens in Layers. Tron, as in the car: dark only, its light trail behind everything,
 // the helper as the Tron rider, and aOS opening with its intro and its sound (nothing to tap), once a launch, Skip and
 // Off in Account.
 // The accounts server is stood in for (the server rules are accounts-api-test.mjs).
@@ -15,6 +16,8 @@
 import { createRequire } from 'module'; import { execSync } from 'child_process'; import http from 'http'; import fs from 'fs'; import path from 'path';
 const require = createRequire(execSync('npm root -g').toString().trim() + '/'); const { chromium } = require('playwright');
 const ROOT = path.resolve(process.argv[2] || new URL('../..', import.meta.url).pathname);
+const { SKIES } = await import(new URL('./looks.mjs', import.meta.url));
+const SKY_TOP = Object.fromEntries(Object.keys(SKIES.light).map(t => [t, [SKIES.light[t][3], SKIES.dark[t][3]]]));   // Layers' bar colours, by the time of day
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => { let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html'; const f = path.join(ROOT, p);
   if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); });
@@ -63,10 +66,10 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
   const names = await p.locator('#looks .dopt b').allTextContents();
-  if (names.join() !== 'Vintage,Sea glass,Night Drive,Tron Special Edition') pr.push('the picker offers ' + names.join());
+  if (names.join() !== 'Vintage,Sea glass,Layers,Tron Special Edition') pr.push('the picker offers ' + names.join());
   if (await selected(p) !== 'vintage') pr.push('Vintage is not the one picked: ' + await selected(p));
   if (await p.locator('#looks [data-look="grid"] .se').evaluate(e => getComputedStyle(e).animationName) !== 'aosSeShine') pr.push('Tron\'s Special Edition badge does not animate');
-  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Night Drive and Tron Special Edition (its badge animated), Vintage picked', pr); await ctx.close();
+  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Layers and Tron Special Edition (its badge animated), Vintage picked', pr); await ctx.close();
 }
 
 // 2. Sea glass at once, kept over a reload, with no flash of Vintage; Vintage again
@@ -112,7 +115,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
   const names = await p.locator('#aos-welcome .c-look b').allTextContents();
-  if (names.join() !== 'Vintage,Sea glass,Night Drive,Tron Special Edition') pr.push('the install step offers ' + names.join());
+  if (names.join() !== 'Vintage,Sea glass,Layers,Tron Special Edition') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());
@@ -147,25 +150,32 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   report('the installed app takes the look from the address or the cookie on its first launch; a look already chosen wins', pr);
 }
 
-// 6. Night Drive and Tron: aOS's look and every app's, at once; their own block, ground, icons and fonts
+// 6. Layers and Tron: aOS's look and every app's, at once; their own block, ground, icons and fonts
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
-  const state = () => p.evaluate(() => ({ look: document.documentElement.dataset.look, media: ['vintage', 'neon', 'grid'].map(id => document.getElementById(id).media).join(),
+  const state = () => p.evaluate(() => ({ look: document.documentElement.dataset.look, tod: document.documentElement.dataset.tod, media: ['vintage', 'layers', 'grid'].map(id => document.getElementById(id).media).join(),
     designs: ['mail', 'weather', 'notes', 'house'].map(id => localStorage.getItem('design.' + id)).join(), clock: ((JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {}).design,
     icon: (document.querySelector('link[rel="apple-touch-icon"]') || {}).href || '', tint: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content).join() }));
-  await openLook(p); await p.click('#looks [data-look="neon"]'); await p.waitForTimeout(200);
+  await openLook(p); await p.click('#looks [data-look="layers"]'); await p.waitForTimeout(200);
   let st = await state();
-  if (st.look !== 'neon') pr.push('Night Drive did not apply: ' + st.look);
-  if (st.media !== 'all,all,not all') pr.push('Night Drive should keep Vintage on and its own block on: ' + st.media);
-  if (st.designs !== 'neon,neon,neon,neon' || st.clock !== 'neon') pr.push('not every app took Night Drive: ' + st.designs + ' / clock ' + st.clock);
-  if (!/icon-neon-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Night Drive\'s: ' + st.icon);
-  if (!/#F5F2FD/i.test(st.tint)) pr.push('the status bar tint is not Night Drive\'s: ' + st.tint);
-  if (await selected(p) !== 'neon') pr.push('the picker does not show Night Drive picked');
-  if (!/Night Drive/.test(await p.locator('#lookSub').innerText())) pr.push('the Appearance line does not say Night Drive');
-  if (await p.evaluate(() => document.documentElement.hasAttribute('data-sky'))) pr.push('the Vintage sky is still drawn in Night Drive');
-  if (await p.locator('#stories .story img').first().getAttribute('src').then(s => !/icon-neon-512/.test(s || ''))) pr.push('the apps\' icons are not Night Drive\'s');
+  if (st.look !== 'layers') pr.push('Layers did not apply: ' + st.look);
+  if (st.media !== 'all,all,not all') pr.push('Layers should keep Vintage on and its own block on: ' + st.media);
+  if (st.designs !== 'layers,layers,layers,layers' || st.clock !== 'layers') pr.push('not every app took Layers: ' + st.designs + ' / clock ' + st.clock);
+  if (!/icon-layers-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Layers\': ' + st.icon);
+  if (!st.tint.split(',').every(c => SKY_TOP[st.tod] && SKY_TOP[st.tod].includes(c.toUpperCase()))) pr.push(`the status bar tint ${st.tint} is not the top of Layers' ${st.tod} sky`);
+  if (await selected(p) !== 'layers') pr.push('the picker does not show Layers picked');
+  if (!/Layers/.test(await p.locator('#lookSub').innerText())) pr.push('the Appearance line does not say Layers');
+  if (await p.evaluate(() => document.documentElement.hasAttribute('data-sky'))) pr.push('the Vintage sky is still drawn in Layers');
+  if (await p.evaluate(() => !/gradient/.test(getComputedStyle(document.documentElement).backgroundImage))) pr.push('Layers\' sky is not behind the page');
+  if (await p.locator('#stories .story img').first().getAttribute('src').then(s => !/icon-layers-512/.test(s || ''))) pr.push('the apps\' icons are not Layers\'');
   await p.reload(); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
-  if (await p.evaluate(() => document.documentElement.dataset.look) !== 'neon') pr.push('Night Drive is not kept over a reload');
+  if (await p.evaluate(() => document.documentElement.dataset.look) !== 'layers') pr.push('Layers is not kept over a reload');
+  // a phone that had Night Drive (gone): aOS opens in Layers, and every app's choice is moved over
+  await p.evaluate(() => { localStorage.setItem('aos.look', 'neon'); localStorage.setItem('design.mail', 'neon'); localStorage.setItem('allison-clock-v1', JSON.stringify({ set: { design: 'neon' } })); });
+  await p.reload(); await p.waitForTimeout(300);
+  const was = await p.evaluate(() => [document.documentElement.dataset.look, localStorage.getItem('aos.look'), localStorage.getItem('design.mail'), JSON.parse(localStorage.getItem('allison-clock-v1')).set.design].join());
+  if (was !== 'layers,layers,layers,layers') pr.push('a phone that had Night Drive did not move to Layers: ' + was);
+  await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   await openLook(p); await p.click('#looks [data-look="grid"]'); await p.waitForTimeout(200);
   st = await state();
   if (st.look !== 'grid' || await p.evaluate(() => document.getElementById('grid').media) !== 'all') pr.push('Tron did not apply: ' + st.look);
@@ -173,7 +183,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/icon-grid-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Tron\'s: ' + st.icon);
   const gfont = await p.evaluate(async () => { await Promise.all(['700 16px "Orbitron"', '16px "Exo 2"'].map(f => document.fonts.load(f, 'Home'))); return document.fonts.check('700 16px "Orbitron"', 'Home') && document.fonts.check('16px "Exo 2"', 'Home'); });
   if (!gfont) pr.push('Tron\'s fonts (Orbitron, Exo 2) did not load from ../home/fonts');
-  report('Night Drive and Tron: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts', pr); await ctx.close();
+  report('Layers and Tron: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts; Night Drive moves to Layers', pr); await ctx.close();
 }
 
 // 7. under an iPhone's solid status bar, an app's shapes fade in from its ground in every flat look (../home/sky.js),
@@ -181,7 +191,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
 for (const scheme of ['light', 'dark']) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme });
   const pr = [];
-  for (const look of ['vintage', 'neon', 'grid']) {
+  for (const look of ['vintage', 'layers', 'grid']) {
     await ctx.addInitScript(l => { localStorage.setItem('aos.bar', 'solid'); localStorage.setItem('aos.seen', JSON.stringify({ calendar: '999' })); localStorage.setItem('design.calendar', l); }, look);
     const p = await ctx.newPage(); p.on('pageerror', e => pr.push(look + ': ' + e.message));
     await p.route('**/api/**', r => r.fulfill({ status: 401, body: '{}' }));
@@ -190,7 +200,11 @@ for (const scheme of ['light', 'dark']) {
       return { display: cs.display, opacity: cs.opacity, radius: cs.borderRadius, top: Math.round(r.top), covers: r.left <= 0 && r.right >= innerWidth, first: (/^linear-gradient\((rgba?\([^)]*\))/.exec(cs.backgroundImage) || [])[1],
         ground: (b => /,\s*0\)$|transparent/.test(b) ? getComputedStyle(document.documentElement).backgroundColor : b)(getComputedStyle(document.body).backgroundColor), tint: [...document.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || matchMedia(m.media).matches).content }; });
     const hex = s => '#' + (s.match(/\d+/g) || []).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
-    if (!c || c.display !== 'block') pr.push(look + ': no fade under the status bar');
+    if (look === 'layers') {   // no fade: the sky runs on up under the bar, which takes the sky's top (the page's colour)
+      if (c && c.display !== 'none') pr.push('layers: a fade under the status bar, over the sky');
+      const t = await p.evaluate(() => [[...document.querySelectorAll('meta[name="theme-color"]')].find(m => !m.media || matchMedia(m.media).matches).content, getComputedStyle(document.documentElement).backgroundColor]);
+      if (t[0].toUpperCase() !== hex(t[1])) pr.push(`layers: the status bar tint ${t[0]} is not the page's colour ${hex(t[1])}`);
+    } else if (!c || c.display !== 'block') pr.push(look + ': no fade under the status bar');
     else {
       if (c.opacity !== '1' || c.radius !== '0px') pr.push(`${look}: the fade is styled as a shape (opacity ${c.opacity}, corners ${c.radius})`);
       if (c.top !== 0 || !c.covers) pr.push(`${look}: the fade does not cover the top of the page (top ${c.top})`);
@@ -199,11 +213,11 @@ for (const scheme of ['light', 'dark']) {
     }
     await p.close();
   }
-  report(`under a solid status bar (${scheme}), an app's shapes fade in from its own ground in Vintage, Night Drive and Tron, and the tint matches`, pr); await ctx.close();
+  report(`under a solid status bar (${scheme}), an app's shapes fade in from its own ground in Vintage and Tron, Layers' sky runs on up under it, and the tint matches`, pr); await ctx.close();
 }
 
 // 8. aOS's bar is the colour of the page, whichever mode's meta iOS goes by: Appearance set to Dark on a phone in
-// light mode, at night, in Vintage and then Night Drive; then Light again. Under a solid bar (an iPhone's), iOS 26
+// light mode, at night, in Vintage and then Layers; then Light again. Under a solid bar (an iPhone's), iOS 26
 // goes by #barcap: over 10px tall, so iOS takes its colour as it is, and taken off and put back on each change
 // of colour, so iOS reads it again (without both, the bar kept its first colour: another look's)
 {
@@ -219,11 +233,11 @@ for (const scheme of ['light', 'dark']) {
     if (s.capTop !== 0 || s.capH <= 10) pr.push(`${what}: #barcap is ${s.capH}px tall at ${s.capTop}px: iOS samples a strip 10px or less once and keeps that colour`);
     if (changed && !s.off) pr.push(`${what}: #barcap changed colour but was not taken off and put back, so iOS keeps the old colour`); };
   await check('Vintage, Dark on a light phone', false);
-  await openLook(p); await p.click('#looks [data-look="neon"]');
-  await check('Night Drive, Dark on a light phone');
+  await openLook(p); await p.click('#looks [data-look="layers"]');
+  await check('Layers, Dark on a light phone');
   await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('home.settings')); s.theme = 'light'; localStorage.setItem('home.settings', JSON.stringify(s)); document.documentElement.setAttribute('data-theme', 'light'); dispatchEvent(new CustomEvent('aos:theme', { detail: 'light' })); });
-  await check('Night Drive, Light');
-  report('aOS\'s bar takes the colour the page shows, with Appearance set to Light or Dark, in Vintage and Night Drive, and iOS reads it again on each change', pr); await ctx.close();
+  await check('Layers, Light');
+  report('aOS\'s bar takes the colour the page shows, with Appearance set to Light or Dark, in Vintage and Layers, and iOS reads it again on each change', pr); await ctx.close();
 }
 
 // 8. erased (a lost phone, home/welcome.js eraseHere): the aos_look cookie goes with the storage, so the next install starts clean

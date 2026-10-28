@@ -785,7 +785,7 @@
 
   /* the atomic shapes behind the title (they scroll away with the page) */
   /* a sun (the moon at night: home/sky.js), a quarter of it showing in the corner */
-  .ambient { display: block; position: absolute; z-index: -1; pointer-events: none; top: 0; left: 0; right: 0; height: 110px; overflow-x: clip; }   /* clip: Night Drive's and Tron's grid floor (::after) is drawn 3 phones wide; unclipped, the phone widens the page to fit it and Home slides sideways */
+  .ambient { display: block; position: absolute; z-index: -1; pointer-events: none; top: 0; left: 0; right: 0; height: 110px; overflow-x: clip; }   /* clip: Tron's grid floor (::after) is drawn 3 phones wide; unclipped, the phone widens the page to fit it and Home slides sideways */
   .ambient i { position: absolute; display: block; width: 204px; height: 204px; right: -140px; top: -104px; border-radius: 50%; background: var(--sky-disc, var(--mc-mustard)); }
 
 
@@ -857,36 +857,84 @@
   .dots i.on { background: var(--accent); }
 
 </style>
-<style id="neon" media="not all">
-/* Night Drive: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-ground:#140A22;--mc-card:#1E142D;--mc-card-2:#241B35;--mc-edge:rgba(241,238,247,0.14);--mc-mustard:#FEAA5D;--mc-teal:#32C7DD;--mc-orange:#FE3CA2;--mc-olive:#C1B3FE;--mc-walnut:#281E38;--mc-on-mustard:#190F28;--text:#F1EEF7;--muted:rgba(241,238,247,0.68);--accent:#46D2E7;--cta:#FE3CA2;--cta-ink:#FBF9FF;--good:#C1B3FE;--warn:#FEAA5D;--bad:#FA70AF;--tile:#1E142D;--tile-edge:rgba(241,238,247,0.05);--lgs-top:#1E142D;--lgs-bottom:#1E142D;--lgs-edge:rgba(241,238,247,0.14);--lgs-row:rgba(241,238,247,0.07);--lgs-field:rgba(241,238,247,0.08);--lgs-lift:rgba(0,0,1,0.3);--lgs-lift-strong:rgba(0,0,1,0.45);--lgs-solid:#1A1029}
+<style id="layers" media="not all">
+/* Layers: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-ground:#0D1219;--mc-card:#191F26;--mc-card-2:#20262D;--mc-edge:rgba(235,239,243,0.14);--mc-mustard:#DEB164;--mc-teal:#6ABBA9;--mc-orange:#D96662;--mc-olive:#96BAFA;--mc-walnut:#232931;--mc-on-mustard:#141920;--text:#EBEFF3;--muted:rgba(235,239,243,0.68);--accent:#76C5B3;--cta:#D96662;--cta-ink:#F7FAFE;--good:#96BAFA;--warn:#DEB164;--bad:#E87772;--tile:#191F26;--tile-edge:rgba(235,239,243,0.05);--lgs-top:#191F26;--lgs-bottom:#191F26;--lgs-edge:rgba(235,239,243,0.14);--lgs-row:rgba(235,239,243,0.07);--lgs-field:rgba(235,239,243,0.08);--lgs-lift:rgba(0,0,0,0.3);--lgs-lift-strong:rgba(0,0,0,0.45);--lgs-solid:#151B22}
 @media (prefers-color-scheme: light){
-:root{--mc-ground:#F5F2FD;--mc-card:#FBF9FF;--mc-card-2:#EEEAF7;--mc-edge:rgba(33,13,58,0.14);--mc-teal:#227189;--mc-olive:#876DD9;--text:#210D3A;--muted:#46385F;--accent:#227189;--cta:#D03384;--cta-ink:#FCFBFF;--good:#876DD9;--warn:#C77512;--bad:#BE2B77;--tile:#FBF9FF;--tile-edge:rgba(33,13,58,0.05);--lgs-top:#FBF9FF;--lgs-bottom:#FBF9FF;--lgs-edge:rgba(33,13,58,0.12);--lgs-row:rgba(33,13,58,0.05);--lgs-field:rgba(33,13,58,0.06);--lgs-lift:rgba(33,13,58,0.10);--lgs-lift-strong:rgba(33,13,58,0.2);--lgs-solid:#FBF9FF}
+:root{--mc-ground:#F1F3F6;--mc-card:#F9FBFE;--mc-card-2:#E9EBEF;--mc-edge:rgba(19,26,35,0.14);--mc-teal:#306E61;--mc-olive:#5B82CB;--text:#131A23;--muted:#3A414A;--accent:#306E61;--cta:#C05552;--cta-ink:#FBFDFF;--good:#5B82CB;--warn:#A57E40;--bad:#AF4C49;--tile:#F9FBFE;--tile-edge:rgba(19,26,35,0.05);--lgs-top:#F9FBFE;--lgs-bottom:#F9FBFE;--lgs-edge:rgba(19,26,35,0.12);--lgs-row:rgba(19,26,35,0.05);--lgs-field:rgba(19,26,35,0.06);--lgs-lift:rgba(19,26,35,0.10);--lgs-lift-strong:rgba(19,26,35,0.2);--lgs-solid:#F9FBFE}
 }
-body{font-family:"Avenir Next","Avenir","Saira",system-ui,sans-serif}
-.top h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231A8190'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FEAA5D'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23FE3CA2'/%3E%3C/svg%3E") no-repeat}
-.vbar::before{box-shadow:inset 0 0 0 1px rgba(241,238,247,0.12), 0 10px 22px -10px rgba(25,15,40,0.6)}
-.vbar > button{color:#F1EEF7}
-.vbar > button:active{background:rgba(241,238,247,0.14)}
-.vbar .vb-chev svg{color:#FEAA5D}
-.scrim{background:rgba(25,15,40,0.4)}
-.sw{background:rgba(241,238,247,0.24)}
-.sw::after{background:#FBF9FF}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
+.top h1::after{background:none}
+.vbar::before{box-shadow:inset 0 0 0 1px rgba(235,239,243,0.12), 0 10px 22px -10px rgba(20,25,32,0.6)}
+.vbar > button{color:#EBEFF3}
+.vbar > button:active{background:rgba(235,239,243,0.14)}
+.vbar .vb-chev svg{color:#DEB164}
+.scrim{background:rgba(20,25,32,0.4)}
+.sw{background:rgba(235,239,243,0.24)}
+.sw::after{background:#F7FAFE}
 .armbtn:not(.on){background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgba(var(--a),0.95)}
 .armbtn:not(.on):not(:disabled):active{background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgb(var(--a))}
-/* Night Drive: heavy italic condensed headings, a striped sunset for the disc, a neon ring and tube, a grid under them */
-:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Avenir Next Condensed","Avenir Next","Arial Narrow",system-ui,sans-serif;font-style:italic;font-weight:800;letter-spacing:-.01em}
-:root{--nd-sun:linear-gradient(#FFC75A,#FF8A4C 42%,#FF3D9A 78%);--nd-ring:#0A8AA6;--nd-tube:#C21E78;--nd-glow:0;--nd-grid:rgba(194,30,120,.22)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}}
-:root[data-theme="dark"]{--nd-ring:#22D3EE;--nd-tube:#FF3D9A;--nd-glow:1;--nd-grid:rgba(255,61,154,.30)}
-
-:root :is(.ambient i,.aurora b,.atoms b):nth-child(1){background:repeating-linear-gradient(to bottom,transparent 0 9px,var(--bg) 9px 13px) 0 100%/100% 46% no-repeat,var(--nd-sun);opacity:1}
-:root :is(.ambient i,.aurora b,.atoms b):nth-child(2){background:transparent;box-shadow:inset 0 0 0 4px var(--nd-ring),0 0 calc(var(--nd-glow) * 16px) var(--nd-ring)}
-:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){background:var(--nd-tube);box-shadow:0 0 calc(var(--nd-glow) * 18px) var(--nd-tube)}
+/* Layers: a still sky behind the page, its colours by the time of day (data-tod, set by home/design.js when the
+   page opens and when you come back; it never animates), clear behind the title and frosted from there down, as a
+   dock of glass over it. Vintage's disc, dot and pill go: the sky is the one shape. System type, bold headings. */
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;font-style:normal;font-weight:700;letter-spacing:-.02em}
+:root{--ly-band:calc(env(safe-area-inset-top) + 150px);--ly-veil:rgba(244,246,249,.82);--ly-lift:0 1px 2px rgba(16,24,40,.08),0 10px 22px -12px rgba(16,24,40,.4);--ly-plate:linear-gradient(150deg,#B9DCD2 0%,#C6D1E7 40%,#EAD0CE 75%,#EEDFC4 100%);--ly-g1:rgba(150,200,186,.6);--ly-g2:rgba(226,182,178,.5);--ly-top:#B9DCD2}
+:root[data-tod="morning"]{--ly-plate:linear-gradient(160deg,#F4DCCB 0%,#F0E0C4 45%,#CFD8EC 100%);--ly-g1:rgba(236,196,160,.55);--ly-g2:rgba(170,188,226,.5);--ly-top:#F4DCCB}
+:root[data-tod="evening"]{--ly-plate:linear-gradient(160deg,#EDCDC9 0%,#DCCCE5 50%,#CFD5EE 100%);--ly-g1:rgba(222,176,172,.55);--ly-g2:rgba(184,170,220,.5);--ly-top:#EDCDC9}
+:root[data-tod="night"]{--ly-plate:linear-gradient(160deg,#D2D7EE 0%,#CFCFEC 55%,#DCD0E3 100%);--ly-g1:rgba(150,160,210,.5);--ly-g2:rgba(190,160,200,.42);--ly-top:#D2D7EE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ly-veil:rgba(16,20,26,.78);--ly-lift:0 1px 2px rgba(0,0,0,.3),0 10px 22px -12px rgba(0,0,0,.7);--ly-plate:linear-gradient(150deg,#1F3B35 0%,#252F48 40%,#3F2D2C 75%,#3C3424 100%);--ly-g1:rgba(46,90,80,.8);--ly-g2:rgba(90,60,58,.7);--ly-top:#1F3B35}}
+:root[data-theme="dark"]{--ly-veil:rgba(16,20,26,.78);--ly-lift:0 1px 2px rgba(0,0,0,.3),0 10px 22px -12px rgba(0,0,0,.7);--ly-plate:linear-gradient(150deg,#1F3B35 0%,#252F48 40%,#3F2D2C 75%,#3C3424 100%);--ly-g1:rgba(46,90,80,.8);--ly-g2:rgba(90,60,58,.7);--ly-top:#1F3B35}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-tod="morning"]{--ly-plate:linear-gradient(160deg,#42302A 0%,#3B3424 45%,#263049 100%);--ly-g1:rgba(90,74,48,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#42302A}}
+:root[data-theme="dark"][data-tod="morning"]{--ly-plate:linear-gradient(160deg,#42302A 0%,#3B3424 45%,#263049 100%);--ly-g1:rgba(90,74,48,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#42302A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-tod="evening"]{--ly-plate:linear-gradient(160deg,#3F2B2E 0%,#33294A 50%,#222C4A 100%);--ly-g1:rgba(74,48,96,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#3F2B2E}}
+:root[data-theme="dark"][data-tod="evening"]{--ly-plate:linear-gradient(160deg,#3F2B2E 0%,#33294A 50%,#222C4A 100%);--ly-g1:rgba(74,48,96,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#3F2B2E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-tod="night"]{--ly-plate:linear-gradient(160deg,#0F1426 0%,#191A33 55%,#241A2C 100%);--ly-g1:rgba(42,58,102,.6);--ly-g2:rgba(74,48,96,.5);--ly-top:#0F1426}}
+:root[data-theme="dark"][data-tod="night"]{--ly-plate:linear-gradient(160deg,#0F1426 0%,#191A33 55%,#241A2C 100%);--ly-g1:rgba(42,58,102,.6);--ly-g2:rgba(74,48,96,.5);--ly-top:#0F1426}
+:root{background:linear-gradient(to bottom,transparent 0,transparent var(--ly-band),var(--ly-veil) calc(var(--ly-band) + 110px)),radial-gradient(75% 45% at 8% 94%,var(--ly-g1),transparent 72%),radial-gradient(65% 40% at 96% 70%,var(--ly-g2),transparent 72%),var(--ly-plate);background-color:var(--ly-top);min-height:100%}   /* the colour: the sky's top, as the bars take it */
+:root :is(body,#app.app){background:transparent}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){display:none}
+:is(.fab,.okbtn){box-shadow:var(--ly-lift)}
+</style>
+<style id="grid" media="not all">
+/* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-ground:#050608;--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,0.14);--mc-mustard:#FF8F7F;--mc-teal:#FFA39B;--mc-orange:#F93433;--mc-olive:#C9DBF3;--mc-walnut:#16181B;--mc-on-mustard:#090B0D;--text:#EEF0F2;--muted:rgba(238,240,242,0.68);--accent:#FCB5AE;--cta:#F93433;--cta-ink:#F8FAFC;--good:#C9DBF3;--warn:#FF8F7F;--bad:#FA6258;--tile:#0D0F11;--tile-edge:rgba(238,240,242,0.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,0.14);--lgs-row:rgba(238,240,242,0.07);--lgs-field:rgba(238,240,242,0.08);--lgs-lift:rgba(0,0,0,0.3);--lgs-lift-strong:rgba(0,0,0,0.45);--lgs-solid:#0A0C0E}
+@media (prefers-color-scheme: light){
+:root{--mc-ground:#F3F5F7;--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,0.14);--mc-teal:#973835;--mc-olive:#707F92;--text:#171B20;--muted:#3D4146;--accent:#973835;--cta:#D41C21;--cta-ink:#FCFDFF;--good:#707F92;--warn:#C3301C;--bad:#C11019;--tile:#FAFCFE;--tile-edge:rgba(23,27,32,0.05);--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,0.12);--lgs-row:rgba(23,27,32,0.05);--lgs-field:rgba(23,27,32,0.06);--lgs-lift:rgba(23,27,32,0.10);--lgs-lift-strong:rgba(23,27,32,0.2);--lgs-solid:#FAFCFE}
+}
+body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+.top h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23CB504C'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FF8F7F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23F93433'/%3E%3C/svg%3E") no-repeat}
+.vbar::before{box-shadow:inset 0 0 0 1px rgba(238,240,242,0.12), 0 10px 22px -10px rgba(9,11,13,0.6)}
+.vbar > button{color:#EEF0F2}
+.vbar > button:active{background:rgba(238,240,242,0.14)}
+.vbar .vb-chev svg{color:#FF8F7F}
+.scrim{background:rgba(9,11,13,0.4)}
+.sw{background:rgba(238,240,242,0.24)}
+.sw::after{background:#F8FAFC}
+.armbtn:not(.on){background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgba(var(--a),0.95)}
+.armbtn:not(.on):not(:disabled):active{background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%), rgb(var(--a))}
+/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
+   only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
+   over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.
+   Orbitron headings, Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
+   dot and pill behind the title go: the car's screen is calm. */
+@font-face{font-family:"Orbitron";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/orbitron-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Exo 2";font-style:normal;font-weight:400 700;font-display:swap;src:url("../home/fonts/exo-2-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@property --tr-a{syntax:'<angle>';inherits:false;initial-value:0deg}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif;font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
+:root{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.16);color-scheme:dark}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){display:none}
 :is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
-  background:linear-gradient(90deg,var(--nd-grid) 1px,transparent 1px) 50% 0/28px 100%,linear-gradient(var(--nd-grid) 1px,transparent 1px) 0 0/100% 16px;
+  background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
   transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
-:is(.fab,.okbtn){box-shadow:0 0 calc(var(--nd-glow) * 18px) color-mix(in srgb,var(--nd-tube) 70%,transparent)}
+:root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
+:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px 4px 4px;z-index:-1;pointer-events:none;border-radius:30px 30px var(--tr-foot) var(--tr-foot);--tr-foot:max(30px,calc(env(safe-area-inset-bottom) + 14px))}
+:root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
+:root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  filter:drop-shadow(0 0 4px #FF2A2A);animation:trRun 7s linear infinite}
+@keyframes trRun{to{--tr-a:360deg}}
+@media (prefers-reduced-motion:reduce){:root::after{animation:none;opacity:0}}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
 </style>
 <style id="grid" media="not all">
 /* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */

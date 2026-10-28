@@ -140,7 +140,7 @@ jobs:
               aOS/scripts/names-test.mjs
               weather/scripts/ipsy-test.mjs
               house/scripts/ipsy-test.mjs
-          # the newest release's update screens; every app opens, light and dark, and in Night Drive and Tron; Calendar's layers, an invite, notifications, designs
+          # the newest release's update screens; every app opens, light and dark, and in Layers and Tron; Calendar's layers, an invite, notifications, designs
           - group: release-smoke
             tests: |
               aOS/scripts/release-test.mjs

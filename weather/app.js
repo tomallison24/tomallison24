@@ -11,7 +11,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   throw new Error('Weather refuses to run inside a frame');
 }
 // Which design is on (design.js), read at each draw, and the screen and any open sheet redrawn on a change
-// (aos:design, at the bottom). vintage(): a flat design - Vintage, or Night Drive and Tron, which repaint it.
+// (aos:design, at the bottom). vintage(): a flat design - Vintage, or Layers and Tron, which repaint it.
 const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
 const vintage = () => look() !== 'glass';
 // The data (NWS, Open-Meteo) is in data.js, shared with Home's weather pill.
@@ -928,7 +928,7 @@ function rampOf(m) {
   const f = (m.entity.attributes.temperature_unit || '').indexOf('F') >= 0;
   const stops = {
     vintage: [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]],
-    neon: [[0, [51, 132, 157]], [10, [58, 154, 183]], [18, [147, 116, 241]], [25, [251, 162, 74]], [32, [223, 56, 142]]],   // Vintage's, repainted (aOS/scripts/looks.mjs)
+    layers: [[0, [96, 141, 224]], [10, [64, 129, 115]], [18, [74, 150, 134]], [25, [216, 171, 99]], [32, [207, 92, 89]]],   // Vintage's, repainted (aOS/scripts/looks.mjs), cold as mist blue
     grid: [[0, [96, 125, 160]], [10, [140, 160, 185]], [18, [168, 174, 184]], [25, [251, 96, 73]], [32, [228, 31, 36]]],   // cold steel to hot red
     glass: [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]],
   }[look()] || [];

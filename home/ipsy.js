@@ -51,10 +51,10 @@
   const me = document.currentScript;
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
-  // Night Drive and Tron wear the Vintage outfit, in their own colours (ipsy-neon, ipsy-grid on top of ipsy-vintage).
-  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return /^(vintage|neon|grid)$/.test(l || '') ? l : 'glass'; };
+  // Layers and Tron wear the Vintage outfit, in their own colours (ipsy-layers, ipsy-grid on top of ipsy-vintage).
+  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return l === 'neon' ? 'layers' : /^(vintage|layers|grid)$/.test(l || '') ? l : 'glass'; };
   const followers = new Set();                       // elements that wear the page's look
-  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'neon', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'neon' || l === 'grid'))); };
+  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'layers', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'layers' || l === 'grid'))); };
   const wear = (el, l) => dress(el, l || LOOK());
   const follow = el => { followers.add(el); wear(el); };
   for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => { followers.forEach(el => wear(el)); redrawAll(); });
@@ -87,7 +87,7 @@
   //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
   //   write (a notepad: create_*, set_*, update_*…), show (points: show_*), talk (the answer appearing),
   //   done (a hop: a change saved).
-  // Night Drive puts mirror shades on every helper, Tron a lit visor.
+  // Tron puts a lit visor on every helper.
   // ---------------------------------------------------------------------------
   const EGG = 'M100 56C134 56 152 80 152 114C152 150 130 168 100 168C70 168 48 150 48 114C48 80 66 56 100 56Z';
   const SPIKES = (() => {
@@ -175,7 +175,6 @@
       + c.front
       + '<g class="h-specs"><circle class="h-spec" cx="86" cy="104" r="12"/><circle class="h-spec" cx="114" cy="104" r="12"/><path class="h-bridge" d="M98 103q2-3 4 0M74 102l-8-3M126 102l8-3"/></g>'
       + '<g class="h-visor"><rect class="h-vband" x="70" y="96" width="60" height="15" rx="7.5"/><path class="h-vlight" d="M78 103.5h44"/></g>'
-      + '<g class="h-shades"><rect class="h-lens2" x="73" y="96" width="25" height="15" rx="6"/><rect class="h-lens2" x="102" y="96" width="25" height="15" rx="6"/><path class="h-sbridge" d="M98 101h4"/><path class="h-sglint" d="M78 107l7-8M107 107l7-8"/></g>'
       + (c.smile === false ? '' : (c.cheeks === false ? '' : '<ellipse class="h-cheek" cx="72" cy="122" rx="7" ry="4"/><ellipse class="h-cheek" cx="128" cy="122" rx="7" ry="4"/>') + '<path class="h-smile" d="M93 123Q100 130 107 123"/>')
       + '<ellipse class="h-mouth" cx="100" cy="127" rx="6" ry="5"/>'
       + '<g class="h-prop h-book"><path class="h-cover" d="M' + (hb - 6) + ' 128h' + f1(2 * (100 - hb) + 12) + 'v32h-' + f1(2 * (100 - hb) + 12) + 'z"/>'
@@ -371,7 +370,7 @@
 .ipsy-char g,.ipsy-char path,.ipsy-char ellipse,.ipsy-char circle,.ipsy-char rect{transform-box:view-box}
 .ipsy-glass .ipsy-char{filter:drop-shadow(0 6px 12px rgba(129,147,188,.35))}
 .ipsy-grid .ipsy-char{filter:drop-shadow(0 0 2.5px var(--tr-line,#FF2A2A))}   /* a rim of light, so a dark helper (Mia) shows on black */
-.ipsy-neon .ipsy-char{filter:drop-shadow(0 0 2.5px #FF3D9A)}
+.ipsy-layers .ipsy-char{filter:drop-shadow(0 8px 14px rgba(16,24,40,.22))}   /* lifted off the glass, as Layers lifts what you can tap */
 .ipsy-char .h-shadow{fill:#2B2522;opacity:.12;transform-origin:100px 182px;animation:ipsyShade 4.8s ease-in-out infinite}
 .h-pose{transform-origin:100px 120px}
 .h-lim{fill:none;stroke:var(--limb);stroke-width:var(--limbw);stroke-linecap:round}
@@ -395,8 +394,8 @@
 .h-specs{opacity:0;transform:translateY(-40px);transition:transform .55s cubic-bezier(.3,1.5,.5,1),opacity .2s}
 .h-lens{fill:#DCEBE9;stroke:#1F6F6B;stroke-width:4} .h-handle{stroke:var(--line);stroke-width:5;stroke-linecap:round}
 .h-bubble{fill:#FFFDF7;stroke:var(--line);stroke-width:2} .h-star{fill:#D8572A} .h-wave{fill:none;stroke:#1F6F6B;stroke-width:3;stroke-linecap:round}
-/* Night Drive: mirror shades (off while the glasses are on); Tron: a lit visor */
-.h-shades,.h-visor{display:none}
+/* Tron: a lit visor */
+.h-visor{display:none}
 .ipsy-grid .h-visor{display:inline}
 .ipsy-grid .h-lids{opacity:0}
 [data-mood="scan"] .h-visor,[data-mood="cross"] [data-who="robot"] .h-visor{display:none}
@@ -405,11 +404,8 @@
 .h-vlight{fill:none;stroke:var(--tr-line,#FF2A2A);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:14 30;animation:ipsyScan 2.4s ease-in-out infinite alternate;filter:drop-shadow(0 0 3px var(--tr-line,#FF2A2A))}
 @keyframes ipsyScan{from{stroke-dashoffset:0}to{stroke-dashoffset:-30}}
 .ipsy-grid .h-cheek{fill:var(--tr-line,#FF2A2A);opacity:.6}
-.ipsy-neon .h-shades{display:inline}
-.h-lens2{fill:#120B1F;stroke:#FF3D9A;stroke-width:2.6} .h-sbridge{fill:none;stroke:#FF3D9A;stroke-width:2.6;stroke-linecap:round} .h-sglint{fill:none;stroke:#22D3EE;stroke-width:2.2;stroke-linecap:round;opacity:.9}
-.ipsy-neon .h-cheek{fill:#FF3D9A}
 /* Tron's rider: a visor for a face (no eyes, brows, mouth or glasses); its props lit red; the Light Cycle only to cross */
-[data-who="rider"] :is(.h-eyes,.h-brow,.h-smile,.h-mouth,.h-cheek,.h-specs,.h-visor,.h-shades,.h-mag){display:none}
+[data-who="rider"] :is(.h-eyes,.h-brow,.h-smile,.h-mouth,.h-cheek,.h-specs,.h-visor,.h-mag){display:none}
 .ipsy-grid [data-who="rider"],[data-who="rider"]{filter:drop-shadow(0 0 2px rgba(255,42,42,.55))}
 .h-rlit{filter:drop-shadow(0 0 2.5px #FF2A2A)}
 .h-rvisor{fill:#060607;stroke:#FF2A2A;stroke-width:1.8}
@@ -465,7 +461,6 @@
 [data-mood="scan"] .h-rigR{animation:ipsySweep 1.6s ease-in-out infinite}
 [data-mood="scan"] .h-mag{opacity:1}
 [data-mood="scan"] .h-specs{opacity:1;transform:translateY(0)}
-[data-mood="scan"] .h-shades{display:none}
 [data-mood="scan"] .h-eyes{animation:ipsyDart 1.6s ease-in-out infinite}
 [data-mood="scan"] .h-browL{transform:translateY(-6px)}
 /* writing: a notepad, the pencil scribbling, lines appearing */
@@ -506,7 +501,6 @@
 [data-mood="cross"] [data-who="mia"] .h-armR,[data-mood="cross"] [data-who="otter"] .h-armR{transform:rotate(40deg)}
 [data-mood="cross"] [data-who="robot"] .h-specs{opacity:1;transform:none}
 [data-mood="cross"] [data-who="robot"] .h-spec{fill:#2B2522}
-[data-mood="cross"] [data-who="robot"] .h-shades{display:none}
 [data-mood="cross"] [data-who="robot"] .h-foot{animation:ipsyMoon .7s ease-in-out infinite}
 [data-mood="cross"] [data-who="robot"] .h-foot+.h-foot{animation-delay:.35s}
 [data-mood="cross"] [data-who="robot"] .h-armL{animation:ipsyBotL var(--cross,4s) ease-in-out}
@@ -701,7 +695,7 @@
   // family's things, and Meals' "Never in a plan" (the family's allergies): for those, open_setting shows where.
   // ---------------------------------------------------------------------------
   const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
-  const LOOKS = ['vintage', 'glass', 'neon', 'grid'];
+  const LOOKS = ['vintage', 'glass', 'layers', 'grid'];
   const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
   const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const CLOCK = 'allison-clock-v1', CAL = 'allison-calendar-v1-settings', POD = 'allison-podcasts-v1', ORD = 'allison-orders-v1';
@@ -714,7 +708,7 @@
   const choice = (pairs, store) => ({ values: Object.keys(pairs), to: v => pairs[v], from: s => Object.keys(pairs).find(k => String(pairs[k]) === String(s)), ...store });
   const onoff = store => choice({ on: true, off: false }, store);
   const range = (lo, hi, step, store) => ({ values: [lo + '-' + hi + ' in steps of ' + step], ok: v => Number.isFinite(+v) && +v >= lo && +v <= hi && (+v - lo) % step === 0, to: v => +v, from: s => String(s), ...store });
-  const lookOf = id => (id === 'clock' ? ((jget(CLOCK, {}) || {}).set || {}).design : ls.get('design.' + id, '')) || 'vintage';
+  const lookOf = id => { const l = (id === 'clock' ? ((jget(CLOCK, {}) || {}).set || {}).design : ls.get('design.' + id, '')) || 'vintage'; return l === 'neon' ? 'layers' : l; };   // neon: Night Drive's, which Layers replaced
   function putLook(id, v) {   // an app's design; an open copy of it follows at once (design.js / clock/design.js: the storage event)
     if (id === 'clock') inObj(CLOCK, ['set', 'design']).put(v); else ls.set('design.' + id, v);
     if (id === pageApp()) { if (window.aosDesign) aosDesign.set(v); else if (window.clockDesign) clockDesign.set(v); }
@@ -724,8 +718,8 @@
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Night Drive or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', grid: 'grid' }, {
-      get: () => ls.get('aos.look', 'vintage'),
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Layers or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, {
+      get: () => { const l = ls.get('aos.look', 'vintage'); return l === 'neon' ? 'layers' : l; },
       put: v => {   // every app, as aOS's own Look picker writes it (AllisonOS.welcome.data.APPS): Money and Sparkle too, not only the apps with settings here
         const all = (AOS.welcome && AOS.welcome.data && AOS.welcome.data.APPS) || SET_APPS;
         if (window.aosLook) return aosLook.set(v, { apps: all }); ls.set('aos.look', v); all.forEach(id => putLook(id, v)); } }) },
@@ -759,7 +753,7 @@
       get: () => (helper() || {}).who || '', put: v => setHelper(v, (helper() || {}).name || '') }) },
     'helper.name': { app: '*', live: true, keepCase: true, about: 'Your helper\'s name (Ipsy until it has one, up to 16 letters)', values: ['a name, up to 16 letters'], ok: v => v.length >= 1 && v.length <= 16, to: v => v, from: v => v,
       get: () => (helper() || {}).name || '', put: v => setHelper((helper() || {}).who || 'mia', v) },
-    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', neon: 'neon', grid: 'grid' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
+    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
   };
   // where a setting is: each app's Settings (the button that opens it), and aOS's Account sections
   const OPENER = { calendar: '#setBtn', clock: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', house: '#gear', mail: '#gear', meals: '#setBtn', news: '#setBtn', notes: '#setBtn', orders: '#setBtn', places: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', weather: '[data-action="location"]' };
@@ -1280,5 +1274,5 @@
 
   // helper(): { who, name } or null; helpers: [{ id, kind }]; picker(host): pick and name it (aOS Account); cross(slot, d): across aOS Home's bar
   AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label })), name: helperName,
-    look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'neon' | 'grid'
+    look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'layers' | 'grid'
 })();

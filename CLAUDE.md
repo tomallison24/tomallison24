@@ -101,7 +101,7 @@ from.
   opened from there, the app hands its data to aOS and says it lives in aOS now.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
-  steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Night Drive
+  steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Layers
   or Tron), `names.js` (your helper's name where the words say Ipsy), `sky.js` (the Vintage designs' day and night sky),
   `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the AI helper you
   chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
@@ -127,7 +127,9 @@ from.
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
 - **Four designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
-  glass), Night Drive (80s neon) and Tron (light cycles, after the
+  glass), Layers (a still sky by the time of day, `data-tod` on `<html>`, light or dark with the phone,
+  frosted glass over it from the title down; it replaced Night Drive, and a phone that had Night Drive, `neon`,
+  opens in Layers) and Tron (light cycles, after the
   Tron: Ares mode in Tesla's cars: red light on black, dark only; its light trail runs around each screen behind
   everything and round each app's icon, and on aOS Home it now and then sends a shot round a section or widget, `aOS/tron-shots.js`, the helper becomes Ares, the Tron: Ares rider (named so in every app), and aOS alone opens with its intro and sound, `aOS/tron-intro.js`; in Vintage aOS opens with Sunrise, `aOS/vintage-intro.js`,
   its sun going up into the disc at the top of aOS; in Sea glass with Tide, `aOS/glass-intro.js`, its "aOS" gliding into the page's), picked for every
@@ -135,9 +137,9 @@ from.
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
   id="vintage">` block on or off, `data-look` on `<html>`, the icon (`icon-*.png` Vintage,
-  `icon-glass-*.png` Sea glass, `icon-neon-*.png`, `icon-grid-*.png`), status bar and bar colours.
-  A change to how an app looks is made in Vintage and Sea glass; **Night Drive and Tron are
-  generated from Vintage** (`<style id="neon">`, `<style id="grid">` and the icons, by
+  `icon-glass-*.png` Sea glass, `icon-layers-*.png`, `icon-grid-*.png`), status bar and bar colours.
+  A change to how an app looks is made in Vintage and Sea glass; **Layers and Tron are
+  generated from Vintage** (`<style id="layers">`, `<style id="grid">` and the icons, by
   `node aOS/scripts/make-looks.mjs`, palettes in `aOS/scripts/looks.mjs`): run it after changing a
   Vintage block or an `icon.svg` (check-apps fails until you do), never edit those blocks by hand.
   The Vintage designs used to be apps of their own (`<app>vintage/`): those folders are gone, and the deploy copies each app to its old Vintage address so phones
