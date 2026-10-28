@@ -14,6 +14,10 @@
 //     Calendar on an inner ring and four favorites on an outer one, in the bottom corner your thumb
 //     rests on (the left one for the left hand), with what's next and every other app above them, so
 //     every app is on the first screen. Tried first in labs/layouts/.
+//   - In Layers (aOS/look.js), Classic is Layers' own grid: what's next and the weather on the sky, then every app
+//     on one screen, four across, as raised round buttons with a line drawing tinted by its group. The top row is
+//     yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
+//     on the phone and on your other devices: aos.home.grid). Tried first as a test page (Calm aOS, Layers).
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
 //
@@ -79,6 +83,9 @@
   const readLayout = () => { try { const v = localStorage.getItem(LAYOUT); return LAYOUTS.includes(v) ? v : 'classic'; } catch { return 'classic'; } };
   let layout = readLayout();
   const arc = () => layout !== 'classic';
+  // Layers' grid: Classic, in Layers
+  const gridOn = () => !arc() && !!window.aosLook && aosLook.get() === 'layers';
+  const homeMode = () => arc() ? 'arc' : gridOn() ? 'grid' : '';
   const pinnable = id => known(id) && !(arc() ? RING : WIDGETS).includes(id);
   const STARTERS = ['meals', 'notes', 'mail', 'travel'];
 
@@ -225,6 +232,7 @@
     const F = window.aosFind || {}, wx = F.weather ? F.weather() : null, next = F.next ? F.next() : null;
     paintBrief(F.brief ? F.brief() : null);
     if (arc()) return paintArc(wx, next);
+    if (gridOn()) return paintGrid(wx, next);
     const tiles = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" aria-label="${label(f.id)}">${ic(f.id)}<i class="pin" aria-hidden="true">${STAR(f.why === 'pin')}</i><b>${esc(name(f.id))}</b></button>`).join('');
     setHTML($('favs'), (known('weather') ? `<button type="button" class="wid wx" data-open="weather" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
         <span class="wh"><img src="${icon('weather')}" alt="">${wx && wx.place ? esc(wx.place) : 'Weather'}</span>
@@ -261,6 +269,58 @@
     const head = e.target.closest('[data-brief]');
     if (head) { briefOpen = !briefOpen; put('aos.brief.open', briefOpen); head.parentNode.classList.toggle('open', briefOpen); head.setAttribute('aria-expanded', briefOpen); return; }
     if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
+
+  // ---- Layers' grid ----
+  // Every app as a round button with its line drawing, tinted by its group (SPACES); the order is yours alone: the
+  // top row starts as your pins (else Mail, Calendar, Weather and Home), then each group, and an app that's new
+  // goes on the end. Edit, then tap one app and another, swaps them.
+  const GRID = 'aos.home.grid', GROUPS = ['family', 'every', 'out', 'you', 'games'];
+  const GROUP_OF = Object.fromEntries(SPACES.flatMap(([, ids], i) => ids.map(id => [id, GROUPS[i] || 'every'])));
+  const GLYPH = {
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    weather: '<path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 11.1 3.5 3.5 0 0 0 7 18z"/>',
+    house: '<path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"/>',
+    meals: '<path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M9.5 8.5c0-1.5 1-2 1-3.5M13.5 8.5c0-1.5 1-2 1-3.5"/>',
+    notes: '<path d="M6 3.5h9l3.5 3.5v13.5H6z"/><path d="M9 11h6M9 15h6"/>',
+    orders: '<path d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/>',
+    news: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M7 9h10M7 12.5h10M7 16h6"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    podcasts: '<rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3"/>',
+    travel: '<rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5v-2A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5v2M3.5 13h17"/>',
+    places: '<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+    fitness: '<path d="M3 12h4l2-5 4 10 2-5h6"/>',
+    drinks: '<path d="M5 4.5h14L12 12zM12 12v7.5M8 19.5h8"/>',
+    money: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+    sparkle: '<path d="M12 3c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7z"/>',
+  };
+  const glyph = id => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[id] || GLYPH.sparkle}</svg>`;
+  function gridOrder() {
+    const saved = get(GRID, []).filter(known);
+    const top = saved.length ? saved : [...new Set([...pins.filter(known), 'mail', 'calendar', 'weather', 'house'].filter(known))].slice(0, 4);
+    return [...new Set([...top, ...ALL])];
+  }
+  let gsel = '';   // the first of two apps tapped to swap, in Edit
+  function paintGrid(wx, next) {
+    const order = gridOrder(), ed = editing();
+    $('gridEdit').textContent = ed ? 'Done' : 'Edit'; $('gridHint').hidden = !ed;
+    $('gridHead').textContent = ed ? 'Tap two apps to swap' : 'Your apps';
+    setHTML($('hgsky'), (known('weather') ? `<button type="button" data-open="weather" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}"><b>${wx ? esc(wx.temp) : '–'}</b><span>${wx ? esc(wx.text) : 'Weather'}</span></button>` : '')
+      + (known('calendar') ? `<button type="button" data-open="calendar" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">${next
+        ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Today</b><span>Nothing else on</span>'}</button>` : ''));
+    setHTML($('hgrid'), order.map((id, i) => (i === 4 ? '<i class="grule" aria-hidden="true"></i>' : '')
+      + `<button type="button" class="gapp${ed && gsel === id ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--sp-${GROUP_OF[id] || 'every'})" aria-label="${label(id)}"${ed ? ` aria-pressed="${gsel === id}"` : ''}>`
+      + `<span class="orb">${glyph(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
+  }
+  function gridTap(id) {
+    if (!gsel) { gsel = id; return paintHome(true); }
+    if (gsel !== id) {
+      const o = gridOrder(), a = o.indexOf(gsel), z = o.indexOf(id);
+      [o[a], o[z]] = [o[z], o[a]]; put(GRID, o); syncPrefs(); toast('Swapped');
+    }
+    gsel = ''; paintHome(true);
+  }
+  $('gridEdit').onclick = () => { body.classList.toggle('editing'); gsel = ''; paintHome(true); };
 
   // ---- Thumb arc ----
   // Drawn at an iPhone's 390 x 844 and scaled to the screen (--arck): the ring's centre in the corner, a
@@ -301,12 +361,13 @@
     layout = LAYOUTS.includes(v) ? v : 'classic';
     if (keep) try { localStorage.setItem(LAYOUT, layout); } catch {}
     const d = document.documentElement;
-    if (arc()) d.dataset.home = 'arc'; else delete d.dataset.home;
+    if (homeMode()) d.dataset.home = homeMode(); else delete d.dataset.home;
     if (layout === 'arc-left') d.dataset.hand = 'left'; else delete d.dataset.hand;
-    if (editing()) $('favEdit').click();
+    if (editing()) { body.classList.remove('editing'); $('favEdit').textContent = $('arcEdit').textContent = 'Edit'; $('favHint').hidden = $('arcHint').hidden = true; gsel = ''; }
     paintHome(true);
     if (keep) syncPrefs();
   }
+  addEventListener('aos:look', () => setLayout(layout, false));   // into Layers or out of it: its grid, or Classic's Favorites
   addEventListener('resize', fitArc); addEventListener('load', fitArc);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitArc);
   // the orb: the Ipsy bar, from down where your thumb is
@@ -324,13 +385,14 @@
     const p = e.target.closest('[data-pin]'); if (p) { e.stopPropagation(); return togglePin(p.dataset.pin); }
     if (e.target.closest('[data-app]')) return;   // ⓘ: the app's page (aOS/app.js)
     const f = e.target.closest('[data-fav]'); if (f && editing()) return togglePin(f.dataset.fav);
+    const g = e.target.closest('[data-gapp]'); if (g && editing()) { e.stopPropagation(); return gridTap(g.dataset.gapp); }   // stopped here: the grid is drawn again, so the tap's button is gone by the time aOS's own handler sees it
   });
   // the icons that aren't buttons themselves (their pin is): Return or Space opens the app
   $('home').addEventListener('keydown', e => { const o = e.target.closest('.happ'); if (o && e.target === o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(o.dataset.open); } });
   // anywhere in aOS (Home, an app's page): data-open opens that app inside aOS
   document.addEventListener('click', e => {
     const o = e.target.closest('[data-open]');
-    if (!o || e.target.closest('[data-pin], [data-app]') || (editing() && o.closest('#favs, #harc'))) return;
+    if (!o || e.target.closest('[data-pin], [data-app]') || (editing() && o.closest('#favs, #harc, #hgrid'))) return;
     e.preventDefault();
     if (o.closest('#hfound')) { const at = o.dataset.at; clearFind(); show(o.dataset.open, at); } else show(o.dataset.open);
   });
