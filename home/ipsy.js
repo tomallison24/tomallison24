@@ -87,7 +87,7 @@
   //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
   //   write (a notepad: create_*, set_*, update_*…), show (points: show_*), talk (the answer appearing),
   //   done (a hop: a change saved).
-  // Tron puts a lit visor on every helper.
+  // Tron puts a lit visor on every helper. Each dresses for the weather where you are (outfit(), below).
   // ---------------------------------------------------------------------------
   const EGG = 'M100 56C134 56 152 80 152 114C152 150 130 168 100 168C70 168 48 150 48 114C48 80 66 56 100 56Z';
   const SPIKES = (() => {
@@ -152,10 +152,94 @@
       + '<path d="M70 122Q100 138 130 122"/><path d="M100 132V166"/><path d="M62 160Q64 134 76 116"/><path d="M138 160Q136 134 124 116"/><circle cx="100" cy="150" r="6"/></g>',
     front: '<g class="h-rvis"><path class="h-rvisor" d="M71 70Q100 58 129 70V90Q100 98 71 90Z"/><rect class="h-rsweep" x="93" y="64" width="14" height="30" rx="7"/>'
       + '<path d="M80 73Q90 68 102 67" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/><path class="h-rline" d="M80 84Q100 90 120 84"/></g>' };
+  // Dressed for the weather where you are (Weather's forecast, kept on the phone: wx.cache, as aOS Home reads it in
+  // aOS/home-find.js): an umbrella in rain, a scarf when it's chilly, a coat when it's cold, a woolly hat in snow or
+  // a freeze, a sun hat and sunglasses on a warm sunny day. By the feels-like temperature, now: wearing() gives the
+  // words ('umbrella coat scarf'), on the drawing as data-wear. No forecast (Weather never opened on this phone, or
+  // its last one is over 12 hours old): dressed as usual. Ares keeps his suit; he takes an umbrella in the rain.
+  // top: the top of the head (where a hat sits); shape: the body's outline (the coat is cut to it); coat, scarf
+  // [colour, stripe] and umbrella [side panels, middle panel]: each helper's own colours.
+  const FIT = {
+    mia: { top: 56, coat: '#B23A32', scarf: ['#E3A72F', '#FFF7EC'] },
+    fox: { top: 56, coat: '#2F4A6D', scarf: ['#1F6F6B', '#FFF7EC'] },
+    owl: { top: 56, coat: '#C98A2B', scarf: ['#D8572A', '#FFF7EC'] },
+    robot: { top: 58, coat: '#D8572A', scarf: ['#2F4A6D', '#FBF5E9'], shape: '<rect x="52" y="58" width="96" height="106" rx="22"/>' },
+    octopus: { top: 50, coat: '#2F4A6D', scarf: ['#E3A72F', '#FFF7EC'], sleeves: false, shape: '<path d="M100 50C136 50 154 76 154 108C154 134 138 148 100 148C62 148 46 134 46 108C46 76 64 50 100 50Z"/>' },
+    hedgehog: { top: 62, coat: '#4E7A4A', scarf: ['#D8572A', '#FFF7EC'], shape: '<circle cx="100" cy="118" r="48"/>' },
+    otter: { top: 56, coat: '#2F4A6D', scarf: ['#E3A72F', '#FFF7EC'] },
+    rider: { only: ['umbrella'] },
+  };
+  const UMBRELLA = ['#E3A72F', '#FFF7EC'];
+  const wxGet = k => { try { return JSON.parse(ls.get(k, 'null')); } catch { return null; } };
+  function weatherNow() {   // { c: Weather's condition ('rainy', 'sunny'…), t: feels like, °F } or null
+    const cache = wxGet('wx.cache'); if (!cache || typeof cache !== 'object') return null;
+    const okP = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lon), at = p => (okP(p) ? cache[p.lat.toFixed(3) + ',' + p.lon.toFixed(3)] : null);
+    const ok = b => b && b.cur && Number.isFinite(b.cur.tF), here = wxGet('wx.here'), places = wxGet('wx.places');
+    const b = [at(here), at(Array.isArray(places) && places[0])].find(ok) || Object.values(cache).find(ok);   // the place on screen in Weather
+    if (!b) return null;
+    const now = Date.now(), age = now - (b.fetchedAt || 0);
+    if (!(age < 12 * 3600e3)) return null;
+    let c = b.cur.c, t = Number.isFinite(b.cur.fF) ? b.cur.fF : b.cur.tF;
+    const h = age > 90 * 60e3 && Array.isArray(b.hourly) && b.hourly.find(x => x && Number.isFinite(x.t) && x.t * 1000 <= now && now < x.t * 1000 + 3600e3);
+    if (h) { c = h.c; t = Number.isFinite(h.fF) ? h.fF : Number.isFinite(h.pF) ? h.pF : t; }   // an older forecast: its hour for now
+    return { c: String(c || ''), t };
+  }
+  function wearing() {
+    const w = weatherNow(); if (!w) return '';
+    const hr = new Date().getHours(), day = hr >= 7 && hr < 19, wet = /rain|pouring|lightning|hail/.test(w.c), snow = /snow/.test(w.c), t = w.t;
+    const on = [];
+    if (wet) on.push('umbrella');
+    if (snow || t < 45) on.push('coat');
+    if (snow || t < 58) on.push('scarf');
+    if (snow || t < 34) on.push('beanie');
+    else if (!wet && day && w.c === 'sunny' && t >= 70) on.push('sunhat', 'shades');
+    return on.join(' ');
+  }
+  let fitN = 0;
+  function outfit(who, wear) {   // -> { back, body, head, sky, vars }: what goes on the drawing, where
+    const f = FIT[who] || {}, on = wear ? wear.split(' ').filter(x => !f.only || f.only.includes(x)) : [], has = x => on.includes(x);
+    const o = { wear: on.join(' '), back: '', body: '', head: '', sky: '', vars: '' };
+    if (!on.length) return o;
+    const T = f.top || 56, [s1, s2] = f.scarf || UMBRELLA;
+    if (has('umbrella')) {   // over its shoulder, the handle behind it; a few drops falling either side
+      const [u1, u2] = UMBRELLA;
+      o.back += '<g class="h-umb" transform="rotate(-16 140 150)"><path class="h-ushaft" d="M140 2V150"/>'
+        + '<path class="h-ucan" fill="' + u1 + '" d="M72 36Q140 -34 208 36' + 'q-8.5-7-17 0'.repeat(8) + 'Z"/>'
+        + '<path class="h-upan" fill="' + u2 + '" d="M140 1Q120 18 123 36q8.5-7 17 0q8.5-7 17 0Q160 18 140 1Z"/><path class="h-ushaft" d="M140 1V-6"/></g>';
+      o.sky += '<g class="h-rain">' + [[14, 62], [30, 98], [12, 132], [182, 70], [192, 108], [176, 138]].map(([x, y], i) => '<path class="h-drop" style="animation-delay:' + (i * .23).toFixed(2) + 's" d="M' + x + ' ' + y + 'l-2 9"/>').join('') + '</g>';
+    }
+    if (has('coat')) {   // the lower body, cut to its outline: buttoned down the middle, two pockets; sleeves too
+      const id = 'ipsyFit' + (++fitN), shape = f.shape || '<path d="' + EGG + '"/>';
+      o.body += '<clipPath id="' + id + '">' + shape + '</clipPath><g class="h-coat" clip-path="url(#' + id + ')"><rect x="0" y="' + (who === 'octopus' ? 134 : 140) + '" width="200" height="66" fill="' + f.coat + '"/>'
+        + '<path class="h-cseam" d="M100 140V172M64 156h16M120 156h16"/><circle class="h-cbtn" cx="106" cy="150" r="2.6"/><circle class="h-cbtn" cx="106" cy="160" r="2.6"/></g>';
+      if (f.sleeves !== false) o.vars += ';--limb:' + f.coat;
+    }
+    if (has('scarf')) {   // round its neck, a striped end hanging down
+      const N = who === 'octopus' ? 132 : 136;
+      o.body += '<g class="h-scarf"><path fill="' + s1 + '" d="M56 ' + (N - 6) + 'Q100 ' + (N + 8) + ' 144 ' + (N - 6) + 'L146 ' + (N + 4) + 'Q100 ' + (N + 20) + ' 54 ' + (N + 4) + 'Z"/>'
+        + '<path fill="none" stroke="' + s2 + '" stroke-width="2.6" stroke-dasharray="7 6" d="M58 ' + (N - 1) + 'Q100 ' + (N + 14) + ' 144 ' + (N - 1) + '"/>'
+        + '<path fill="' + s1 + '" d="M116 ' + (N + 6) + 'L129 ' + (N + 5) + 'L133 ' + (N + 32) + 'L119 ' + (N + 34) + 'Z"/>'
+        + '<path fill="none" stroke="' + s2 + '" stroke-width="2.6" d="M117.5 ' + (N + 15) + 'L130.5 ' + (N + 14) + 'M118.6 ' + (N + 25) + 'L131.8 ' + (N + 24) + '"/></g>';
+    }
+    if (has('beanie')) {   // a woolly hat with a bobble
+      o.head += '<g class="h-beanie"><path fill="' + s1 + '" d="M64 ' + (T + 20) + 'C64 ' + (T - 18) + ' 136 ' + (T - 18) + ' 136 ' + (T + 20) + 'Z"/>'
+        + '<path fill="none" stroke="#000" stroke-opacity=".14" stroke-width="2" d="M82 ' + (T + 12) + 'Q82 ' + (T - 2) + ' 88 ' + (T - 6) + 'M100 ' + (T + 12) + 'V' + (T - 8) + 'M118 ' + (T + 12) + 'Q118 ' + (T - 2) + ' 112 ' + (T - 6) + '"/>'
+        + '<rect fill="' + s2 + '" x="62" y="' + (T + 10) + '" width="76" height="13" rx="6.5"/><circle fill="' + s2 + '" cx="100" cy="' + (T - 13) + '" r="9"/></g>';
+    }
+    if (has('sunhat')) {   // a straw beach hat, tipped, a flower in its band
+      o.head += '<g class="h-sunhat" transform="rotate(-7 100 ' + (T + 12) + ')"><ellipse class="h-straw" cx="100" cy="' + (T + 12) + '" rx="50" ry="10"/>'
+        + '<path class="h-straw" d="M74 ' + (T + 12) + 'C74 ' + (T - 16) + ' 126 ' + (T - 16) + ' 126 ' + (T + 12) + 'Z"/>'
+        + '<path class="h-hband" d="M75 ' + (T + 3) + 'Q100 ' + (T - 2) + ' 125 ' + (T + 3) + 'L126 ' + (T + 10) + 'Q100 ' + (T + 6) + ' 74 ' + (T + 10) + 'Z"/>'
+        + '<circle class="h-flower" cx="117" cy="' + (T + 5) + '" r="4.2"/><path class="h-weave" d="M58 ' + (T + 15) + 'Q100 ' + (T + 23) + ' 142 ' + (T + 15) + '"/></g>';
+    }
+    if (has('shades')) o.head += '<g class="h-shades"><rect x="74" y="96" width="24" height="16" rx="7"/><rect x="102" y="96" width="24" height="16" rx="7"/>'
+      + '<path class="h-sframe" d="M98 102q2-3 4 0M74 101l-8-3M126 101l8-3"/><path class="h-sglint" d="M79 100l5-2M107 100l5-2"/></g>';
+    return o;
+  }
   const MOODS = ['idle', 'listen', 'think', 'read', 'scan', 'write', 'show', 'talk', 'done'];
 
-  function charSvg(who) {
-    const c = HELPERS[who] || HELPERS.mia, lx = c.sh, sy = 120, rx = 200 - lx, hb = lx + 17.5;
+  function charSvg(who, wear) {
+    const c = HELPERS[who] || HELPERS.mia, o = outfit(who, wear), lx = c.sh, sy = 120, rx = 200 - lx, hb = lx + 17.5;
     // where the hands end up for each job (the arm's rest, turned: see the CSS)
     const mg = [f1(rx + 24.4), f1(sy + 13.5)], pn = [f1(rx - 22.5), f1(sy + 16.4)], pt = [f1(rx + 21), f1(sy - 18.3)];
     const pg = x => 'M' + x + ' 130Q' + f1((x + 100) / 2) + ' 126 100 132V158Q' + f1((x + 100) / 2) + ' 152 ' + x + ' 156Z';
@@ -165,14 +249,14 @@
       return '<g class="h-rig h-rig' + side + '" style="' + o + '"><g class="h-arm h-arm' + side + '" style="' + o + '"><path class="h-lim" d="M' + sx + ' ' + sy + 'Q' + (sx + d * 13) + ' ' + (sy + 11) + ' ' + hx + ' ' + hy + '"/><circle class="h-hand" cx="' + hx + '" cy="' + hy + '" r="7"/></g>';
     };
     const star = (x, y, s) => '<path class="h-star" style="transform-origin:' + x + 'px ' + y + 'px" d="M' + x + ' ' + (y - 10 * s) + 'l' + 2.5 * s + ' ' + 7.5 * s + ' ' + 7.5 * s + ' ' + 2.5 * s + '-' + 7.5 * s + ' ' + 2.5 * s + '-' + 2.5 * s + ' ' + 7.5 * s + '-' + 2.5 * s + '-' + 7.5 * s + '-' + 7.5 * s + '-' + 2.5 * s + ' ' + 7.5 * s + '-' + 2.5 * s + 'z"/>';
-    return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="' + who + '" style="' + c.vars + '">'
-      + '<ellipse class="h-shadow" cx="100" cy="182" rx="44" ry="6"/>'
+    return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="' + who + '"' + (o.wear ? ' data-wear="' + o.wear + '"' : '') + ' style="' + c.vars + o.vars + '">'
+      + '<ellipse class="h-shadow" cx="100" cy="182" rx="44" ry="6"/>' + o.sky
       + '<g class="h-pose"><g class="h-hop"><g class="h-bob"><g class="h-lean">'
-      + c.back + (c.feet === false ? '' : '<ellipse class="h-foot" cx="84" cy="168" rx="11" ry="6"/><ellipse class="h-foot" cx="116" cy="168" rx="11" ry="6"/>')
-      + c.body
+      + o.back + c.back + (c.feet === false ? '' : '<ellipse class="h-foot" cx="84" cy="168" rx="11" ry="6"/><ellipse class="h-foot" cx="116" cy="168" rx="11" ry="6"/>')
+      + c.body + o.body
       + '<g class="h-eyes"><g class="h-lids">' + eye(86) + eye(114) + '</g></g>'
       + '<path class="h-brow h-browL" d="M78 89Q85 85 92 88" style="transform-origin:85px 88px"/><path class="h-brow h-browR" d="M108 88Q115 85 122 89" style="transform-origin:115px 88px"/>'
-      + c.front
+      + c.front + o.head
       + '<g class="h-specs"><circle class="h-spec" cx="86" cy="104" r="12"/><circle class="h-spec" cx="114" cy="104" r="12"/><path class="h-bridge" d="M98 103q2-3 4 0M74 102l-8-3M126 102l8-3"/></g>'
       + '<g class="h-visor"><rect class="h-vband" x="70" y="96" width="60" height="15" rx="7.5"/><path class="h-vlight" d="M78 103.5h44"/></g>'
       + (c.smile === false ? '' : (c.cheeks === false ? '' : '<ellipse class="h-cheek" cx="72" cy="122" rx="7" ry="4"/><ellipse class="h-cheek" cx="128" cy="122" rx="7" ry="4"/>') + '<path class="h-smile" d="M93 123Q100 130 107 123"/>')
@@ -221,12 +305,21 @@
   const cells = new Set();
   let peekAt = Math.floor(Math.random() * WHO.length), peekT = 0;
   const looksAs = who => (LOOK() === 'grid' ? 'rider' : who);
+  let WEAR = wearing();   // what the helpers have on (wearing()), looked at again with the weather (refit)
   function drawChar(c, who) {
     if (!c.fixed) who = looksAs(who);
-    if (c.who === who) return;
-    c.who = who; c.host.innerHTML = charSvg(who); c.svg = c.host.firstChild;
+    if (c.who === who && c.wear === WEAR) return;
+    c.who = who; c.wear = WEAR; c.host.innerHTML = charSvg(who, WEAR); c.svg = c.host.firstChild;
     if (c.peeking) c.svg.classList.add('h-peek');
   }
+  function refit() {   // a new forecast, back on the page, or the hour turned: dressed again if the weather changed
+    const w = wearing(); if (w === WEAR) return;
+    WEAR = w; const h = helper();
+    cells.forEach(c => { if (!c.host.isConnected) { cells.delete(c); return; } drawChar(c, c.fixed ? c.who : h ? h.who : c.peek); });
+  }
+  addEventListener('storage', e => { if (/^wx\.(cache|here|places)$/.test(e.key || '')) refit(); });   // Weather (or aOS Home) got a forecast
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refit(); });
+  setInterval(() => { if (document.visibilityState === 'visible') refit(); }, 5 * 60e3);
   function addCell(host, o = {}) {   // a helper drawn in host (o.who: always that one)
     const h = helper();
     const c = { host, mood: 'idle', fixed: !!o.who, peek: WHO[peekIndex()], who: '' };
@@ -394,6 +487,19 @@
 .h-specs{opacity:0;transform:translateY(-40px);transition:transform .55s cubic-bezier(.3,1.5,.5,1),opacity .2s}
 .h-lens{fill:#DCEBE9;stroke:#1F6F6B;stroke-width:4} .h-handle{stroke:var(--line);stroke-width:5;stroke-linecap:round}
 .h-bubble{fill:#FFFDF7;stroke:var(--line);stroke-width:2} .h-star{fill:#D8572A} .h-wave{fill:none;stroke:#1F6F6B;stroke-width:3;stroke-linecap:round}
+/* dressed for the weather (outfit()): its own colours in every look; Ares's umbrella is black, lit red */
+.h-ushaft{fill:none;stroke:var(--line);stroke-width:3;stroke-linecap:round}
+.h-ucan,.h-upan{stroke:var(--line);stroke-width:2;stroke-linejoin:round}
+.h-drop{fill:none;stroke:#5B8FB0;stroke-width:2.4;stroke-linecap:round;opacity:0;animation:ipsyDrop 1.4s linear infinite}
+@keyframes ipsyDrop{0%{opacity:0;transform:translateY(-8px)}20%{opacity:.8}100%{opacity:0;transform:translateY(22px)}}
+.h-cseam{fill:none;stroke:#000;stroke-opacity:.28;stroke-width:2;stroke-linecap:round} .h-cbtn{fill:#000;fill-opacity:.35}
+.h-straw{fill:#EDCB7E;stroke:#B98A4A;stroke-width:1.6} .h-hband{fill:#D8572A} .h-flower{fill:#FFF7EC;stroke:#E3A72F;stroke-width:2.4}
+.h-weave{fill:none;stroke:#B98A4A;stroke-width:1.4;stroke-dasharray:3 4;opacity:.8}
+.h-shades rect{fill:#1E1B1A} .h-sframe{fill:none;stroke:#1E1B1A;stroke-width:3.2;stroke-linecap:round} .h-sglint{fill:none;stroke:#fff;stroke-opacity:.55;stroke-width:2;stroke-linecap:round}
+[data-mood="scan"] .h-shades{display:none}
+@media (prefers-reduced-motion:reduce){.h-drop{opacity:.6}}
+[data-who="rider"] .h-ucan,[data-who="rider"] .h-upan{fill:#0E0E10;stroke:#FF2A2A;filter:drop-shadow(0 0 2px #FF2A2A)} [data-who="rider"] .h-upan{fill:#141418}
+[data-who="rider"] .h-ushaft{stroke:#FF2A2A} [data-who="rider"] .h-drop{stroke:#FF8A8A}
 /* Tron: a lit visor */
 .h-visor{display:none}
 .ipsy-grid .h-visor{display:inline}
@@ -1274,5 +1380,5 @@
 
   // helper(): { who, name } or null; helpers: [{ id, kind }]; picker(host): pick and name it (aOS Account); cross(slot, d): across aOS Home's bar
   AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label })), name: helperName,
-    look: LOOK, settings: () => Object.keys(SETTINGS) };   // look(): 'vintage' | 'glass' | 'layers' | 'grid'
+    look: LOOK, settings: () => Object.keys(SETTINGS), wearing: () => WEAR, refit };   // look(): 'vintage' | 'glass' | 'layers' | 'grid'; wearing(): 'umbrella coat scarf'…
 })();
