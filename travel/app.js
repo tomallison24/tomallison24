@@ -50,8 +50,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore', family: KEY + '-family', who: KEY + '-who', people: KEY + '-people',
     calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
-    ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
+    ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut',
   };
+  // Inside aOS, reading Gmail (and the checks after it) count as an update under way: aOS doesn't put Travel away
+  // or start it again until it's done (../home/welcome.js AllisonOS.updating).
+  const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 400;              // messages read in one go at most
   const LOOKUPS_A_MONTH = 250;       // per phone; meant to stay inside AeroDataBox's free plan (README, "What I could not verify")
@@ -1086,6 +1089,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return;
     }
     st.scanning = true; scanErr = ''; render();
+    updating('gmail', true);
+    ls.set(K.cut, '1');   // until this read ends: one cut off (Travel closed, the phone) goes on as soon as Travel is back
     busyPill('Reading Gmail');
     const startedAt = Date.now();
     const rebuild = ls.get(K.queryV, '') !== QUERY_V;   // the reader changed: read the mail again once, and rebuild what the old reader made of it
@@ -1137,6 +1142,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         seen.add(m.id); read++;
         st.scanDone++;
         if (st.scanDone % 10 === 0) busyPill('Reading Gmail · ' + st.scanDone + ' of ' + st.scanTotal);
+        // kept as it goes, so a read cut off loses at most the last few (not while rebuilding: what it took out
+        // to make again is only put back at the end, so a half-made copy mustn't be kept)
+        if (!rebuild && st.scanDone % 25 === 0) { track(); persist(); saveSeen(); }
       });
       // A look that read the mail again after an update counts as done when (nearly) all of it came down; otherwise it is tried again.
       if (rebuild && failed > 3) scanErr = plural(failed, 'email') + ' could not be downloaded';
@@ -1151,6 +1159,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (!scanErr) { revive = new Set(); ls.del(K.revive); }
       saveScanLog(notes, { at: startedAt, ok: !scanErr, err: scanErr === 'auth' ? 'signed out' : scanErr, listed, read, failed, found, rebuilt: rebuild });
       st.scanning = false;
+      if (scanErr !== 'auth') ls.del(K.cut);   // cut off by a sign-in that ran out out of sight: renewed once Travel is on screen
+      updating('gmail', false);
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
       else if (scanErr) { busyPill(); if (loud) toast(scanErr); }
@@ -1168,7 +1178,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('scanBtn').onclick = () => scan({ loud: true });
   // Due every half hour, and straight away once the search has widened.
-  const scanDue = () => ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
+  const scanDue = () => !!ls.get(K.cut, '') || ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
   // ---------------------------------------------------------------------
   // Live flight status (travel/api/flight, a Cloudflare Pages Function). Travel's route, named from
@@ -1750,7 +1760,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. Asked once first, from Ipsy's
   // corner; Settings > Smart help turns it on or off. What it fills in is marked Check (To check), with Undo in Ipsy's chat.
   let autoBusy = false, autoOffered = false;
-  async function ipsyAutoCheck() {
+  async function ipsyAutoCheck() { updating('check', true); try { await ipsyAutoCheckNow(); } finally { updating('check', false); } }
+  async function ipsyAutoCheckNow() {
     if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken()) return;
     const mode = ls.get(K.ipsyAuto, '');
     if (mode === '0') return;
@@ -1943,7 +1954,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // After a read of Gmail, when the app opens, and after an edit: the cheap steps first.
   let smartBusy = false;
-  async function smartPass() {
+  async function smartPass() { updating('smart', true); try { await smartPassNow(); } finally { updating('smart', false); } }
+  async function smartPassNow() {
     if (smartBusy) return;
     smartBusy = true;
     try {
@@ -2271,6 +2283,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (getToken() && scanDue()) scan();
     alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
     render();
+  });
+  // back on screen inside aOS, after another app: a read cut off out of sight goes on (its sign-in renewed if it ran out)
+  addEventListener('aos:shown', () => {
+    if (getToken() && scanDue()) scan();
+    else if (!getToken() && ls.get(K.cut, '') && mayRenew()) signIn({ silent: true });
   });
   window.addEventListener('online', () => sync());
   addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync()); else { syncState = 'signin'; renderSyncStatus(); } });

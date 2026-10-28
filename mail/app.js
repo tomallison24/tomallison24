@@ -880,7 +880,12 @@ async function markRead(item) {
 
 // Everything in the bucket older than the cut-off goes to the Trash, which
 // Gmail empties for good after 30 days.
-async function sweep() {
+// Inside aOS, the long jobs below (the bucket's clean-up, Tidy, the marketing sort) count as an update under way: aOS
+// doesn't put Mail away or start it again until they're done (../home/welcome.js AllisonOS.updating).
+const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
+const during = (task, fn) => async (...a) => { updating(task, true); try { return await fn(...a); } finally { updating(task, false); } };
+const sweep = during('sweep', sweepNow);
+async function sweepNow() {
   const label = await labelNamed(settings.label);
   let done = 0;
   if (label) {
@@ -1271,7 +1276,8 @@ async function untidy(back) {
 }
 
 // Once a day, when Tidy is on, as the app opens.
-async function tidyDaily() {
+const tidyDaily = during('tidy', tidyDailyNow);
+async function tidyDailyNow() {
   if (!tidyOn() || Date.now() - Number(ls.get(K.tidied, 0)) < TIDY_EVERY || bgSlowed()) return;
   ls.set(K.tidied, String(Date.now()));          // one try a day, even if it fails part-way
   const plan = await tidyPlan({ limit: TIDY_DAILY, maxWaits: 1, yieldToUser: true });
@@ -1374,7 +1380,8 @@ async function marketingSort({ progress, alive = () => true } = {}) {
 }
 
 // As the app opens, and when it comes back after a while.
-async function sortMarketingNow({ force } = {}) {
+const sortMarketingNow = during('marketing', sortMarketing);
+async function sortMarketing({ force } = {}) {
   if (!mktSortOn() || mktRunning || bgSlowed() || !getToken()) return;
   if (!force && Date.now() - Number(ls.get(K.mktSorted, 0)) < MKT_EVERY) return;
   let shown = false;

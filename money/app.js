@@ -65,7 +65,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
-  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open' };
+  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open', cut: KEY + '-scan-cut' };
+  // Inside aOS, reading Gmail, sending it to the family's copy and the daily check count as an update under way: aOS
+  // doesn't put Money away or start it again until it's done (../home/welcome.js AllisonOS.updating).
+  const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
+  // due: an hour since the last read, or one was cut off (Money closed, the phone): it goes on as soon as Money is back
+  const scanDue = () => !!ls.get(K.cut, '') || Date.now() - D.lastScan > H;
   const FIRST_SCAN = 'newer_than:5y';   // as much as Money keeps (calc.js, KEEP_MONTHS)
   const API = '../money/api/';
 
@@ -579,7 +584,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const emailText = b => { const t = b.html ? P.htmlText(b.html) : P.decode(b.text || ''); const k = t.search(/If you have any questions|This email was sent to|You can update your\s+notification/i); return (k > 0 ? t.slice(0, k) : t).slice(0, 1500); };
   // Once a day, on the reader's phone: this month's transactions not checked yet, 20 to a call (POST check).
   const checkOn = () => ls.get(K.checkOff, '') !== '1';
-  async function dailyCheck({ loud } = {}) {
+  async function dailyCheck(o) { updating('check', true); try { return await dailyCheckNow(o); } finally { updating('check', false); } }
+  async function dailyCheckNow({ loud } = {}) {
     if (st.checking || !signedIn() || !st.server || !st.server.reader || !getToken()) { if (loud) toast(!getToken() ? 'Connect Gmail first, so Ipsy can read the emails.' : 'Only the phone that reads Monarch’s emails can check them.'); return; }
     if (!loud && (!checkOn() || D.checkDay === today())) return;
     const todo = C.toCheck(D.tx, today());
@@ -824,6 +830,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return;
     }
     st.reading = true; render();
+    updating('gmail', true); ls.set(K.cut, '1');
+    let signedOut = false;
     busyPill('Reading Gmail');
     if (again) { D.seen = []; D.lastScan = 0; }
     const started = Date.now();
@@ -879,12 +887,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (loud && !added && !alerts && !failed) toast('Nothing new from Monarch.');
     } catch (err) {
       busyPill(null);
+      signedOut = err instanceof AuthError;
       if (err instanceof AuthError) { if (mayRenew()) signIn({ silent: true }); else if (loud) toast('Gmail needs you to sign in again: Settings, Connect Gmail.', null, 6000); }
       else if (loud) toast(err.message || 'Couldn’t read Gmail.', null, 6000);
     } finally {
       st.reading = false; render(); if (!$('setSheet').hidden) renderSettings();
+      if (!signedOut) ls.del(K.cut);   // cut off by a sign-in that ran out out of sight: renewed once Money is on screen
     }
-    if (signedIn()) sync().then(() => dailyCheck());
+    if (signedIn()) sync().then(() => dailyCheck()).finally(() => updating('gmail', false));   // still part of the update
+    else updating('gmail', false);
   }
 
   // ---------------------------------------------------------------------
@@ -1206,7 +1217,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     // The family's copy first (it says whether this phone reads Gmail), then Gmail: always after a
     // sign-in, else when it's been over an hour.
     (signedIn() ? sync() : Promise.resolve()).then(() => {
-      if (getToken() && (back && back.ok || Date.now() - D.lastScan > H)) scan({ loud: !!(back && back.ok) });
+      if (getToken() && (back && back.ok || scanDue())) scan({ loud: !!(back && back.ok) });
       else if (getToken()) dailyCheck();
       else if (!getToken() && mayRenew() && mayRead() && Date.now() - D.lastScan > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
     });
@@ -1217,7 +1228,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (document.visibilityState !== 'visible') return;
     if (curYm() !== shown) { if (st.ym === shown) st.ym = curYm(); shown = curYm(); }
     render();
-    sync().then(() => { if (getToken() && Date.now() - D.lastScan > H) scan(); else if (getToken()) dailyCheck(); });
+    sync().then(() => { if (getToken() && scanDue()) scan(); else if (getToken()) dailyCheck(); });
+  });
+  // back on screen inside aOS, after another app: a read cut off out of sight goes on (its sign-in renewed if it ran out)
+  addEventListener('aos:shown', () => {
+    if (getToken() && scanDue()) scan();
+    else if (!getToken() && ls.get(K.cut, '') && mayRenew() && mayRead()) signIn({ silent: true });
   });
   window.addEventListener('online', () => sync());
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

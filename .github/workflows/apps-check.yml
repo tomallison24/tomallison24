@@ -174,13 +174,14 @@ jobs:
               notes/scripts/ipsy-test.mjs
               mail/scripts/design-test.mjs
               money/scripts/app-test.mjs
-          # Notes; Ipsy in Meals; Fitness's Meds and Steps; home/design.js
+          # Notes; Ipsy in Meals; Fitness's Meds and Steps; home/design.js; an update isn't cut off by moving between apps
           - group: notes
             tests: |
               notes/scripts/app-test.mjs
               meals/scripts/ipsy-test.mjs
               fitness/scripts/meds-steps-test.mjs
               aOS/scripts/design-test.mjs
+              aOS/scripts/updating-test.mjs
           # Meals, Podcasts; aOS's look; Android
           - group: meals-podcasts
             tests: |

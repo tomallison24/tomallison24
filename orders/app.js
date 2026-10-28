@@ -56,8 +56,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', log: KEY + '-log', logSeed: KEY + '-log-seed',
     family: KEY + '-family', notMine: KEY + '-not-mine',
     aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
-    cleanup: KEY + '-cleanup-5d',
+    cleanup: KEY + '-cleanup-5d', cut: KEY + '-scan-cut',
   };
+  // Inside aOS, reading Gmail (and Ipsy's checks after it) count as an update under way: aOS doesn't put Orders away
+  // or start it again until it's done (../home/welcome.js AllisonOS.updating).
+  const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
   const FIRST_SCAN = 'newer_than:1y';
   const MAX_SCAN = 500;              // messages read in one go at most; the rest follow straight away
   const CLEANUP_DAYS = 5;            // the one-off clean-up marks open orders nothing has been heard about for longer than this as received
@@ -896,7 +899,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   let autoBusy = false, autoOffered = false;     // offered once each time Orders opens
   const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy', 'ai-budget'];
   const when = o => (o.source && o.source.date) || 0;
-  async function autoCheck() {
+  async function autoCheck() { updating('check', true); try { await autoCheckNow(); } finally { updating('check', false); } }
+  async function autoCheckNow() {
     if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken()) return;
     const tried = new Set(ls.json(K.ipsyTried, []));
     const todo = orders.filter(o => !o.private && !o.hide && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
@@ -1204,14 +1208,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const header = (m, name) => ((m.payload && m.payload.headers) || []).find(h => h.name.toLowerCase() === name)?.value || '';
 
   let scanErr = '';
-  async function scan({ loud } = {}) {
-    if (st.scanning) return;
+  async function scan({ loud, next } = {}) {   // next: the next batch of a long read, which is still the same update
+    if (st.scanning) { if (next) updating('gmail', false); return; }
     if (!getToken()) {
+      if (next) updating('gmail', false);   // the next batch of a long read, with the sign-in run out
       if (mayRenew()) { signIn({ silent: true }); return; }
       if (loud) openSettings();
       return;
     }
     st.scanning = true; scanErr = ''; render();
+    if (!next) updating('gmail', true);
+    ls.set(K.cut, '1');   // until this read ends: one cut off (Orders closed, the phone) goes on as soon as Orders is back
     busyPill('Reading Gmail');
     // The first sync of this session goes first, so an email read now folds into your own copy of its
     // order from the Sheet (with your edits) rather than starting a new one.
@@ -1261,6 +1268,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         seen.add(m.id); read++;
         st.scanDone++;
         if (st.scanDone % 10 === 0) busyPill('Reading Gmail · ' + st.scanDone + ' of ' + st.scanTotal);
+        if (st.scanDone % 25 === 0) { track(); persist(); saveSeen(); }   // kept as it goes: a read cut off loses at most the last few
       });
       if (!more) { ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V); ls.set(K.returnsV, RETURNS_V); }
     } catch (e) {
@@ -1269,10 +1277,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       saveSeen(); save(); revive = new Set();
       if (!scanErr && !more) { cleanupOnce(); setTimeout(autoCheck, 600); }
       st.scanning = false;
+      if (scanErr !== 'auth') ls.del(K.cut);   // cut off by a sign-in that ran out out of sight: renewed once Orders is on screen
+      if (scanErr || !more) updating('gmail', false);   // else it goes on with the next batch, still on
       render();
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
       else if (scanErr) { busyPill(); if (loud) toast(scanErr); }
-      else if (more) { busyPill('Reading Gmail · more to read'); setTimeout(() => scan({ loud: false }), 400); }
+      else if (more) { busyPill('Reading Gmail · more to read'); setTimeout(() => scan({ loud: false, next: true }), 400); }
       else {
         const bits = [];
         if (added) bits.push(plural(added, 'new order'));
@@ -1284,7 +1294,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('scanBtn').onclick = () => scan({ loud: true });
   // Due every half hour, and straight away once the search has widened.
-  const scanDue = () => ls.get(K.queryV, '') !== QUERY_V || ls.get(K.returnsV, '') !== RETURNS_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
+  const scanDue = () => !!ls.get(K.cut, '') || ls.get(K.queryV, '') !== QUERY_V || ls.get(K.returnsV, '') !== RETURNS_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
   // ---------------------------------------------------------------------
   // Settings
@@ -1569,6 +1579,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (Date.now() - lastSyncAt > 30000) sync();
     if (getToken() && scanDue()) scan();
     render();
+  });
+  // back on screen inside aOS, after another app: a read cut off out of sight goes on (its sign-in renewed if it ran out)
+  addEventListener('aos:shown', () => {
+    if (getToken() && scanDue()) scan();
+    else if (!getToken() && ls.get(K.cut, '') && mayRenew()) signIn({ silent: true });
   });
   window.addEventListener('online', () => sync());
   addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync()); else renderSub(); });
