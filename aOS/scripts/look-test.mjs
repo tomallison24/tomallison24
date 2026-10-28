@@ -472,5 +472,70 @@ for (const scheme of ['light', 'dark']) {
   report('Vintage\'s Sunrise intro: the sky, "aOS" and a greeting by the clock, the sun into aOS\'s disc; once a launch, Account\'s Sound, Silent, Off and Play', pr);
 }
 
+// 12. Sea glass's intro, Tide (aOS/glass-intro.js): aOS opens with the waves coming in and "aOS" with a greeting by the
+// clock, then "aOS" glides up onto the small "aOS" at the top of the page; once a launch; Sound, Silent or Off and Play in
+// Account (in Sea glass only); and none for a browser test that didn't ask for it, or in another look
+{
+  const pr = [];
+  const launch = async (seed, o = {}) => {
+    const c = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: o.scheme || 'light', reducedMotion: o.still ? 'reduce' : 'no-preference' });
+    await c.addInitScript(s => { try { localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); localStorage.setItem('aos.session', JSON.stringify({ t: 'x' })); sessionStorage.setItem('aos.later.aos', '1');
+      for (const k in s) if (!localStorage.getItem('seeded.' + k)) { localStorage.setItem(k, s[k]); localStorage.setItem('seeded.' + k, '1'); } } catch {}
+      window.__gi = {}; new MutationObserver(() => { const e = document.getElementById('glassIntro'); if (!e) return; const v = window.__gi; v.shown = true;
+        v.name = (e.querySelector('.gi-name') || {}).textContent; v.hi = (e.querySelector('.gi-hi') || {}).textContent; if (e.classList.contains('lost')) v.lost = true;
+        if (e.classList.contains('home') && !v.home) setTimeout(() => { const n = e.querySelector('.gi-name').getBoundingClientRect(), m = document.querySelector('.tab:not([hidden]) .head .mark'), r = document.createRange(); r.selectNodeContents(m); const d = r.getBoundingClientRect();
+          v.home = { dx: Math.round(n.left - d.left), dy: Math.round((n.top + n.height / 2) - (d.top + d.height / 2)), w: Math.round(n.width - d.width) }; }, 700); })
+        .observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }, seed);
+    await c.route('**/*', r => { const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort(); return u.pathname.startsWith('/aOS/api/') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{"storage":true,"setup":true,"user":{"id":"u1","name":"Sarah","role":"member","apps":{}}}' }) : r.continue(); });
+    const p = await c.newPage(); p.on('pageerror', e => pr.push('script error: ' + e.message)); await p.goto(BASE + '/aOS/');
+    return { c, p };
+  };
+  // a browser test in Sea glass that didn't pick it: no intro (many open aOS in Sea glass)
+  { const { c, p } = await launch({ 'aos.look': 'glass' }); await p.waitForTimeout(400);
+    if ((await p.evaluate(() => window.__gi)).shown) pr.push('the intro played for a browser test that did not ask for it'); await c.close(); }
+  // Sound picked: the intro, its greeting, and "aOS" onto the page's own as it ends
+  const { c, p } = await launch({ 'aos.look': 'glass', 'aos.glass.intro': 'sound' });
+  await p.waitForTimeout(200);
+  let v = await p.evaluate(() => ({ ...window.__gi, want: aosGlassIntro.greeting() }));
+  if (!v.shown || v.name !== 'aOS' || v.hi !== v.want) pr.push('aOS did not open with the Tide intro: ' + JSON.stringify(v));
+  await p.waitForFunction(() => !document.getElementById('glassIntro'), null, { timeout: 6000 }).catch(() => pr.push('the intro did not end by itself'));
+  v = await p.evaluate(() => window.__gi);
+  if (!v.home || v.lost || Math.abs(v.home.dx) > 2 || Math.abs(v.home.dy) > 2 || Math.abs(v.home.w) > 2) pr.push('"aOS" did not land on the page\'s own: ' + JSON.stringify(v));
+  const g = await p.evaluate(() => [7, 12, 17, 18, 23].map(h => aosGlassIntro.greeting(new Date(2026, 9, 27, h, 30))));
+  if (g.join() !== 'Good morning,Good afternoon,Good afternoon,Good evening,Good evening') pr.push('the greeting: ' + g);
+  // once a launch
+  await p.reload(); await p.waitForTimeout(300);
+  if ((await p.evaluate(() => window.__gi)).shown) pr.push('the intro played again on a reload');
+  // Account, in Sea glass: Sound picked, Play plays it (with its sound), Skip ends it, Off stops it on the next launch
+  await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
+  await openLook(p);
+  if (!(await p.isVisible('#glassIntroPick [data-gi="sound"][aria-pressed="true"]'))) pr.push('Account has no Tide intro setting, Sound picked');
+  if (await p.isVisible('#vintageIntroPick') || await p.isVisible('#tronIntroPick')) pr.push('Account shows another look\'s intro setting in Sea glass');
+  await p.click('[data-giplay]');
+  await p.waitForSelector('#glassIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
+  await p.click('#glassIntro:not(.out) .gi-skip', { timeout: 3000 }).catch(() => pr.push('no Skip on the intro'));
+  await p.waitForFunction(() => !document.getElementById('glassIntro'), null, { timeout: 2000 }).catch(() => pr.push('Skip did not end the intro'));
+  await p.click('[data-gi="off"]');
+  if (await p.evaluate(() => localStorage.getItem('aos.glass.intro')) !== 'off') pr.push('Off was not kept');
+  const p2 = await c.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
+  if (await p2.evaluate(() => !!document.getElementById('glassIntro'))) pr.push('the intro played with Off picked');
+  await c.close();
+  // in Dark, Silent: the dark water, and no sound
+  { const { c, p } = await launch({ 'aos.look': 'glass', 'aos.glass.intro': 'silent' }, { scheme: 'dark' }); await p.waitForTimeout(1500);
+    const n = await p.evaluate(() => { const e = document.getElementById('glassIntro'); return e && { wave: getComputedStyle(e.querySelector('.gi-wave svg')).fill, sound: e.dataset.sound || '' }; });
+    if (!n || !/^rgba\(78, 95, 134/.test(n.wave)) pr.push('the intro in Dark: ' + JSON.stringify(n));
+    if (n && n.sound) pr.push('Silent played its sound');
+    await c.close(); }
+  // Vintage: not this intro
+  { const { c, p } = await launch({ 'aos.look': 'vintage', 'aos.glass.intro': 'sound' }); await p.waitForTimeout(400);
+    if ((await p.evaluate(() => window.__gi)).shown) pr.push('the Tide intro played in Vintage'); await c.close(); }
+  // Reduce Motion: a short fade, and still gone in time
+  { const { c, p } = await launch({ 'aos.look': 'glass', 'aos.glass.intro': 'silent' }, { still: true }); await p.waitForTimeout(200);
+    if (!(await p.evaluate(() => window.__gi)).shown) pr.push('no intro with Reduce Motion');
+    await p.waitForFunction(() => !document.getElementById('glassIntro'), null, { timeout: 4000 }).catch(() => pr.push('with Reduce Motion, the intro did not end within 4 seconds'));
+    await c.close(); }
+  report('Sea glass\'s Tide intro: the waves, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
+}
+
 await b.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed'); process.exit(failed ? 1 : 0);

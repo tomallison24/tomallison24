@@ -425,10 +425,21 @@
   .wid.cal b { display: block; margin-top: 2px; font-size: 18px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wid.cal small { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* the morning brief and the next trip, on Home: a widget card each (aOS/home-tab.js paintBrief) */
-  #hbrief { display: grid; gap: 10px; margin: 2px 0 14px; }
+  #hbrief { display: grid; gap: 10px; margin: 14px 0; }
   #hbrief:empty { display: none; }
-  .wid.brief { padding: 12px 8px 8px; }
-  .wid.brief > em, .wid.trip > em { display: block; padding: 0 8px 4px; font-style: normal; font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .wid.brief { padding: 4px 8px; }
+  .wid.brief.open { padding-bottom: 8px; }
+  .wid.brief .bhead { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 8px; text-align: left; }
+  .wid.brief .bhead em { flex: 1; font-style: normal; font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .wid.brief .bsum { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+  .wid.brief .bsum img { width: 20px; height: 20px; border-radius: 6px; }
+  .wid.brief .bsum b { margin-left: 4px; font-weight: 600; white-space: nowrap; }
+  .wid.brief .bsum svg { width: 16px; height: 16px; transition: transform .25s; }
+  .wid.brief.open .bsum svg { transform: rotate(180deg); }
+  .wid.brief.open .bsum img { display: none; }
+  .wid.brief .blines { width: 100%; }
+  .wid.brief:not(.open) .blines { display: none; }
+  .wid.trip > em { display: block; padding: 0 8px 4px; font-style: normal; font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
   .wid.brief .bl { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 14px; font-size: 15px; line-height: 1.3; text-align: left; }
   .wid.brief .bl img { flex: none; width: 24px; height: 24px; border-radius: 7px; }
   .wid.brief .bl span { min-width: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -552,6 +563,7 @@
 
 html:not([data-look="grid"]) .tronnote{display:none}   /* Tron is dark only: said under Light or dark */
 html:not([data-look="vintage"]) .vintnote{display:none}   /* Vintage's Sunrise intro: its setting, in Vintage only */
+html:not([data-look="glass"]) .glassnote{display:none}   /* Sea glass's Tide intro: its setting, in Sea glass only */
 /* Tron: the Weather widget as a car-screen card (dark, a red edge, the identity disc), not a block of colour */
 html[data-look="grid"] .wid.wx{background:#121215;color:#F1F3F5;box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.42),0 0 14px rgba(255,42,42,.12)}
 html[data-look="grid"] .wid.wx small{color:#A3A8B0}
@@ -863,6 +875,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="tron-shots.js" defer></script>   <!-- in Tron, now and then a shot from the screen's trail round a section or widget on Home -->
 <script src="../home/sky.js"></script>   <!-- the Vintage sky (day and night backgrounds), when the look is Vintage -->
 <script src="vintage-intro.js"></script>   <!-- in Vintage, Sunrise: a short intro with its sound as aOS opens (after sky.js: it uses the sky's colours) -->
+<script src="glass-intro.js"></script>   <!-- in Sea glass, Tide: a short intro with its sound as aOS opens -->
 </head>
 <body>
 <main id="scroller">
