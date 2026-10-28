@@ -1532,8 +1532,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (!P.realDates(q.text, q.date).length) miss = miss.filter(m => m !== 'date' && m !== 'checkOut');
       const ask = [...new Set(miss.map(m => map[m]).filter(Boolean))];
       if (!ask.length) { out.nothing++; out.done.add(q.bid); continue; }
+      // email addresses, phone, card and account numbers stay on the phone (home/redact.js): placeholders go, the real ones come back
+      const M = (window.AllisonOS && AllisonOS.redact ? AllisonOS.redact.make() : { hide: x => x, show: x => x });
       const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
-        body: JSON.stringify({ type: b.type, missing: ask, known: knownFor(b), text: q.text.slice(0, 8000), subject: q.subject, emailDate: new Date(q.date).toISOString() }) };
+        body: JSON.stringify({ type: b.type, missing: ask, known: knownFor(b), text: M.hide(q.text.slice(0, 8000)), subject: M.hide(q.subject), emailDate: new Date(q.date).toISOString() }) };
       out.asked++;
       let res, d = null;
       try {
@@ -1548,7 +1550,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (d.error === 'too-big') { out.unread++; continue; }      // the server would not take the email: not read, said so (below), not asked again
       const before = JSON.parse(JSON.stringify(b)), had = Object.keys(b.filled || {}).length;
       if (d.ok) noteModel('check', d.model);
-      if (d.ok && applyAi(b, d.fields || {})) {
+      if (d.ok && applyAi(b, M.show(d.fields || {}))) {
         changed = true; out.filled += Math.max(1, Object.keys(b.filled || {}).length - had);
         out.changes.push({ id: b.id, before, after: sameAs(b) });
       }

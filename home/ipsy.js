@@ -75,6 +75,8 @@
   const MAX_STEPS = 24;                 // model calls for one question, at most
   const MAX_CHAT = 950 * 1024;          // a conversation bigger than this is full (the route takes 1 MB)
   const MAX_RESULT = 40000;             // characters of one tool result
+  // said under every app's own consent words, the first time Ipsy opens there
+  const KEPT_HERE = 'Email addresses, phone numbers, and card, account and ID numbers stay on your phone: Claude gets placeholders.';
 
   const DEG = Math.PI / 180;
   // ---------------------------------------------------------------------------
@@ -814,7 +816,7 @@
     addStyle();
     // the app's tools, for Ipsy in aOS: aOS opens the app out of sight and runs them there (aOS/home-tab.js)
     AOS.ipsy.mounted = { app: o.app, name: o.name, tools: o.tools || {}, label: o.label, context: o.context };
-    const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok', hist: 'ipsy.' + o.app + '.history', closed: 'ipsy.' + o.app + '.closed' };
+    const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok', hist: 'ipsy.' + o.app + '.history', closed: 'ipsy.' + o.app + '.closed', masks: 'ipsy.' + o.app + '.masks' };
     const BUILT_IN = {
       ...settingsTools(o, () => close()),   // the settings Ipsy may change or show (above)
     };
@@ -822,6 +824,13 @@
     let showing = false;                  // the list of recent chats is on screen instead of the chat
     const asks = new Map();               // questions waiting on a Yes or No: id -> resolve
     try { const saved = JSON.parse(ls.get(K.chat, 'null')); if (saved && Array.isArray(saved.messages) && Array.isArray(saved.view)) { messages = saved.messages; view = saved.view; } } catch {}
+    // Personal details stay on the phone (home/redact.js): what the app hands Claude (its tools' results, its context)
+    // goes with email addresses, phone numbers, card, account and ID numbers as placeholders; what Claude hands back
+    // (a tool to run, its answer) has the real ones put back here. One set for the app, kept on this phone only, so a
+    // chat brought back from Recent still shows them.
+    const M = (() => { let saved = null; try { saved = JSON.parse(ls.get(K.masks, 'null')); } catch {} return AOS.redact ? AOS.redact.make(saved) : { hide: x => x, show: x => x, saved: () => ({}), size: 0 }; })();
+    let maskN = M.size;
+    const keepMasks = () => { if (M.size !== maskN && ls.set(K.masks, JSON.stringify(M.saved()))) maskN = M.size; };
 
     // The button
     const btn = document.createElement('button');
@@ -990,7 +999,7 @@
         }
         h = '<div class="ipsy-empty">' + (o.intro === '' ? '' : '<p>' + esc(o.intro || 'Hi! Ask me anything.') + '</p>')
           + (ok ? '<div class="ipsy-chips">' + (o.suggestions || []).map(s => '<button class="ipsy-chip" type="button" data-ask="' + esc(s) + '">' + esc(s) + '</button>').join('') + '</div>'
-            : '<div class="ipsy-consent"><p>' + esc(o.consent || '') + '</p><button class="ipsy-chip" type="button" id="ipsyOk">OK, let’s go</button></div>') + '</div>';
+            : '<div class="ipsy-consent"><p>' + esc(o.consent || '') + ' ' + esc(KEPT_HERE) + '</p><button class="ipsy-chip" type="button" id="ipsyOk">OK, let’s go</button></div>') + '</div>';
       }
       h += view.map(item).join('');
       log.innerHTML = h; bindPick();
@@ -1067,22 +1076,22 @@
       const fn = BUILT_IN[u.name] || (o.tools && o.tools[u.name]);
       if (!fn) return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: 'No such tool here.' };
       try {
-        const res = await fn(u.input || {}, { confirm }) || {};
+        const res = await fn(M.show(u.input || {}), { confirm }) || {};
         if (res.change && res.change.text) {
           const id = uid('c');
           if (typeof res.change.undo === 'function') undos.set(id, res.change.undo);
           add({ t: 'change', id, text: res.change.text });
         }
-        let text = typeof res.content === 'string' ? res.content : JSON.stringify(res.content == null ? { ok: true } : res.content);
+        let text = M.hide(typeof res.content === 'string' ? res.content : JSON.stringify(res.content == null ? { ok: true } : res.content));
         if (text.length > MAX_RESULT) text = text.slice(0, MAX_RESULT) + '\n[cut off here: ask for less at a time]';
         return { type: 'tool_result', tool_use_id: u.id, content: text, ...(res.error ? { is_error: true } : {}) };
       } catch (err) {
-        return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: String(err && err.message || err).slice(0, 500) };
+        return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: M.hide(String(err && err.message || err)).slice(0, 500) };
       }
     }
     // Claude's words, with the web pages it cited.
     function words(content) {
-      const text = content.filter(b => b.type === 'text').map(b => b.text).join('').trim();
+      const text = M.show(content.filter(b => b.type === 'text').map(b => b.text).join('').trim());   // the real details back, on screen
       const src = [], seen = new Set();
       content.forEach(b => (b.type === 'text' && Array.isArray(b.citations) ? b.citations : []).forEach(c => {
         if (c && c.url && /^https?:/.test(c.url) && !seen.has(c.url) && src.length < 4) { seen.add(c.url); src.push({ url: c.url, title: String(c.title || '').slice(0, 60) }); }
@@ -1109,6 +1118,8 @@
       const d = new Date(), p = n => String(n).padStart(2, '0');
       return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + ' (' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ')';
     };
+    // Told to Claude with every question: what the placeholders are, so it uses them as they are.
+    const PLACEHOLDERS = ' Personal details in what the app gives you (email addresses, phone numbers, card, account and ID numbers) are placeholders such as [email-1], [phone-2] or [card-1 ending 4242]: the real ones stay on the phone. Use a placeholder exactly as it is wherever you need that detail (in a tool, in your answer): the phone puts the real one back. Never ask for the real one, and never search the web for a placeholder.';
     const ACT_WEB = { web_search: i => 'Searching the web' + (i && i.query ? ': ' + i.query : ''), web_fetch: i => 'Reading ' + (i && i.url ? String(i.url).replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : 'a web page') };
 
     async function submit() {
@@ -1117,9 +1128,9 @@
       input.value = ''; input.style.height = '';
       busy = true; sendBtn.disabled = true;
       const mark = messages.length;          // where this question starts, to go back to if it fails
-      let ctx = ''; try { ctx = o.context ? o.context() : ''; } catch {}
+      let ctx = ''; try { ctx = M.hide(o.context ? o.context() : ''); } catch {}
       const me = helper(), tron = LOOK() === 'grid', who = tron ? ' You are this person’s helper, named Ares, drawn as ' + HELPERS.rider.kind + '.' : me ? ' You are this person’s helper, ' + (me.name.trim() ? 'named ' + me.name.trim() + ', ' : '') + 'drawn as ' + HELPERS[me.who].kind + '.' : '';
-      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + who + ']' }, { type: 'text', text }] });
+      messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + who + PLACEHOLDERS + ']' }, { type: 'text', text }] });
       add({ t: 'me', text });
       let failed = null;
       try {
@@ -1131,18 +1142,18 @@
           const content = Array.isArray(res.content) ? res.content : [];
           if (!content.length) throw Object.assign(new Error('empty'), { code: 'server' });
           messages.push({ role: 'assistant', content });
-          content.forEach(b => { if (b.type === 'server_tool_use' && ACT_WEB[b.name]) add({ t: 'act', text: ACT_WEB[b.name](b.input) }); });
+          content.forEach(b => { if (b.type === 'server_tool_use' && ACT_WEB[b.name]) add({ t: 'act', text: M.show(ACT_WEB[b.name](b.input)) }); });
           const w = words(content);
           const uses = content.filter(b => b.type === 'tool_use');
           if (w.text) await reveal({ t: 'it', text: w.text, src: w.src });
           if (res.stop_reason === 'pause_turn') continue;                    // Anthropic paused a long search: carry on
           if (res.stop_reason === 'tool_use' && uses.length) {
-            uses.forEach(u => { const l = BUILT_LABEL[u.name] || (o.label ? o.label(u.name, u.input || {}) : ''); if (l) add({ t: 'act', text: l }); });
+            uses.forEach(u => { const l = BUILT_LABEL[u.name] || (o.label ? o.label(u.name, M.show(u.input || {})) : ''); if (l) add({ t: 'act', text: l }); });
             const results = [], changes = view.filter(v => v.t === 'change').length;
             for (const u of uses) { const job = jobOf(u.name); mood(job); say(doing(job)); results.push(await runTool(u)); }   // one at a time: they share the app's data
             if (view.filter(v => v.t === 'change').length > changes) { mood('done'); say(doing('done')); }   // a change saved: a hop while Claude carries on
             messages.push({ role: 'user', content: results });
-            persist();
+            keepMasks(); persist();
             continue;
           }
           if (res.stop_reason === 'max_tokens' && !w.text) throw Object.assign(new Error('server'), { code: 'server' });
@@ -1160,7 +1171,7 @@
         add({ t: 'err', text: code === 'ai-budget' ? AOS.budgetSay(failed.until) : ERRORS[code] || ('Something went wrong' + (failed.why ? ': ' + failed.why : '') + '. Try again in a minute.') });
         if (code === 'full') { /* nothing more to say */ }
       }
-      busy = false; persist(); mood(document.activeElement === input ? 'listen' : 'idle'); say(''); draw();
+      busy = false; keepMasks(); persist(); mood(document.activeElement === input ? 'listen' : 'idle'); say(''); draw();
       if (afterReply.length) { const run = afterReply.splice(0); setTimeout(() => run.forEach(f => f()), 1600); }   // after the answer has been read
     }
 
