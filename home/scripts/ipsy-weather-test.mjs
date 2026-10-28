@@ -4,7 +4,9 @@
 //     freeze: a woolly hat too; a warm sunny day: a sun hat and sunglasses, but not after dark;
 //   - no forecast, or one over 12 hours old: dressed as usual; an older one (2 hours): the hour for now;
 //   - a new forecast from another app or frame (a storage event): dressed again at once;
-//   - Tron: Ares keeps his suit, with an umbrella in the rain; the picker's helpers are as they are.
+//   - Tron: Ares keeps his suit, with an umbrella in the rain; the picker's helpers are as they are;
+//   - turned off (aOS > Account > Your helper, or Ipsy's helper.dress_for_weather; aos.helper.weather): as usual, in
+//     this page and in another app or frame at once; on again, dressed again.
 //
 //   node home/scripts/ipsy-weather-test.mjs [repo root]
 import { createRequire } from 'module'; import { execSync } from 'child_process'; import http from 'http'; import fs from 'fs'; import path from 'path';
@@ -65,7 +67,13 @@ const dressAs = async (p, cache) => p.evaluate(c => { if (c == null) localStorag
   const other = await ctx.newPage(); await other.goto(BASE + '/x.html');
   await other.evaluate(c => localStorage.setItem('wx.cache', c), wx('rainy', 40));
   await p.waitForFunction(() => document.querySelector('#h .ipsy-char').dataset.wear === 'umbrella coat scarf', null, { timeout: 3000 }).catch(() => pr.push('a forecast from another page did not dress it'));
-  pr.push(...errs); report('after dark no sun hat; a forecast from another app or frame dresses it at once', pr); await ctx.close();
+  // turned off in another app or frame: as usual at once, whatever the weather; on again, dressed again
+  await other.evaluate(() => localStorage.setItem('aos.helper.weather', 'off'));
+  await p.waitForFunction(() => !document.querySelector('#h .ipsy-char').dataset.wear, null, { timeout: 3000 }).catch(() => pr.push('turned off in another page, it stayed dressed'));
+  if (await p.evaluate(() => AllisonOS.ipsy.dressing())) pr.push('dressing() still on');
+  await p.evaluate(() => AllisonOS.ipsy.dress(true));
+  if ((await p.evaluate(() => document.querySelector('#h .ipsy-char').dataset.wear || '')) !== 'umbrella coat scarf') pr.push('on again, it was not dressed again');
+  pr.push(...errs); report('after dark no sun hat; a forecast from another app or frame dresses it at once; turned off there, as usual at once', pr); await ctx.close();
 }
 
 // 3. Tron: Ares keeps his suit, an umbrella in the rain; the picker's helpers as they are
@@ -104,7 +112,19 @@ const dressAs = async (p, cache) => p.evaluate(c => { if (c == null) localStorag
   await p.waitForSelector('#ipsySlot .ipsy-char', { timeout: 15000 }).catch(() => {});
   const got = await p.evaluate(() => { const s = document.querySelector('#ipsySlot .ipsy-char'); return s ? { who: s.dataset.who, wear: s.dataset.wear || '' } : null; });
   if (!got || got.who !== 'owl' || got.wear !== 'umbrella coat scarf') pr.push('the Ipsy bar\'s helper: ' + JSON.stringify(got));
-  pr.push(...errs); report('aOS Home: the helper in the Ipsy bar wears a coat, a scarf and an umbrella in cold rain', pr); await ctx.close();
+  // Account > Your helper: Dress for the weather, Off and On again
+  const wear = () => p.evaluate(() => document.querySelector('#ipsySlot .ipsy-char').dataset.wear || '');
+  await p.evaluate(() => aosAccount.open('helper')); await p.waitForTimeout(600);
+  const off = p.locator('[data-hwx="off"]');
+  if (!await off.isVisible().catch(() => false)) pr.push('no Dress for the weather in Account > Your helper');
+  else {
+    if (await p.locator('[data-hwx="on"]').getAttribute('aria-pressed') !== 'true') pr.push('Dress for the weather did not start On');
+    await off.click(); await p.waitForTimeout(200);
+    if (await wear() !== '' || await p.evaluate(() => localStorage.getItem('aos.helper.weather')) !== 'off' || await off.getAttribute('aria-pressed') !== 'true') pr.push('Off: still dressed, or not kept: ' + await wear());
+    await p.locator('[data-hwx="on"]').click(); await p.waitForTimeout(200);
+    if (await wear() !== 'umbrella coat scarf') pr.push('On again: ' + await wear());
+  }
+  pr.push(...errs); report('aOS Home: the helper in the Ipsy bar wears a coat, a scarf and an umbrella in cold rain; Account turns it off and on', pr); await ctx.close();
 }
 
 await b.close(); server.close();
