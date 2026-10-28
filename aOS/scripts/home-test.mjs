@@ -120,6 +120,20 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 0; });
   const below = await pg.evaluate(() => Math.round(document.querySelector('#spaces .hcat:nth-child(2)').getBoundingClientRect().top));
   check(below < 844, `Every app starts on the first screen (${below}px) ${tag}`);
+  // your day (the brief): folded to one row with room under the Ipsy bar; a tap opens it, kept after a reload
+  await pg.evaluate(() => { const p = x => String(x).padStart(2, '0'), d = new Date(); localStorage.setItem('allison-notes-v1', JSON.stringify({ notes: [], todos: [{ id: 'bt', title: 'Bins out', date: d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) }] })); });
+  await pg.reload(); await pg.waitForTimeout(900);
+  const fold = () => pg.evaluate(() => { const c = document.querySelector('#hbrief .brief'), bar = document.getElementById('askIpsy').getBoundingClientRect();
+    return c && { gap: Math.round(c.getBoundingClientRect().top - bar.bottom), open: c.classList.contains('open'), aria: c.querySelector('[data-brief]').getAttribute('aria-expanded'), lines: c.querySelector('.blines .bl') ? c.querySelector('.blines .bl').offsetHeight : -1 }; });
+  const f0 = await fold();
+  check(f0 && f0.gap >= 12 && !f0.open && f0.aria === 'false' && f0.lines === 0, `your day starts folded to one row, ${f0 && f0.gap}px under the Ipsy bar ${tag}`);
+  await pg.click('#hbrief [data-brief]'); await pg.waitForTimeout(150);
+  const f1 = await fold();
+  await pg.reload(); await pg.waitForTimeout(900);
+  const f2 = await fold();
+  check(f1.open && f1.aria === 'true' && f1.lines > 0 && f2.open && f2.lines > 0, `a tap opens it, and it stays open after a reload ${tag}`);
+  await pg.click('#hbrief [data-brief]'); await pg.evaluate(() => { localStorage.removeItem('allison-notes-v1'); localStorage.removeItem('aos.brief.open'); });
+  await pg.reload(); await pg.waitForTimeout(900);
   // Favorites: Weather and Calendar as widgets, four other apps beside them
   const favIds = await pg.evaluate(() => [...document.querySelectorAll('#favs .fav')].map(f => f.dataset.open));
   check(favIds.length === 4 && !favIds.some(id => id === 'weather' || id === 'calendar') && await pg.locator('#favs .wid.wx[data-open="weather"]').count() === 1 && await pg.locator('#favs .wid.cal[data-open="calendar"]').count() === 1,

@@ -200,20 +200,28 @@
   }
   // ---- the morning brief and the next trip (aOS/home-find.js brief): worked out on the phone each time Home is
   // drawn, in both layouts; a line opens its app, and Get ready asks Ipsy in aOS to do the trip's chores (each
-  // change it makes shows with Undo) ----
-  let tripAsk = '';
+  // change it makes shows with Undo). The brief starts folded to one row (its apps' icons and how many things);
+  // a tap on that row opens or folds it, kept on the phone (aos.brief.open) ----
+  let tripAsk = '', briefOpen = get('aos.brief.open', false) === true;
+  const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
   function paintBrief(b) {
     const lines = b ? b.lines.filter(l => known(l.app)) : [], t = b && b.trip;
     tripAsk = t ? t.ask : '';
     const hour = new Date().getHours(), part = hour < 12 ? 'This morning' : hour < 17 ? 'This afternoon' : 'This evening';
-    setHTML($('hbrief'), (lines.length ? `<div class="wid brief" style="--c:${appHue('calendar')}"><em>${part}</em>${lines.map(l =>
-        `<button type="button" class="bl" data-open="${l.app}" aria-label="${esc(name(l.app))}: ${esc(l.text)}"><img src="${icon(l.app)}" alt=""><span translate="no">${esc(l.text)}</span></button>`).join('')}</div>` : '')
+    const apps = [...new Set(lines.map(l => l.app))].slice(0, 4), many = lines.length === 1 ? '1 thing' : lines.length + ' things';
+    setHTML($('hbrief'), (lines.length ? `<div class="wid brief${briefOpen ? ' open' : ''}" style="--c:${appHue('calendar')}">
+        <button type="button" class="bhead" data-brief aria-expanded="${briefOpen}" aria-controls="blines" aria-label="${part}: ${many}"><em>${part}</em><span class="bsum" aria-hidden="true">${apps.map(a => `<img src="${icon(a)}" alt="">`).join('')}<b>${many}</b>${CHEV}</span></button>
+        <div class="blines" id="blines">${lines.map(l =>
+        `<button type="button" class="bl" data-open="${l.app}" aria-label="${esc(name(l.app))}: ${esc(l.text)}"><img src="${icon(l.app)}" alt=""><span translate="no">${esc(l.text)}</span></button>`).join('')}</div></div>` : '')
       + (t && known('travel') ? `<div class="wid trip" style="--c:${appHue('travel')}"><em>${esc(t.starts)}</em><b translate="no">${esc(t.name)}</b><small>${esc(t.dates)}</small>
         <ul>${[t.deliveries.length ? `📦 ${t.deliveries.length === 1 ? 'A delivery' : t.deliveries.length + ' deliveries'} due while you're away: ${esc(t.deliveries.slice(0, 3).join(', '))}` : '',
           t.dinners ? `🍽 ${t.dinners === 1 ? 'A dinner' : t.dinners + ' dinners'} planned for those days` : '', t.events ? `📅 ${t.events === 1 ? 'An event' : t.events + ' events'} on the calendar then` : ''].filter(Boolean).map(x => `<li>${x}</li>`).join('')}</ul>
         ${window.AllisonOS && AllisonOS.ipsy ? `<button type="button" class="tgo" data-tripgo>Get ready with Ipsy</button>` : ''}</div>` : ''));
   }
-  $('hbrief').addEventListener('click', e => { if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
+  $('hbrief').addEventListener('click', e => {
+    const head = e.target.closest('[data-brief]');
+    if (head) { briefOpen = !briefOpen; put('aos.brief.open', briefOpen); head.parentNode.classList.toggle('open', briefOpen); head.setAttribute('aria-expanded', briefOpen); return; }
+    if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
 
   // ---- Thumb arc ----
   // Drawn at an iPhone's 390 x 844 and scaled to the screen (--arck): the ring's centre in the corner, a
