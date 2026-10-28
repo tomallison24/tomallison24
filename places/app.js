@@ -128,9 +128,6 @@
     if (st.tag && !tags.includes(st.tag)) st.tag = null;
     $('chips').innerHTML = st.view === 'map' ? LAYERS.map(([k, n]) => '<button class="chip glass" type="button" data-layer="' + k + '" aria-pressed="' + !!st.layers[k] + '">' + n + '</button>').join('') : SORTS[st.tab].map(([k, n]) => '<button class="chip glass" type="button" data-sort="' + k + '" aria-pressed="' + (st.sort[st.tab] === k) + '">' + n + '</button>').join('')
       + tags.map(t => '<button class="chip glass" type="button" data-tag="' + esc(t) + '" aria-pressed="' + (st.tag === t) + '" translate="no">#' + esc(t) + '</button>').join('');
-    $('viewBtn').innerHTML = st.view === 'map' ? ICON.list : ICON.map;
-    $('viewBtn').setAttribute('aria-label', st.view === 'map' ? 'Show the list' : 'Show the map');
-    $('viewBtn').setAttribute('aria-pressed', st.view === 'map');
 
     const list = sorted(shown());
     let h = '';
@@ -149,14 +146,9 @@
     $('filter').placeholder = st.view === 'map' ? 'Search businesses here' : 'Search your places and businesses';
     $('mapResults').hidden = !(st.view === 'map' && finding);
     if (st.view === 'map' && finding) $('mapResults').innerHTML = st.found.map(foundRow).join('');
-    if (st.view === 'map') { drawPins(list); if (biz) drawBusinesses(); drawer.size(); drawer.draw(list); }
+    if (st.view === 'map') { drawPins(list); if (biz) drawBusinesses(); }
   }
   const group = (label, g) => '<section class="group"><h2><span>' + esc(label) + '</span><span>' + g.length + '</span></h2>' + g.map(row).join('') + '</section>';
-
-  const ICON = {
-    map: '<svg class="i" viewBox="0 0 24 24"><path d="M9 4.5L3.8 6.6v12.9L9 17.4l6 2.1 5.2-2.1V4.5L15 6.6z"/><path d="M9 4.5v12.9M15 6.6v12.9"/></svg>',
-    list: '<svg class="i" viewBox="0 0 24 24"><path d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11"/><circle cx="4.6" cy="6.5" r="1" fill="currentColor"/><circle cx="4.6" cy="12" r="1" fill="currentColor"/><circle cx="4.6" cy="17.5" r="1" fill="currentColor"/></svg>',
-  };
 
   $('seg').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b && st.tab !== b.dataset.tab) { st.tab = b.dataset.tab; st.tag = null; render(); } });
   $('chips').addEventListener('click', async e => {
@@ -211,7 +203,7 @@
       let m = bizShown.get(key);
       if (!m) {
         m = L.circleMarker([o.lat, o.lon], { radius: 7, weight: 2, color: '#fff', fillColor: bizColor(o.group), fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(key) })
-          .bindPopup(() => bizCard(o, key), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200 + taller()], autoPanPaddingBottomRight: [20, drawer.height() + 20] }).addTo(biz);
+          .bindPopup(() => bizCard(o, key), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200 + taller()] }).addTo(biz);
         bizShown.set(key, m);
       }
       m.openPopup();
@@ -236,7 +228,6 @@
 
   // ---------- the map ----------
   let map = null, pins = null, me = null, fitted = false, tiles = null;
-  const pinOf = new Map();   // place id -> its pin, for the list beside the map
   // Light or dark as chosen in the app (home.settings.theme, applied as data-theme by
   // welcome.js; read from storage too, in case welcome.js hasn't run yet), else the phone's.
   const dark = () => {
@@ -259,7 +250,7 @@
     pins = L.layerGroup().addTo(map);
     // Touch and hold (or right-click) on the map: add a place there.
     map.on('contextmenu', e => addAt(e.latlng.lat, e.latlng.lng));
-    map.on('moveend', () => { clearTimeout(bizTimer); bizTimer = setTimeout(() => loadBusinesses(), 700); if (st.view === 'map') drawer.draw(); });
+    map.on('moveend', () => { clearTimeout(bizTimer); bizTimer = setTimeout(() => loadBusinesses(), 700); });
     return map;
   }
 
@@ -315,7 +306,7 @@
     for (const [k, o] of want) {
       if (bizShown.has(k)) continue;
       const m = L.circleMarker([o.lat, o.lon], { radius: 6, weight: 2, color: '#fff', fillColor: bizColor(o.group), fillOpacity: 0.95, className: 'osm-dot osm-' + o.group + ' ' + dotClass(k) })
-        .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200 + taller()], autoPanPaddingBottomRight: [20, drawer.height() + 20] })
+        .bindPopup(() => bizCard(o), { className: 'bizpop', closeButton: false, autoPanPaddingTopLeft: [20, 200 + taller()] })
         .addTo(biz);
       bizShown.set(k, m);
     }
@@ -340,14 +331,13 @@
   });
   function drawPins(list) {
     if (!ensureMap()) return;
-    pins.clearLayers(); pinOf.clear();
+    pins.clearLayers();
     const pts = [];
     for (const p of list) {
       if (p.lat == null) continue;
       const icon = L.divIcon({ className: '', html: '<div class="pin ' + p.status + '"><span>' + esc(p.emoji) + '</span></div>', iconSize: [30, 30], iconAnchor: [15, 30] });
       const mk = L.marker([p.lat, p.lon], { icon, title: p.name, keyboard: true }).on('click', () => openPlace(p)).addTo(pins);
       if (mk.getElement()) mk.getElement().setAttribute('translate', 'no');   // its title is the place's name: left as it is in Russian
-      pinOf.set(p.id, mk);
       pts.push([p.lat, p.lon]);
     }
     if (!fitted && pts.length) { fitted = true; fit(pts); }
@@ -356,110 +346,22 @@
     pts = pts || sorted(shown()).filter(p => p.lat != null).map(p => [p.lat, p.lon]);
     if (!pts.length) { if (st.here) map.setView([st.here.lat, st.here.lon], 13); return; }
     if (pts.length === 1) map.setView(pts[0], 15);
-    else map.fitBounds(pts, { padding: [40, 40], paddingTopLeft: [40, 220 + taller()], paddingBottomRight: [40, drawer.height() + 40], maxZoom: 15 });
+    else map.fitBounds(pts, { padding: [40, 40], paddingTopLeft: [40, 220 + taller()], maxZoom: 15 });
   }
-  // ---------- the list beside the map ----------
-  // A drawer along the bottom of the map with the tab's places (the same search and #tag): the
-  // ones on the map first, nearest its middle, then the rest; redrawn as the map moves. Pull its
-  // head up or down (or tap it) between a peek, half the screen and nearly all of it, kept on
-  // the phone. Tapping a place flies the map to its pin and opens it. The full list, with its
-  // sorting, is still the button at the top.
-  const drawer = (() => {
-    const el = $('drawer'), head = $('drawerHead'), STATES = ['peek', 'half', 'full'];
-    let state = STATES.includes(store.get(KEY + '-drawer', 'peek')) ? store.get(KEY + '-drawer', 'peek') : 'peek', h = 0, last = [], drag = null, moved = false;
-    const safe = () => parseFloat(getComputedStyle(el).paddingBottom) || 0;
-    const top = () => document.querySelector('.top').getBoundingClientRect().bottom;
-    const heights = () => {
-      const peek = Math.round(head.offsetHeight + 98 + safe()), full = Math.max(peek, Math.round(innerHeight - top() - 6));
-      return { peek, half: Math.min(full, Math.max(peek, Math.round(innerHeight * 0.44))), full };
-    };
-    function apply(px, snap) {
-      const hs = heights();
-      h = Math.max(hs.peek, Math.min(hs.full, px));
-      const root = document.documentElement.style;
-      root.setProperty('--dh', h + 'px');
-      root.setProperty('--dh-btn', (snap && state === 'full' ? Math.round(safe() + 8) : Math.min(h, hs.half)) + 'px');   // at full, + goes back to the corner
-      if (snap) {
-        STATES.forEach(s => el.classList.toggle(s, s === state));
-        head.setAttribute('aria-expanded', state !== 'peek');
-        head.setAttribute('aria-label', (state === 'peek' ? 'Show more of the list' : 'Show less of the list'));
-        if (state === 'peek') $('drawerList').scrollTop = 0;
-        for (const m of bizShown.values()) { const pop = m.getPopup(); if (pop) pop.options.autoPanPaddingBottomRight = [20, h + 20]; }
-      }
-    }
-    function set(s) {
-      state = s; store.set(KEY + '-drawer', s); apply(heights()[s], true);
-      draw();   // it covers more or less of the map now
-    }
-    const size = () => { if (!el.hidden && !drag) apply(heights()[state], true); };   // after each render: the header's height can change
-    // Dragging the head: it follows the finger, then settles on the nearest height (a flick goes on).
-    head.addEventListener('pointerdown', e => { drag = { y: e.clientY, h, t: e.timeStamp, v: 0 }; moved = false; head.setPointerCapture(e.pointerId); });
-    head.addEventListener('pointermove', e => {
-      if (!drag) return;
-      const dy = e.clientY - drag.y;
-      if (!moved && Math.abs(dy) < 6) return;
-      moved = true; el.classList.add('dragging');
-      drag.v = (e.clientY - (drag.ly ?? drag.y)) / Math.max(1, e.timeStamp - (drag.lt ?? drag.t)); drag.ly = e.clientY; drag.lt = e.timeStamp;
-      apply(drag.h - dy, false);
-    });
-    const end = () => {
-      if (!drag) return;
-      el.classList.remove('dragging');
-      if (moved) {
-        const hs = heights(), aim = h - drag.v * 180;   // a flick carries on
-        set(STATES.reduce((a, b) => Math.abs(hs[b] - aim) < Math.abs(hs[a] - aim) ? b : a));
-      }
-      drag = null; setTimeout(() => { moved = false; }, 0);
-    };
-    head.addEventListener('pointerup', end);
-    head.addEventListener('pointercancel', end);
-    head.addEventListener('click', () => { if (moved) return; set(state === 'peek' ? 'half' : 'peek'); });
-    addEventListener('resize', size);
-
-    function draw(list) {
-      if (list) last = list;
-      // the part of the map that shows: below the header, above the drawer
-      const sz = map && map.getSize(), bounds = map && L.latLngBounds(map.containerPointToLatLng([0, Math.min(top(), sz.y - h)]), map.containerPointToLatLng([sz.x, sz.y - h])), c = bounds && bounds.getCenter();
-      const far = p => c ? P.distance({ lat: c.lat, lon: c.lng }, p) : 0;
-      const pinned = last.filter(p => p.lat != null).sort((a, b) => far(a) - far(b));
-      const here = bounds ? pinned.filter(p => bounds.contains([p.lat, p.lon])) : pinned, away = pinned.filter(p => !here.includes(p));
-      const loose = last.filter(p => p.lat == null).sort((a, b) => b.created - a.created);
-      const name = st.tab === 'want' ? 'Want to go' : 'Been';
-      $('drawerTitle').textContent = name + ' · ' + last.length;
-      $('drawerSub').textContent = last.length ? (here.length ? here.length + ' on the map' : 'None on the map here') : '';
-      let out = '';
-      if (!last.length) {
-        const any = places.some(p => p.status === st.tab);
-        out = '<div class="empty"><strong>' + (any ? 'Nothing matches' : st.tab === 'want' ? 'Nowhere yet' : 'Nothing here yet') + '</strong>'
-          + (any ? 'Try another word or tag.' : st.tab === 'want' ? 'Tap + or touch and hold the map to add one.' : 'Open a place and tap Been.') + '</div>';
-      } else for (const [label, g] of [['On the map', here], ['Further away', away], ['No pin', loose]]) if (g.length) out += group(label, g);
-      $('drawerList').innerHTML = out;
-    }
-    $('drawerList').addEventListener('click', e => {
-      const r = e.target.closest('[data-id]'), p = r && places.find(x => x.id === r.dataset.id); if (!p) return;
-      if (p.lat == null || !map) return openPlace(p);
-      if (state === 'full') set('half');
-      // Fly so the pin lands in the middle of the map that shows above the drawer, then open it.
-      const z = Math.max(map.getZoom(), 16), at = map.project([p.lat, p.lon], z).add([0, (h - top()) / 2]);
-      map.flyTo(map.unproject(at, z), z, { duration: 0.7 });
-      map.once('moveend', () => {
-        const mk = pinOf.get(p.id), pin = mk && mk.getElement() && mk.getElement().querySelector('.pin');
-        if (pin) { pin.classList.remove('hot'); void pin.offsetWidth; pin.classList.add('hot'); }
-        setTimeout(() => openPlace(places.find(x => x.id === p.id) || p), 350);
-      });
-    });
-    return { draw: list => { if (!el.hidden) draw(list); }, size, height: () => (el.hidden ? 0 : h) };
-  })();
   function setView(v) {
     st.view = v;
     document.body.classList.toggle('mapmode', v === 'map');
     document.documentElement.classList.toggle('locked', v === 'map');
-    $('map').hidden = v !== 'map'; $('mapBtns').hidden = v !== 'map'; $('drawer').hidden = v !== 'map';
+    $('map').hidden = v !== 'map'; $('mapBtns').hidden = v !== 'map';
+    document.querySelectorAll('#views [data-view]').forEach(b => b.setAttribute('aria-selected', b.dataset.view === v));
+    slideViews();
     render();
     if (v === 'map' && map) setTimeout(() => { map.invalidateSize(); loadBusinesses(); }, 50);
     if (v !== 'map') hint('');
   }
-  $('viewBtn').onclick = () => setView(st.view === 'map' ? 'list' : 'map');
+  // The Map | List pill at the bottom, as the other apps' tab bars.
+  const slideViews = jump => slide($('views'), $('views').querySelector('[aria-selected="true"]'), 'views', { jump });
+  $('views').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && st.view !== b.dataset.view) setView(b.dataset.view); });
   $('fitBtn').onclick = () => fit();
   $('locBtn').onclick = async () => {
     try {
@@ -791,15 +693,16 @@
       const o = bizSeen.get(k); m.setStyle({ fillColor: bizColor(o ? o.group : 'fun') });
       const pop = m.getPopup(); if (pop) pop.options.autoPanPaddingTopLeft = [20, 200 + taller()];
     }
-    requestAnimationFrame(() => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
+    requestAnimationFrame(() => { slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }); slideViews(true); });
   });
 
   // ---------- start ----------
-  // Places opens on the map (the list is a tap away, top right).
+  // Places opens on the map (the list is a tap away, on the pill at the bottom).
   setView('map');
   if (!places.some(p => p.lat != null) && st.here && map) map.setView([st.here.lat, st.here.lon], 15);
   slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true });
-  window.addEventListener('resize', () => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
+  slideViews(true);
+  window.addEventListener('resize', () => { slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }); slideViews(true); });
   // The family's Sheet: hand over the link and phrase this phone kept (if any), then sync, signed in.
   setTimeout(() => handOver().finally(() => sync()), 400);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

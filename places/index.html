@@ -142,7 +142,7 @@ a{color:var(--accent-text)}
 /* The one card that keeps a blur: the search results dropping down over the map, so the map's
    streets and labels don't fight the text. */
 .mapres{max-height:46vh;overflow-y:auto;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
-.maphint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);z-index:4;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap;pointer-events:none}
+.maphint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:4;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap;pointer-events:none}
 /* The business card: the same clear glass as the sheets and the toast; its tip is the bottom of the
    card's gradient under the same blur, so the two read as one piece. */
 .bizpop .leaflet-popup-content-wrapper{border-radius:22px;background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));color:var(--text);
@@ -158,35 +158,17 @@ a{color:var(--accent-text)}
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
 .bizacts button:first-child:active{background: var(--cta); filter: brightness(.94); }
 .mapbtns{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:4;display:flex;flex-direction:column;gap:8px}
-/* The list beside the map: a drawer of the tab's places along the bottom, pulled up or down by its
-   head (or tapped) between a peek, half the screen and nearly all of it (app.js: drawer). Its height
-   is --dh, which the map's buttons, its note and + sit above (--dh-btn: no higher than half). */
-.drawer{position:fixed;left:0;right:0;bottom:0;z-index:3;width:100%;max-width:560px;margin:0 auto;height:var(--dh,150px);display:flex;flex-direction:column;
-  border-radius:28px 28px 0 0;overflow:hidden;padding-bottom:env(safe-area-inset-bottom,0px);transition:height .32s var(--ease);
-  color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
-  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 -8px 30px var(--lift)}
-.drawer.dragging{transition:none}
-.dhead{flex:none;display:flex;flex-direction:column;align-items:stretch;width:100%;padding:8px 18px 8px;text-align:left;touch-action:none;cursor:grab}
-.dhead .grab{display:block;width:38px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 8px}
-.dhead .dt{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.dhead b{font-size:17px;font-weight:700;letter-spacing:-.2px}
-.dhead small{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dlist{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 6px 90px}
-.drawer.peek .dlist{overflow:hidden}
-.drawer .group{background:none;box-shadow:none;border-radius:0}
-.drawer .group h2{padding:8px 12px 4px}
-.drawer .row{padding:10px 12px}
-.drawer .empty{background:none;box-shadow:none;padding:10px 24px 20px}
-.pin.hot{animation:hot 1.2s var(--ease) 2}
-@keyframes hot{40%{scale:1.35}}
-@media (prefers-reduced-motion:reduce){.drawer{transition:none}.pin.hot{animation:none}}
-.mapmode .mapbtns{bottom:calc(var(--dh-btn,150px) + 84px)}
-.mapmode .fab{bottom:calc(var(--dh-btn,150px) + 14px)}
-.mapmode .maphint{bottom:calc(var(--dh-btn,150px) + 26px)}
-.mapmode .leaflet-bottom{bottom:var(--dh,150px)}
-.drawer.full ~ .mapbtns,.drawer.full ~ .maphint{display:none}
 
-.fab{position:fixed;right:max(18px,calc(50% - 262px));bottom:calc(env(safe-area-inset-bottom,0px) + 22px);z-index:6;width:58px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+/* The dock: the Map | List pill on the left and + on the right, floating at the bottom, as in Travel and Podcasts */
+.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:6;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 18px;pointer-events:none}
+.dock > *{pointer-events:auto}
+.tabs{display:inline-flex;align-items:center;gap:2px;padding:4px;border-radius:999px;box-shadow:inset 0 1px 0 var(--hi),0 10px 30px var(--lift-strong)}
+.tab{height:44px;border-radius:999px;padding:0 16px;display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14.5px;color:var(--muted);transition:color .2s,transform .18s var(--ease)}
+.tab:active{transform:scale(.94)}
+.tab svg{width:19px;height:19px}
+.tab[aria-selected="true"]{color:var(--text)}
+.tabs:not(.slides) .tab[aria-selected="true"]{background:var(--seg-thumb)}
+.fab{position:relative;width:58px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;
   color:var(--cta-ink);background:var(--cta);box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),0 10px 26px color-mix(in srgb,var(--accent) 40%,transparent);transition:transform .18s var(--ease)}
 .fab:active{transform:scale(.92)}
 .fab svg{width:26px;height:26px;stroke-width:2.2}
@@ -255,13 +237,13 @@ input[type="date"]{border:0;border-radius:999px;padding:7px 13px;background:var(
   color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
   box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong)}
 .toast button{color:var(--accent-text);font-weight:700}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet,.toast,.drawer,.bizpop .leaflet-popup-content-wrapper,.bizpop .leaflet-popup-tip{background:var(--bar-solid)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet,.toast,.bizpop .leaflet-popup-content-wrapper,.bizpop .leaflet-popup-tip{background:var(--bar-solid)}}
 
 /* 44-point tap targets: the smaller controls take taps a little way round them
    too, on an invisible layer (the look doesn't change). :where() keeps any
    position they already have. */
-:where(#viewBtn, #setBtn, #locBtn, #fitBtn, .chip, [data-tab]){position:relative}
-:where(#viewBtn, #setBtn, #locBtn, #fitBtn, .chip, [data-tab])::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+:where(#setBtn, #locBtn, #fitBtn, .chip, [data-tab]){position:relative}
+:where(#setBtn, #locBtn, #fitBtn, .chip, [data-tab])::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -379,6 +361,12 @@ body > .ambient{display:none}
 .chip[aria-pressed="true"]{background:var(--mc-mustard);color:var(--mc-on-mustard);border-color:var(--mc-mustard)}
 .glass{border:1.5px solid var(--mc-edge);box-shadow:none}
 .search:focus-within{border-color:var(--accent)}
+/* the Map | List pill at the bottom: a cream pill, the chosen one on a mustard thumb */
+.tabs{background:var(--mc-card);box-shadow:0 10px 22px -12px var(--lift-strong)}
+.tab{letter-spacing:.02em}
+.tab svg{color:var(--icon)}
+.tabs:not(.slides) .tab[aria-selected="true"]{background:var(--mc-mustard)}
+.tab[aria-selected="true"],.tab[aria-selected="true"] svg{color:var(--mc-on-mustard)}
 
 /* the lists: solid cream cards, round-cornered, no rim light */
 .group,.empty,.box,.rgroup{background:var(--mc-card);box-shadow:none;border-radius:20px}
@@ -410,11 +398,6 @@ input[type="date"]{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-ed
 .stars{color:var(--star)}
 .rate button.on{color:var(--star)}
 #findForm.search{background:var(--bg)!important}
-
-/* the list beside the map: a flat cream (walnut) panel, round-cornered at the top */
-.drawer{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:26px 26px 0 0;box-shadow:inset 0 1.5px 0 var(--mc-edge),0 -10px 24px -14px var(--lift-strong)}
-.dhead .grab{background:var(--mc-edge)}
-.dhead b{font-weight:600;letter-spacing:0}
 
 /* the toast */
 .toast{background:var(--mc-card-2);border-radius:18px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
@@ -524,7 +507,6 @@ path.osm-dot{stroke:#FAFCFE}
     <div class="titlerow">
       <h1 class="title">Places<small id="sub"></small></h1>
       <div class="acts">
-        <button class="iconbtn glass" id="viewBtn" type="button" aria-label="Show the map" aria-pressed="false"></button>
         <button class="iconbtn glass" id="setBtn" type="button" aria-label="Settings"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8l1.6 2.3 2.8-.5.9 2.7 2.6 1.1-.5 2.8 1.8 2.2-1.8 2.2.5 2.8-2.6 1.1-.9 2.7-2.8-.5L12 21.2l-1.6-2.3-2.8.5-.9-2.7-2.6-1.1.5-2.8L2.8 12l1.8-2.2-.5-2.8 2.6-1.1.9-2.7 2.8.5z"/></svg></button>
       </div>
     </div>
@@ -544,16 +526,19 @@ path.osm-dot{stroke:#FAFCFE}
 </div>
 <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>   <!-- Standard's Sea glass aurora, behind everything -->
 <div id="map" hidden></div>
-<section class="drawer peek" id="drawer" aria-label="Your places on the map" hidden>   <!-- the list beside the map (app.js: drawer) -->
-  <button class="dhead" id="drawerHead" type="button" aria-expanded="false" aria-controls="drawerList"><span class="grab" aria-hidden="true"></span><span class="dt"><b id="drawerTitle">Want to go</b><small id="drawerSub"></small></span></button>
-  <div class="dlist" id="drawerList"></div>
-</section>
 <div class="mapbtns" id="mapBtns" hidden>
   <button class="iconbtn glass" id="locBtn" type="button" aria-label="Show where I am"><svg class="i" viewBox="0 0 24 24"><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3"/><circle cx="12" cy="12" r="6.2"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></button>
   <button class="iconbtn glass" id="fitBtn" type="button" aria-label="Show all places"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></svg></button>
 </div>
 <div class="maphint glass" id="mapHint" role="status" hidden></div>
-<button class="fab" id="fab" type="button" aria-label="Add a place"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+<!-- The dock, as in the other apps: the floating Map | List pill, and + -->
+<div class="dock">
+  <nav class="tabs glass" id="views" role="tablist" aria-label="Map or list">
+    <button class="tab" type="button" role="tab" data-view="map" aria-selected="true"><svg class="i" viewBox="0 0 24 24"><path d="M9 4.5L3.8 6.6v12.9L9 17.4l6 2.1 5.2-2.1V4.5L15 6.6z"/><path d="M9 4.5v12.9M15 6.6v12.9"/></svg>Map</button>
+    <button class="tab" type="button" role="tab" data-view="list" aria-selected="false"><svg class="i" viewBox="0 0 24 24"><path d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11"/><circle cx="4.6" cy="6.5" r="1" fill="currentColor"/><circle cx="4.6" cy="12" r="1" fill="currentColor"/><circle cx="4.6" cy="17.5" r="1" fill="currentColor"/></svg>List</button>
+  </nav>
+  <button class="fab" id="fab" type="button" aria-label="Add a place"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
 
 <!-- Add a place -->
 <div class="sheetwrap" id="addSheet" hidden>
