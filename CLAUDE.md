@@ -134,7 +134,8 @@ from.
   Tron: Ares mode in Tesla's cars: red light on black, dark only; its light trail runs around each screen behind
   everything and round each app's icon, and on aOS Home it now and then sends a shot round a section or widget, `aOS/tron-shots.js`, the helper becomes Ares, the Tron: Ares rider (named so in every app), and aOS alone opens with its intro and sound, `aOS/tron-intro.js`; in Vintage aOS opens with Sunrise, `aOS/vintage-intro.js`,
   its sun going up into the disc at the top of aOS; in Sea glass with Tide, `aOS/glass-intro.js`, its "aOS" gliding into the page's; in Layers with Skylight,
-  `aOS/layers-intro.js`, the time of day's sky and a pane of glass rising, "aOS" gliding into the page's), picked for every
+  `aOS/layers-intro.js`, a starry sky brightening into the time of day's as the sun or moon rises, the glass springing
+  up with the apps popping onto it, "aOS" gliding into the page's), picked for every
   app at once in aOS (Account > Appearance > Look: `aOS/look.js` writes each app's design) or in
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
