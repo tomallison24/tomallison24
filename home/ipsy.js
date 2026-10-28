@@ -1118,8 +1118,9 @@
       const d = new Date(), p = n => String(n).padStart(2, '0');
       return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + ' (' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ')';
     };
-    // Told to Claude with every question: what the placeholders are, so it uses them as they are.
-    const PLACEHOLDERS = ' Personal details in what the app gives you (email addresses, phone numbers, card, account and ID numbers) are placeholders such as [email-1], [phone-2] or [card-1 ending 4242]: the real ones stay on the phone. Use a placeholder exactly as it is wherever you need that detail (in a tool, in your answer): the phone puts the real one back. Never ask for the real one, and never search the web for a placeholder.';
+    // Told to Claude with every question: what the placeholders are, so it uses them as they are. (No square brackets of
+    // its own: it sits inside the question's [From the app: …] line.)
+    const PLACEHOLDERS = ' Personal details in what the app gives you (email addresses, phone numbers, card, account and ID numbers) are placeholders in square brackets, such as email-1, phone-2 or card-1 ending 4242: the real ones stay on the phone. Use a placeholder exactly as it is, brackets and all, wherever you need that detail (in a tool, in your answer): the phone puts the real one back. Never ask for the real one, and never search the web for a placeholder.';
     const ACT_WEB = { web_search: i => 'Searching the web' + (i && i.query ? ': ' + i.query : ''), web_fetch: i => 'Reading ' + (i && i.url ? String(i.url).replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : 'a web page') };
 
     async function submit() {

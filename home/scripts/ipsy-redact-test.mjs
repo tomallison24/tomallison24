@@ -73,7 +73,8 @@ await step('what reaches the server has placeholders, never the real email addre
   for (const s of sent) if (REAL.test(s)) assert.fail('a real detail went to the server: ' + s.match(REAL)[0]);
   const first = JSON.parse(sent[0]).messages[0].content[0].text;
   assert.match(first, /\[email-1\]/, 'the context line has the placeholder');
-  assert.match(first, /placeholders such as \[email-1\]/, 'the question tells Claude what the placeholders are');
+  assert.match(first, /placeholders in square brackets, such as email-1/, 'the question tells Claude what the placeholders are');
+  assert.ok(!/\[/.test(first.slice(first.indexOf('Personal details'), -1)), 'the note has no square brackets of its own (it sits inside the [From the app: …] line)');
   const look = JSON.parse(JSON.parse(sent[1]).messages.at(-1).content[0].content);
   assert.deepEqual(look, { name: 'Ann Lee', email: '[email-1]', phone: '[phone-1]', card: '[card-1 ending 1111]', order: '112-1234567-1234567' });
 });
