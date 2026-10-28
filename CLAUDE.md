@@ -106,7 +106,7 @@ from.
   or Tron), `names.js` (your helper's name where the words say Ipsy), `sky.js` (the Vintage designs' day and night sky),
   `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the AI helper you
   chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
-  `server/ipsy.js`) with `redact.js` before it (personal details stay on the phone: what goes to
+  `server/ipsy.js`; the helper dresses for the weather from Weather's `wx.cache`, `outfit()`) with `redact.js` before it (personal details stay on the phone: what goes to
   Claude, in Ipsy's chat and in Orders, Travel and Money's email checks, has email addresses,
   phone, card, account and ID numbers as placeholders, put back on the phone) - plus the Welcome Lab. Its `index.html` is a "moved to aOS" notice.
 - `home/back.js` (swipe up to the launcher) is **gone**: don't add

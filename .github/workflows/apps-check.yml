@@ -132,12 +132,13 @@ jobs:
               aOS/scripts/sky-test.mjs . 2/3
               aOS/scripts/sky-test.mjs . 0/3
               aOS/scripts/sky-test.mjs . 1/3
-          # every app on its own (and its old Vintage address); aOS's Today; your helper's name, and English only; Weather's and Home's tools for Ipsy in aOS
+          # every app on its own (and its old Vintage address); aOS's Today; your helper's name, and English only; your helper dressed for the weather; Weather's and Home's tools for Ipsy in aOS
           - group: standalone
             tests: |
               aOS/scripts/standalone-test.mjs
               aOS/scripts/today-test.mjs
               aOS/scripts/names-test.mjs
+              home/scripts/ipsy-weather-test.mjs
               weather/scripts/ipsy-test.mjs
               house/scripts/ipsy-test.mjs
           # the newest release's update screens; every app opens, light and dark, and in Layers and Tron; Calendar's layers, an invite, notifications, designs
