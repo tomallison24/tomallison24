@@ -111,6 +111,40 @@
   let used = open.slice();                                      // the same, the one used longest ago first
   let current = null;                                           // the app showing, or null: aOS
   const frames = {};                                            // id -> its .frame, while it's open
+  // Updates under way in the apps (AllisonOS.updating in ../home/welcome.js: Orders, Travel and Money reading Gmail,
+  // Ipsy checking what they read, Mail's sorting). While one runs, its app isn't put away to open another, nor started
+  // again for settings from another device, a look or data moved in: that waits until it's done (whenFree). An app
+  // says so again every minute; one silent for three minutes (a frame that stopped without a word) counts as done.
+  const busy = {};                                              // id -> Map(task -> when it last said so)
+  const STALE = 3 * 6e4, afterBusy = {}, restartLater = new Set();
+  function isBusy(id) {
+    const m = busy[id]; if (!m) return false;
+    for (const [t, at] of m) if (Date.now() - at > STALE) m.delete(t);
+    return m.size > 0;
+  }
+  function freed(id) {
+    if (isBusy(id)) return;
+    const fns = afterBusy[id] || []; delete afterBusy[id];
+    fns.forEach(fn => { try { fn(); } catch {} });
+    if (prefsHeld.delete(id)) syncPrefs();                             // its settings, held back while it was busy
+  }
+  const whenFree = (id, fn) => { if (isBusy(id)) (afterBusy[id] = afterBusy[id] || []).push(fn); else fn(); };
+  window.aosHome.updating = (id, task, on) => {
+    if (!known(id)) return;
+    const m = busy[id] || (busy[id] = new Map());
+    if (on) m.set(String(task), Date.now()); else { m.delete(String(task)); freed(id); }
+    if (!m.size) delete busy[id];
+  };
+  setInterval(() => { for (const id of new Set([...Object.keys(afterBusy), ...prefsHeld])) freed(id); }, 30e3);   // the stale ones
+  // An app opened again from scratch (out of sight: it closes first, so it saves what it has); the one on screen
+  // when you leave it
+  function restart(id) {
+    const box = frames[id]; if (!box) return;
+    if (id === current) { restartLater.add(id); return; }
+    const f = box.firstChild; f.moving = true;
+    f.addEventListener('load', () => { f.moving = false; if (frames[id] === box) point(f, `../${id}/`); }, { once: true });
+    point(f, 'about:blank');
+  }
   const editing = () => body.classList.contains('editing');
   const STAR = on => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
   // Mail's unread count, on its icon on Home rather than on aOS's Home Screen icon: Mail inside aOS
@@ -130,9 +164,12 @@
   // or leaving it, and back on Home from an app (where most of them change). What came from another
   // device: aOS's own look, light or dark and Favorites at once; an app open out of sight starts again
   // with its settings; the app on screen gets them once you leave it.
-  const syncPrefs = () => { if (window.aosPrefs && AllisonOS.account) aosPrefs.sync({ apps: D.APPS, account: AllisonOS.account, wait: id => id === current, ready: prefsReady, applied: prefsCame }).catch(() => {}); };
+  // An app in the middle of an update (reading Gmail, say) gets its settings once it's done, as the one on screen does.
+  const prefsHeld = new Set();
+  const waits = id => { if (id === current) return true; if (isBusy(id)) { prefsHeld.add(id); return true; } return false; };
+  const syncPrefs = () => { if (window.aosPrefs && AllisonOS.account) aosPrefs.sync({ apps: D.APPS, account: AllisonOS.account, wait: waits, ready: prefsReady, applied: prefsCame }).catch(() => {}); };
   // an app open out of sight closes first (it may save what it has as it goes), then opens again with them
-  const prefsReady = apps => Promise.all(apps.filter(id => frames[id] && id !== current).map(id => new Promise(ok => {
+  const prefsReady = apps => Promise.all(apps.filter(id => frames[id] && id !== current && !isBusy(id)).map(id => new Promise(ok => {
     const f = frames[id].firstChild; f.moving = true;
     f.addEventListener('load', ok, { once: true }); setTimeout(ok, 3000); point(f, 'about:blank');
   })));
@@ -150,8 +187,10 @@
   addEventListener('aos:account', e => { if (e.detail) syncPrefs(); });
   // a look picked in Appearance is every app's: an app open out of sight closes first (so it can't save its old design
   // over the new one), every app's design is written (aOS/look.js), then they open again in it
+  // (one in the middle of an update opens again in it once it's done)
   const everyLook = look => {
-    const done = () => { aosLook.set(look, { apps: D.APPS }); prefsCame(D.APPS); syncPrefs(); };
+    const later = D.APPS.filter(id => frames[id] && id !== current && isBusy(id));
+    const done = () => { aosLook.set(look, { apps: D.APPS }); prefsCame(D.APPS); syncPrefs(); later.forEach(id => whenFree(id, () => restart(id))); };
     if (!D.APPS.some(id => frames[id] && id !== current)) return done();   // none open: at once
     return prefsReady(D.APPS).then(done);
   };
@@ -200,20 +239,28 @@
   }
   // ---- the morning brief and the next trip (aOS/home-find.js brief): worked out on the phone each time Home is
   // drawn, in both layouts; a line opens its app, and Get ready asks Ipsy in aOS to do the trip's chores (each
-  // change it makes shows with Undo) ----
-  let tripAsk = '';
+  // change it makes shows with Undo). The brief starts folded to one row (its apps' icons and how many things);
+  // a tap on that row opens or folds it, kept on the phone (aos.brief.open) ----
+  let tripAsk = '', briefOpen = get('aos.brief.open', false) === true;
+  const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
   function paintBrief(b) {
     const lines = b ? b.lines.filter(l => known(l.app)) : [], t = b && b.trip;
     tripAsk = t ? t.ask : '';
     const hour = new Date().getHours(), part = hour < 12 ? 'This morning' : hour < 17 ? 'This afternoon' : 'This evening';
-    setHTML($('hbrief'), (lines.length ? `<div class="wid brief" style="--c:${appHue('calendar')}"><em>${part}</em>${lines.map(l =>
-        `<button type="button" class="bl" data-open="${l.app}" aria-label="${esc(name(l.app))}: ${esc(l.text)}"><img src="${icon(l.app)}" alt=""><span translate="no">${esc(l.text)}</span></button>`).join('')}</div>` : '')
+    const apps = [...new Set(lines.map(l => l.app))].slice(0, 4), many = lines.length === 1 ? '1 thing' : lines.length + ' things';
+    setHTML($('hbrief'), (lines.length ? `<div class="wid brief${briefOpen ? ' open' : ''}" style="--c:${appHue('calendar')}">
+        <button type="button" class="bhead" data-brief aria-expanded="${briefOpen}" aria-controls="blines" aria-label="${part}: ${many}"><em>${part}</em><span class="bsum" aria-hidden="true">${apps.map(a => `<img src="${icon(a)}" alt="">`).join('')}<b>${many}</b>${CHEV}</span></button>
+        <div class="blines" id="blines">${lines.map(l =>
+        `<button type="button" class="bl" data-open="${l.app}" aria-label="${esc(name(l.app))}: ${esc(l.text)}"><img src="${icon(l.app)}" alt=""><span translate="no">${esc(l.text)}</span></button>`).join('')}</div></div>` : '')
       + (t && known('travel') ? `<div class="wid trip" style="--c:${appHue('travel')}"><em>${esc(t.starts)}</em><b translate="no">${esc(t.name)}</b><small>${esc(t.dates)}</small>
         <ul>${[t.deliveries.length ? `📦 ${t.deliveries.length === 1 ? 'A delivery' : t.deliveries.length + ' deliveries'} due while you're away: ${esc(t.deliveries.slice(0, 3).join(', '))}` : '',
           t.dinners ? `🍽 ${t.dinners === 1 ? 'A dinner' : t.dinners + ' dinners'} planned for those days` : '', t.events ? `📅 ${t.events === 1 ? 'An event' : t.events + ' events'} on the calendar then` : ''].filter(Boolean).map(x => `<li>${x}</li>`).join('')}</ul>
         ${window.AllisonOS && AllisonOS.ipsy ? `<button type="button" class="tgo" data-tripgo>Get ready with Ipsy</button>` : ''}</div>` : ''));
   }
-  $('hbrief').addEventListener('click', e => { if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
+  $('hbrief').addEventListener('click', e => {
+    const head = e.target.closest('[data-brief]');
+    if (head) { briefOpen = !briefOpen; put('aos.brief.open', briefOpen); head.parentNode.classList.toggle('open', briefOpen); head.setAttribute('aria-expanded', briefOpen); return; }
+    if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
 
   // ---- Thumb arc ----
   // Drawn at an iPhone's 390 x 844 and scaled to the screen (--arck): the ring's centre in the corner, a
@@ -291,7 +338,7 @@
   // ---- the apps, each in a frame of its own ----
   function load(id, at = '') {
     if (!open.includes(id)) {
-      if (open.length >= MAX_OPEN) drop(used.find(x => x !== id && x !== current && !working.has(x)));   // put away the one used longest ago
+      if (open.length >= MAX_OPEN) drop(used.find(x => x !== id && x !== current && !working.has(x) && !isBusy(x)));   // put away the one used longest ago (not one in the middle of an update: then one more stays open)
       open.push(id);
     }
     const box = document.createElement('div'), f = document.createElement('iframe');
@@ -348,6 +395,7 @@
   const putIn = data => { for (const [k, v] of Object.entries(data)) if (typeof v === 'string') try { localStorage.setItem(k, v); } catch {} };
   // already running here: it may save what it has as it closes, so it closes first, then it's put back
   function movedIn(id, f, data) {
+    if (f && isBusy(id)) return whenFree(id, () => movedIn(id, frames[id] && frames[id].firstChild, data));   // in the middle of an update: once it's done
     if (f) {
       f.moving = true;
       f.addEventListener('load', () => { f.moving = false; putIn(data); if (frames[id] && frames[id].firstChild === f) point(f, `../${id}/`); }, { once: true });
@@ -365,6 +413,7 @@
   function drop(id) {
     if (!id) return;
     if (frames[id]) { frames[id].remove(); delete frames[id]; }
+    delete busy[id]; delete afterBusy[id]; restartLater.delete(id); prefsHeld.delete(id);
     open = open.filter(x => x !== id); used = used.filter(x => x !== id);
     if (current === id) current = null;
     put(OPEN, open);
@@ -376,7 +425,7 @@
     closeMenu();
     id = known(id) ? id : null;
     at = /^[#?][\w=&%.:-]*$/.test(at || '') ? at : '';
-    const prev = current;
+    const prev = current, wasOpen = !!(id && frames[id]);
     if (id && !frames[id]) load(id, at);
     else { if (id && id !== prev) recheck(id); if (id && at) point(frames[id].firstChild, `../${id}/` + at); }
     current = id;
@@ -384,6 +433,10 @@
     clearTimeout(hideT);
     if (!current && prev) hideT = setTimeout(() => { if (!current) reveal(null); }, 400);   // it slides out first
     else reveal(current);
+    // back to an app that was open out of sight: it hears so ('aos:shown', ../home/welcome.js), to carry on an update
+    // cut off there (a Gmail sign-in that ran out can only be renewed on screen)
+    if (wasOpen && current !== prev) { try { const w = frames[current].firstChild.contentWindow; w.dispatchEvent(new w.CustomEvent('aos:shown')); } catch {} }
+    if (prev && prev !== current && restartLater.delete(prev)) whenFree(prev, () => restart(prev));   // a look that came while it was on screen
     body.classList.toggle('in-app', !!current);
     $('appwin').setAttribute('aria-hidden', String(!current));
     if (!current) { paintHome(true); if (prev) syncPrefs(); }   // an app's design may have changed its icon; and its settings follow you

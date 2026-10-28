@@ -88,9 +88,11 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['Vintage gets an intro too, Sunrise: as aOS opens, the sky comes up over two hills, the sun (the moon and stars after sunset) rises, and "aOS" says Good morning, Good afternoon or Good evening; then the sun goes up into the disc at the top of aOS. Once a launch, like Tron\'s, with its own sound (Account > Appearance > Sunrise intro: Sound, Silent or Off, and Play the intro)',
+      notes: ['Moving between apps in aOS no longer cuts off an app reading Gmail: Orders, Travel, Money and Mail aren\'t put away to open another app, or started again for a setting from another device or a new look, until they\'re done. Orders and Travel keep what they\'ve read as they go, and a read that was cut off goes on from where it stopped as soon as you\'re back in the app (renewing the Gmail sign-in first if it ran out)',
+        'Vintage gets an intro too, Sunrise: as aOS opens, the sky comes up over two hills, the sun (the moon and stars after sunset) rises, and "aOS" says Good morning, Good afternoon or Good evening; then the sun goes up into the disc at the top of aOS. Once a launch, like Tron\'s, with its own sound (Account > Appearance > Sunrise intro: Sound, Silent or Off, and Play the intro)',
         'Sea glass gets an intro too, Tide: as aOS opens, three waves in the sea glass colours roll in over the sand, five pieces of frosted sea glass wash up and settle, and "aOS" says Good morning, Good afternoon or Good evening; then the water fades and "aOS" glides up into its place at the top of the page. With a soft wave and glass chimes, where the phone lets it play. Account > Appearance: Sound, Silent or Off, and Play the intro',
         'aOS Home opens with your day: events, rain, deliveries and pickups, tonight\'s dinner and reminders due, in a line each, worked out on your phone. And when a trip is a week away or under way, a card for it (deliveries due while you\'re away, dinners planned, what\'s on the calendar) with Get ready with Ipsy',
+        'aOS Home: your day starts folded to one row under the Ipsy bar (its apps\' icons and how many things); tap it to open the list or fold it again, and aOS remembers which. The Ipsy bar has room under it now',
         'Ipsy in aOS looks across your apps in one go (search_apps): Calendar, Notes, Travel, Orders, Meals, Places and Podcasts, on your phone, so answers that name someone or something come quicker. Anything marked Private is never searched',
         'Money: ask Ipsy to find a charge Monarch missed (a flight booking whose confirmation is the only email): on the phone that reads Monarch\'s emails it searches Gmail, shows exactly what it found, and adds it to your totals only when you say Yes (with Undo, and never twice)',
         'Ipsy in aOS knows the weather and the house: the forecast and alerts for your places (or any city), and Home\'s devices, which it changes for you with Undo (lights, thermostats, speakers, purifiers, dehumidifiers, vacuums), asks first about (heaters, blinds, automations) and never touches (the alarm, cameras, locks)',
@@ -1200,6 +1202,26 @@
       if (again) setInset(insetNow.top, insetNow.bottom);
     }).observe(document.documentElement, { childList: true, subtree: true });
   }
+  // An update under way in this app (reading Gmail, Ipsy checking what it read): inside aOS, the app isn't put away
+  // for another one, nor started again for new settings, a look or data moved in, until it's done (aOS/home-tab.js,
+  // aosHome.updating). Said again every minute while it runs, so aOS can tell one that stopped without a word from one
+  // still going; said off as the page goes. Counted: the same job started again while it runs (and so straight
+  // away done) leaves it on until the first is done too. Outside aOS there's no one to tell. The app shown again
+  // inside aOS hears 'aos:shown' (as visibilitychange, for coming back to the phone), so an update cut off out of
+  // sight carries on.
+  const tasks = new Map(); let beat = 0;   // task -> how many of it are running
+  const tell = (task, on) => { try { window.top.aosHome.updating(APP, task, on); } catch {} };
+  AOS.updating = (task, on) => {
+    if (!inHome || !APP) return;
+    task = String(task);
+    const n = tasks.get(task) || 0;
+    if (on) { tasks.set(task, n + 1); if (!n) tell(task, true); }
+    else if (n > 1) tasks.set(task, n - 1);
+    else if (n) { tasks.delete(task); tell(task, false); }
+    if (tasks.size && !beat) beat = setInterval(() => tasks.forEach((n, t) => tell(t, true)), 60e3);
+    if (!tasks.size && beat) { clearInterval(beat); beat = 0; }
+  };
+  if (inHome) addEventListener('pagehide', () => { tasks.forEach((n, t) => tell(t, false)); tasks.clear(); clearInterval(beat); beat = 0; });
   // Never sideways: no app (nor aOS) pans left and right, so a stray swipe can't carry its controls off
   // the screen. Anything wider than the screen (a title's shapes, a long line) is cut off at its edge; a
   // row meant to scroll sideways (a strip of chips, a map) has its own scroller and still does. And no
