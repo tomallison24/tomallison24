@@ -1815,9 +1815,9 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     el.querySelector('.w-skip').onclick = close;
     return { el, q: s => el.querySelector(s), close, closers };
   }
-  // In Tron, Vintage and Sea glass, aOS opens with its intro (aOS/tron-intro.js, aOS/vintage-intro.js, aOS/glass-intro.js) over everything: a welcome waits for it to end, so none of its
+  // In Tron, Vintage, Sea glass and Layers, aOS opens with its intro (aOS/tron-intro.js, vintage-intro.js, glass-intro.js, layers-intro.js) over everything: a welcome waits for it to end, so none of its
   // opening plays unseen underneath (at most a few seconds, whatever happens to the intro).
-  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro, #glassIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
+  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro, #glassIntro, #layersIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
   const run = (label, inner, onClose, body) => {
     if (open) return open;
     open = introDone().then(() => new Promise(resolve => { const o = mount(label, inner, resolve, onClose); body(o).catch(() => o.close()); }));
