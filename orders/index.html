@@ -857,7 +857,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 :root[data-theme="dark"][data-tod="night"]{--ly-plate:linear-gradient(160deg,#0F1426 0%,#191A33 55%,#241A2C 100%);--ly-g1:rgba(42,58,102,.6);--ly-g2:rgba(74,48,96,.5);--ly-top:#0F1426}
 :root{background:linear-gradient(to bottom,transparent 0,transparent var(--ly-band),var(--ly-veil) calc(var(--ly-band) + 110px)),radial-gradient(75% 45% at 8% 94%,var(--ly-g1),transparent 72%),radial-gradient(65% 40% at 96% 70%,var(--ly-g2),transparent 72%),var(--ly-plate);background-color:var(--ly-top);min-height:100%}   /* the colour: the sky's top, as the bars take it */
 :root :is(body,#app.app){background:transparent}
-:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){display:none}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3),:root .aos-sky-cap{display:none}   /* and no fade under a solid status bar: the sky runs on up into it */
 :is(.fab,.okbtn){box-shadow:var(--ly-lift)}
 </style>
 <style id="grid" media="not all">

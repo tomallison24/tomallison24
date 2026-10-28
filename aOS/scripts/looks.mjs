@@ -252,7 +252,7 @@ ${HEADS}{font-family:${LOOKS.layers.display};font-style:normal;font-weight:700;l
 ${TODS.filter(t => t !== 'afternoon').map(t => `:root[data-tod="${t}"]{${skyVars(L[t])}}`).join('\n')}
 ${darkBoth(`--ly-veil:rgba(16,20,26,.78);--ly-lift:0 1px 2px rgba(0,0,0,.3),0 10px 22px -12px rgba(0,0,0,.7);${skyVars(D.afternoon)}`)}${TODS.filter(t => t !== 'afternoon').map(darkTod).join('')}:root{background:linear-gradient(to bottom,transparent 0,transparent var(--ly-band),var(--ly-veil) calc(var(--ly-band) + 110px)),radial-gradient(75% 45% at 8% 94%,var(--ly-g1),transparent 72%),radial-gradient(65% 40% at 96% 70%,var(--ly-g2),transparent 72%),var(--ly-plate);background-color:var(--ly-top);min-height:100%}   /* the colour: the sky's top, as the bars take it */
 :root :is(body,#app.app){background:transparent}
-${SHAPE(1)},${SHAPE(2)},${SHAPE(3)}{display:none}
+${SHAPE(1)},${SHAPE(2)},${SHAPE(3)},:root .aos-sky-cap{display:none}   /* and no fade under a solid status bar: the sky runs on up into it */
 :is(.fab,.okbtn){box-shadow:var(--ly-lift)}
 `;
   }
