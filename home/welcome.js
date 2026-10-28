@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['A new look, Layers, in place of Night Drive, in aOS and every app: a still sky behind the page, its colours by the time of day (sunrise, sea glass, dusk and night), clear behind the title and frosted glass from there down, in the AllisonOS colours, light or dark with your phone. Its own app icons, and your helper dressed for it. A phone that had Night Drive opens in Layers',
+      notes: ['Layers gets an intro too, Skylight: as aOS opens, the time of day\'s sky comes up with a soft light rising in it, a pane of frosted glass slides up from the bottom, and "aOS" says Good morning, Good afternoon or Good evening; then the glass settles and "aOS" glides up into the page. Once a launch, with its own sound (a warm chord and a few glass notes); Account > Appearance > Skylight intro: Sound, Silent or Off, and Play the intro',
+        'A new look, Layers, in place of Night Drive, in aOS and every app: a still sky behind the page, its colours by the time of day (sunrise, sea glass, dusk and night), clear behind the title and frosted glass from there down, in the AllisonOS colours, light or dark with your phone. Its own app icons, and your helper dressed for it. A phone that had Night Drive opens in Layers',
         'Your personal details stay on your phone: when Ipsy, or Orders, Travel and Money\'s checks of their emails, send something to Claude, email addresses, phone numbers, and card, account and ID numbers go as placeholders like [email-1], and your phone puts the real ones back in what comes back. Names, addresses, and order, tracking and booking numbers still go, since Ipsy needs them',
         'Moving between apps in aOS no longer cuts off an app reading Gmail: Orders, Travel, Money and Mail aren\'t put away to open another app, or started again for a setting from another device or a new look, until they\'re done. Orders and Travel keep what they\'ve read as they go, and a read that was cut off goes on from where it stopped as soon as you\'re back in the app (renewing the Gmail sign-in first if it ran out)',
         'Vintage gets an intro too, Sunrise: as aOS opens, the sky comes up over two hills, the sun (the moon and stars after sunset) rises, and "aOS" says Good morning, Good afternoon or Good evening; then the sun goes up into the disc at the top of aOS. Once a launch, like Tron\'s, with its own sound (Account > Appearance > Sunrise intro: Sound, Silent or Off, and Play the intro)',
@@ -1815,9 +1816,9 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     el.querySelector('.w-skip').onclick = close;
     return { el, q: s => el.querySelector(s), close, closers };
   }
-  // In Tron, Vintage and Sea glass, aOS opens with its intro (aOS/tron-intro.js, aOS/vintage-intro.js, aOS/glass-intro.js) over everything: a welcome waits for it to end, so none of its
+  // In Tron, Vintage, Sea glass and Layers, aOS opens with its intro (aOS/tron-intro.js, vintage-intro.js, glass-intro.js, layers-intro.js) over everything: a welcome waits for it to end, so none of its
   // opening plays unseen underneath (at most a few seconds, whatever happens to the intro).
-  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro, #glassIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
+  const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro, #glassIntro, #layersIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
   const run = (label, inner, onClose, body) => {
     if (open) return open;
     open = introDone().then(() => new Promise(resolve => { const o = mount(label, inner, resolve, onClose); body(o).catch(() => o.close()); }));

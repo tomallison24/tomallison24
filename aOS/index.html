@@ -566,6 +566,7 @@
 html:not([data-look="grid"]) .tronnote{display:none}   /* Tron is dark only: said under Light or dark */
 html:not([data-look="vintage"]) .vintnote{display:none}   /* Vintage's Sunrise intro: its setting, in Vintage only */
 html:not([data-look="glass"]) .glassnote{display:none}   /* Sea glass's Tide intro: its setting, in Sea glass only */
+html:not([data-look="layers"]) .layersnote{display:none}   /* Layers' Skylight intro: its setting, in Layers only */
 /* Tron: the Weather widget as a car-screen card (dark, a red edge, the identity disc), not a block of colour */
 html[data-look="grid"] .wid.wx{background:#121215;color:#F1F3F5;box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.42),0 0 14px rgba(255,42,42,.12)}
 html[data-look="grid"] .wid.wx small{color:#A3A8B0}
@@ -944,6 +945,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="../home/sky.js"></script>   <!-- the Vintage sky (day and night backgrounds), when the look is Vintage -->
 <script src="vintage-intro.js"></script>   <!-- in Vintage, Sunrise: a short intro with its sound as aOS opens (after sky.js: it uses the sky's colours) -->
 <script src="glass-intro.js"></script>   <!-- in Sea glass, Tide: a short intro with its sound as aOS opens -->
+<script src="layers-intro.js"></script>   <!-- in Layers, Skylight: a short intro with its sound as aOS opens -->
 </head>
 <body>
 <main id="scroller">
