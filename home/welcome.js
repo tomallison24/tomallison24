@@ -108,6 +108,7 @@
         'A fifth look, Tron Special Edition, after the Tron: Ares mode in Tesla\'s cars: red light on a black grid at night and on clean white by day, Orbitron headings, a red identity disc and light trail behind each title, its own app icons, and Ipsy in a lit visor. Account > Appearance > Look, or an app\'s Settings > Design',
         'Night Drive puts mirror shades on every helper; Folk, a red neckerchief with white dots; Tron, a lit visor',
         'Ipsy is no longer a stem cell, and doesn\'t change into other cells as it works',
+        'Places: your Want to go and Been places are listed beside the map, in a drawer along the bottom (the ones on the map first, nearest its middle). Pull it up or tap it for more; tap a place to fly to its pin and open it',
         'Meals: cook a past plan again, or one meal from it: its meals come back on the Plan tab with their recipes, and their ingredients go on the shopping list, for the whole family (two weeks, or until you take them off)',
         'Meals: a recipe from a past plan opens on top of the plan, where before it opened hidden behind it',
         'Meals: planning is one card now: a row for each choice (meals, food, how long, people, lunches, extras) showing what you picked, one open at a time; tap a row to change it. Quick notes (Quick, Kid-friendly, Not spicy, Budget-friendly, One pan) sit beside the fridge and anything-else boxes. Your choices stay on the phone until the plan is accepted, show while it plans and on the plan waiting, and Edit choices takes them back to the card',

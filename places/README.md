@@ -25,8 +25,15 @@ same frosted glass as the other AllisonOS apps.
   add it. On the map it searches around where the map is looking: results
   drop down under the box, and tapping one flies the map there and opens its
   card.
-- **Opens on the map**; the list button (top right) switches to the list
-  and back. After you add a place, Places goes back to the map, on the list
+- **Opens on the map**, with **your places listed beside it**: a drawer along
+  the bottom with the Want to go or Been list (whichever is picked, with the
+  same search and `#tag`): the places on the map first, nearest its middle,
+  then **Further away** and **No pin**, redrawn as the map moves. Pull its head
+  up or down, or tap it, between a peek (one place), half the screen and
+  nearly all of it, kept on the phone; the map's buttons and + sit above it.
+  Tapping a place flies the map to its pin (it pulses) and opens it. The list
+  button (top right) still switches to the full list, with its sorting, and
+  back. After you add a place, Places goes back to the map, on the list
   the place went into, with the search cleared and the new pin in the middle.
 - **Map**: your places as pins, blue for Want to
   go and gold for Been (teal and mustard in Vintage), each with its emoji. **Touch and hold** anywhere on the

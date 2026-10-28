@@ -3,7 +3,8 @@
 // adding by search, by a pasted Apple Maps link and from where you are; the
 // place sheet (status, stars, price, dates, notes and #tags, OpenStreetMap
 // details); moving a place to Been; the lists, sorting and filters; the map
-// and its pins; Apple Maps directions; delete with undo; and the family's Google
+// and its pins; the list beside the map (its drawer: peek, half, full, kept; a place
+// tapped flies there and opens); Apple Maps directions; delete with undo; and the family's Google
 // Sheet (Notes'), through aOS: the real notes/google-sheet-sync.gs on an
 // in-memory Sheet answering **/sheet/api/places, with who's asking from the
 // phone's session: signed out it asks to sign in; signed in, every place is the
@@ -226,6 +227,37 @@ await page.click('#viewBtn'); await page.waitForTimeout(800);
 const nPins = await page.$$eval('.pin.want', p => p.length);
 ok('the map shows a pin for each Want to go place', await page.isVisible('#map') && nPins === 2, nPins + ' pins');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '4-map.png') });
+// ---- the list beside the map ----
+const dh = () => page.$eval('#drawer', d => d.getBoundingClientRect().height);
+const drows = () => page.$$eval('#drawerList .row b', bs => bs.map(b => b.textContent));
+let dt = await page.textContent('#drawer');
+ok('on the map, a list of the tab’s places sits along the bottom, the ones on the map first', await page.isVisible('#drawer') && dt.includes('Want to go · 2') && dt.includes('On the map') && (await drows()).length === 2, dt.slice(0, 120));
+const peekH = await dh();
+await page.click('#drawerHead'); await page.waitForTimeout(500);
+ok('tapping its head pulls it up to half the screen', (await page.getAttribute('#drawerHead', 'aria-expanded')) === 'true' && await dh() > peekH + 150 && await dh() < 844 * 0.5, peekH + ' → ' + await dh());
+ok('the map’s buttons and + move up above it', (await page.$eval('#fab', f => f.getBoundingClientRect().bottom)) <= 844 - await dh() && (await page.$eval('#mapBtns', f => f.getBoundingClientRect().bottom)) <= 844 - await dh());
+if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '4b-map-list.png') });
+const hb = await page.$eval('#drawerHead', b => { const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + 10 }; });
+await page.mouse.move(hb.x, hb.y); await page.mouse.down(); await page.mouse.move(hb.x, hb.y - 200, { steps: 8 }); await page.mouse.move(hb.x, 120, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(500);
+const top = await page.$eval('.top', t => t.getBoundingClientRect().bottom);
+ok('dragging it up opens it nearly to the top, below the search and chips', Math.abs((844 - await dh()) - top) < 12 && await page.isHidden('#mapBtns'), top + ' / ' + (844 - await dh()));
+await page.reload(); await page.waitForTimeout(800);
+ok('and it stays open that far next time', Math.abs((844 - await dh()) - top) < 12);
+await page.click('#drawerHead'); await page.waitForTimeout(500);
+ok('tapping its head again settles it back down', (await page.getAttribute('#drawerHead', 'aria-expanded')) === 'false' && Math.abs(await dh() - peekH) < 2);
+await page.click('#drawerHead'); await page.waitForTimeout(500);
+await page.click('#drawerList .row:has-text("Denver Art Museum")'); await page.waitForTimeout(1600);
+const mid = await page.evaluate(() => { const p = document.querySelector('.leaflet-marker-icon .pin.hot'); if (!p) return null; const r = p.getBoundingClientRect(); return r.y + r.height / 2; });
+ok('tapping a place flies the map to its pin, above the list, and opens it', (await page.inputValue('#plName')) === 'Denver Art Museum' && mid != null && mid > top && mid < 844 - await dh(), String(mid));
+await page.click('#placeSheet [data-close].iconbtn'); await page.waitForTimeout(300);
+await page.click('#seg [data-tab="been"]'); await page.waitForTimeout(300);
+dt = await page.textContent('#drawer');
+ok('switching to Been lists the places you’ve been', dt.includes('Been · 1') && (await drows()).length === 1, dt.slice(0, 120));
+await page.click('#seg [data-tab="want"]'); await page.waitForTimeout(200);
+await page.click('#drawerHead'); await page.waitForTimeout(400);
+await page.click('#viewBtn'); await page.waitForTimeout(300);
+ok('the full list hides it', await page.isHidden('#drawer') && await page.isVisible('#list'));
+await page.click('#viewBtn'); await page.waitForTimeout(800);
 // ---- searching on the map ----
 await page.fill('#filter', 'pizza'); await found('#mapResults');
 ok('on the map the search box stays, and results drop down under it', await page.isVisible('#filter') && await page.isVisible('#mapResults') && (await page.textContent('#mapResults')).includes('Pizzeria Locale'));
