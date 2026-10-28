@@ -25,8 +25,9 @@ same frosted glass as the other AllisonOS apps.
   add it. On the map it searches around where the map is looking: results
   drop down under the box, and tapping one flies the map there and opens its
   card.
-- **Opens on the map**; the list button (top right) switches to the list
-  and back. After you add a place, Places goes back to the map, on the list
+- **Opens on the map**; the floating **Map | List** pill at the bottom (as in
+  the other apps' tab bars, with + beside it on the right) switches between
+  the map and the list. After you add a place, Places goes back to the map, on the list
   the place went into, with the search cleared and the new pin in the middle.
 - **Map**: your places as pins, blue for Want to
   go and gold for Been (teal and mustard in Vintage), each with its emoji. **Touch and hold** anywhere on the
@@ -87,7 +88,8 @@ applies it before the page is drawn.
     because the Vintage header is 26px taller), in the list the header is solid
     ground and the list slides under it;
   - solid burnt-orange buttons (+, Save, Want to go on the card); outlined red
-    for Delete;
+    for Delete; the Map | List pill at the bottom is a cream pill with a
+    mustard thumb under the chosen view;
   - the map keeps CARTO's own tiles, warmed with a light sepia filter
     (`.leaflet-tile-pane`) so they sit better with the cream;
   - Futura, which iOS has built in, so no font is downloaded.

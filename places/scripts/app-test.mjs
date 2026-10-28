@@ -3,7 +3,7 @@
 // adding by search, by a pasted Apple Maps link and from where you are; the
 // place sheet (status, stars, price, dates, notes and #tags, OpenStreetMap
 // details); moving a place to Been; the lists, sorting and filters; the map
-// and its pins; Apple Maps directions; delete with undo; and the family's Google
+// and its pins; the Map | List pill at the bottom; Apple Maps directions; delete with undo; and the family's Google
 // Sheet (Notes'), through aOS: the real notes/google-sheet-sync.gs on an
 // in-memory Sheet answering **/sheet/api/places, with who's asking from the
 // phone's session: signed out it asks to sign in; signed in, every place is the
@@ -123,9 +123,12 @@ await page.goto(BASE + '/places/');
 await page.waitForTimeout(600);
 const rows = () => page.$$eval('#list .row', rs => rs.map(r => r.querySelector('b').textContent + ' | ' + r.querySelector('.r').textContent));
 const toastText = () => page.textContent('#toastMsg');
-const toList = async () => { if (await page.isVisible('#map')) { await page.click('#viewBtn'); await page.waitForTimeout(300); } };
+const toList = async () => { if (await page.isVisible('#map')) { await page.click('#views [data-view="list"]'); await page.waitForTimeout(300); } };
 
-ok('opens on the map', await page.isVisible('#map') && (await page.getAttribute('#viewBtn', 'aria-label')) === 'Show the list');
+ok('opens on the map, Map chosen on the pill', await page.isVisible('#map') && (await page.getAttribute('#views [data-view="map"]', 'aria-selected')) === 'true' && (await page.getAttribute('#views [data-view="list"]', 'aria-selected')) === 'false');
+const pill = await page.$eval('#views', v => { const r = v.getBoundingClientRect(), f = document.getElementById('fab').getBoundingClientRect(); return { bottom: r.bottom, left: r.left, mid: r.top + r.height / 2, fab: f.top + f.height / 2, fabLeft: f.left }; });
+ok('the Map | List pill floats at the bottom left, + beside it on the right', pill.bottom > 844 - 40 && pill.left < 40 && Math.abs(pill.mid - pill.fab) < 2 && pill.fabLeft > 300, JSON.stringify(pill));
+ok('no map-or-list button left in the header', (await page.$('#viewBtn')) === null);
 await toList();
 ok('starts empty, with a short line how to add', (await page.textContent('#list')).includes('Tap + to add one.'));
 
@@ -222,7 +225,9 @@ await page.click('#placeSheet [data-close].iconbtn');
 await page.fill('#filter', ''); await page.dispatchEvent('#filter', 'input'); await page.waitForTimeout(600);
 
 // ---- map ----
-await page.click('#viewBtn'); await page.waitForTimeout(800);
+await page.click('#views [data-view="map"]'); await page.waitForTimeout(800);
+ok('tapping Map on the pill shows the map, the thumb under Map', await page.isVisible('#map') && await page.isHidden('#list') && (await page.getAttribute('#views [data-view="map"]', 'aria-selected')) === 'true'
+  && await page.evaluate(() => { const t = document.querySelector('#views .slthumb').getBoundingClientRect(), m = document.querySelector('#views [data-view="map"]').getBoundingClientRect(); return Math.abs(t.left - m.left) < 3; }));
 const nPins = await page.$$eval('.pin.want', p => p.length);
 ok('the map shows a pin for each Want to go place', await page.isVisible('#map') && nPins === 2, nPins + ' pins');
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '4-map.png') });
@@ -264,7 +269,8 @@ ok('Directions opens Apple Maps with directions to the place', calls.apple.some(
 await page.click('#plOpen'); await page.waitForTimeout(300);
 ok('Open in Apple Maps shows the place by name', calls.apple.some(u => /[?&]ll=39\.\d+,-104\.\d+&q=/.test(u)), calls.apple.join(' '));
 await page.click('#placeSheet [data-close].iconbtn');
-await page.click('#viewBtn'); await page.waitForTimeout(300);
+await page.click('#views [data-view="list"]'); await page.waitForTimeout(300);
+ok('tapping List on the pill shows the list, the map hidden', await page.isVisible('#list') && await page.isHidden('#map') && (await page.getAttribute('#views [data-view="list"]', 'aria-selected')) === 'true');
 
 // ---- delete, undo ----
 await page.click('#list .row:has-text("Corner Café")'); await page.waitForTimeout(300);
@@ -402,7 +408,8 @@ for (const scheme of ['light', 'dark']) {
   ok(lbl('Retro: pins for Been are mustard'), (await q(rp, '.pin.been', ['backgroundColor']))[0] === MUSTARD);
   await rp.click('#seg [data-tab="want"]');
   // the list
-  await rp.click('#viewBtn'); await rp.waitForTimeout(500);
+  ok(lbl('Retro: the Map | List pill is a flat cream pill with a mustard thumb'), (await q(rp, '#views', ['backgroundColor']))[0] === cream && ['none', ''].includes((await q(rp, '#views', ['backdropFilter']))[0]) && (await q(rp, '#views .slthumb', ['backgroundColor']))[0] === MUSTARD);
+  await rp.click('#views [data-view="list"]'); await rp.waitForTimeout(500);
   const [gb, gs, gf, gr] = await q(rp, '#list .group', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
   ok(lbl('Retro: the lists are flat cards, 20px round, no blur or shadow'), gb === cream && gs === 'none' && ['none', ''].includes(gf) && gr === '20px', [gb, gs, gf, gr].join(' '));
   ok(lbl('Retro: in the list the header is solid ground, so the list slides under it, never through the title'), (await q(rp, '.top', ['backgroundColor']))[0] === ground && (await q(rp, '.top', ['position']))[0] === 'sticky');
@@ -470,13 +477,13 @@ for (const scheme of ['light', 'dark']) {
     && (await pg.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content')) === 'black-translucent'
     && (await pg.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content')) === (scheme === 'light' ? '#EEF2F0' : '#0D1213'));
   ok(lbl('the aurora behind everything, no atomic shapes in the header'), await pg.evaluate(() => getComputedStyle(document.querySelector('body > .ambient')).display === 'block' && getComputedStyle(document.querySelector('body > .ambient')).position === 'fixed' && getComputedStyle(document.querySelector('.top > .ambient')).display === 'none'));
-  ok(lbl('a 34px title, no bars under it; glass buttons'), (await q(pg, '.title', ['fontSize']))[0] === '34px' && ['none', ''].includes((await q(pg, '.title', ['content'], '::after'))[0]) && !['none', ''].includes((await q(pg, '#viewBtn', ['backdropFilter']))[0]));
+  ok(lbl('a 34px title, no bars under it; glass buttons'), (await q(pg, '.title', ['fontSize']))[0] === '34px' && ['none', ''].includes((await q(pg, '.title', ['content'], '::after'))[0]) && !['none', ''].includes((await q(pg, '#setBtn', ['backdropFilter']))[0]) && !['none', ''].includes((await q(pg, '#views', ['backdropFilter']))[0]));
   ok(lbl('pins for Want to go are blue'), (await q(pg, '.pin.want', ['backgroundColor']))[0] === 'rgb(10, 132, 255)');
   await pg.click('#fitBtn'); await pg.waitForTimeout(2500);
   ok(lbl('business dots in Places\' own colours: coral for food, violet for things to do'), (await fill(pg, 'osm-food')) === 'rgb(255, 107, 87)' && (await fill(pg, 'osm-fun')) === 'rgb(142, 108, 255)', (await fill(pg, 'osm-food')) + ' / ' + (await fill(pg, 'osm-fun')));
   ok(lbl('the map is clear of the header'), await pg.evaluate(() => { const t = document.querySelector('.top').getBoundingClientRect().bottom; return [...document.querySelectorAll('.pin')].every(p => p.getBoundingClientRect().top >= t - 30); }));
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, '30-glass-map-' + scheme + '.png') });
-  await pg.click('#viewBtn'); await pg.waitForTimeout(500);
+  await pg.click('#views [data-view="list"]'); await pg.waitForTimeout(500);
   ok(lbl('in the list the header is clear glass over the aurora, not solid ground'), (await q(pg, '.top', ['backgroundColor']))[0] === 'rgba(0, 0, 0, 0)' && (await q(pg, '#list .group', ['borderRadius']))[0] === '24px');
   ok(lbl('no sideways scroll'), await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, '31-glass-list-' + scheme + '.png') });

@@ -128,9 +128,6 @@
     if (st.tag && !tags.includes(st.tag)) st.tag = null;
     $('chips').innerHTML = st.view === 'map' ? LAYERS.map(([k, n]) => '<button class="chip glass" type="button" data-layer="' + k + '" aria-pressed="' + !!st.layers[k] + '">' + n + '</button>').join('') : SORTS[st.tab].map(([k, n]) => '<button class="chip glass" type="button" data-sort="' + k + '" aria-pressed="' + (st.sort[st.tab] === k) + '">' + n + '</button>').join('')
       + tags.map(t => '<button class="chip glass" type="button" data-tag="' + esc(t) + '" aria-pressed="' + (st.tag === t) + '" translate="no">#' + esc(t) + '</button>').join('');
-    $('viewBtn').innerHTML = st.view === 'map' ? ICON.list : ICON.map;
-    $('viewBtn').setAttribute('aria-label', st.view === 'map' ? 'Show the list' : 'Show the map');
-    $('viewBtn').setAttribute('aria-pressed', st.view === 'map');
 
     const list = sorted(shown());
     let h = '';
@@ -152,11 +149,6 @@
     if (st.view === 'map') { drawPins(list); if (biz) drawBusinesses(); }
   }
   const group = (label, g) => '<section class="group"><h2><span>' + esc(label) + '</span><span>' + g.length + '</span></h2>' + g.map(row).join('') + '</section>';
-
-  const ICON = {
-    map: '<svg class="i" viewBox="0 0 24 24"><path d="M9 4.5L3.8 6.6v12.9L9 17.4l6 2.1 5.2-2.1V4.5L15 6.6z"/><path d="M9 4.5v12.9M15 6.6v12.9"/></svg>',
-    list: '<svg class="i" viewBox="0 0 24 24"><path d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11"/><circle cx="4.6" cy="6.5" r="1" fill="currentColor"/><circle cx="4.6" cy="12" r="1" fill="currentColor"/><circle cx="4.6" cy="17.5" r="1" fill="currentColor"/></svg>',
-  };
 
   $('seg').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b && st.tab !== b.dataset.tab) { st.tab = b.dataset.tab; st.tag = null; render(); } });
   $('chips').addEventListener('click', async e => {
@@ -361,11 +353,15 @@
     document.body.classList.toggle('mapmode', v === 'map');
     document.documentElement.classList.toggle('locked', v === 'map');
     $('map').hidden = v !== 'map'; $('mapBtns').hidden = v !== 'map';
+    document.querySelectorAll('#views [data-view]').forEach(b => b.setAttribute('aria-selected', b.dataset.view === v));
+    slideViews();
     render();
     if (v === 'map' && map) setTimeout(() => { map.invalidateSize(); loadBusinesses(); }, 50);
     if (v !== 'map') hint('');
   }
-  $('viewBtn').onclick = () => setView(st.view === 'map' ? 'list' : 'map');
+  // The Map | List pill at the bottom, as the other apps' tab bars.
+  const slideViews = jump => slide($('views'), $('views').querySelector('[aria-selected="true"]'), 'views', { jump });
+  $('views').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && st.view !== b.dataset.view) setView(b.dataset.view); });
   $('fitBtn').onclick = () => fit();
   $('locBtn').onclick = async () => {
     try {
@@ -697,15 +693,16 @@
       const o = bizSeen.get(k); m.setStyle({ fillColor: bizColor(o ? o.group : 'fun') });
       const pop = m.getPopup(); if (pop) pop.options.autoPanPaddingTopLeft = [20, 200 + taller()];
     }
-    requestAnimationFrame(() => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
+    requestAnimationFrame(() => { slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }); slideViews(true); });
   });
 
   // ---------- start ----------
-  // Places opens on the map (the list is a tap away, top right).
+  // Places opens on the map (the list is a tap away, on the pill at the bottom).
   setView('map');
   if (!places.some(p => p.lat != null) && st.here && map) map.setView([st.here.lat, st.here.lon], 15);
   slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true });
-  window.addEventListener('resize', () => slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }));
+  slideViews(true);
+  window.addEventListener('resize', () => { slide($('seg'), $('seg').querySelector('[aria-pressed="true"]'), 'tab', { jump: true }); slideViews(true); });
   // The family's Sheet: hand over the link and phrase this phone kept (if any), then sync, signed in.
   setTimeout(() => handOver().finally(() => sync()), 400);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
