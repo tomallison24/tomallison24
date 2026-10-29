@@ -507,9 +507,9 @@
     try { return ((await (await api(path, bg)).json()).results || []).map(cleanShow); }
     catch(e) {
       if (e.message === 'signin') return [];   // the family lock, not a missing server: nothing to show until a sign-in, and no asking Apple from the page
-      if (!quiet(e.message)) throw e;
-      // Apple's own addresses, where they let a page read them
-      try { return (await direct()).map(cleanShow); } catch(_) { throw new Error('Search isn’t available right now.'); }
+      // no server, or Apple and Podcast Index turned the server away (functions/podcasts/api): Apple's own
+      // addresses, where they let a page read them, asked from the phone's own address; else the server's words
+      try { return (await direct()).map(cleanShow); } catch(_) { throw quiet(e.message) ? new Error('Search isn’t available right now.') : e; }
     }
   }
   const itJson = async u => { const r = await fetch(u, {credentials:'omit'}); if (!r.ok) throw new Error('Search isn’t available right now.'); return r.json(); };

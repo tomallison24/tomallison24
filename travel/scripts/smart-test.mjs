@@ -561,7 +561,7 @@ const pick = (page, f) => page.evaluate(f);
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
     assert.equal(await page.textContent('#stCalSub'), 'On. Shares bookings with the Family calendar, both ways.'); assert.match(await page.textContent('#stAiSub'), /^On\. Ipsy fills in a trip’s missing details from its email\./);
-    assert.equal(await page.textContent('#stIpsyAutoSub'), 'Off. Ipsy fills in what new bookings are missing, and moves them to Upcoming.');
+    assert.equal(await page.textContent('#stIpsyAutoSub'), 'Off. Ipsy fills in what new bookings are missing, and moves them to Upcoming. This phone only.');
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
     assert.equal(await page.textContent('#stCalSub'), 'Off. Shares bookings with the Family calendar, both ways.'); assert.equal(await page.textContent('#stAiSub'), 'Off. Ipsy fills in a trip’s missing details from its email.');
