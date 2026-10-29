@@ -122,7 +122,8 @@ the same kinds of row and the same words.**
   - The sections, in this order, leaving out what the app doesn't have:
     **Design** (always first: `aosDesign.picker()` in `S.raw`, bound with
     `aosDesign.bind`) · the app's own, named for what they're about (Trips,
-    Family rules, Your goals) · **Connected accounts** · **Ipsy** ·
+    Family rules, Your goals) · **Connected accounts** · **AI helper** (not
+    Ipsy: everyone names their own helper) ·
     **Notifications** · **Your data** · **Family account**. Notifications live
     here too (Notes' bell opens this section).
   - Rows: the kinds in rule 5. At most one line under a section (`hint`).
@@ -226,7 +227,7 @@ with a lowercase a.**
 
 **Ipsy sits in the app's bottom left corner, every change it makes comes with
 Undo, it asks in its own chat before anything big, its switches live in
-Settings > Ipsy, and anything marked Private stays out of what it reads.**
+Settings > AI helper, and anything marked Private stays out of what it reads.**
 
 - **Why:** a helper that changes your things has to be easy to find, easy to
   undo and easy to keep out.
@@ -234,20 +235,21 @@ Settings > Ipsy, and anything marked Private stays out of what it reads.**
   the floating way out sits while a sheet is open), never over content. A
   tool's change returns `change: { text, undo }`, which the chat shows with
   Undo; a big change asks first with the tool's `confirm(text, { yes, no })`, a
-  card in the chat. Settings > Ipsy holds every Ipsy switch for the app (Ipsy
-  fills in what's missing, Ipsy can search Gmail), with the models it uses in
-  the line under the section. A note, order, booking or event can be marked
+  card in the chat. Settings > AI helper holds every helper switch for the app,
+  starting with Use Claude in … (`S.claude('<id>')`, the same row as in aOS
+  Account > AI helper), then the app's own (Ipsy fills in what's missing, Ipsy
+  can search Gmail), with the models it uses in the line under the section. A note, order, booking or event can be marked
   Private (a switch in its editor): the app's tools leave it out of everything
   they read (`AllisonOS.ipsy.privacy`). In Tron the helper is Ares.
 - **Enforced:** Review (Undo and the chat's asking are `home/ipsy.js`'s own;
-  CI: `order` checks where the Ipsy section sits).
+  CI: `order` checks where the AI helper section sits).
 - **Known gaps:** none.
 
 ![Ipsy in the bottom left corner, in each look](docs/design/ipsy-corner.png)
 
 ![A change Ipsy made, with Undo](docs/design/ipsy-undo.png)
 
-![Settings > Ipsy](docs/design/ipsy-settings.png)
+![Settings > AI helper](docs/design/ipsy-settings.png)
 
 ## 8. Empty screens
 

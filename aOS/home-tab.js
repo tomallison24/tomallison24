@@ -670,8 +670,8 @@
   function askIpsy(t) { if (!ipsy || !t) return; clearFind(); ipsy.prompt(t); }
 
   // Now and then your helper crosses the bar, in its own way (home/ipsy.js cross: Mia's zoomies, the fox's
-  // pounce, the owl's loop, the robot's moonwalk, the octopus's spurts, the hedgehog's roll, the otter's belly
-  // slide), out to the far end and back. Only on Home with the bar empty and untouched, the chat shut and no
+  // pounce, the owl's loop, the hedgehog's roll, Nova zipping by as a ball of code), out to the far end
+  // and back. Only on Home with the bar empty and untouched, the chat shut and no
   // finger down; never with Reduce Motion. The first soon after aOS opens, then a minute or two apart. Any
   // tap (the helper itself, the bar) sends it straight home.
   const slot = $('ipsySlot'), rollBar = $('askIpsy');
@@ -709,6 +709,8 @@
   const IPSY_APPS = ['calendar', 'notes', 'meals', 'orders', 'travel', 'news', 'weather', 'house'].filter(known);
   const SEP = '__';
   const working = new Set();   // apps Ipsy is using right now: not put away to open another
+  // Claude turned off for an app on this phone (AllisonOS.claude, ../home/account.js): Ipsy here doesn't use it either
+  const claudeOn = id => !AllisonOS.claude || AllisonOS.claude.on(id);
   const mountedOf = id => { try { const A = frames[id].firstChild.contentWindow.AllisonOS, m = (A.ipsy && A.ipsy.mounted) || A.ipsyTools; return m && m.app === id ? m : null; } catch { return null; } };
   async function ipsyOf(id) {
     if (!frames[id]) { load(id); used = used.filter(x => x !== id); used.unshift(id); }   // opened out of sight: first in line to be put away
@@ -721,6 +723,7 @@
   const runIn = key => async (input, ctx) => {
     const i = key.indexOf(SEP), id = key.slice(0, i), tool = key.slice(i + SEP.length);
     if (!IPSY_APPS.includes(id)) return { error: true, content: 'There is no such app for Ipsy in aOS.' };
+    if (!claudeOn(id)) return { error: true, content: `The person has turned Claude off for ${name(id)} on this phone (Settings, AI helper in that app, or aOS, Account, AI helper), so Ipsy can't read or change anything in ${name(id)}. Don't try again; you can tell them it can be turned back on there.` };
     working.add(id);
     try {
       const m = await ipsyOf(id);
@@ -732,12 +735,12 @@
   };
   // search_apps: one look across the apps' own words on this phone (aOS/home-find.js, as the Ipsy bar's "In your
   // apps"), so a question that names something needn't open each app to find which has it. What is marked
-  // Private is left out, as each app's own Ipsy leaves it out. Places and Podcasts are searched too (they have no
+  // Private is left out, as each app's own Ipsy leaves it out, and so is an app Claude is turned off for. Places and Podcasts are searched too (they have no
   // tools of their own yet); Fitness and Money aren't searched at all (home-find.js doesn't read them).
   async function searchApps(input) {
     const q = String((input && input.query) || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80);
     if (q.length < 2) throw new Error('Give a word or two to search for.');
-    const found = window.aosFind ? window.aosFind.search(q, { known, per: 8, max: 30, forIpsy: true }) : [];
+    const found = window.aosFind ? window.aosFind.search(q, { known: id => known(id) && claudeOn(id), per: 8, max: 30, forIpsy: true }) : [];
     return { content: { query: q, found: found.length, results: found.map(r => ({ app: r.app, app_name: name(r.app), title: r.title, details: r.sub, ...(r.at ? { opens: r.at } : {}) })),
       note: 'Titles and a line each, as the apps list them; use the app\'s own tools for the details. Anything marked Private is never searched.' } };
   }

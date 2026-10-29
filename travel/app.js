@@ -50,7 +50,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore', family: KEY + '-family', who: KEY + '-who', people: KEY + '-people',
     calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
-    ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut', more: KEY + '-scan-more',
+    ipsyAuto: KEY + '-ipsy-auto', drive: KEY + '-drive', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut', more: KEY + '-scan-more',
   };
   // Inside aOS, reading Gmail (and the checks after it) count as an update under way: aOS doesn't put Travel away
   // or start it again until it's done (../home/welcome.js AllisonOS.updating).
@@ -269,6 +269,60 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (b.type === 'hotel') return b.name || 'Hotel';
     if (b.type === 'car') return carCo(b) + (b.carClass ? ' · ' + b.carClass : '');
     return b.title || 'Booking';
+  }
+  // ---------------------------------------------------------------------
+  // Check in after the drive. On the day you fly in, the hotel's check-in comes after the flight lands
+  // (BAGS_MIN to get off and collect bags), the car is picked up, and the drive from there to the hotel:
+  // never before the hotel's own check-in time. The drive is from travel/api/drive (OpenStreetMap: Photon
+  // finds the places, OSRM the route), kept on this phone by its two places; until it answers, or when it
+  // can't, DRIVE_GUESS minutes.
+  // ---------------------------------------------------------------------
+  const BAGS_MIN = 30, DRIVE_GUESS = 45;
+  // Wall-clock times ('2026-10-16T17:05', the place's own clock) plus minutes, still on that clock.
+  const addMin = (at, m) => { const t = Date.parse(at.slice(0, 16) + ':00Z'); return isNaN(t) ? at : new Date(t + m * 6e4).toISOString().slice(0, 16); };
+  const wall = at => /^20\d\d-\d\d-\d\dT\d\d:\d\d/.test(at || '') ? at.slice(0, 16) : '';
+  function arrival(h, items) {
+    if (h.type !== 'hotel' || !h.checkIn || h.status === 'cancelled') return null;
+    const day = h.checkIn, ok = b => b !== h && b.status !== 'cancelled';
+    const fl = items.filter(b => ok(b) && b.type === 'flight' && wall(b.arr).slice(0, 10) === day).sort((a, b) => a.arr.localeCompare(b.arr)).pop();
+    if (!fl) return null;
+    const landed = addMin(wall(fl.arr), BAGS_MIN);
+    const car = items.filter(b => ok(b) && b.type === 'car' && wall(b.pickup).slice(0, 10) === day).pop();
+    const ready = car && wall(car.pickup) > landed ? wall(car.pickup) : landed;
+    const code = /^[A-Z]{3}$/.test(fl.to || '') ? fl.to : '';
+    const from = (car && car.pickupPlace) || [code && code + ' airport', fl.toName || city(code)].filter(Boolean).join(', ');
+    const to = h.address || [h.name, h.city].filter(Boolean).join(', ');
+    const d = driveMin(from, to, car && car.pickupPlace ? '' : code);   // from the airport itself: Photon looks for the aerodrome
+    const at = addMin(ready, d.min);
+    const posted = h.checkInTime ? h.checkIn + 'T' + h.checkInTime : '';
+    return { at: posted > at ? posted : at, min: d.min, routed: d.routed, from: car ? 'car' : (code || 'the airport'), posted };
+  }
+  const drives = ls.json(K.drive, {});
+  const driving = new Set();
+  // Minutes from one place to the other: {min, routed}. Asks the server once for a pair it doesn't have (a failed
+  // answer is tried again the next day), then shows the trip again.
+  function driveMin(from, to, code) {
+    const k = (from + '|' + to).toLowerCase().slice(0, 400), x = drives[k];
+    if (x && x.min) return { min: x.min, routed: true };
+    if (from && to && !driving.has(k) && !(x && Date.now() - x.at < D)) {
+      driving.add(k);
+      setTimeout(async () => {
+        if (liveAvail === false) { driving.delete(k); return; }   // no server here (liveAvail, below)
+        let min = 0;
+        try {
+          const r = await aosFetch(API + 'drive?' + new URLSearchParams({ from: from.slice(0, 160), to: to.slice(0, 160), ...(code ? { airport: code } : {}) }), { headers: { 'X-Travel': '1' }, cache: 'no-store' }, true);
+          const j = await r.json();
+          if (j && j.ok && j.min > 0 && j.min < 600) min = Math.round(j.min);
+          else if (j && j.error === 'signin') { driving.delete(k); return; }   // signed out: asked again once signed in
+        } catch {}
+        drives[k] = min ? { min, at: Date.now() } : { at: Date.now() };
+        const keys = Object.keys(drives); keys.slice(0, Math.max(0, keys.length - 100)).forEach(o => delete drives[o]);
+        ls.set(K.drive, JSON.stringify(drives));
+        driving.delete(k);
+        if (min && !$('tripPage').hidden && st.trip) renderTrip();
+      }, 0);
+    }
+    return { min: DRIVE_GUESS, routed: false };
   }
   // Where people usually fly from: the most common first departure of a trip.
   let homeAirport = '';
@@ -493,8 +547,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const now = Date.now();
     const soon = alive().filter(b => !b.ride && b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D);
     const flightsIn = d => soon.filter(f => f.type === 'flight' && (f.dep || '').slice(0, 10) === d && startT(f) > now - 30 * 6e4);
-    // On the day you fly in, the flight comes before the hotel check-in.
-    const key = b => b.type === 'hotel' && startT(b) > now && flightsIn(b.checkIn).length ? Math.max(startT(b), ...flightsIn(b.checkIn).map(endT)) + 1 : startT(b);
+    // On the day you fly in, the flight and the car come before the hotel check-in (arrival).
+    const all = soon.slice();
+    const key = b => {
+      if (b.type !== 'hotel' || startT(b) <= now || !flightsIn(b.checkIn).length) return startT(b);
+      const a = arrival(b, all);
+      return Math.max(a ? moment(a.at) : startT(b), ...flightsIn(b.checkIn).map(endT)) + 1;
+    };
     const next = soon.sort((a, b) => key(a) - key(b))[0];
     if (!next) return '';
     const s = startT(next), going = s <= now;
@@ -597,7 +656,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // A trip page: the timeline
   // ---------------------------------------------------------------------
   // One row of the timeline. side: 'start' | 'end' (a hotel's check-out, a car's return).
-  function evRow(b, at, side, withDate) {
+  function evRow(b, at, side, withDate, est) {
     const cx = b.status === 'cancelled' ? ' cx' : '';
     let t = '', s = '', time = fmtTime(at) || (!at ? (b.depTime ? fmtTime('2000-01-01T' + b.depTime) : '') || '—' : b.type === 'hotel' ? (side === 'start' ? 'Check in' : 'Check out') : 'All day');
     if (b.type === 'flight') {
@@ -609,6 +668,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       t = (side === 'start' ? 'Check in · ' : 'Check out · ') + (b.name || 'Hotel');
       if (!fmtTime(at)) time = side === 'start' ? 'In' : 'Out';
       s = side === 'start' ? [b.address, b.checkOut ? plural(Math.max(1, Math.round((dOf(b.checkOut) - dOf(b.checkIn)) / D)), 'night') : ''].filter(Boolean).join(' · ') : '';
+      // On the day you fly in: when you'll get there, after the flight, the car and the drive (arrival)
+      if (est && side === 'start' && at !== est.posted) { time = '~' + time; s = [s, 'about ' + est.min + ' min drive from ' + (est.from === 'car' ? 'the car hire' : est.from), est.posted ? 'check-in from ' + fmtTime(est.posted) : ''].filter(Boolean).join(' · '); }
     } else if (b.type === 'car') {
       t = (side === 'start' ? 'Pick up · ' : 'Return · ') + carCo(b);
       s = [side === 'start' ? b.pickupPlace : (b.dropPlace || b.pickupPlace), side === 'start' ? b.carClass : ''].filter(Boolean).join(' · ');
@@ -659,7 +720,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     st.trip = g.id;
     const events = [];
     for (const b of g.items) {
-      events.push({ b, at: startOf(b), side: 'start' });
+      const est = arrival(b, g.items);
+      events.push({ b, at: est ? est.at : startOf(b), side: 'start', est });
       if (b.type === 'hotel' && b.checkOut) events.push({ b, at: endOf(b), side: 'end' });
       if (b.type === 'car' && b.dropoff) events.push({ b, at: endOf(b), side: 'end' });
     }
@@ -668,7 +730,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     for (const e of events) { const d = e.at.slice(0, 10); if (!days.length || days[days.length - 1].d !== d) days.push({ d, list: [] }); days[days.length - 1].list.push(e); }
     let h = '<div class="triphead"><input id="tpName" translate="no" value="' + esc(g.name) + '" aria-label="Trip name" placeholder="' + esc(g.auto) + '" enterkeyhint="done"><div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div></div>';
     h += days.map((d, i) => '<div class="dayblock" style="--i:' + i + '"><p class="sechead"><span>' + esc(fmtDay(d.d, { weekday: 'long', month: 'long' })) + '</span></p><div class="tl glass">'
-      + d.list.map(e => evRow(e.b, e.at, e.side)).join('') + '</div></div>').join('');
+      + d.list.map(e => evRow(e.b, e.at, e.side, false, e.est)).join('') + '</div></div>').join('');
+    if (events.some(e => e.est && e.est.routed)) h += '<p class="hint">Drive times: OSRM, map data © OpenStreetMap contributors.</p>';
     // Have Ipsy check this trip: every booking still to come, against its newest email (checkTrip)
     if (aiOn() && aiAvail !== false && g.items.some(checkable)) h += '<div class="rgroup glass"><button class="rowbtn" type="button" id="tpAi"' + (st.aiBusy ? ' disabled' : '') + '><span class="ic">' + I.spark + '</span><span>'
       + (st.aiBusy ? 'Ipsy is reading the emails…' : 'Have Ipsy check this trip') + '<span class="sub">Reads the newest email for each booking and updates what changed</span></span></button></div>';
@@ -1488,7 +1551,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Ipsy's own check had a switch of its own (K.ipsyAuto); it's this one now. Turned off there, it stays off here, once.
   if (ls.get(K.ipsyAuto, '') === '0') ls.set(K.aiOn, '0');
   ls.del(K.ipsyAuto);
-  const aiOn = () => ls.get(K.aiOn, '1') !== '0';
+  // Claude turned off for Travel on this phone (Settings > AI helper, Use Claude in Travel; ../home/account.js): Ipsy doesn't fill in anything either
+  const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('travel');
+  const aiOn = () => claudeOn() && ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null, aiModels = null;
   // Which models answer: what the function says it is set to use, and, for Check, what the last answer said it came from (kept
   // on this phone). Ipsy's answers go to the chat as they come, so only the model it is set to use is named.
@@ -2065,8 +2130,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.info({ id: 'stLive', title: 'Live flight status', sub: liveAvail === true ? 'Working: ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.' : liveAvail === false ? 'Not available on this copy of the site.' : 'Checking…' }),
       ])
       + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
-      + S.section('Ipsy', [
-        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false }),
+      + S.section('AI helper', [
+        S.claude('travel'),
+        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false || !claudeOn() }),
         PV ? S.toggle({ id: 'stIpsyGmailOpt', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('travel') }) : '',
       ], { hint: ml, hintId: 'stModels' })
       + S.section('Your data', [
@@ -2090,6 +2156,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
+  addEventListener('aos:claude', () => { renderSettings(); render(); });   // Use Claude in Travel turned (home/settings.js)
   $('stBody').addEventListener('click', e => {
     const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
     const id = b.id;
@@ -2368,5 +2435,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
 })();

@@ -106,7 +106,7 @@ const base = id => id.replace(/vintage$/, '');
   const { ctx, p, errs } = await open(after(1), 'glass'); const pr = [...errs];
   common(await cards(p), pr);
   await p.click('#stories .story:not(.plain)'); await p.waitForSelector('.page.on .approw');
-  if (intro && await p.locator('.page.on .ipsy-forms .ipsy-mini .ipsy-char').count() !== 7) pr.push('Meet Ipsy\'s page doesn\'t show its seven helpers');
+  if (intro && await p.locator('.page.on .ipsy-forms .ipsy-mini .ipsy-char').count() !== 5) pr.push('Meet Ipsy\'s page doesn\'t show its five helpers');
   if (!await p.locator('.page.on .approw [data-get]').count()) pr.push('the postcard\'s page has no Get');
   report('Sea glass: Today\'s postcards, and one opens its page', pr); await ctx.close();
 }

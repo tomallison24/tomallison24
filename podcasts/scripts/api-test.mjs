@@ -34,6 +34,7 @@ const call = async (path, env = {}) => {
 const apple = { collectionId: 1, collectionName: 'Apple Show', artistName: 'A', feedUrl: 'https://feeds.example.com/a', artworkUrl600: 'https://img.example.com/a.jpg', primaryGenreName: 'News' };
 const pi = { id: 77, title: 'Index Show', author: 'B', url: 'https://feeds.example.com/b', artwork: 'https://img.example.com/b.jpg', itunesId: 2, categories: { 9: 'Comedy' }, episodeCount: 12 };
 const isApple = u => u.startsWith('https://itunes.apple.com/');
+const CHART_ROW = { id: '1', name: 'Apple Show', artistName: 'A', artworkUrl100: 'https://img.example.com/a/100x100bb.jpg', genres: [{ name: 'News' }] };
 const isIndex = u => u.startsWith('https://api.podcastindex.org/');
 let n = 0;
 const test = async (name, fn) => { store.clear(); calls = []; await fn(); n++; console.log('ok -', name); };
@@ -100,7 +101,7 @@ await test('Search: both refuse, an older kept copy is used', async () => {
 });
 
 await test('Top shows: kept, and an older copy used when Apple refuses', async () => {
-  answer = u => u.startsWith('https://rss.applemarketingtools.com/') ? jsonRes({ feed: { results: [{ id: '1' }] } })
+  answer = u => u.startsWith('https://rss.applemarketingtools.com/') ? jsonRes({ feed: { results: [CHART_ROW] } })
     : u.includes('/lookup?') ? jsonRes({ results: [apple] }) : jsonRes({}, 500);
   assert.deepEqual((await call('top?cc=us')).body.results.map(s => s.title), ['Apple Show']);
   calls = [];
@@ -112,11 +113,43 @@ await test('Top shows: kept, and an older copy used when Apple refuses', async (
   assert.deepEqual((await call('top?cc=us')).body.results.map(s => s.title), ['Apple Show']);
 });
 
-await test('Top shows: Apple refuses and nothing is kept: an error, as before', async () => {
-  answer = () => jsonRes({}, 429);
+await test('Top shows: Apple’s chart, but its lookup says 429: the chart anyway, each show with its Apple id, not kept', async () => {
+  answer = u => u.startsWith('https://rss.applemarketingtools.com/') ? jsonRes({ feed: { results: [CHART_ROW, { id: 'x1', name: 'Not a number' }, { id: '7' }] } }) : jsonRes({}, 429);
   const r = await call('top?cc=us');
-  assert.equal(r.status, 502);
-  assert.match(r.body.error, /429/);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.results, [{ id: '1', title: 'Apple Show', author: 'A', art: 'https://img.example.com/a/600x600bb.jpg', genre: 'News', feed: '', count: 0, apple: '1' }],
+    'its name, author, artwork (600 px) and genre from the chart, and the Apple id to look up; odd and nameless rows left out');
+  assert.equal(store.size, 0, 'not kept: the whole chart is kept once the lookup works');
+});
+
+await test('Top shows: no chart from Apple at all: Podcast Index’s trending shows, marked so; without its key, an error', async () => {
+  answer = u => isIndex(u) ? jsonRes({ feeds: [pi, { ...pi, title: 'Gone', dead: 1 }] }) : jsonRes({}, 429);
+  const r = await call('top?cc=us', KEYS);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.results.map(s => [s.title, s.feed, s.trend]), [['Index Show', 'https://feeds.example.com/b', true]]);
+  assert.ok(calls.some(c => c.url === 'https://api.podcastindex.org/api/1.0/podcasts/trending?max=50&lang=en'));
+  store.clear(); calls = [];
+  const n = await call('top?cc=us');
+  assert.equal(n.status, 502);
+  assert.match(n.body.error, /chart isn’t available/);
+});
+
+await test('lookup: one show’s feed by its Apple id, from Apple, else Podcast Index; kept a day; odd ids refused', async () => {
+  answer = u => u.startsWith('https://itunes.apple.com/lookup?entity=podcast&id=1') ? jsonRes({ results: [apple] }) : jsonRes({}, 500);
+  assert.deepEqual((await call('lookup?id=1', KEYS)).body.results.map(s => s.feed), ['https://feeds.example.com/a']);
+  calls = [];
+  assert.deepEqual((await call('lookup?id=1', KEYS)).body.results.map(s => s.feed), ['https://feeds.example.com/a']);
+  assert.equal(calls.length, 0, 'kept');
+  store.clear();
+  answer = u => isIndex(u) ? jsonRes({ status: 'true', feed: pi }) : jsonRes({}, 429);
+  const r = await call('lookup?id=2', KEYS);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.results.map(s => [s.title, s.feed]), [['Index Show', 'https://feeds.example.com/b']]);
+  assert.ok(calls.some(c => c.url === 'https://api.podcastindex.org/api/1.0/podcasts/byitunesid?id=2'));
+  store.clear();
+  answer = u => isIndex(u) ? jsonRes({ status: 'true', feed: [] }) : jsonRes({}, 429);
+  assert.match((await call('lookup?id=3', KEYS)).body.error, /no public feed/);
+  for (const bad of ['', 'abc', '1;2', '1'.repeat(13)]) assert.equal((await call('lookup?id=' + bad, KEYS)).status, 400, bad);
 });
 
 await test('still refuses requests without the app header', async () => {

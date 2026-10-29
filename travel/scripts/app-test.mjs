@@ -106,11 +106,12 @@ for (const scheme of ['light', 'dark']) {
     const id = u.pathname.split('/').pop(), m = EMAILS.find(x => x.id === id);
     return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
   });
-  const lookups = [];
+  const lookups = [], drives = [];
   await ctx.route(BASE + '/travel/api/**', route => {
     const u = new URL(route.request().url());
     if (route.request().headers()['x-travel'] !== '1') return route.fulfill({ status: 404, json: { error: 'not-found' } });
     if (u.pathname.endsWith('/ping')) return route.fulfill({ json: { ok: true, status: true } });
+    if (u.pathname.endsWith('/drive')) { drives.push(Object.fromEntries(u.searchParams)); return route.fulfill({ json: { ok: true, min: 25, km: 21.4 } }); }
     lookups.push(u.searchParams.get('no') + '@' + u.searchParams.get('date'));
     return route.fulfill({ json: { ok: true, found: true, legs: [{ number: 'UA 1234', status: 'Delayed', cargo: false, aircraft: 'Boeing 737-900',
       departure: { iata: 'DEN', scheduled: { utc: utc(soon), local: loc(soon) }, revised: { utc: utc(late), local: loc(late) }, terminal: 'West', gate: 'B32' },
@@ -204,6 +205,30 @@ for (const scheme of ['light', 'dark']) {
     const links = await page.$$eval('#tpBody a.rowbtn', els => els.map(a => a.href));
     assert.ok(links.some(h => h.startsWith('https://www.google.com/travel/flights?q=')));
     assert.ok(links.some(h => h.startsWith('https://www.marriott.com/search/findHotels.mi?') && h.includes('Boston')));
+  });
+  await step(scheme + ': on the day you fly in, check-in comes after the flight, the car and the drive', async () => {
+    const run = () => page.evaluate(() => {
+      const fl = { id: 'xf', type: 'flight', dep: '2026-11-05T12:00', arr: '2026-11-05T17:10', from: 'RDU', to: 'LAX' };
+      const car = { id: 'xc', type: 'car', pickup: '2026-11-05T17:30', pickupPlace: 'LAX Airport, 9020 Aviation Blvd' };
+      const h = { id: 'xh', type: 'hotel', checkIn: '2026-11-05', checkInTime: '15:00', checkOut: '2026-11-07', address: '900 W Olympic Blvd, Los Angeles' };
+      const a = window.__travel.arrival;
+      return { car: a(h, [fl, car, h]), noCar: a(h, [fl, h]), late: a({ ...h, checkInTime: '20:00' }, [fl, car, h]), otherDay: a({ ...h, checkIn: '2026-11-06' }, [fl, car, h]) };
+    });
+    let r = await run();
+    assert.deepEqual([r.car.at, r.car.min, r.car.from], ['2026-11-05T18:25', 45, 'car'], 'landed + 30 min for bags, then the guess for the drive: ' + JSON.stringify(r.car));
+    assert.equal(r.late.at, '2026-11-05T20:00', 'never before the hotel\'s own check-in time');
+    assert.equal(r.otherDay, null, 'no flight in that day: the hotel\'s time');
+    await page.waitForFunction(() => window.__travel.arrival({ type: 'hotel', checkIn: '2026-11-05', address: '900 W Olympic Blvd, Los Angeles' },
+      [{ type: 'flight', arr: '2026-11-05T17:10', to: 'LAX' }, { type: 'car', pickup: '2026-11-05T17:30', pickupPlace: 'LAX Airport, 9020 Aviation Blvd' }]).min === 25, null, { timeout: 5000 });
+    r = await run();
+    assert.deepEqual([r.car.at, r.car.routed], ['2026-11-05T18:05', true], 'then the drive from travel/api/drive');
+    const asked = drives.find(d => /9020 Aviation/.test(d.from));
+    assert.ok(asked && asked.to === '900 W Olympic Blvd, Los Angeles' && !asked.airport, 'from the car hire desk to the hotel: ' + JSON.stringify(drives));
+    assert.ok(drives.some(d => d.airport === 'LAX' && /^LAX airport/.test(d.from)), 'with no car, from the airport: ' + JSON.stringify(drives));
+    // The trip page: when the flight in lands on the check-in day, the check-in row comes after it
+    const rows = await page.$$eval('#tpBody .dayblock', els => els.map(d => [...d.querySelectorAll('.ev .t')].map(e => e.textContent)));
+    const dayOf = rows.find(l => l.some(t => /^UA 1234/.test(t)) && l.some(t => /^Check in/.test(t)));
+    if (dayOf) assert.ok(dayOf.findIndex(t => /^Check in/.test(t)) > dayOf.findIndex(t => /^UA 1234/.test(t)), dayOf.join(' | '));
   });
   await step(scheme + ': the trip page: round teal, orange and olive kinds on a cream ground', async () => {
     const q = (sel, props) => page.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);

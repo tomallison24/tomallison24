@@ -411,7 +411,8 @@ if (want('ipsy-settings')) {
   const items = [];
   for (const [look, name] of LOOKS.slice(0, 2)) {
     const p = await phone('travel', { look }); await settings(p);
-    await rows(p, S => S.section('Ipsy', [
+    await rows(p, S => S.section('AI helper', [
+      S.claude('travel'),
       S.toggle({ title: 'Ipsy fills in what’s missing', sub: 'Completes new bookings from their emails, on this phone.', on: true }),
       S.toggle({ title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: true }),
     ], { hint: 'A booking marked Private stays out of everything Ipsy reads.' }));

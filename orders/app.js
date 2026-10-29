@@ -797,7 +797,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     'ai-key': 'Anthropic didn’t accept the key. The owner can check it.', 'ai-busy': 'Claude is busy. Try again in a minute.',
     'ai-unreachable': 'Couldn’t reach Claude. Try again in a minute.', 'ai-refused': 'Claude wouldn’t read this one.',
     'ai-format': 'That didn’t come back right. Try again.', empty: 'There’s too little text in that email to read.',
-    offline: 'No connection. Try again when you’re online.',
+    offline: 'No connection. Try again when you’re online.', 'ai-off': 'Claude is turned off for Orders on this phone (Settings, AI helper).',
   };
   const AI_LABEL = { store: 'store', kind: 'kind', orderNo: 'order number', items: 'items', total: 'total', carrier: 'courier', tracking: 'tracking number', eta: 'expected date', etaEnd: 'expected date', pickupBy: 'pickup date', status: 'status' };
   // quiet (Ipsy checking by itself): never asks for Face ID; signed out, it just says so.
@@ -895,14 +895,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Ipsy keeps orders up to date by itself: after each read of Gmail (and when Orders opens), every order
   // in To check, and every order still on its way, whose newest email Ipsy hasn't read yet, is checked
   // once (per email), To check first, at most 10 at a time, quietly. Asked once first, from Ipsy's corner;
-  // Settings > Ipsy turns it on or off. A fix shows in Ipsy's chat with Undo, and Ipsy says in its corner
+  // Settings > AI helper turns it on or off. A fix shows in Ipsy's chat with Undo, and Ipsy says in its corner
   // what it did. What it can't fix stays in To check.
+  const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('orders');   // Settings > AI helper, Use Claude in Orders (this phone)
   let autoBusy = false, autoOffered = false;     // offered once each time Orders opens
-  const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy', 'ai-budget'];
+  const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'ai-off', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy', 'ai-budget'];
   const when = o => (o.source && o.source.date) || 0;
   async function autoCheck() { updating('check', true); try { await autoCheckNow(); } finally { updating('check', false); } }
   async function autoCheckNow() {
-    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken()) return;
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken() || !claudeOn()) return;
     const tried = new Set(ls.json(K.ipsyTried, []));
     const todo = orders.filter(o => !o.private && !o.hide && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
       .sort((a, b) => needsCheck(b) - needsCheck(a) || when(b) - when(a)).slice(0, 10);
@@ -1318,7 +1319,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + S.section('What counts as an order', kindRows, { id: 'stKinds' })
       + S.section('Hidden orders', S.nav({ id: 'stHidden', icon: 'eye', title: 'Show hidden orders', sub: 'Gifts and anything you hid, after Face ID.' }))
       + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
-      + S.section('Ipsy', [
+      + S.section('AI helper', [
+        S.claude('orders'),
         S.toggle({ id: 'stIpsyAuto', title: 'Ipsy keeps orders up to date', sub: 'Ipsy rereads new order emails and To check, and fixes them.', on: ls.get(K.ipsyAuto, '') === '1' }),
         PV ? S.toggle({ id: 'stIpsyGmail', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('orders') }) : '',
       ], { id: 'stIpsy' })

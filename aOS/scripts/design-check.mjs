@@ -7,7 +7,7 @@
 //   done          the sheet's way out is the ✓ labelled Done, in the head's right corner
 //   design-first  the first section is Design, with the shared picker (aosDesign.picker()); Clock, whose looks
 //                 live in clock/design.js (DESIGN.md rule 14), with its own picker of the four looks
-//   order         the sections in the standard order: Design · the app's own · Connected accounts · Ipsy ·
+//   order         the sections in the standard order: Design · the app's own · Connected accounts · AI helper ·
 //                 Notifications · Your data · Family account
 //   on-off        no "On." or "Off." in the words
 //   one-sentence  a row's line under its name is one sentence, ending with a full stop
@@ -232,7 +232,7 @@ function pageSheet() {
     looks: [...((dlg.querySelector('.st-sec') || dlg).querySelectorAll('[role="radiogroup"] [role="radio"][data-design]'))].map(b => b.dataset.design), text, upper: (text.match(/(^|[^\w])AOS([^\w]|$)/g) || []).length };
 }
 
-const ORDER = ['Design', '', 'Connected accounts', 'Ipsy', 'Notifications', 'Your data', 'Family account'];
+const ORDER = ['Design', '', 'Connected accounts', 'AI helper', 'Notifications', 'Your data', 'Family account'];
 const rank = l => { const i = ORDER.findIndex(x => x && x.toLowerCase() === l.toLowerCase()); return i < 0 ? 1 : i; };
 // sentences: a full stop, question or exclamation mark, then a space and the next sentence
 const sentences = s => s.split(/(?<=[.!?])\s+(?=[A-Z0-9“"‘(])/).filter(Boolean).length;

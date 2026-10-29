@@ -5,6 +5,7 @@
 //   /podcasts/api/feed?url=<RSS feed>     the feed, as text
 //   /podcasts/api/search?term=<words>     Apple Podcasts search (shows)
 //   /podcasts/api/top?cc=us               Apple's top shows for a country
+//   /podcasts/api/lookup?id=<Apple id>    one show of the chart, with its feed
 //
 // Apple's directory answers about 20 calls a minute from one address, and this
 // runs on Cloudflare's addresses, which other sites share, so Apple often turns
@@ -46,7 +47,8 @@ export async function onRequestGet({ request, params, env = {}, waitUntil }) {
   try {
     if (route === 'feed') return await feed(q.get('url'));
     if (route === 'search') return await search(q.get('term'), q.get('cc'), env, waitUntil);
-    if (route === 'top') return await top(q.get('cc'), waitUntil);
+    if (route === 'top') return await top(q.get('cc'), env, waitUntil);
+    if (route === 'lookup') return await lookup(q.get('id'), env, waitUntil);
   } catch (e) {
     return reply(JSON.stringify({ error: String(e && e.message || e).slice(0, 200) }), 502, 'application/json');
   }
@@ -174,7 +176,11 @@ async function kept(key, fresh, make, waitUntil) {
   }
   let results;
   try { results = await make(); }
-  catch (e) { if (old) return old; throw e; }
+  catch (e) {
+    if (old) return old;
+    if (e && Array.isArray(e.partial)) return e.partial;   // part of an answer (the chart without its feeds): used, not kept
+    throw e;
+  }
   if (cache && results.length) {
     const put = cache.put(req, new Response(JSON.stringify({ at: Date.now(), results }), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + KEEP },
@@ -206,14 +212,14 @@ async function search(term, country, env, waitUntil) {
   return json({ results }, 600);
 }
 
-// Podcast Index's search (search/byterm), signed as its API asks: the key, the
-// time, and a SHA-1 of the key, secret and time. null without a key.
-async function indexSearch(term, env) {
+// Podcast Index (api/1.0/<path>), signed as its API asks: the key, the time, and a SHA-1 of the key,
+// secret and time. null without a key.
+async function indexGet(path, env) {
   const key = String(env.PODCASTINDEX_KEY || '').trim(), secret = String(env.PODCASTINDEX_SECRET || '').trim();
   if (!key || !secret) return null;
   const date = String(Math.floor(Date.now() / 1000));
   const hash = new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(key + secret + date)));
-  const res = await fetch('https://api.podcastindex.org/api/1.0/search/byterm?max=30&q=' + encodeURIComponent(term), {
+  const res = await fetch('https://api.podcastindex.org/api/1.0/' + path, {
     signal: AbortSignal.timeout(TIMEOUT_MS),
     headers: {
       'User-Agent': UA, Accept: 'application/json', 'X-Auth-Key': key, 'X-Auth-Date': date,
@@ -221,40 +227,83 @@ async function indexSearch(term, env) {
     },
   });
   if (!res.ok) throw new Error('Podcast Index answered ' + res.status);
-  const data = JSON.parse(await readText(res));
-  return (data.feeds || []).filter(f => f && f.title && f.url && !f.dead).map(f => ({
-    id: String(f.itunesId || 'pi' + f.id),
-    title: String(f.title),
-    author: String(f.author || f.ownerName || ''),
-    feed: String(f.url),
-    art: String(f.artwork || f.image || ''),
-    genre: String(Object.values(f.categories || {})[0] || ''),
-    count: Number(f.episodeCount) || 0,
-  }));
+  return JSON.parse(await readText(res));
+}
+const indexShow = f => ({
+  id: String(f.itunesId || 'pi' + f.id),
+  title: String(f.title),
+  author: String(f.author || f.ownerName || ''),
+  feed: String(f.url),
+  art: String(f.artwork || f.image || ''),
+  genre: String(Object.values(f.categories || {})[0] || ''),
+  count: Number(f.episodeCount) || 0,
+});
+const indexFeeds = data => ((data && data.feeds) || []).filter(f => f && f.title && f.url && !f.dead).map(indexShow);
+// Its search (search/byterm), and its trending shows in English (podcasts/trending), each null without a key.
+async function indexSearch(term, env) {
+  const data = await indexGet('search/byterm?max=30&q=' + encodeURIComponent(term), env);
+  return data && indexFeeds(data);
+}
+async function indexTrending(env) {
+  let data = null;
+  try { data = await indexGet('podcasts/trending?max=50&lang=en', env); } catch {}
+  return data && indexFeeds(data).map(s => ({ ...s, trend: true }));
 }
 
 // Apple's chart gives ids, names and artwork but no feeds; one lookup call
 // adds the feeds. The newer chart first, then the older one.
-async function top(country, waitUntil) {
+async function top(country, env, waitUntil) {
   const c = cc(country);
-  return json({ results: await kept('top/' + c, FRESH_TOP, () => chart(c), waitUntil) }, 21600);
+  return json({ results: await kept('top/' + c, FRESH_TOP, () => chart(c, env), waitUntil) }, 21600);
 }
 
-async function chart(c) {
-  let ids = [];
+// The chart: Apple's (the newer one, then the older), then one lookup for every show's feed. When Apple
+// won't do the lookup (it's the rate-limited part), the chart is still shown, each show with its Apple id
+// (apple) for the phone to ask lookup for when it's tapped; that answer isn't kept. When there's no
+// chart at all, Podcast Index's trending shows (trend: true; the phone says Trending), once its key is set.
+async function chart(c, env) {
+  let rows = [];
   try {
     const { res } = await get(`https://rss.applemarketingtools.com/api/v2/${c}/podcasts/top/50/podcasts.json`, 'application/json');
     const data = JSON.parse(await readText(res));
-    ids = ((data.feed && data.feed.results) || []).map(r => String(r.id));
+    rows = ((data.feed && data.feed.results) || []).map(r => ({ id: String(r.id), title: r.name || '', author: r.artistName || '',
+      art: String(r.artworkUrl100 || '').replace(/\/\d+x\d+bb\./, '/600x600bb.'), genre: ((r.genres || [])[0] || {}).name || '' }));
   } catch {}
-  if (!ids.length) {
-    const data = await itunes(`${c}/rss/toppodcasts/limit=50/json`);
-    ids = ((data.feed && data.feed.entry) || []).map(e => e.id && e.id.attributes && e.id.attributes['im:id']).filter(Boolean);
+  if (!rows.length) {
+    try {
+      const data = await itunes(`${c}/rss/toppodcasts/limit=50/json`);
+      rows = ((data.feed && data.feed.entry) || []).map(e => ({ id: String(e.id && e.id.attributes && e.id.attributes['im:id'] || ''),
+        title: (e['im:name'] || {}).label || '', author: (e['im:artist'] || {}).label || '', art: ((e['im:image'] || []).slice(-1)[0] || {}).label || '', genre: '' })).filter(r => r.id);
+    } catch {}
   }
-  if (!ids.length) return [];
-  const data = await itunes(`lookup?entity=podcast&country=${c}&id=${ids.slice(0, 50).join(',')}`);
+  rows = rows.filter(r => /^\d{1,12}$/.test(r.id) && r.title).slice(0, 50);
+  if (!rows.length) {
+    const t = await indexTrending(env);
+    if (t && t.length) return t;
+    throw new Error('Apple’s chart isn’t available right now');
+  }
+  let data;
+  try { data = await itunes(`lookup?entity=podcast&country=${c}&id=${rows.map(r => r.id).join(',')}`); }
+  catch { throw Object.assign(new Error('partial'), { partial: rows.map(r => ({ ...r, feed: '', count: 0, apple: r.id })) }); }
   const byId = new Map((data.results || []).map(r => [String(r.collectionId), show(r)]));
-  return ids.map(id => byId.get(id)).filter(s => s && s.feed);
+  return rows.map(r => byId.get(r.id)).filter(s => s && s.feed);
+}
+
+// One show by its Apple id, with its feed: Apple's lookup, else Podcast Index's (byitunesid). Kept for a day.
+async function lookup(raw, env, waitUntil) {
+  const id = String(raw || '');
+  if (!/^\d{1,12}$/.test(id)) return reply(JSON.stringify({ error: 'bad-request' }), 400, 'application/json');
+  const [found] = await kept('lookup/' + id, 86400, async () => {
+    try {
+      const r = ((await itunes(`lookup?entity=podcast&id=${id}`)).results || []).map(show).find(s => s.feed);
+      if (r) return [r];
+    } catch {}
+    const p = await indexGet('podcasts/byitunesid?id=' + id, env);
+    const f = p && !Array.isArray(p.feed) && p.feed;
+    if (f && f.url) return [indexShow(f)];
+    throw new Error(p ? 'That show has no public feed' : BUSY);
+  }, waitUntil);
+  return json({ results: [found] }, 600);
 }
 
 // ---- tags ----

@@ -128,7 +128,7 @@ card and the category.
   with Ipsy's note. Nothing corrected or flagged is sent again either.
 - This month shows a card when Ipsy corrected something or wants you to look ("Ipsy's check"), and
   the check travels with the transaction to whoever sees Money.
-- Settings > Ipsy's daily check (the reader only): **Check each day** (on; kept on this phone), when it
+- Settings > AI helper's daily check (the reader only): **Check each day** (on; kept on this phone), when it
   last checked and what it found, and **Check now**.
 - Cost: a call holds only the new emails (about 7 a day, a few thousand tokens), at Sonnet 5.5's
   $2 / $10 per million tokens in / out: well under $1 a month. At most 8 calls a day for the reader
