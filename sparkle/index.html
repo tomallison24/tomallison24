@@ -128,6 +128,17 @@ svg{display:block}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 .note{margin:8px 4px 0;font-size:13px;color:var(--muted);line-height:1.4}
 .swatch{width:40px;height:40px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(0,0,0,.12)}
+.swrow .switch{margin-left:auto}
+/* the switch every aOS app has (Orders, Travel…): the switch says on or off */
+.switch{position:relative;flex:none;width:58px;height:30px;border-radius:999px;background:var(--fill);box-shadow:inset 0 0 0 1px var(--hair);transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:34px;height:24px;border-radius:999px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.28);
+  transition:transform .3s cubic-bezier(.3,1.3,.5,1),scale .2s cubic-bezier(.2,.8,.2,1),background .2s}
+[aria-checked="true"] > .switch{background:#34C759}
+[aria-checked="true"] > .switch::after{transform:translateX(18px)}
+.swrow:active > .switch::after{scale:1.18;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
+@media (prefers-reduced-motion:reduce){.switch,.switch::after{transition:none}}
+.swrow{font-weight:600}
+.swrow small{font-weight:400}
 .seg button.sw{padding:4px;border-radius:50%;min-width:48px}
 .seg button.sw[aria-pressed="true"]{background:none;box-shadow:0 0 0 3px var(--accent)}
 .preview{width:150px;height:200px;margin:0 auto}
@@ -668,7 +679,7 @@ svg{display:block}
    Standard (Sea glass) design (../home/design.js).
    ====================================================================== */
 :root{
-  --mc-card:#FBF5E9; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-mustard:#E3A72F;
+  --sw-off:rgba(43,37,34,.22); --mc-card:#FBF5E9; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-mustard:#E3A72F;
   --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
   --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-text:#1F6F6B; --cta:#C9502A; --cta-ink:#FFF8EC; --danger-text:#9E3A1A;
   --sheet:#FBF5E9; --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --scrim:rgba(43,37,34,.35); --aurora:1;
@@ -676,14 +687,14 @@ svg{display:block}
   --font:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --mc-card:#322A25; --mc-teal:#4FB3AB;
+  --sw-off:rgba(244,236,221,.24); --mc-card:#322A25; --mc-teal:#4FB3AB;
   --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
   --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --cta:#D8572A; --cta-ink:#FFF8EC; --danger-text:#F2906E;
   --sheet:#322A25; --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --scrim:rgba(12,8,5,.55); --aurora:.9;
   --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
 }}
 :root[data-theme="dark"]{
-  --mc-card:#322A25; --mc-teal:#4FB3AB;
+  --sw-off:rgba(244,236,221,.24); --mc-card:#322A25; --mc-teal:#4FB3AB;
   --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
   --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --cta:#D8572A; --cta-ink:#FFF8EC; --danger-text:#F2906E;
   --sheet:#322A25; --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07); --scrim:rgba(12,8,5,.55); --aurora:.9;
@@ -701,17 +712,21 @@ svg{display:block}
 .sheet .panel{-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:28px 28px 0 0}
 .cta{border-radius:999px}
 .seg button[aria-pressed="true"]{background:var(--mc-teal);color:#FFF8EC}
+.switch{background:var(--sw-off);box-shadow:none}
+.switch::after{background:#FFF8EC;box-shadow:0 1px 3px rgba(43,37,34,.3)}
+[aria-checked="true"] > .switch{background:var(--mc-teal)}
 .bar .bt i,.chart i{background:var(--mc-teal)}
 </style>
 <style id="layers" media="not all">
 /* Layers: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-card:#F9FBFE;--mc-teal:#306E61;--mc-orange:#CF5C59;--mc-mustard:#D8AB63;--bg:#F1F3F6;--text:#131A23;--muted:#3A414A;--faint:#535A62;--accent:#306E61;--on-accent:#FBFDFF;--accent-text:#306E61;--cta:#C05552;--cta-ink:#FBFDFF;--danger-text:#973F3D;--sheet:#F9FBFE;--hair:rgba(19,26,35,.14);--hair-2:rgba(19,26,35,.08);--fill:rgba(19,26,35,.06);--scrim:rgba(19,26,35,.35);--tile:#F9FBFE;--tile-edge:rgba(19,26,35,.05);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
+:root{--sw-off:rgba(19,26,35,.22);--mc-card:#F9FBFE;--mc-teal:#306E61;--mc-orange:#CF5C59;--mc-mustard:#D8AB63;--bg:#F1F3F6;--text:#131A23;--muted:#3A414A;--faint:#535A62;--accent:#306E61;--on-accent:#FBFDFF;--accent-text:#306E61;--cta:#C05552;--cta-ink:#FBFDFF;--danger-text:#973F3D;--sheet:#F9FBFE;--hair:rgba(19,26,35,.14);--hair-2:rgba(19,26,35,.08);--fill:rgba(19,26,35,.06);--scrim:rgba(19,26,35,.35);--tile:#F9FBFE;--tile-edge:rgba(19,26,35,.05);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
 @media (prefers-color-scheme:dark){
-:root:not([data-theme="light"]){--mc-card:#191F26;--mc-teal:#6ABBA9;--bg:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-text:#76C5B3;--cta:#D96662;--cta-ink:#F7FAFE;--danger-text:#F59B95;--sheet:#191F26;--hair:rgba(235,239,243,.14);--hair-2:rgba(235,239,243,.09);--fill:rgba(235,239,243,.07);--scrim:rgba(1,2,6,.55);--tile:#191F26;--tile-edge:rgba(235,239,243,.05)}
+:root:not([data-theme="light"]){--sw-off:rgba(235,239,243,.24);--mc-card:#191F26;--mc-teal:#6ABBA9;--bg:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-text:#76C5B3;--cta:#D96662;--cta-ink:#F7FAFE;--danger-text:#F59B95;--sheet:#191F26;--hair:rgba(235,239,243,.14);--hair-2:rgba(235,239,243,.09);--fill:rgba(235,239,243,.07);--scrim:rgba(1,2,6,.55);--tile:#191F26;--tile-edge:rgba(235,239,243,.05)}
 }
-:root[data-theme="dark"]{--mc-card:#191F26;--mc-teal:#6ABBA9;--bg:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-text:#76C5B3;--cta:#D96662;--cta-ink:#F7FAFE;--danger-text:#F59B95;--sheet:#191F26;--hair:rgba(235,239,243,.14);--hair-2:rgba(235,239,243,.09);--fill:rgba(235,239,243,.07);--scrim:rgba(1,2,6,.55);--tile:#191F26;--tile-edge:rgba(235,239,243,.05)}
+:root[data-theme="dark"]{--sw-off:rgba(235,239,243,.24);--mc-card:#191F26;--mc-teal:#6ABBA9;--bg:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-text:#76C5B3;--cta:#D96662;--cta-ink:#F7FAFE;--danger-text:#F59B95;--sheet:#191F26;--hair:rgba(235,239,243,.14);--hair-2:rgba(235,239,243,.09);--fill:rgba(235,239,243,.07);--scrim:rgba(1,2,6,.55);--tile:#191F26;--tile-edge:rgba(235,239,243,.05)}
 .pcard.add .plus{color:#131A23}
 .seg button[aria-pressed="true"]{color:#FBFDFF}
+.switch::after{background:#FBFDFF;box-shadow:0 1px 3px rgba(19,26,35,.3)}
 /* Layers: a still sky behind the page, its colours by the time of day (data-tod, set by home/design.js when the
    page opens and when you come back; it never animates), clear behind the title and frosted from there down, as a
    dock of glass over it. Vintage's disc, dot and pill go: the sky is the one shape. System type, bold headings. */
@@ -735,13 +750,14 @@ svg{display:block}
 </style>
 <style id="grid" media="not all">
 /* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-card:#FAFCFE;--mc-teal:#973835;--mc-orange:#E41F24;--mc-mustard:#FB6049;--bg:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-text:#973835;--cta:#D41C21;--cta-ink:#FCFDFF;--danger-text:#A50310;--sheet:#FAFCFE;--hair:rgba(23,27,32,.14);--hair-2:rgba(23,27,32,.08);--fill:rgba(23,27,32,.06);--scrim:rgba(23,27,32,.35);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,.05);--font:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+:root{--sw-off:rgba(23,27,32,.22);--mc-card:#FAFCFE;--mc-teal:#973835;--mc-orange:#E41F24;--mc-mustard:#FB6049;--bg:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-text:#973835;--cta:#D41C21;--cta-ink:#FCFDFF;--danger-text:#A50310;--sheet:#FAFCFE;--hair:rgba(23,27,32,.14);--hair-2:rgba(23,27,32,.08);--fill:rgba(23,27,32,.06);--scrim:rgba(23,27,32,.35);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,.05);--font:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 @media (prefers-color-scheme:dark){
-:root:not([data-theme="light"]){--mc-card:#0D0F11;--mc-teal:#FFA39B;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--cta:#F93433;--cta-ink:#F8FAFC;--danger-text:#FE9185;--sheet:#0D0F11;--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--scrim:rgba(0,0,0,.55);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05)}
+:root:not([data-theme="light"]){--sw-off:rgba(238,240,242,.24);--mc-card:#0D0F11;--mc-teal:#FFA39B;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--cta:#F93433;--cta-ink:#F8FAFC;--danger-text:#FE9185;--sheet:#0D0F11;--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--scrim:rgba(0,0,0,.55);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05)}
 }
-:root[data-theme="dark"]{--mc-card:#0D0F11;--mc-teal:#FFA39B;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--cta:#F93433;--cta-ink:#F8FAFC;--danger-text:#FE9185;--sheet:#0D0F11;--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--scrim:rgba(0,0,0,.55);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05)}
+:root[data-theme="dark"]{--sw-off:rgba(238,240,242,.24);--mc-card:#0D0F11;--mc-teal:#FFA39B;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--cta:#F93433;--cta-ink:#F8FAFC;--danger-text:#FE9185;--sheet:#0D0F11;--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--scrim:rgba(0,0,0,.55);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05)}
 .pcard.add .plus{color:#171B20}
 .seg button[aria-pressed="true"]{color:#FCFDFF}
+.switch::after{background:#FCFDFF;box-shadow:0 1px 3px rgba(23,27,32,.3)}
 /* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
    only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
    over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.

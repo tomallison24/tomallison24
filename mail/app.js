@@ -2071,12 +2071,12 @@ function notifyHTML() {
       '<p class="hint">Paste the notification server’s address.</p>';
   }
   return '<p class="label">Notifications</p>' +
-    '<div class="sgroup"><div class="frow"><span class="l">New-mail notifications</span><span class="v">' + (on ? 'On' : 'Off') + '</span></div></div>' +
+    '<div class="sgroup"><div class="frow"><span class="l">New-mail notifications</span><button class="switch" role="switch" data-act="notify-toggle" aria-checked="' + !!on + '" aria-label="New-mail notifications"></button></div></div>' +
     '<div class="notify-modes" role="radiogroup" aria-label="Notify me about">' +
       NOTIFY_MODES().map(([id, label]) => '<button class="textbtn" role="radio" data-act="notify-mode" data-mode="' + id + '" aria-checked="' + (on === id) + '">' + esc(label) + '</button>').join('') +
     '</div>' +
     '<div class="sgroup">' +
-      (on ? '<button class="rowbtn" type="button" data-act="notify-test"><span>Send a test</span></button><button class="rowbtn" type="button" data-act="notify-off"><span>Turn off</span></button>' : '') +
+      (on ? '<button class="rowbtn" type="button" data-act="notify-test"><span>Send a test</span></button>' : '') +
       '<button class="rowbtn" type="button" data-act="push-url-change"><span>Change server</span></button>' +
     '</div>' +
     '<p class="hint">Choose which new mail notifies this phone.</p>';
@@ -4163,6 +4163,7 @@ document.addEventListener('click', async e => {
       return go();
     case 'notify-mode': return turnOnNotifications(el.dataset.mode);
     case 'notify-off': return turnOffNotifications();
+    case 'notify-toggle': return notifyMode() ? turnOffNotifications() : turnOnNotifications('all');
     case 'notify-test':
       try { const r = await pushCall('/test'); toast(r.sent ? 'Test sent — it should arrive in a moment' : 'The server has no phone to send to — turn notifications off and on', { ms: 6000 }); }
       catch (err) { if (err instanceof AuthError) failed(err); else toast('Couldn’t send a test: ' + err.message, { bad: true, ms: 7000 }); }

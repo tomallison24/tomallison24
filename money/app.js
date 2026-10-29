@@ -636,7 +636,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + cats.map(c => '<button class="chip quiet" type="button" data-pick="' + esc(c.name) + '" data-emoji="' + esc(c.emoji || '') + '">' + (c.emoji ? '<span aria-hidden="true">' + esc(c.emoji) + '</span> ' : '') + no(c.name)
         + (x.how && x.how !== 'merge' && C.catKey(c.name) === C.catKey(x.mcat) ? ' <small>(Monarch’s)</small>' : '') + '</button>').join('') + '</div></div>'
       + '<div class="rgroup"><div class="frow"><label for="newCat">New category</label><input class="txt" id="newCat" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"><button class="chip" type="button" id="newCatGo">Use it</button></div>'
-      + '<button class="rowbtn" type="button" role="switch" id="recatAll" aria-checked="true"><span class="check" aria-hidden="true">' + I.tick + '</span><span><span>Always for</span> ' + no(x.merchant) + '<span class="sub">Its other transactions too, and those to come</span></span></button></div>'
+      + '<button class="swrow" type="button" role="switch" id="recatAll" aria-checked="true"><span class="grow"><span>Always for</span> ' + no(x.merchant) + '<span class="sub">Its other transactions too, and those to come.</span></span><span class="switch" aria-hidden="true"></span></button></div>'
       + (x.how === 'merge' ? '<p class="note">Its category was merged into another: Settings, Categories.</p>' : '');
     box.hidden = false;
     box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -1045,7 +1045,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (reader) {
       const lc = D.lastCheck;
       html += '<p class="label">Ipsy’s daily check</p><div class="rgroup">'
-        + '<button class="rowbtn" type="button" role="switch" id="checkOn" aria-checked="' + checkOn() + '"><span class="check" aria-hidden="true">' + I.tick + '</span><span>Check each day<span class="sub">Ipsy reads each new transaction’s Monarch email this month, and checks the amount, merchant, card and category</span></span></button>'
+        + '<button class="swrow" type="button" role="switch" id="checkOn" aria-checked="' + checkOn() + '"><span class="grow">Check each day<span class="sub">Ipsy checks each new transaction against its Monarch email.</span></span><span class="switch" aria-hidden="true"></span></button>'
         + '<div class="acct"><p>' + (lc ? '<span>Last checked</span> ' + esc(ago(lc.at)) + ': <span>' + esc(plural(lc.n, 'transaction')) + '</span>' + (lc.fixed ? ', <span>' + esc(plural(lc.fixed, 'correction')) + '</span>' : '') + (lc.flagged ? ', <span>' + esc(lc.flagged + ' to look at') + '</span>' : '') + '.' : 'Not checked yet.') + '</p></div>'
         + '<button class="rowbtn" type="button" id="checkNow"><span class="ic">' + I.tick + '</span><span>Check now</span></button></div>'
         + '<p class="note">What passed is never checked again. It uses Claude Sonnet 5.5: a few cents a month.</p>';

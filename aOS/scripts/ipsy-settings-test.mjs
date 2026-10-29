@@ -71,13 +71,13 @@ const store = (p, k) => p.evaluate(k => localStorage.getItem(k), k);
   const ids = await p.evaluate(() => AllisonOS.ipsy.settings());
   if (JSON.stringify([...ids].sort()) !== JSON.stringify([...SETTING_IDS].sort())) pr.push('the phone and the server list different settings: ' + ids.filter(i => !SETTING_IDS.includes(i)).concat(SETTING_IDS.filter(i => !ids.includes(i))).join(', '));
   for (const never of ['mail.delete_after', 'meals.never_in_a_plan', 'plan', 'notifications', 'house.address']) if (ids.includes(never)) pr.push(never + ' is on the list');
-  // Travel's own check is on unless turned off on this phone (travel/app.js): Ipsy says so, and says off once it is
-  const travelAuto = async () => { const r = await ask(p, claude, 'get_settings', {}, { btn: '#ipsySlot .ipsy-btn' }); return (/"id":"travel\.ipsy_checks_by_itself","now":"(\w+)"/.exec(r.text) || [])[1]; };
+  // Travel's Ipsy is on unless turned off on this phone (travel/app.js): Ipsy says so, and says off once it is
+  const travelAuto = async () => { const r = await ask(p, claude, 'get_settings', {}, { btn: '#ipsySlot .ipsy-btn' }); return (/"id":"travel\.ipsy_fills_in","now":"(\w+)"/.exec(r.text) || [])[1]; };
   let now = await travelAuto();
-  if (now !== 'on') pr.push('Travel\'s own check, never touched, reads ' + now + ', not on');
-  await p.evaluate(() => localStorage.setItem('allison-travel-v1-ipsy-auto', '0'));
+  if (now !== 'on') pr.push('Travel\'s Ipsy, never touched, reads ' + now + ', not on');
+  await p.evaluate(() => localStorage.setItem('allison-travel-v1-ai-on', '0'));
   now = await travelAuto();
-  if (now !== 'off') pr.push('Travel\'s own check, turned off, reads ' + now + ', not off');
+  if (now !== 'off') pr.push('Travel\'s Ipsy, turned off, reads ' + now + ', not off');
   report('the phone lists the same settings as the server, and none of the ones Ipsy must never change', pr); await ctx.close();
 }
 

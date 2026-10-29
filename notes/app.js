@@ -1707,11 +1707,12 @@
     $('remBellDot').hidden = !push.on;
     const on = push.on;
     $('puOff').hidden = on; $('puOnBox').hidden = !on;
+    $('puSw').setAttribute('aria-checked', String(on)); $('puSw').disabled = !pushable();
     $('puStatus').textContent = !pushable()
       ? (isIOS && !standalone() ? 'Open Notes from its Home Screen icon to turn these on.' : 'This browser can’t show notifications.')
       : !signedIn() ? PUSH_ERRORS.signin
       : on ? 'On in ' + place() + '.'
-      : 'Alerts this phone when a reminder or nudge is due.';
+      : 'Enter the notification server’s address, then turn the switch on.';
     $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'" translate="no"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('puNudges').setAttribute('aria-checked', push.nudges);
     $('puMorning').value = push.morning;
@@ -1719,7 +1720,8 @@
   function openPush(){ $('puServer').value = push.server; renderPush(); openSheet('pushSheet'); }
   $('remBellBtn').onclick = openPush;
 
-  $('puOn').onclick = async () => {
+  $('puSw').onclick = () => (push.on ? turnPushOff() : turnPushOn());
+  async function turnPushOn(){
     const server = $('puServer').value.trim().replace(/\/+$/, '');
     if (!pushable()) { renderPush(); return; }
     if (!signedIn()) {
@@ -1728,7 +1730,7 @@
       return;
     }
     if (!okServer(server)) { $('puStatus').textContent = 'Enter the server address. It starts with https:// and ends in workers.dev.'; return; }
-    $('puOn').disabled = true; $('puStatus').textContent = 'Turning on…';
+    $('puSw').disabled = true; $('puSw').setAttribute('aria-checked', 'true'); $('puStatus').textContent = 'Turning on…';
     try {
       // First, while the tap still counts: iPhone only asks from a tap.
       const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
@@ -1746,9 +1748,9 @@
       push.on = true; savePush(); renderPush(); render();
       toast('Notifications on for this phone');
     } catch(e) {
-      savePush(); $('puStatus').textContent = pushErr(e);
-    } finally { $('puOn').disabled = false; }
-  };
+      savePush(); renderPush(); $('puStatus').textContent = pushErr(e);
+    } finally { $('puSw').disabled = !pushable(); }
+  }
   // A change of lists, nudges or morning time goes to the server a moment later.
   let prefsTimer = null;
   function prefsChanged(){
@@ -1774,12 +1776,12 @@
     try { await pushPost('test', {endpoint:sub.endpoint}); toast('Test sent. It should arrive in a few seconds.'); }
     catch(e) { if (e.message === 'not-subscribed') { push.on = false; savePush(); renderPush(); } toast(pushErr(e)); }
   };
-  $('puOffBtn').onclick = async () => {
+  async function turnPushOff(){
     const sub = await currentSub();
     push.on = false; savePush(); renderPush(); render();
     if (sub) { pushPost('unsubscribe', {endpoint:sub.endpoint}).catch(() => {}); sub.unsubscribe().catch(() => {}); }
     toast('Notifications off for this phone');
-  };
+  }
   // After this phone syncs a change, the server reads the Sheet again, so a
   // new or moved reminder alerts on time rather than at the next 15-minute read.
   function pokePush(){

@@ -111,7 +111,7 @@ await upcoming();
 await page.click('#remBellBtn');
 ok('signed out: the sheet says to sign in first', (await page.textContent('#puStatus')).includes('Sign in first'), await page.textContent('#puStatus'));
 await page.fill('#puServer', PUSH);
-await page.click('#puOn');
+await page.click('#puSw');
 await page.waitForSelector('#aos-signin');
 ok('turning on signed out: the family sign-in, and nothing sent', !calls.some(c => c.to === 'push'));
 await page.click('#aos-signin .s-not');
@@ -125,13 +125,13 @@ await upcoming();
 ok('bell in the Reminders header, no dot while off', await page.isVisible('#remBellBtn') && await page.isHidden('#remBellDot'));
 ok('reminder rows show the clock while notifications are off', await page.locator('.todo').first().locator('.tchip.bare svg circle').count() === 1);
 await page.click('#remBellBtn');
-ok('the sheet says what it does in a line, and asks for the server address', (await page.textContent('#puStatus')) === 'Alerts this phone when a reminder or nudge is due.' && await page.isVisible('#puServer'));
+ok('the sheet says what it does in a line, and asks for the server address', (await page.textContent('#puSw .sub')) === 'Alerts this phone when a reminder or nudge is due.' && await page.getAttribute('#puSw', 'aria-checked') === 'false' && await page.isVisible('#puServer'));
 await page.fill('#puServer', '');
-await page.click('#puOn');
+await page.click('#puSw');
 ok('no address: says what to enter, sends nothing', (await page.textContent('#puStatus')).includes('workers.dev') && !calls.some(c => c.to === 'push'));
 if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '1-off.png') });
 await page.fill('#puServer', PUSH + '/');
-await page.click('#puOn');
+await page.click('#puSw');
 await page.waitForTimeout(800);
 const sub1 = calls.find(c => c.path === '/subscribe');
 ok('turning on: subscribes with the family session (no Sheet link or phrase), time zone and choices', sub1 && sub1.body.session === 'tok-tom' && !('sheet' in sub1.body)
@@ -200,7 +200,7 @@ ok('the service worker shows every push and opens ?open= on a tap', /addEventLis
 // ---- off ----
 await page.click('.tab[data-tab="rem"]');
 await page.click('#remBellBtn');
-await page.click('#puOffBtn');
+await page.click('#puSw');
 await page.waitForTimeout(500);
 ok('turning off: unsubscribes at the server, the dot goes', calls.at(-1).path === '/unsubscribe' && await page.isHidden('#remBellDot'));
 

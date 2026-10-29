@@ -1482,6 +1482,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // -- the AI and the flight board --
+  // Ipsy's own check had a switch of its own (K.ipsyAuto); it's this one now. Turned off there, it stays off here, once.
+  if (ls.get(K.ipsyAuto, '') === '0') ls.set(K.aiOn, '0');
+  ls.del(K.ipsyAuto);
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null, aiModels = null;
   // Which models answer: what the function says it is set to use, and, for Check, what the last answer said it came from (kept
@@ -1492,7 +1495,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!aiModels) return '';
     const last = ls.json(K.aiLast, {});
     const bit = (label, cfg, served) => label + ' ' + modelName(cfg) + (served ? (modelName(served) === modelName(cfg) ? ' (the last answer came from it)' : ' (but the last answer came from ' + modelName(served) + ')') : '');
-    return '\nModels: ' + bit('Check', aiModels.check, last.check) + (aiModels.ipsy ? '; Ipsy ' + modelName(aiModels.ipsy) : '') + '.';
+    return 'Models: ' + bit('Check', aiModels.check, last.check) + (aiModels.ipsy ? '; Ipsy ' + modelName(aiModels.ipsy) : '') + '.';
   }
   const FIND_A_MONTH = 30;                                // board lookups per phone; the free allowance is small
   function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
@@ -1530,7 +1533,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return any;
   }
   // queue: [{bid, text, subject, date, msgId}] - the emails of bookings that still lack something. A press of Have Ipsy
-  // check gets here, and Ipsy's own check (ipsyAutoCheck, unless it's turned off). Returns {asked, filled, nothing, done,
+  // check gets here, and Ipsy's own check (ipsyAutoCheck). Returns {asked, filled, nothing, done,
   // changes, stop}: calls made, details filled in, bookings whose email does not state what is missing, the bookings
   // now missing nothing (complete: out of To check, in Upcoming),
   // looked at, what changed ({id, before, after} for Undo), and why it stopped early ('' if it didn't). quiet: no Face ID
@@ -1783,14 +1786,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // Ipsy checks by itself: after Travel reads Gmail, opens or you change a booking (smartPass, once the calendar and the
   // flight board have had their go), every upcoming booking still missing something that came from an email is
-  // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. On unless Settings > Smart help
-  // turns it off. A booking it completes goes to Upcoming; one still missing something waits in To check; Undo in Ipsy's chat.
+  // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. On with Settings > Smart help >
+  // Ipsy fills in what's missing (the one switch for Ipsy's checks, this phone's own). A booking it completes goes to Upcoming; one still missing something waits in To check; Undo in Ipsy's chat.
   let autoBusy = false, signinSaid = false;
   async function ipsyAutoCheck() { updating('check', true); try { await ipsyAutoCheckNow(); } finally { updating('check', false); } }
   async function ipsyAutoCheckNow() {
-    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken()) return;
-    const mode = ls.get(K.ipsyAuto, '');
-    if (mode === '0') return;
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken() || window.__travelNoAuto) return;   // __travelNoAuto: tests only
     const tried = new Set(ls.json(K.ipsyTried, [])), tag = b => b.id + ':' + b.source.msgId;
     const todo = bookings.filter(b => !b.private && myMail(b) && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
       && !(startOf(b) && isPast(b)) && P.missingFields(b).length && !tried.has(tag(b))).slice(0, 10);
@@ -2058,14 +2059,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('stGmail').innerHTML = rows;
     $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser.' : '';
     $('stGmailHint').hidden = !viaMail;
-    $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : (calOn() ? 'On. ' : 'Off. ') + 'Shares bookings with the Family calendar, both ways.';
-    $('stAiSub').textContent = aiAvail === false ? 'Not set up on this copy of the site.' : aiOn() ? 'On. Ipsy fills in a trip’s missing details from its email.' + modelsLine() : 'Off. Ipsy fills in a trip’s missing details from its email.';
-    const auto = ls.get(K.ipsyAuto, '');
-    $('stIpsyAutoOpt').hidden = aiAvail === false || !aiOn();
-    $('stIpsyAutoSub').textContent = (auto === '0' ? 'Off. ' : 'On. ') + 'Ipsy fills in what new bookings are missing, and moves them to Upcoming. This phone only.';
+    // switches: the switch says on or off, the line under it says what it does, in a sentence
+    const sw = (id, on, sub, off) => { const b = $(id); b.setAttribute('aria-checked', String(!!on && !off)); b.disabled = !!off; b.querySelector('.sub').textContent = off || sub; };
+    sw('stCalOpt', calOn(), 'Shares bookings with the Family calendar, both ways.', calAvail === false && 'Not available on this copy of the site.');
+    sw('stAiOpt', aiOn(), 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', aiAvail === false && 'Not set up on this copy of the site.');
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
     $('stIpsyGmailOpt').hidden = !PV;
-    if (PV) $('stIpsyGmailSub').textContent = (PV.gmail('travel') ? 'On. ' : 'Off. ') + 'Lets Ipsy search and read your email in chats.';
+    if (PV) sw('stIpsyGmailOpt', PV.gmail('travel'), 'Lets Ipsy search and read your email in chats.');
+    const ml = aiOn() && aiAvail !== false ? modelsLine() : '';
+    $('stModels').textContent = ml; $('stModels').hidden = !ml;
     const n = lookupsThisMonth();
     $('stLive').textContent = liveAvail === true ? 'Working. ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.'
       : liveAvail === false ? 'Not available on this copy of the site.'
@@ -2092,12 +2094,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     document.querySelectorAll('#setSheet [data-design-row]').forEach(e => { e.hidden = false; });
   }
   $('stCalOpt').onclick = () => { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); };
-  $('stAiOpt').onclick = () => { ls.set(K.aiOn, aiOn() ? '0' : '1'); renderSettings(); render(); };
-  $('stIpsyAutoOpt').onclick = () => {
-    const on = ls.get(K.ipsyAuto, '') === '0';
-    ls.set(K.ipsyAuto, on ? '1' : '0'); renderSettings();
-    if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); ipsyAutoCheck(); }
-  };
+  $('stAiOpt').onclick = () => { const on = !aiOn(); ls.set(K.aiOn, on ? '1' : '0'); renderSettings(); render(); if (on) { ls.del(K.ipsyTried); ipsyAutoCheck(); } };
   $('stIpsyGmailOpt').onclick = () => { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('travel', !PV.gmail('travel')); renderSettings(); };
   $('stGmail').addEventListener('click', e => {
     if (e.target.closest('#stIn')) signIn({ choose: true });

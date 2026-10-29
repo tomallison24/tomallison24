@@ -273,7 +273,8 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.fill('#gAns', String(+m2[1] * +m2[2])); await p.click('#gOk'); await p.waitForTimeout(300);
   if (!(await p.locator('.sheet h2', { hasText: 'Parent corner' }).count())) pr.push('the right answer did not open the Parent corner');
   await shot(p, '10-parent');
-  await p.click('#sBadge [data-v="0"]');
+  if (await p.getAttribute('#sBadge', 'role') !== 'switch') pr.push('Play timer on screen is not a switch');
+  await p.click('#sBadge');
   await p.click('#sDesign [data-design="glass"]'); await p.waitForTimeout(200);
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'glass') pr.push('Design > Standard did not switch to Sea glass');
   await p.click('[data-rep="p1"]'); await p.waitForTimeout(200);

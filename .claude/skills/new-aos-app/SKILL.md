@@ -136,6 +136,12 @@ per person is deleted in `functions/aOS/api` `remove`.
   on the window's `aos:theme` event (as `house/bg.js` and Places do).
 - **Motion**: honour `prefers-reduced-motion` (and
   `prefers-reduced-transparency` for glass).
+- **On/off settings are switches**, the same in every app: a row (`<button class="swrow" role="switch"
+  aria-checked>`) with the name, one sentence under it (`.sub`) saying what it does (not "On." or "Off.":
+  the switch says that), and `<span class="switch">` on the right: 58 by 30, a pill-shaped knob; on is
+  `#34C759` in Sea glass and `--mc-teal` in Vintage (Layers and Tron follow from Vintage). Copy the
+  rules from Orders' `index.html` (`.swrow`, `.switch`). Never On/Off buttons, a check mark, or words
+  for a setting that is on or off. Device controls in Home keep the Signal dashboard's own switches.
 - **Simple**: one main screen where possible; a sheet for each thing you open;
   the fewest controls that do the job. Tap targets 44 px. Real `<button>`s and
   labels; color never the only signal.

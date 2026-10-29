@@ -1377,12 +1377,13 @@
     };
     opts('setBack', [[10, '10 sec'], [15, '15 sec'], [30, '30 sec']], S.set.back, v => { S.set.back = +v; });
     opts('setFwd', [[15, '15 sec'], [30, '30 sec'], [45, '45 sec'], [60, '60 sec']], S.set.fwd, v => { S.set.fwd = +v; });
-    opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
+    $('setAuto').setAttribute('aria-checked', String(!!S.set.auto));
+    $('setAuto').onclick = () => { S.set.auto = !S.set.auto; save(); renderSettings(); };
     opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
     slideOpts();
   }
   // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
-  const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
+  const slideOpts = jump => ['setBack', 'setFwd', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideOpts(); };
   // Design, the first section: Vintage or Standard, at once and just on this phone (../home/design.js); not part of the other settings
   if (window.aosDesign) {

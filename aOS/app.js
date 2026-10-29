@@ -337,7 +337,7 @@
           <p class="lnote">Home layout</p>
           <div class="seg" id="homeLayout">${HOME_LAYOUTS.map(([v, n]) => `<button type="button" data-hl="${v}" aria-pressed="${v === homeLayout()}">${n}</button>`).join('')}</div>
           <p class="note">Thumb arc puts Home, Mail, Weather and Calendar and your four favorites in the corner your thumb rests on, and every app on one screen.</p>`, 'lookSub')}
-        ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><p class="lnote">Dress for the weather</p><div class="seg" id="helperWx" role="group" aria-label="Dress for the weather">${[['on', 'On'], ['off', 'Off']].map(([v, n]) => `<button type="button" data-hwx="${v}" aria-pressed="${(v === 'on') === helperDresses()}">${n}</button>`).join('')}</div><p class="note">An umbrella in the rain, a scarf or a coat when it’s cold, a sun hat when it’s warm and sunny, from Weather’s forecast.</p><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
+        ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><div class="group"><button type="button" class="swrow" role="switch" id="helperWx" aria-checked="${helperDresses()}"><span class="grow">Dress for the weather<span class="sub">An umbrella in the rain, a coat in the cold or a sun hat in the sun, from Weather’s forecast.</span></span><span class="switch" aria-hidden="true"></span></button></div><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
           <ul data-ipsy="as-is">${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
@@ -346,7 +346,7 @@
     el.addEventListener('click', ev => {
       const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
-      const hwx = ev.target.closest('[data-hwx]'); if (hwx && AllisonOS.ipsy && AllisonOS.ipsy.dress) { AllisonOS.ipsy.dress(hwx.dataset.hwx === 'on'); el.querySelectorAll('[data-hwx]').forEach(b => b.setAttribute('aria-pressed', String(b === hwx))); }
+      const hwx = ev.target.closest('#helperWx'); if (hwx && AllisonOS.ipsy && AllisonOS.ipsy.dress) { const on = hwx.getAttribute('aria-checked') !== 'true'; AllisonOS.ipsy.dress(on); hwx.setAttribute('aria-checked', String(on)); }
       const hl = ev.target.closest('[data-hl]'); if (hl && window.aosHomeTab) { aosHomeTab.layout(hl.dataset.hl); el.querySelectorAll('[data-hl]').forEach(b => b.setAttribute('aria-pressed', String(b === hl))); }
       const ti = ev.target.closest('[data-ti]'); if (ti) { try { localStorage.setItem('aos.tron.intro', ti.dataset.ti); } catch {} el.querySelectorAll('[data-ti]').forEach(b => b.setAttribute('aria-pressed', String(b === ti))); }
       if (ev.target.closest('[data-tiplay]') && window.aosTronIntro) aosTronIntro.show({ force: true });
@@ -729,20 +729,19 @@
     let html;
     if (!pushOK()) html = `<p>${iphone && !standalone ? 'Add aOS to your Home Screen to turn these on.' : 'This browser can\'t show notifications from aOS.'}</p>`;
     else if (Notification.permission === 'denied') html = `<p>Blocked: allow them in ${iphone ? 'Settings → Notifications → aOS' : 'this browser\'s site settings'}.</p>`;
-    else if (on) html = '<p>On: you hear when aOS is updated, and when the family has news.</p><button type="button" class="soft" id="nOff">Turn off</button>';
-    else html = '<p>Hear when aOS is updated, and when the family has news.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
+    else html = `<div class="group"><button type="button" class="swrow" role="switch" id="nSw" aria-checked="${on}"><span class="grow">Notifications<span class="sub">Hear when aOS is updated, and when the family has news.</span></span><span class="switch" aria-hidden="true"></span></button></div>`;
     box.innerHTML = `<div>${html}<div class="err" id="nMsg"></div></div>`;
     if ($('nSub')) $('nSub').textContent = !pushOK() ? 'Not on this phone' : Notification.permission === 'denied' ? 'Blocked' : on ? 'On' : 'Off';   // on its fold, under Account
     if (msg) { const m = $('nMsg'); m.style.color = msg.err ? '' : 'var(--muted)'; m.textContent = msg.t; }
-    if ($('nOn')) $('nOn').onclick = turnOn;
-    if ($('nOff')) $('nOff').onclick = async () => {
-      busy($('nOff'), true);
-      try { const { sub: s } = await thisPhone(); if (s) { const ep = s.endpoint; await s.unsubscribe(); await ACC.call('push/unsubscribe', { endpoint: ep }); } paintNotify({ t: 'Off for this phone.' }); }
-      catch (e) { paintNotify({ err: 1, t: why(e) }); }
-    };
+    if ($('nSw')) $('nSw').onclick = () => (on ? turnOff() : turnOn());
+  }
+  async function turnOff() {
+    busy($('nSw'), true); $('nSw').setAttribute('aria-checked', 'false');
+    try { const { sub: s } = await thisPhone(); if (s) { const ep = s.endpoint; await s.unsubscribe(); await ACC.call('push/unsubscribe', { endpoint: ep }); } paintNotify({ t: 'Off for this phone.' }); }
+    catch (e) { paintNotify({ err: 1, t: why(e) }); }
   }
   async function turnOn() {
-    busy($('nOn'), true);
+    busy($('nSw'), true); $('nSw').setAttribute('aria-checked', 'true');
     try {
       const perm = await Notification.requestPermission();   // from the tap
       if (perm !== 'granted') return paintNotify({ err: 1, t: perm === 'denied' ? 'Blocked. You can allow it in Settings.' : 'Not turned on.' });

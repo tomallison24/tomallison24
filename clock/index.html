@@ -57,7 +57,7 @@
   /* the faces */
   --face:#FFFFFF; --face-ink:#111114; --face-tick:rgba(60,60,67,.55); --face-night:#1A2224; --face-night-ink:#FFFFFF;
   --hand-s:#BE5B3A; --hand-lap:#3B7366; --ray:#BC9C68; --ray-tip:#BC9C68;
-  --up:#1A7F45; --down:#C0261B; --sw-on:#3B7366; --sw-off:rgba(118,118,128,.22);
+  --up:#1A7F45; --down:#C0261B; --sw-on:#34C759; --sw-off:rgba(118,118,128,.22);
   /* Nightstand: always dark, low and warm */
   --ns-bg:#050808; --ns-ink:#A9D3C7; --ns-dim:rgba(169,211,199,.62);
 }
@@ -76,7 +76,7 @@
   --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
   --face:#E9EFEC; --face-ink:#10181A; --face-tick:rgba(16,24,26,.55); --face-night:#1E2729; --face-night-ink:#FFFFFF;
   --hand-s:#E3906F; --hand-lap:#A9D3C7; --ray:#E9D6B4; --ray-tip:#E9D6B4;
-  --up:#30D158; --down:#FF6961; --sw-on:#6FA597; --sw-off:rgba(255,255,255,.16);
+  --up:#30D158; --down:#FF6961; --sw-on:#34C759; --sw-off:rgba(255,255,255,.16);
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
@@ -93,7 +93,7 @@
   --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
   --face:#E9EFEC; --face-ink:#10181A; --face-tick:rgba(16,24,26,.55); --face-night:#1E2729; --face-night-ink:#FFFFFF;
   --hand-s:#E3906F; --hand-lap:#A9D3C7; --ray:#E9D6B4; --ray-tip:#E9D6B4;
-  --up:#30D158; --down:#FF6961; --sw-on:#6FA597; --sw-off:rgba(255,255,255,.16);
+  --up:#30D158; --down:#FF6961; --sw-on:#34C759; --sw-off:rgba(255,255,255,.16);
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -238,7 +238,7 @@ svg.face{display:block;width:100%;height:auto;stroke:none;overflow:visible}
 [aria-checked="true"] > .switch::after,.switch[aria-checked="true"]::after{transform:translateX(18px)}
 button.switch{width:58px;height:30px;margin:7px 0}
 button.switch::before{content:'';position:absolute;inset:-8px -4px}
-.swrow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 14px 10px 16px;text-align:left;font-size:16px;color:var(--text);border-top:1px solid var(--hair-2)}
+.swrow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 14px 10px 16px;text-align:left;font-size:16px;font-weight:600;color:var(--text);border-top:1px solid var(--hair-2)}
 .swrow:first-child{border-top:0}
 .swrow .grow{flex:1;min-width:0}
 .swrow .grow small{display:block;font-size:13px;color:var(--muted)}

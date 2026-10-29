@@ -61,7 +61,7 @@ async function open(role, { standalone = true, push = true, acct = true, hash = 
   await p.waitForSelector('.tab:not([hidden]) [data-acct]');   // aOS2 opens on Home
   if (acct) {   // Account, then its Notifications fold (every section there is folded until tapped)
     await p.click('.tab:not([hidden]) [data-acct]'); await p.waitForSelector('[aria-controls="fNotify"]', { timeout: 15000 });
-    await p.click('[aria-controls="fNotify"]'); await p.waitForSelector('#nBox p', { timeout: 15000 });
+    await p.click('[aria-controls="fNotify"]'); await p.waitForSelector('#nBox p, #nBox .swrow', { timeout: 15000 });
   }
   return { ctx, p, calls, errs };
 }
@@ -70,15 +70,15 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 // 1. a member turns them on, tests, turns off
 {
   const { ctx, p, calls, errs } = await open('member'); const pr = [...errs];
-  if (!(await p.locator('#nOn').count())) pr.push('no Turn on button');
+  if (await p.getAttribute('#nSw', 'aria-checked').catch(() => null) !== 'false') pr.push('no switch, off');
   if (await p.locator('#nTitle').count()) pr.push('a member sees the composer');
-  await p.click('#nOn'); await p.waitForSelector('#nOff', { timeout: 8000 }).catch(async () => pr.push('did not turn on: ' + (await text(p, '#nMsg'))));
+  await p.click('#nSw'); await p.waitForSelector('#nSw[aria-checked="true"]:not([disabled])', { timeout: 8000 }).catch(async () => pr.push('did not turn on: ' + (await text(p, '#nMsg'))));
   const subbed = calls.find(c => c.route === 'push/subscribe');
   if (!subbed || subbed.body.subscription.endpoint !== 'https://web.push.apple.com/fake') pr.push('the server was not told about the phone');
   if (await p.evaluate(() => window.__appKey) !== 65) pr.push('subscribed without the server\'s key');
   if (await p.locator('#nTest').count()) pr.push('a test button: that\'s a developer tool, not part of the app');
   if (/test/i.test(await text(p, '#nBox'))) pr.push('the notifications section mentions a test');
-  if (await p.locator('#nOff').count()) { await p.click('#nOff'); await p.waitForSelector('#nOn', { timeout: 5000 }).catch(() => pr.push('did not turn off')); }
+  if (await p.locator('#nSw[aria-checked="true"]').count()) { await p.click('#nSw'); await p.waitForSelector('#nSw[aria-checked="false"]:not([disabled])', { timeout: 5000 }).catch(() => pr.push('did not turn off')); }
   if (!calls.some(c => c.route === 'push/unsubscribe')) pr.push('the server was not told it was off');
   if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)) pr.push('the page scrolls sideways');
   report('a member turns notifications on and off (and there is no test button)', pr); await ctx.close();
@@ -89,7 +89,7 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
   const { ctx, p, errs } = await open('member', { standalone: false, push: false }); const pr = [...errs];
   const t = await text(p, '#nBox');
   if (!/Home Screen/.test(t)) pr.push('does not say to add aOS to the Home Screen: ' + t);
-  if (await p.locator('#nOn').count()) pr.push('offers a button that cannot work');
+  if (await p.locator('#nSw').count()) pr.push('offers a switch that cannot work');
   report('on an iPhone not yet on the Home Screen it says how', pr); await ctx.close();
 }
 

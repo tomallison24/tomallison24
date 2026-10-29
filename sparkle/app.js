@@ -1423,9 +1423,9 @@
         <div class="row"><div class="seg" id="sLands">${[['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['garden', 'Fairy Garden'], ['spell', 'Tiara Workshop'], ['castle', 'Bakery']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${!(st.off || []).includes(v)}">${n}</button>`).join('')}</div></div></div>
       <p class="label">Voice and sound</p><div class="group">
         <div class="row"><span class="grow">Voice speed</span><div class="seg" id="sRate">${[[0.75, 'Slow'], [0.9, 'Normal'], [1.05, 'Quick']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${Math.abs(st.rate - v) < 0.01}">${n}</button>`).join('')}</div></div>
-        <div class="row"><span class="grow">Sound effects</span><div class="seg" id="sSfx"><button type="button" data-v="1" aria-pressed="${!!st.sfx}">On</button><button type="button" data-v="0" aria-pressed="${!st.sfx}">Off</button></div></div>
-        <div class="row"><span class="grow">Play timer on screen<small>Minutes played this session. The game never stops play: you're in charge of screen time.</small></span><div class="seg" id="sBadge"><button type="button" data-v="1" aria-pressed="${!!st.badge}">Show</button><button type="button" data-v="0" aria-pressed="${!st.badge}">Hide</button></div></div>
-        <div class="row"><span class="grow">Natural voices<small>Each friend speaks in a real-sounding voice of their own, made by Google over the internet${token() ? '' : '. Sign in below to use them'}; otherwise the phone's voice</small></span><div class="seg" id="sNatural"><button type="button" data-v="1" aria-pressed="${st.natural !== false}">On</button><button type="button" data-v="0" aria-pressed="${st.natural === false}">Off</button></div></div>
+        <button type="button" class="row swrow" role="switch" id="sSfx" aria-checked="${!!st.sfx}"><span class="grow">Sound effects</span><span class="switch" aria-hidden="true"></span></button>
+        <button type="button" class="row swrow" role="switch" id="sBadge" aria-checked="${!!st.badge}"><span class="grow">Play timer on screen<small>Minutes played this session; the game never stops play.</small></span><span class="switch" aria-hidden="true"></span></button>
+        <button type="button" class="row swrow" role="switch" id="sNatural" aria-checked="${st.natural !== false}"><span class="grow">Natural voices<small>A real-sounding voice for each friend, made by Google over the internet${token() ? '' : ' (sign in below to use them)'}.</small></span><span class="switch" aria-hidden="true"></span></button>
         <button type="button" class="row" id="sVoices"><span class="grow">Hear the voices<small>The storyteller, Professor Hoot, Pebble, Gemma and Bloom</small></span><span class="val">▶</span></button>
         <button type="button" class="row" id="sTest"><span class="grow">Test the voice<small>Hear how this phone says some letter sounds</small></span><span class="val">▶</span></button></div>
       <p class="label">Letter sounds</p><div class="group"><div class="row"><span class="grow"><small>Phone voices say letter names well and letter sounds poorly. Record each sound once (tap a letter, say the sound, tap again): the game plays your voice instead. Say just the sound: "mmm" for m, "t" (short, no "uh") for t, "a" as in apple.</small></span></div>
@@ -1438,9 +1438,10 @@
     seg('sFocus', v => { st.focus = v; });
     s.querySelector('#sLands').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; const off = new Set(st.off || []); off.has(b.dataset.v) ? off.delete(b.dataset.v) : off.add(b.dataset.v); st.off = [...off]; b.setAttribute('aria-pressed', String(!off.has(b.dataset.v))); save.settingsAt = Date.now(); persist(); });
     seg('sRate', v => { st.rate = +v; V.rate = +v; });
-    seg('sSfx', v => { st.sfx = v === '1'; V.sounds = st.sfx; });
-    seg('sBadge', v => { st.badge = v === '1'; });
-    seg('sNatural', v => { st.natural = v === '1'; V.natural = V.natural; });
+    const flip = (id, fn) => { const b = s.querySelector('#' + id); b.onclick = () => { const on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', String(on)); fn(on); save.settingsAt = Date.now(); persist(); }; };
+    flip('sSfx', on => { st.sfx = on; V.sounds = on; });
+    flip('sBadge', on => { st.badge = on; });
+    flip('sNatural', on => { st.natural = on; V.natural = V.natural; });
     s.querySelector('#sVoices').onclick = async () => { V.unlock();
       for (const [who, line] of [['narrator', 'Once upon a time, in Sparkle Kingdom.'], ['owl', "Hoo hoo! I'm Professor Hoot."], ['dragon', "Hi! I'm Pebble. Let's count gems!"], ['gemma', "I'm Gemma. Let's spell a word!"], ['bloom', "I'm Bloom. Let's find the flowers!"]]) {
         if (!document.body.contains(s)) return; await V.say([line], { who }); } };
