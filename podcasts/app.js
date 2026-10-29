@@ -51,7 +51,7 @@
   // =====================================================================
   // STATE: localStorage (small things) + IndexedDB (each show's episodes)
   // =====================================================================
-  const DEF_SET = {back:15, fwd:30, speed:1, auto:true, cc:'us'};
+  const DEF_SET = {back:15, fwd:30, speed:1, auto:true, cc:'us', ai:true};   // ai: Ipsy tags your shows (Settings, AI)
   const okSnap = e => !!(e && typeof e.k === 'string' && typeof e.u === 'string');
   const S = (function(){
     let v = null;
@@ -540,7 +540,7 @@
   let tagBusy = false, tagOff = false, tagTimer = 0;
   const tagSoon = () => { clearTimeout(tagTimer); tagTimer = setTimeout(autoTag, 2500); };
   async function autoTag(){
-    if (tagBusy || tagOff || apiGone || !signedIn() || navigator.onLine === false) return;
+    if (!S.set.ai || tagBusy || tagOff || apiGone || !signedIn() || navigator.onLine === false) return;
     const todo = S.follows.filter(f => !Array.isArray(f.tags) && (f.title || shows.has(f.id))).slice(0, TAG_MAX);
     if (!todo.length) return;
     tagBusy = true;
@@ -577,7 +577,7 @@
       g.tags = TAGS.filter(x => now.has(x)); g.tagBy = 'you';
       save(); render(); tagMenu(id);
     }}));
-    if (signedIn()) rows.push({label: 'Let Ipsy Pick', sub: 'From the show’s description', icon: I.tag, run: () => {
+    if (S.set.ai && signedIn()) rows.push({label: 'Let Ipsy Pick', sub: 'From the show’s description', icon: I.tag, run: () => {
       const g = followOf(id); if (!g) return;
       delete g.tags; delete g.tagBy; tagOff = false;
       save(); render(); autoTag();
@@ -695,15 +695,13 @@
     }
     return h;
   }
-  // Shows, as a grid of artwork, with a chip for each tag in use (TAGS, above).
+  // Shows, as a grid of artwork, of the tag picked in the pill at the bottom (renderTagbar, below).
+  const tagsUsed = () => TAGS.filter(t => S.follows.some(f => (f.tags || []).includes(t)));
+  const withTag = t => S.follows.filter(f => (f.tags || []).includes(t));
   function showGrid(){
-    const used = TAGS.filter(t => S.follows.some(f => (f.tags || []).includes(t)));
-    if (st.tag && !used.includes(st.tag)) st.tag = '';
-    const list = [...S.follows].filter(f => !st.tag || (f.tags || []).includes(st.tag))
-      .sort((a, b) => (b.latest || 0) - (a.latest || 0) || (b.at || 0) - (a.at || 0));
-    return (used.length ? '<div class="chips tagchips">' + chip('tag:', 'All', !st.tag)
-        + used.map(t => chip('tag:' + t, esc(t), st.tag === t, S.follows.filter(f => (f.tags || []).includes(t)).length)).join('') + '</div>' : '')
-      + '<div class="sgrid">' + list.map((f, i) => {
+    if (st.tag && !tagsUsed().includes(st.tag)) st.tag = '';
+    const list = (st.tag ? withTag(st.tag) : [...S.follows]).sort((a, b) => (b.latest || 0) - (a.latest || 0) || (b.at || 0) - (a.at || 0));
+    return '<div class="sgrid">' + list.map((f, i) => {
         const sh = shows.get(f.id), title = f.title || (sh && sh.title) || 'Loading…';
         return '<button class="stile" type="button" data-show="' + esc(f.id) + '" style="--i:' + i + '">' + art(f.art || (sh && (sh.itArt || sh.art)), 0, 'fill')
           + '<span class="sn"' + (f.title || sh ? ' translate="no"' : '') + '>' + esc(title) + '</span>'
@@ -733,8 +731,32 @@
         '<button class="btn" type="button" data-act="go-search">' + I.search + 'Search podcasts</button>');
     } else h = st.lib === 'new' ? newList() : showGrid();
     $('libBody').innerHTML = h;
-    slideChips($('libBody'), st.lib === 'new' ? 'new' : 'tag');
+    if (st.lib === 'new') slideChips($('libBody'), 'new');
   }
+  // The tag picker: over Library's Shows while any show has a tag; All shows, then each tag in use, with how many.
+  function renderTagbar(){
+    const used = tagsUsed(), on = !st.show && st.tab === 'lib' && st.lib === 'shows' && used.length > 0;
+    $('tagbar').hidden = !on;
+    if (!on) { closeTagMenu(); return; }
+    if (st.tag && !used.includes(st.tag)) st.tag = '';
+    $('tagName').textContent = st.tag || 'All shows';
+    $('tagBtn').setAttribute('aria-label', 'Showing ' + (st.tag || 'all shows') + '. Pick a tag');
+    if (!$('tagMenu').hidden) drawTagMenu();
+  }
+  function drawTagMenu(){
+    const row = (t, label, n) => '<button type="button" role="option" data-tag="' + esc(t) + '" aria-selected="' + (st.tag === t) + '"><span class="k">' + esc(label) + '</span><span class="n">' + n + '</span><span class="tick">' + I.check + '</span></button>';
+    $('tagMenu').innerHTML = row('', 'All shows', S.follows.length) + tagsUsed().map(t => row(t, t, withTag(t).length)).join('');
+  }
+  function closeTagMenu(){ $('tagMenu').hidden = true; $('tagBtn').setAttribute('aria-expanded', 'false'); }
+  $('tagBtn').onclick = () => {
+    if (!$('tagMenu').hidden) { closeTagMenu(); return; }
+    drawTagMenu(); $('tagMenu').hidden = false; $('tagBtn').setAttribute('aria-expanded', 'true');
+  };
+  $('tagMenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-tag]'); if (!b) return;
+    st.tag = b.dataset.tag; closeTagMenu(); renderLib(); renderTagbar(); animateIn($('libBody')); window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+  document.addEventListener('click', e => { if (!$('tagMenu').hidden && !e.target.closest('#tagbar')) closeTagMenu(); });
 
   const looksLikeFeed = q => /^(https?:\/\/|feed:\/\/|www\.)\S+$/i.test(q) || /^[\w-]+(\.[\w-]+)+\/\S*$/.test(q);
   const feedFromInput = q => webUrl(q.replace(/^feed:\/\//i, 'https://').replace(/^(?!https?:\/\/)/i, 'https://'));
@@ -836,6 +858,7 @@
     if (st.show) renderShow();
     else if (st.tab === 'lib') renderLib();
     else renderSearch();
+    renderTagbar();
     renderMini();
     if (!$('np').hidden) renderQueue();
     if (!$('epSheet').hidden && st.ep) renderEpActs();
@@ -857,9 +880,10 @@
     $('showView').hidden = !st.show;
     $('searchTab').setAttribute('aria-pressed', String(st.tab === 'search'));
     $('searchTab').setAttribute('aria-label', st.tab === 'search' ? 'Close search' : 'Search');
+    renderTagbar();
   }
   const reslide = () => {
-    slideChips($('libView'), 'lib', {jump:true}); slideChips($('libBody'), st.lib === 'new' ? 'new' : 'tag', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true}); slideOpts(true);
+    slideChips($('libView'), 'lib', {jump:true}); if (st.lib === 'new') slideChips($('libBody'), 'new', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true}); slideOpts(true);
   };
   window.addEventListener('resize', reslide);
   window.addEventListener('aos:design', () => requestAnimationFrame(reslide));   // Futura and the system font are different widths
@@ -1144,9 +1168,8 @@
     if (a === 'go-search') setTab('search');
     else if (a.startsWith('new:')) { st.newFilter = a.slice(4); st.newLimit = 30; renderLib(); }
     else if (a === 'new-more') { st.newLimit += 30; renderLib(); }
-    else if (a.startsWith('tag:')) { st.tag = a.slice(4); renderLib(); animateIn($('libBody')); }
     else if (a === 'tags') tagMenu(st.show);
-    else if (a.startsWith('lib:')) { st.lib = a.slice(4); try { localStorage.setItem(KEY + '-lib', st.lib); } catch(e) {} renderLib(); animateIn($('libBody')); }
+    else if (a.startsWith('lib:')) { st.lib = a.slice(4); try { localStorage.setItem(KEY + '-lib', st.lib); } catch(e) {} renderLib(); renderTagbar(); animateIn($('libBody')); }
     else if (a === 'hist-clear') { const h = S.hist; S.hist = []; save(); renderLib(); toast('History cleared', () => { S.hist = h; save(); renderLib(); }); }
     else if (a === 'hist-older') loadOlder();
     else if (a.startsWith('sf:')) { st.showFilter = a.slice(3); st.showLimit = 40; renderShow(); }
@@ -1423,8 +1446,14 @@
     opts('setFwd', [[15, '15 sec'], [30, '30 sec'], [45, '45 sec'], [60, '60 sec']], S.set.fwd, v => { S.set.fwd = +v; });
     opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
     opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
+    $('setAi').setAttribute('aria-checked', String(!!S.set.ai));
     slideOpts();
   }
+  // AI: off, nothing in Podcasts asks Claude (the tags it has stay, and you change them yourself); on again, Ipsy tags the rest.
+  $('setAi').onclick = () => {
+    S.set.ai = !S.set.ai; save(); renderSettings(); render();
+    if (S.set.ai) { tagOff = false; tagSoon(); }
+  };
   // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
   const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideOpts(); };
