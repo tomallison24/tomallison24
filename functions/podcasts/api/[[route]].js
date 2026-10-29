@@ -6,12 +6,24 @@
 //   /podcasts/api/search?term=<words>     Apple Podcasts search (shows)
 //   /podcasts/api/top?cc=us               Apple's top shows for a country
 //
+// Apple's directory answers about 20 calls a minute from one address, and this
+// runs on Cloudflare's addresses, which other sites share, so Apple often turns
+// it away ("The server answered 429") however little the family searches. So
+// each search and chart is kept at Cloudflare (kept()), and when Apple won't
+// answer a search, Podcast Index (podcastindex.org, the open podcast
+// directory) is asked instead, once its free key is set up: the
+// PODCASTINDEX_KEY and PODCASTINDEX_SECRET secrets (podcasts/README.md,
+// "Search").
+//
+// And one that isn't a fetch: POST /podcasts/api/tags, the show's tags (Music,
+// Talk, News...) for the Library, picked by Claude from TAGS (tag(), below).
+//
 // It runs only where the site is on Cloudflare Pages (behind Cloudflare
 // Access, like the rest of it). Wrangler picks up this functions/ folder when
 // .github/workflows/news.yml deploys from the repository root. On GitHub Pages
 // it is just a file; the app then reads feeds directly where the feed allows.
 //
-// It only fetches, never stores. To keep it from being used for anything else:
+// Its fetches store nothing. To keep it from being used for anything else:
 // - requests must carry the X-Podcasts header, which a link or a form can't
 //   add, so nothing can be opened here by visiting an address;
 // - replies are plain text or JSON with nosniff and a sandbox CSP, so nothing
@@ -24,18 +36,29 @@ const MAX_BYTES = 25 * 1024 * 1024;
 const TIMEOUT_MS = 20000;
 const COUNTRIES = new Set(['gb', 'us', 'ie', 'ca', 'au', 'nz']);
 
-export async function onRequestGet({ request, params }) {
+import { kv, sessionUser } from '../../../server/auth.js';
+import { fail, aiFail, today } from '../../../server/ipsy.js';
+
+export async function onRequestGet({ request, params, env = {}, waitUntil }) {
   if (request.headers.get('X-Podcasts') !== '1') return reply('Not found', 404);
   const route = [].concat(params.route || []).join('/');
   const q = new URL(request.url).searchParams;
   try {
     if (route === 'feed') return await feed(q.get('url'));
-    if (route === 'search') return await search(q.get('term'), q.get('cc'));
-    if (route === 'top') return await top(q.get('cc'));
+    if (route === 'search') return await search(q.get('term'), q.get('cc'), env, waitUntil);
+    if (route === 'top') return await top(q.get('cc'), waitUntil);
   } catch (e) {
     return reply(JSON.stringify({ error: String(e && e.message || e).slice(0, 200) }), 502, 'application/json');
   }
   return reply('Not found', 404);
+}
+
+export async function onRequestPost({ request, params, env = {} }) {
+  if (request.headers.get('X-Podcasts') !== '1') return reply('Not found', 404);
+  const route = [].concat(params.route || []).join('/');
+  if (route !== 'tags') return reply('Not found', 404);
+  try { return json(await tag(request, env)); }
+  catch (e) { return reply(JSON.stringify({ error: String(e && e.message || e).slice(0, 200) }), e && e.status || 502, 'application/json'); }
 }
 
 function reply(body, status = 200, type = 'text/plain; charset=utf-8', maxAge = 0) {
@@ -131,17 +154,93 @@ const show = r => ({
   count: r.trackCount || 0,
 });
 
-async function search(term, country) {
+// A search or chart, kept at Cloudflare: used as it is while fresh; an older
+// copy (up to 30 days) only when the directories can't answer. Nothing empty
+// is kept, as Apple sometimes answers a busy moment with no results.
+const FRESH_SEARCH = 86400, FRESH_TOP = 21600, KEEP = 30 * 86400;
+async function kept(key, fresh, make, waitUntil) {
+  const cache = typeof caches !== 'undefined' && caches.default;
+  const req = new Request('https://podcasts-directory.cache/' + key);
+  let old = null;
+  if (cache) {
+    try {
+      const hit = await cache.match(req);
+      const v = hit && await hit.json();
+      if (v && Array.isArray(v.results)) {
+        if (Date.now() - v.at < fresh * 1000) return v.results;
+        old = v.results;
+      }
+    } catch {}
+  }
+  let results;
+  try { results = await make(); }
+  catch (e) { if (old) return old; throw e; }
+  if (cache && results.length) {
+    const put = cache.put(req, new Response(JSON.stringify({ at: Date.now(), results }), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + KEEP },
+    })).catch(() => {});
+    if (waitUntil) waitUntil(put); else await put;
+  }
+  return results;
+}
+
+const BUSY = 'Podcast search is busy right now. Try again in a minute, or paste the show’s RSS link.';
+
+async function search(term, country, env, waitUntil) {
   term = String(term || '').trim().slice(0, 100);
   if (!term) return json({ results: [] });
-  const data = await itunes(`search?media=podcast&entity=podcast&limit=30&country=${cc(country)}&term=${encodeURIComponent(term)}`);
-  return json({ results: (data.results || []).map(show).filter(s => s.title) }, 600);
+  const c = cc(country);
+  const results = await kept('search/' + c + '/' + encodeURIComponent(term.toLowerCase()), FRESH_SEARCH, async () => {
+    let failed = false;
+    try {
+      const data = await itunes(`search?media=podcast&entity=podcast&limit=30&country=${c}&term=${encodeURIComponent(term)}`);
+      const found = (data.results || []).map(show).filter(s => s.title);
+      if (found.length) return found;
+    } catch { failed = true; }
+    let other = null;
+    try { other = await indexSearch(term, env); } catch {}
+    if (other && other.length) return other;
+    if (failed) throw new Error(BUSY);
+    return [];
+  }, waitUntil);
+  return json({ results }, 600);
+}
+
+// Podcast Index's search (search/byterm), signed as its API asks: the key, the
+// time, and a SHA-1 of the key, secret and time. null without a key.
+async function indexSearch(term, env) {
+  const key = String(env.PODCASTINDEX_KEY || '').trim(), secret = String(env.PODCASTINDEX_SECRET || '').trim();
+  if (!key || !secret) return null;
+  const date = String(Math.floor(Date.now() / 1000));
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(key + secret + date)));
+  const res = await fetch('https://api.podcastindex.org/api/1.0/search/byterm?max=30&q=' + encodeURIComponent(term), {
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    headers: {
+      'User-Agent': UA, Accept: 'application/json', 'X-Auth-Key': key, 'X-Auth-Date': date,
+      Authorization: [...hash].map(b => b.toString(16).padStart(2, '0')).join(''),
+    },
+  });
+  if (!res.ok) throw new Error('Podcast Index answered ' + res.status);
+  const data = JSON.parse(await readText(res));
+  return (data.feeds || []).filter(f => f && f.title && f.url && !f.dead).map(f => ({
+    id: String(f.itunesId || 'pi' + f.id),
+    title: String(f.title),
+    author: String(f.author || f.ownerName || ''),
+    feed: String(f.url),
+    art: String(f.artwork || f.image || ''),
+    genre: String(Object.values(f.categories || {})[0] || ''),
+    count: Number(f.episodeCount) || 0,
+  }));
 }
 
 // Apple's chart gives ids, names and artwork but no feeds; one lookup call
 // adds the feeds. The newer chart first, then the older one.
-async function top(country) {
+async function top(country, waitUntil) {
   const c = cc(country);
+  return json({ results: await kept('top/' + c, FRESH_TOP, () => chart(c), waitUntil) }, 21600);
+}
+
+async function chart(c) {
   let ids = [];
   try {
     const { res } = await get(`https://rss.applemarketingtools.com/api/v2/${c}/podcasts/top/50/podcasts.json`, 'application/json');
@@ -152,8 +251,60 @@ async function top(country) {
     const data = await itunes(`${c}/rss/toppodcasts/limit=50/json`);
     ids = ((data.feed && data.feed.entry) || []).map(e => e.id && e.id.attributes && e.id.attributes['im:id']).filter(Boolean);
   }
-  if (!ids.length) return json({ results: [] });
+  if (!ids.length) return [];
   const data = await itunes(`lookup?entity=podcast&country=${c}&id=${ids.slice(0, 50).join(',')}`);
   const byId = new Map((data.results || []).map(r => [String(r.collectionId), show(r)]));
-  return json({ results: ids.map(id => byId.get(id)).filter(s => s && s.feed) }, 21600);
+  return ids.map(id => byId.get(id)).filter(s => s && s.feed);
+}
+
+// ---- tags ----
+// The Library's tags, one list for everyone so they stay few and the same. Claude picks one or two
+// for each show from its title, author, Apple's genre and the start of its description; the phone
+// sends the shows it has no tags for (TAG_MAX at a time) and keeps what comes back, and you can
+// change them. Each call costs a little, so at most TAG_DAILY a person a day, counted in the
+// accounts' KV as podcasts:tags:<user id>:<day> (gone after two days), before the call.
+export const TAGS = ['Music', 'Talk', 'News', 'Comedy', 'True Crime', 'Sport', 'Education', 'Kids', 'Business', 'Health', 'Society', 'Other'];
+export const TAG_MODEL = 'claude-haiku-5-5';
+export const TAG_MAX = 25, TAG_DAILY = 30;
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+const clip = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+export const TAG_SYSTEM = 'You sort podcasts for a family\'s podcast app. For each show, pick one tag, or two when one '
+  + 'isn\'t enough, from exactly this list: ' + TAGS.join(', ') + '. Music: shows about or made of music. Talk: chat, '
+  + 'interviews and personalities, when nothing more specific fits. Other: only when nothing else fits. Answer with only '
+  + 'a JSON object from each show\'s id to its list of tags, like {"a1": ["Comedy"], "b2": ["News", "Business"]}.';
+
+async function tag(request, env) {
+  const db = kv(env);
+  const me = db && await sessionUser(db, request);
+  if (!me) throw fail('signin', 401);
+  if (!env.ANTHROPIC_API_KEY) throw fail('no-ai', 503);
+  let body;
+  try { body = await request.json(); } catch { throw fail('bad-request', 400); }
+  const shows = (Array.isArray(body && body.shows) ? body.shows : []).slice(0, TAG_MAX)
+    .map(x => ({ id: clip(x && x.id, 80), title: clip(x && x.title, 200), author: clip(x && x.author, 120), genre: clip(x && x.genre, 60), about: clip(x && x.desc, 400) }))
+    .filter(x => x.id && x.title);
+  if (!shows.length) return { tags: {} };
+  const key = 'podcasts:tags:' + me.id + ':' + today(), n = (+(await db.get(key)) || 0) + 1;
+  if (n > TAG_DAILY) throw fail('limit', 429);
+  await db.put(key, String(n), { expirationTtl: 2 * 86400 });
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+  let r;
+  try {
+    r = await fetch(ANTHROPIC_URL, { method: 'POST', signal: ctl.signal,
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: TAG_MODEL, max_tokens: 2000, system: TAG_SYSTEM, messages: [{ role: 'user', content: JSON.stringify(shows) }] }) });
+  } catch { throw fail('ai-unreachable', 502); }
+  finally { clearTimeout(timer); }
+  if (!r.ok) throw await aiFail(r);
+  const text = ((await r.json()).content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  let got;
+  try { got = JSON.parse(text.slice(a, b + 1)); } catch { throw fail('ai-format', 502); }
+  // only the shows asked about, only tags from the list, at most two each
+  const tags = {};
+  for (const x of shows) {
+    const t = [...new Set([].concat(got && got[x.id] || []).map(v => TAGS.find(g => g.toLowerCase() === String(v).trim().toLowerCase())).filter(Boolean))].slice(0, 2);
+    if (t.length) tags[x.id] = t;
+  }
+  return { tags };
 }

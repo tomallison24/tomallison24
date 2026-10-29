@@ -42,7 +42,7 @@ jobs:
       # each app's own server and logic tests: plain Node, no network
       - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
       - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node notes/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs && node fitness/scripts/meds-test.mjs && node fitness/scripts/steps-api-test.mjs && node fitness/scripts/ipsy-api-test.mjs && node fitness/scripts/health-api-test.mjs && node fitness/scripts/health-status-test.mjs && node fitness/scripts/vitals-alert-test.mjs && node travel/scripts/sheet-test.mjs
-      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs
+      - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs && node podcasts/scripts/api-test.mjs
       # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds
       - run: node clock/scripts/logic-test.mjs
       # Sparkle Kingdom: the learning engine and every question it makes, the school letters, its server

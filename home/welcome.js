@@ -90,10 +90,12 @@
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
       notes: ['Settings looks and works the same in every app now: called Settings, with the same sections in the same order (Design, the app\'s own, Connected accounts, Ipsy, Notifications, Your data, Family account), the same words for the same job (Check now, Disconnect Gmail, Back up everything) and a sentence at most under each row. Learn it in one app and you know it in all of them',
         'Every setting that is on or off is a new switch, the same in every app and in aOS: a slim frosted track that glows in your look\'s colour when on, a small glass bead, and a | when on and an o when off, so it reads without colour. That includes Travel\'s, aOS\'s Notifications and Dress for the weather, Notes\' and Mail\'s notifications, Podcasts\' Play the next episode, Money\'s daily check and Sparkle Kingdom\'s sound, timer and voices. Travel has one switch for Ipsy now, Ipsy fills in what\'s missing, in place of two. Notes\' notifications moved into its Settings',
+        'Podcasts is one page now, Library: Listen Now is gone, and its new episodes are Library\'s New. Ipsy tags each show you follow (Music, Talk, News, Comedy and more); pick a tag in the pill at the bottom of Shows, as in Home, and change a show\'s tags on its page (they follow you to your other phones). Settings > Ipsy turns Ipsy\'s tagging off.',
+        'Podcasts\' Search no longer stops at "The server answered 429" when Apple\'s directory is busy: searches and Top shows are remembered for a while, a busy moment tries Apple from your phone, and Podcast Index answers instead once its key is set up; otherwise it says to try again in a minute or paste the show\'s RSS link.',
         'Travel reads Gmail 90 emails at a time, newest first, so your upcoming trips come in first; a longer read (the first one goes back a year) carries on after a minute\'s break, the most Gmail lets an app read without slowing it down. And Ipsy fills in what new bookings are missing by itself (Settings > Smart help turns it off): a booking it completes goes straight to Upcoming instead of waiting in To check, with Undo in Ipsy\'s chat',
         'Your helper dresses for the weather where you are (from Weather\'s forecast on your phone): an umbrella in the rain, a scarf when it\'s chilly, a coat when it\'s cold, a woolly hat in snow, and a sun hat and sunglasses on a warm sunny day. In Tron, Ares keeps his suit and takes an umbrella. Turn it off in Account, Your helper (or ask Ipsy).',
         'aOS Home in Layers is its own: the weather and what\'s next on the sky, then every app on one screen, four across, as raised round buttons with a line drawing tinted by its group. The top row is yours, and nothing moves unless you move it: Edit, then tap two apps to swap them (kept on your other devices too). Thumb arc is still there in Account > Appearance > Home layout',
-        'Layers gets an intro too, Skylight: as aOS opens, a day goes by in a moment: a starry sky brightens into the time of day\'s own as the sun (the moon after dusk) rises on an arc, its rays turning; a pane of frosted glass springs up with a light sweeping across it, your sixteen apps pop onto it row by row as Home\'s round buttons, and "aOS" bounces in letter by letter with Good morning, Good afternoon or Good evening; then "aOS" glides up into the page. Once a launch, with its own sound (a warm chord, a whoosh, a note for each row and a sparkle); Account > Appearance > Skylight intro: Sound, Silent or Off, and Play the intro',
+        'Layers gets an intro too, Skylight: as aOS opens, the sun (the moon in the evening) rises into the top right of the time of day\'s sky, and hundreds of tiny dots, your helpers, swoop in like a flock of birds in your apps\' colours. They come together into your apps\' drawings, and the drawings into a house, walls first and then the roof; a warm light comes on inside with a family standing in it, and "aOS" bounces in letter by letter with Good morning, Good afternoon or Good evening; then "aOS" glides up into the page. Once a launch, with its own sound (a warm chord, a whoosh as the flock swoops in, notes climbing as the house goes up and a sparkle as the light comes on); Account > Appearance > Skylight intro: Sound, Silent or Off, and Play the intro',
         'A new look, Layers, in place of Night Drive, in aOS and every app: a still sky behind the page, its colours by the time of day (sunrise, sea glass, dusk and night), clear behind the title and frosted glass from there down, in the AllisonOS colours, light or dark with your phone. Its own app icons, and your helper dressed for it. A phone that had Night Drive opens in Layers',
         'Your personal details stay on your phone: when Ipsy, or Orders, Travel and Money\'s checks of their emails, send something to Claude, email addresses, phone numbers, and card, account and ID numbers go as placeholders like [email-1], and your phone puts the real ones back in what comes back. Names, addresses, and order, tracking and booking numbers still go, since Ipsy needs them',
         'Moving between apps in aOS no longer cuts off an app reading Gmail: Orders, Travel, Money and Mail aren\'t put away to open another app, or started again for a setting from another device or a new look, until they\'re done. Orders and Travel keep what they\'ve read as they go, and a read that was cut off goes on from where it stopped as soon as you\'re back in the app (renewing the Gmail sign-in first if it ran out)',
@@ -793,8 +795,13 @@
       "cards": [
         {
           "i": "play",
-          "t": "Up Next",
-          "d": "Listen Now shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
+          "t": "Your library",
+          "d": "Your shows, their new episodes, what you saved and your history, all on one page."
+        },
+        {
+          "i": "tag",
+          "t": "Tagged for you",
+          "d": "Ipsy tags each show you follow, like Music, Talk or News. Pick a tag in the pill at the bottom to see just those shows. Change a show's tags on its page, or turn Ipsy off in Settings."
         },
         {
           "i": "search",
@@ -2061,15 +2068,15 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '.tabs .tab[data-tab="rem"]', t: 'Smart grocery lists', d: 'Grocery items sort into store sections in aisle order, and it learns where you like things to go.' },
     { sel: '#fab', t: 'Write it down', d: 'Tap the pencil for a new note. Notes and lists can be shared with the family.', g: 'tap' },
   ] };
-  const UP_NEXT = { key: 'pod-up', into: '#homeBody', html: `<section><p class="sechead">Up Next</p><div class="shelf"><article class="upcard glass" style="--i:0">
+  const UP_NEXT = { key: 'pod-up', into: '#libBody', hide: '#libBody .empty', html: `<section><p class="sechead">Up Next</p><div class="shelf"><article class="upcard glass" style="--i:0">
         <button class="uptop" type="button" tabindex="-1"><span class="art" style="--s:64px"></span><span class="uptx"><span class="upm">Your favorite show</span><span class="upt">The newest episode</span></span></button>
         <div class="upbar"><button class="playpill" type="button" tabindex="-1"><span class="pbar"><i style="width:40%"></i></span><span>18 min left</span></button><span class="upd">Today</span></div></article></div></section>` };
   SPOTS.podcasts = { stops: [
-    { sel: '#homeBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Up Next', d: 'Listen Now shows what’s playing, your queue, episodes you’re part way through, and new episodes from your shows.' },
-    { sel: '#homeBody [data-aos-demo="pod-up"] .playpill', demo: UP_NEXT, pad: 6, t: 'Resume where you left off', d: 'Each episode resumes right where you stopped, and the next one in Up Next plays when it ends.', g: 'tap' },
-    { sel: '#homeBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Listen your way', d: 'Play at 0.5× to 3×, skip back or forward, set a sleep timer, and AirPlay to a speaker or TV.', g: 'tap' },
+    { sel: '#libChips', t: 'Your library', d: 'Your shows, their new episodes, what you saved and your history, all on one page.', g: 'tap' },
+    { sel: ['#tagBtn', '#libChips'], t: 'Tagged for you', d: 'Ipsy tags each show you follow, like Music, Talk or News. Pick a tag in the pill at the bottom to see just those shows. Change a show’s tags on its page, or turn Ipsy off in Settings.', g: 'tap' },
+    { sel: '#libBody [data-aos-demo="pod-up"] .playpill', demo: UP_NEXT, pad: 6, t: 'Resume where you left off', d: 'Each episode resumes right where you stopped, and the next one in Up Next plays when it ends.', g: 'tap' },
+    { sel: '#libBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Listen your way', d: 'Play at 0.5× to 3×, skip back or forward, set a sleep timer, and AirPlay to a speaker or TV.', g: 'tap' },
     { sel: '#searchTab', t: 'Find new shows', d: 'Browse Apple’s Top shows, search by name, or paste a show’s feed link. Private and premium feeds work too.', g: 'tap' },
-    { sel: '.tabs .tab[data-tab="lib"]', t: 'Your library', d: 'Every show you follow, with new episodes downloaded and ready.', g: 'tap' },
   ] };
   SPOTS.travel = { stops: [
     { sel: '#scanBtn', t: 'Fills itself from Gmail', d: 'Connect Gmail and your flight, hotel and rental car confirmations become trips on their own.', g: 'tap' },
@@ -2156,7 +2163,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and Settings. Pick one in Settings > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
-  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
+  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
   for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
   let spotEnd = null;
   const onScreen = e => {

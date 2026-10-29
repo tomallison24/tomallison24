@@ -554,8 +554,8 @@ for (const scheme of ['light', 'dark']) {
   report('Sea glass\'s Tide intro: the waves, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
 }
 
-// 13. Layers' intro, Skylight (aOS/layers-intro.js): aOS opens with the time of day's sky, a pane of glass rising and
-// "aOS" with a greeting by the clock, then "aOS" glides up onto the small "aOS" at the top of the page; once a launch;
+// 13. Layers' intro, Skylight (aOS/layers-intro.js): aOS opens with the time of day's sky, a swarm of dots building a
+// house and "aOS" with a greeting by the clock, then "aOS" glides up onto the small "aOS" at the top of the page; once a launch;
 // Sound, Silent or Off and Play in Account (in Layers only); and none for a browser test that didn't ask for it, or in another look
 {
   const pr = [];
@@ -602,12 +602,26 @@ for (const scheme of ['light', 'dark']) {
   const p2 = await c.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
   if (await p2.evaluate(() => !!document.getElementById('layersIntro'))) pr.push('the intro played with Off picked');
   await c.close();
-  // in Dark, Silent: the dark glass, and no sound
-  { const { c, p } = await launch({ 'aos.look': 'layers', 'aos.layers.intro': 'silent' }, { scheme: 'dark' }); await p.waitForTimeout(1500);
-    const n = await p.evaluate(() => { const e = document.getElementById('layersIntro'); return e && { wave: getComputedStyle(e.querySelector('.li-glass')).backgroundColor, sound: e.dataset.sound || '' }; });
-    if (!n || !/^rgba\(16, 20, 26/.test(n.wave)) pr.push('the intro in Dark: ' + JSON.stringify(n));
-    if (n && n.sound) pr.push('Silent played its sound');
-    await c.close(); }
+  // the swarm: hundreds of dots in the apps' colours, which by 2.8 seconds have built the house (its ground across the
+  // lower part of the screen, the roof's peak above the walls) with the family inside; in Dark, light dots and people
+  // on the dark sky; Silent, no sound
+  const swarm = p => p.evaluate(() => {
+    const e = document.getElementById('layersIntro'), cv = e && e.querySelector('.li-swarm'); if (!cv) return null;
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let n = 0, light = 0, top = cv.height, bottom = 0;
+    for (let i = 3; i < d.length; i += 4 * 3) if (d[i] > 200) { n++; if ((d[i - 3] + d[i - 2] + d[i - 1]) / 3 > 150) light++; const y = Math.floor((i >> 2) / cv.width); top = Math.min(top, y); bottom = Math.max(bottom, y); }
+    return { n, light: n ? light / n : 0, top: top / cv.height, bottom: bottom / cv.height, sound: e.dataset.sound || '' };
+  });
+  for (const scheme of ['light', 'dark']) {
+    const { c, p } = await launch({ 'aos.look': 'layers', 'aos.layers.intro': 'silent' }, { scheme }); await p.waitForTimeout(2800);
+    const n = await swarm(p);
+    if (!n || n.n < 2000) pr.push(`${scheme}: the house of dots is not drawn: ` + JSON.stringify(n));
+    else {
+      if (n.top < 0.3 || n.top > 0.5 || n.bottom < 0.7 || n.bottom > 0.85) pr.push(`${scheme}: the house is not where it should be (its peak to its ground, as parts of the screen): ` + JSON.stringify(n));
+      if (scheme === 'dark' ? n.light < 0.6 : n.light > 0.4) pr.push(`${scheme}: the dots and the family are not in the ${scheme} colours: ` + JSON.stringify(n));
+      if (n.sound) pr.push('Silent played its sound');
+    }
+    await c.close();
+  }
   // Sea glass: not this intro
   { const { c, p } = await launch({ 'aos.look': 'glass', 'aos.layers.intro': 'sound' }); await p.waitForTimeout(400);
     if ((await p.evaluate(() => window.__li)).shown) pr.push('the Skylight intro played in Sea glass'); await c.close(); }
@@ -616,7 +630,7 @@ for (const scheme of ['light', 'dark']) {
     if (!(await p.evaluate(() => window.__li)).shown) pr.push('no intro with Reduce Motion');
     await p.waitForFunction(() => !document.getElementById('layersIntro'), null, { timeout: 4000 }).catch(() => pr.push('with Reduce Motion, the intro did not end within 4 seconds'));
     await c.close(); }
-  report('Layers\' Skylight intro: the sky, the glass, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
+  report('Layers\' Skylight intro: the sky, the house of dots, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
 }
 
 
