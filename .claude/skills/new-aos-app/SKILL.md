@@ -136,12 +136,18 @@ per person is deleted in `functions/aOS/api` `remove`.
   on the window's `aos:theme` event (as `house/bg.js` and Places do).
 - **Motion**: honour `prefers-reduced-motion` (and
   `prefers-reduced-transparency` for glass).
-- **On/off settings are switches**, the same in every app: a row (`<button class="swrow" role="switch"
-  aria-checked>`) with the name, one sentence under it (`.sub`) saying what it does (not "On." or "Off.":
-  the switch says that), and `<span class="switch">` on the right: 58 by 30, a pill-shaped knob; on is
-  `#34C759` in Sea glass and `--mc-teal` in Vintage (Layers and Tron follow from Vintage). Copy the
-  rules from Orders' `index.html` (`.swrow`, `.switch`). Never On/Off buttons, a check mark, or words
-  for a setting that is on or off. Device controls in Home keep the Signal dashboard's own switches.
+- **Settings, the same in every app** (`../home/settings.js`: load it before `app.js` and list it in
+  `sw.js` SHELL; read its header). The sheet is called **Settings** and closes with the ✓. Its body is
+  sections in this order, leaving out what the app doesn't have: **Design** (the shared picker) · the
+  app's own · **Connected accounts** · **Ipsy** · **Notifications** · **Your data** · **Family
+  account**. Rows come from `AllisonOS.settings`: a switch for anything on or off (never On/Off
+  buttons, a check mark or words), a choice for two or three options, a select for four or more,
+  an action (icon and verb), a danger row that asks again (`S.armed`, never `confirm()`), an info row.
+  One sentence at most under a row, ending with a full stop, never "On." or "Off.". The same job
+  has the same words everywhere: Check now, Disconnect Gmail, Back up everything, Import a backup,
+  Export as a spreadsheet, Delete all data, Sign in with Face ID / Signed in as …. Travel's
+  `renderSettings` is the example to copy. Its look (and the Glass switch) is the component's:
+  don't restyle it in the app. Device controls in Home keep the Signal dashboard's own switches.
 - **Simple**: one main screen where possible; a sheet for each thing you open;
   the fewest controls that do the job. Tap targets 44 px. Real `<button>`s and
   labels; color never the only signal.
