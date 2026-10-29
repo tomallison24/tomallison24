@@ -1114,12 +1114,12 @@
         {
           "i": "people",
           "t": "For grown-ups",
-          "d": "Press and hold Grown-ups for the Parent corner: each child's progress, words to practice together, play time and the letter sounds you record."
+          "d": "Press and hold Grown-ups for Settings: each child's progress, words to practice together, play time and the letter sounds you record."
         },
         {
           "i": "sliders",
           "t": "Four designs",
-          "d": "Vintage, Standard in Sea glass, Layers or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
+          "d": "Vintage, Standard in Sea glass, Layers or Tron, for the player picker and Settings. Pick one in Settings > Design."
         }
       ]
     }
@@ -2152,8 +2152,8 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: ['#players .pcard', '#players'], t: 'Reading first', d: 'Story Tower follows her school\'s reading plan, from syllables to little stories, with the Gem Mine for math and Star Meadow for memory.' },
     { sel: ['#players .pcard', '#players'], t: 'Just hard enough', d: 'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.' },
     { sel: ['#players .pcard', '#players'], t: 'Earned by learning', d: 'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.' },
-    { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for the Parent corner: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
-    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
+    { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for Settings: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
+    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and Settings. Pick one in Settings > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
   const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
@@ -2362,7 +2362,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['layers', 'Layers', 'A still sky by the time of day'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'], ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'], ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];   // word for word home/design.js's picker
   const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now

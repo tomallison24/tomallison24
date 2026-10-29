@@ -118,7 +118,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
   const names = await p.locator('#aos-welcome .c-look b').allTextContents();
-  if (names.join() !== 'Vintage,Sea glass,Layers,Tron Special Edition') pr.push('the install step offers ' + names.join());
+  if (names.join() !== 'Vintage,Standard,Layers,Tron Special Edition') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());

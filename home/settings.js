@@ -126,6 +126,8 @@ html[data-look="vintage"][data-theme="dark"] { --st-card: #322A25; --st-edge: rg
 html[data-look="vintage"] .st-group { box-shadow: inset 0 0 0 1.5px var(--st-edge) }
 html[data-look="vintage"] .st-lbl { letter-spacing: .16em }
 html[data-look="grid"] .st-lbl { letter-spacing: .2em }
+/* Tron: the picked option of a choice carries the red light, so it stands out on the black */
+html[data-look="grid"] .st-seg button[aria-checked="true"] { box-shadow: inset 0 0 0 1px var(--st-accent), 0 0 10px -3px var(--st-accent); color: var(--st-accent) }
 /* Layers: frosted glass over the sky, the way its pages are */
 html[data-look="layers"] .st-group { background: color-mix(in srgb, var(--st-card) 78%, transparent) }
 
