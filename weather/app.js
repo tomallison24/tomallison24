@@ -1,6 +1,6 @@
 // weather's own script, moved out of index.html so the page's
 // Content-Security-Policy can allow only this site's own files (script-src 'self').
-// Two designs, picked in Settings > Design (the Places sheet): Vintage (the default) and Standard
+// Two designs, picked in Settings > Design (the sheet the place name opens): Vintage (the default) and Standard
 // (Sea glass), kept on this phone (../home/design.js, as in Clock). Vintage draws in the Retro
 // colours (CSS variables from index.html's #vintage block) with a sky of flat shapes; Standard,
 // Weather's own glowing colours and gradient skies. Everything else is the same in both.
@@ -1129,13 +1129,30 @@ function renderWelcome() {
     ${S.error ? `<p class="note" style="margin:12px 0 0;">${esc(S.error)}</p>` : ''}</div>`);
 }
 
-// ---- Location sheet ----
+// ---- Settings: the sheet the place name and the Places button open ----
+// As in every app (../home/settings.js): Design · Your places (the search, My Location, the trip, your cities) · Units.
+// Drawn once: the search's answers, your places and the units are put in again in place, so what's typed stays.
 const wrap = document.getElementById('sheetWrap');
+{
+  const St = window.AllisonOS.settings;
+  document.getElementById('setBody').innerHTML = (window.aosDesign ? St.section('Design', St.raw(aosDesign.picker(), { id: 'designBox' })) : '')
+    + St.section('Your places', [
+      St.input({ id: 'q', type: 'search', title: 'Add a city', placeholder: 'City name', attrs: 'autocomplete="off" enterkeyhint="search"' }),
+      St.raw('<div class="list" id="results"></div>'),
+      St.raw('<div class="list" id="placesList"></div>'),
+    ])
+    + St.section('Units', St.choice({ id: 'units', title: 'Temperature, wind and rain', options: [['us', '°F · mph · in'], ['metric', '°C · km/h · mm']], value: S.units }));
+  // Units: as picked, at once
+  document.getElementById('setBody').addEventListener('click', e => {
+    if (!e.target.closest('#units')) return;
+    const u = St.pick(e);
+    if (u && S.units !== u) { S.units = u; store.set('units', S.units); syncUnits(); placesList.innerHTML = placesRows(); render(); }
+  });
+}
 const q = document.getElementById('q');
 const results = document.getElementById('results');
 const placesList = document.getElementById('placesList');
-document.querySelector('.sheet h2 button').innerHTML = svg('close', 18);
-document.getElementById('searchIcon').innerHTML = svg('magnify', 18);
+document.querySelector('.sheet h2 button').innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>';   // Done
 
 // The sheet's list: My Location first, your next trip's destination while there is one (its dates under
 // the name, no remove: it comes from Travel), then each saved city with its weather, and a way to remove it.
@@ -1163,7 +1180,7 @@ function placesRows() {
 }
 function openSheet() {
   placesList.innerHTML = placesRows();
-  syncUnits(true);
+  syncUnits();
   wrap.classList.add('open');
   lockBehind(wrap);
 }
@@ -1384,29 +1401,22 @@ function closeSheet() {
 }
 // The sliding glass thumb under the units switch (home/slide.js, loaded first).
 const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
-const units = document.getElementById('units');
-function syncUnits(jump) {
-  for (const b of units.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.u === S.units));
-  slide(units, units.querySelector('[aria-pressed="true"]'), 'units', { jump });
+const units = document.getElementById('units');   // the Units choice in Settings
+function syncUnits() {
+  for (const b of units.querySelectorAll('[role="radio"]')) b.setAttribute('aria-checked', String(b.dataset.value === S.units));
 }
-window.addEventListener('resize', () => syncUnits(true));
 
-// Settings > Design, the first section of the Places sheet: Vintage or Standard, at once and just on this
-// phone (../home/design.js). The screen and any open sheet are drawn again in the design picked, and the
-// sliding thumbs measured again (Futura and the system font are different widths).
-if (window.aosDesign) {
-  const box = document.getElementById('designBox');
-  box.innerHTML = aosDesign.picker();
-  for (const id of ['designLabel', 'designBox']) document.getElementById(id).hidden = false;
-  aosDesign.bind(box);
-}
+// Settings > Design, the first section: Vintage, Standard, Layers or Tron, at once and just on this phone
+// (../home/design.js). The screen and any open sheet are drawn again in the design picked, and the view
+// buttons' sliding thumb measured again (Futura and the system font are different widths).
+if (window.aosDesign) aosDesign.bind(document.getElementById('designBox'));
 window.addEventListener('aos:design', () => {
   S.vswPlaced = false;                                  // the view buttons' thumb jumps to its place, rather than sliding from where it was
   render();
   if (hourWrap.classList.contains('open')) fillHour();
   if (dayWrap.classList.contains('open')) fillDay();
   if (wrap.classList.contains('open')) placesList.innerHTML = placesRows();
-  requestAnimationFrame(() => { syncUnits(true); const vsw = document.getElementById('vsw'); if (vsw) slide(vsw, vsw.querySelector('[aria-pressed="true"]'), 'wxview', { jump: true }); });
+  requestAnimationFrame(() => { const vsw = document.getElementById('vsw'); if (vsw) slide(vsw, vsw.querySelector('[aria-pressed="true"]'), 'wxview', { jump: true }); });
 });
 
 let searchTimer, searchSeq = 0;
@@ -1432,7 +1442,7 @@ q.addEventListener('input', () => {
 
 // ---- Events ----
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-u],[data-alert],[data-view],[data-rz],[data-rplay],[data-hour],[data-hstep],[data-day],[data-dstep]');
+  const t = e.target.closest('[data-action],[data-close],[data-pick],[data-pick-place],[data-remove],[data-alert],[data-view],[data-rz],[data-rplay],[data-hour],[data-hstep],[data-day],[data-dstep]');
   if (!t) return;
   if (t.hasAttribute('data-close')) return closeSheet();
   if (t.dataset.view) {
@@ -1455,10 +1465,6 @@ document.addEventListener('click', e => {
   }
   if (t.dataset.pickPlace != null) { closeSheet(); return pickPlace(t.dataset.pickPlace); }
   if (t.dataset.remove != null) { removePlace(+t.dataset.remove); placesList.innerHTML = placesRows(); return; }
-  if (t.dataset.u) {
-    if (S.units !== t.dataset.u) { S.units = t.dataset.u; store.set('units', S.units); syncUnits(); placesList.innerHTML = placesRows(); render(); }
-    return;
-  }
   switch (t.dataset.action) {
     case 'refresh': refresh(true); break;
     case 'location': openSheet(); break;

@@ -667,12 +667,9 @@ path.osm-dot{stroke:#FAFCFE}
   <div class="scrim" data-close></div>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setLbl">
     <div class="grab" aria-hidden="true"></div>
-    <div class="sheethead"><h2 id="setLbl">Settings</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="sheetbody" id="setBody">
-      <div class="field">
-        <p class="label">Design</p>
-        <div class="rgroup" id="setDesign"></div>
-      </div>
+    <div class="sheethead"><h2 id="setLbl">Settings</h2><button class="iconbtn ok" data-close type="button" aria-label="Done"><svg class="i" viewBox="0 0 24 24" style="stroke-width:2.2"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
+    <div class="sheetbody">
+      <div id="setBody"></div>   <!-- the sections, written by renderSettings (../home/settings.js) -->
     </div>
   </div>
 </div>
@@ -681,6 +678,7 @@ path.osm-dot{stroke:#FAFCFE}
 
 <script src="vendor/leaflet.js"></script>
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: signs the family's Google Sheet in -->
 <script src="../home/sheet.js"></script>   <!-- the family's Google Sheet (Notes'), through aOS (aOS/SHEETS.md) -->
 <script src="parse.js"></script>

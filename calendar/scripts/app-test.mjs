@@ -326,7 +326,7 @@ await test('the year and list views', async () => {
   await shot(page, '08-list');
 });
 
-await test('switches: a glass thumb slides under the chosen view, day and setting, and hides while searching', async () => {
+await test('switches: a glass thumb slides under the chosen view and day, and hides while searching; Settings\' choices pick at once', async () => {
   // true once the thumb in `box` sits exactly over its chosen option (or that option's `inner`)
   const under = ([box, chosen, inner]) => { const b = document.querySelector(box), t = b && b.querySelector(':scope > .slthumb'), c = b && b.querySelector(chosen); if (!t || !c) return false; const q = (inner ? c.querySelector(inner) : c).getBoundingClientRect(), r = t.getBoundingClientRect(); return Math.abs(r.left - q.left) < 1 && Math.abs(r.width - q.width) < 1 && Math.abs(r.top - q.top) < 1; };
   const tabs = ['.tabs', '.tab[aria-selected="true"]'];
@@ -353,15 +353,15 @@ await test('switches: a glass thumb slides under the chosen view, day and settin
   await page.click('.strip button[data-day="' + other + '"]');
   assert.ok(await slides() > n, 'the circle slid to the day');
   await page.waitForFunction(under, strip, { timeout: 3000 });
-  // Settings' segmented choices
-  const seg = ['#stBody .seg:has([data-set="clock"])', '[aria-pressed="true"]'];
+  // Settings' choices are the shared segmented control (../home/settings.js): the option tapped is the one picked, at once
+  const seg = '#stBody [data-set="clock"]';
   await page.click('#setBtn');
-  await page.waitForFunction(under, seg, { timeout: 3000 });
-  n = await slides();
-  await page.click('[data-set="clock"][data-val="24"]');
-  assert.ok(await slides() > n, 'the choice slid');
-  await page.waitForFunction(under, seg, { timeout: 3000 });
-  await page.click('[data-set="clock"][data-val="auto"]');
+  await page.waitForSelector('#setSheet:not([hidden]) ' + seg);
+  await page.click(seg + ' [data-value="24"]');
+  assert.equal(await page.getAttribute(seg + ' [data-value="24"]', 'aria-checked'), 'true', 'the choice is picked');
+  assert.equal(await page.$$eval(seg + ' [aria-checked="true"]', e => e.length), 1, 'and only it');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-calendar-v1-settings')).clock), '24', 'and kept');
+  await page.click(seg + ' [data-value="auto"]');
   await page.click('#setSheet .sheethead [data-close]');
   await page.click('.tab[data-view="list"]');
 });
@@ -373,14 +373,14 @@ await test('settings: the layers switch off and on, and the week can start on Mo
   assert.ok(t.includes('Connected') && t.includes('Family') && t.includes('US Holidays') && t.includes('Sign in to your family account first'), t);
   await shot(page, '09-settings');
   await page.click('[data-layer="notes"]');
-  await page.click('[data-set="weekStart"][data-val="1"]');
+  await page.click('[data-set="weekStart"] [data-value="1"]');
   await page.click('#setSheet .sheethead [data-close]');
   await page.click('.tab[data-view="month"]');
   await page.waitForTimeout(150);
   assert.ok(!(await page.textContent('#main')).includes('Call the plumber'), 'Notes layer off');
   assert.equal(await page.$eval('.wkhead span', e => e.textContent), 'M', 'Monday first, once picked');
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-calendar-v1-settings')).weekStartPicked), true);
-  await page.click('#setBtn'); await page.click('[data-layer="notes"]'); await page.click('[data-set="weekStart"][data-val="0"]'); await page.click('#setSheet .sheethead [data-close]');
+  await page.click('#setBtn'); await page.click('[data-layer="notes"]'); await page.click('[data-set="weekStart"] [data-value="0"]'); await page.click('#setSheet .sheethead [data-close]');
 });
 
 await test('dark mode renders', async () => {
@@ -429,7 +429,7 @@ await test('Settings > Design: Vintage, then Standard and back, at once and kept
   const under = () => p.evaluate(() => { const t = document.getElementById('tabThumb').getBoundingClientRect(), c = document.querySelector('.tab[aria-selected="true"]').getBoundingClientRect(); return Math.abs(t.left - c.left) < 1 && Math.abs(t.width - c.width) < 1; });
   assert.equal(await look(), 'vintage');
   await p.click('#setBtn'); await p.waitForSelector('#setSheet:not([hidden])');
-  assert.equal(await p.textContent('#stBody .label'), 'Design', 'Design is the first section');
+  assert.equal(await p.textContent('#stBody .st-sec:first-child .st-lbl'), 'Design', 'Design is the first section');
   assert.equal(await p.getAttribute('#stBody [data-design="vintage"]', 'aria-checked'), 'true');
   assert.equal(await p.getAttribute('#stBody [data-design="glass"]', 'aria-checked'), 'false');
   assert.ok(!(await p.textContent('#stBody')).includes('Just on this phone'), 'no explanation under Design');
