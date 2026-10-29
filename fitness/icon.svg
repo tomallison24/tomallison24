@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: a cream dumbbell on walnut, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. -->
-  <rect width="512" height="512" fill="#4A3426"/>
-  <circle cx="412" cy="412" r="150" fill="#E3A72F"/>
-  <rect x="40" y="66" width="190" height="50" rx="25" fill="#D8572A" transform="rotate(-18 135 91)"/>
-  <g transform="rotate(-35 256 256) translate(256 256) scale(1.02) translate(-256 -256)" fill="#FBF5E9">
+  <!-- Mid-century modern, as a tinted tile: the dumbbell in Fitness's own colour (#9D1E63) on a pale tint of it (#FEDCE5); every app has its own, a shade of its room's (You: aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
+  <rect width="512" height="512" fill="#FEDCE5"/>
+  <circle cx="424" cy="88" r="44" fill="#E3A72F"/>
+  <rect x="46" y="432" width="88" height="24" rx="12" fill="#D8572A" transform="rotate(-18 90 444)"/>
+  <g transform="rotate(-35 256 256) translate(256 256) scale(1.02) translate(-256 -256)" fill="#9D1E63">
     <rect x="150" y="238" width="212" height="36" rx="18"/>
     <rect x="96" y="172" width="54" height="168" rx="22"/><rect x="362" y="172" width="54" height="168" rx="22"/>
     <rect x="58" y="204" width="44" height="104" rx="18"/><rect x="410" y="204" width="44" height="104" rx="18"/>

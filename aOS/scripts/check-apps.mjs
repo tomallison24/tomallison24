@@ -88,7 +88,7 @@ const SKY = new Set(['aos', ...APPS].filter(id => id !== 'weather'));
 const LINEsrc = (/const LINE = \{/.exec(W) || {}).index;
 const LINE = LINEsrc === undefined ? new Set() : new Set([...literal(W, LINEsrc + 'const LINE = '.length).matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]));
 const S = (read('aOS/app.js') || '') + (read('aOS/index.html') || '');   // aOS's script is app.js (it was inline in index.html)
-const HUE = constant(S, 'GLASS_HUE', 'aOS/app.js') || {};   // HUE follows aOS's look; GLASS_HUE has every app
+const HUE = constant(S, 'ROOM_HUE', 'aOS/app.js') || {};   // HUE is every app's own colour (ROOM_HUE), Tron's in Tron
 const CAT = constant(S, 'CAT', 'aOS/app.js') || {};
 const NEEDS = constant(S, 'NEEDS', 'aOS/app.js') || {};
 const API = read('functions/aOS/api/[[route]].js') || '';

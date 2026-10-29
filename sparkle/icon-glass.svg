@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- "Orchid": a white unicorn's head (its eye and horn stripes cut out) and a sparkle, on soft orchid, one of the Sea glass tints (each AllisonOS app has its own). A full-bleed diagonal gradient, a soft glow top left, one white glyph; the phone rounds the corners. -->
+  <!-- Sea glass, as a tinted tile: the drawing in Sparkle's own colour (#7655B4) on a pale glass of it (#EBE0FF), the same colour it has in every look (aOS/app.js, ROOM_HUE). A full-bleed diagonal gradient, a soft glow top left; the phone rounds the corners. -->
   <defs>
     <linearGradient id="sky" x1="0.15" y1="0" x2="0.85" y2="1">
-      <stop offset="0" stop-color="#E6C7E8"/>
-      <stop offset="0.55" stop-color="#B88CC0"/>
-      <stop offset="1" stop-color="#85588E"/>
+      <stop offset="0" stop-color="#F6F1FF"/>
+      <stop offset="0.55" stop-color="#EBE0FF"/>
+      <stop offset="1" stop-color="#DDCFF6"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.18" cy="0.12" r="0.6">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </radialGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10181A" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10181A" flood-opacity="0.08"/>
     </filter>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <rect width="512" height="512" fill="#fff"/>
@@ -21,12 +21,12 @@
   </defs>
   <rect width="512" height="512" fill="url(#sky)"/>
   <rect width="512" height="512" fill="url(#glow)"/>
-  <g filter="url(#shadow)" fill="#FFFFFF">
+  <g filter="url(#shadow)" fill="#7655B4">
     <g mask="url(#cut)">
       <path d="M150 448C138 368 146 294 186 240C212 204 248 182 290 176L270 124L312 164C350 174 386 194 404 228C420 256 418 288 398 302C380 314 354 310 334 300C318 294 306 298 298 312C282 342 282 392 300 448Z"/>
       <path d="M300 180L366 52L338 192Z"/>
     </g>
-    <path d="M150 448C120 408 112 348 128 308C110 298 104 270 120 254C108 234 120 208 144 208C150 184 176 174 196 184C204 168 226 160 244 168" fill="none" stroke="#FFFFFF" stroke-width="40" stroke-linecap="round"/>
+    <path d="M150 448C120 408 112 348 128 308C110 298 104 270 120 254C108 234 120 208 144 208C150 184 176 174 196 184C204 168 226 160 244 168" fill="none" stroke="#7655B4" stroke-width="40" stroke-linecap="round"/>
     <path d="M128 80Q134 114 168 120Q134 126 128 160Q122 126 88 120Q122 114 128 80Z"/>
   </g>
 </svg>
