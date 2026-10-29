@@ -632,14 +632,14 @@ for (const signedIn of [false, true]) {
   check(JSON.parse(await pg.evaluate(() => localStorage.getItem('home.settings'))).theme === 'dark', 'light or dark, saved');
   await pg.click('#setupBox [data-snext]');
   check(await pg.locator('#setupBox .ipsy-whobtn').count() === 5 && await pg.locator('#setupBox .ipsy-whobtn[aria-checked="true"]').count() === 0, 'then every helper (five), none picked yet');
-  await pg.click('#setupBox .ipsy-whobtn[data-who="ai"]'); await pg.fill('#setupBox .ipsy-name', 'Biscuit');
+  await pg.click('#setupBox .ipsy-whobtn[data-who="nova"]'); await pg.fill('#setupBox .ipsy-name', 'Biscuit');
   await pg.click('#setupBox [data-snext]');
   check(/You’re all set/.test(await pg.textContent('#setupBox')) && /Biscuit · AI/.test(await pg.textContent('#setupBox')), 'all set, with what was picked');
-  check(await pg.textContent('#helperSub') === 'Biscuit · AI' && await pg.locator('#helperPick .ipsy-whobtn[data-who="ai"][aria-checked="true"]').count() === 1, 'Account\'s Your helper, under it, follows');
+  check(await pg.textContent('#helperSub') === 'Biscuit · AI' && await pg.locator('#helperPick .ipsy-whobtn[data-who="nova"][aria-checked="true"]').count() === 1, 'Account\'s Your helper, under it, follows');
   const h = await pg.evaluate(() => ({ h: AllisonOS.ipsy.helper(), who: document.querySelector('#ipsySlot .ipsy-char').dataset.who, label: document.querySelector('#ipsySlot .ipsy-btn').getAttribute('aria-label') }));
-  check(h.h && h.h.who === 'ai' && h.h.name === 'Biscuit' && h.who === 'ai' && h.label === 'Ask Biscuit', `the helper is yours at once, on Home too (${JSON.stringify(h)})`);
+  check(h.h && h.h.who === 'nova' && h.h.name === 'Biscuit' && h.who === 'nova' && h.label === 'Ask Biscuit', `the helper is yours at once, on Home too (${JSON.stringify(h)})`);
   const old = await pg.evaluate(() => { const was = localStorage.getItem('aos.helper'); localStorage.setItem('aos.helper', '{"who":"otter","name":"Pip"}'); const h = AllisonOS.ipsy.helper(); localStorage.setItem('aos.helper', was); return h; });
-  check(old && old.who === 'ai' && old.name === 'Pip', `a retired helper (the otter) is the AI now, its name kept (${JSON.stringify(old)})`);
+  check(old && old.who === 'nova' && old.name === 'Pip', `a retired helper (the otter) is Nova now, its name kept (${JSON.stringify(old)})`);
   await pg.click('#setupBox [data-snext]'); await pg.waitForTimeout(500);
   check(await pg.locator('#setupBox').count() === 0, 'Done closes it');
   check(!errs.length, 'Run through setup: no script errors' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));

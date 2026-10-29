@@ -32,7 +32,7 @@
 // only ever added to: the API checks that earlier turns weren't changed.
 //
 // Ipsy is the person's own helper: one of five characters (Mia, the family's Australian Shepherd, a
-// fox, an owl, a hedgehog, an AI made of light), picked and named the first time the chat
+// fox, an owl, a hedgehog, Nova: flying code), picked and named the first time the chat
 // opens (aos.helper; also in aOS, Account). It acts out each job: listening (the box has focus),
 // thinking (waiting for Claude), reading, searching with its glasses on, writing, showing (by the
 // tool's name: jobOf), talking (the answer appearing) and a hop when a change is saved. Reduce
@@ -81,7 +81,7 @@
   const DEG = Math.PI / 180;
   // ---------------------------------------------------------------------------
   // The helpers: everyone picks their own (Mia, the family's Australian Shepherd, or a fox, an owl, a
-  // hedgehog or the AI) and names it. All of them share one rig: rubber-hose
+  // hedgehog, or Nova) and names it. All of them share one rig: rubber-hose
   // arms, a face, and the props for each job, so each acts out what Ipsy is doing:
   //   idle (bobs, blinks, waves now and then), listen (hand to its ear), think (hand on its chin, thought
   //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
@@ -96,22 +96,9 @@
     return 'M' + pts.join('L') + 'L100 140Z';
   })();
   const STROKE = (c, w, d) => '<path fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" d="' + d + '"/>';
-  // the AI's hologram: what it builds, one at a time, centred on 100,22
-  const HOLO = (() => {
-    const gear = [];
-    for (let i = 0; i < 16; i++) { const r = i % 4 < 2 ? 11 : 8, t = (i * 22.5 - 11.25) * DEG; gear.push(f1(100 + r * Math.cos(t)) + ' ' + f1(22 + r * Math.sin(t))); }
-    return ['M100 11l10 6v12l-10 6-10-6V17zM90 17l10 6 10-6M100 23v12',                         // a cube
-      'M100 10L88 32h24zM100 10l4 22',                                                           // a pyramid
-      'M89 22a11 11 0 1 0 22 0a11 11 0 1 0-22 0M89 22h22M100 11c-6 6-6 16 0 22c6-6 6-16 0-22',   // a globe
-      'M' + gear.join('L') + 'zM96 22a4 4 0 1 0 8 0a4 4 0 1 0-8 0',                               // a gear
-      'M89 33l13-13M102 20a7 7 0 0 1 8-9l-4 4 1 3 3 1 4-4a7 7 0 0 1-9 8',                          // a wrench
-      'M100 10a8 8 0 0 0-5 14v4h10v-4a8 8 0 0 0-5-14zM96 32h8M100 28v-6',                          // a light bulb
-      'M94 14l-8 8 8 8M106 14l8 8-8 8M103 12l-6 20',                                              // </>
-    ].map((d, i) => '<path class="h-holi" style="--i:' + i + '" d="' + d + '"/>').join('');
-  })();
-  // kind: what it is, for screen readers and for Claude (the picker shows them unnamed)
+  // kind: what it is, for screen readers and for Claude (the picker shows them unnamed); named: its own name, unnamed (Mia, Nova)
   const HELPERS = {
-    mia: { label: 'Australian Shepherd', kind: 'Mia, the family’s Australian Shepherd', sh: 52, pupil: true, cheeks: false,
+    mia: { label: 'Australian Shepherd', named: 'Mia', kind: 'Mia, the family’s Australian Shepherd', sh: 52, pupil: true, cheeks: false,
       vars: '--limb:#24211E;--limbw:10;--paw:#FFFDF7;--pawedge:#24211E;--foot:#FFFDF7;--eye:#7A4523;--brow:#C27A3E;--broww:6.5;--specl:#E3A72F',
       back: '<path d="M64 62C42 64 32 92 36 120C38 136 50 140 58 128C62 108 66 86 76 68Z" fill="#24211E"/><path d="M136 62C158 64 168 92 164 120C162 136 150 140 142 128C138 108 134 86 124 68Z" fill="#24211E"/>'
         + STROKE('#24211E', 2, 'M37 96c-6 2-10 0-12-4M36 112c-6 4-11 3-14 0M38 132c-4 4-10 6-14 4M163 96c6 2 10 0 12-4M164 112c6 4 11 3 14 0M162 132c4 4 10 6 14 4'),
@@ -135,25 +122,12 @@
       back: '<path d="' + SPIKES + '" fill="#7A4E2D"/><circle cx="136" cy="54" r="10" fill="#D8572A"/>' + STROKE('#7E8C34', 3, 'M136 44q4-6 9-5'),
       body: '<circle cx="100" cy="118" r="48" fill="#E8C58F"/><circle cx="72" cy="80" r="8" fill="#E8C58F"/><circle cx="128" cy="80" r="8" fill="#E8C58F"/>',
       front: '<circle class="h-ink" cx="100" cy="116" r="5"/>' },
-    // the AI: made of light and code. A screen for a face, wireframe shapes in orbit, and over its head a hologram
-    // that builds one shape or tool after another (a cube, a pyramid, a globe, a gear, a wrench, a bulb, </>);
-    // it hovers (no feet), and its book, notepad and magnifying glass are light too (the CSS)
-    ai: { label: 'AI', kind: 'an AI made of light, building shapes and tools out of code', sh: 54, feet: false, cheeks: false,
-      vars: '--limb:#8B7CF6;--limbw:6;--paw:#5CE1E6;--pawedge:#3B2FA8;--eye:#5CE1E6;--brow:#8B7CF6;--broww:3',
-      back: '<g class="h-orbit" style="transform-origin:100px 112px"><circle cx="100" cy="112" r="66" fill="none" stroke="#8B7CF6" stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="3 7"/>'
-        + '<g fill="none" stroke="#5CE1E6" stroke-width="2.2" stroke-linejoin="round"><path d="M166 104l7 13h-14z"/><rect x="60" y="162" width="13" height="13" rx="1.5"/><circle cx="67" cy="55" r="6.5"/></g></g>'
-        + '<ellipse class="h-thrust" cx="100" cy="176" rx="22" ry="4.5" style="transform-origin:100px 176px"/>'
-        + '<g class="h-holo"><path class="h-beam" d="M100 50L78 2H122Z"/>' + HOLO + '</g>'
-        + STROKE('#8B7CF6', 3, 'M100 58V50') + '<path d="M100 43l5 5-5 5-5-5z" fill="#5CE1E6"/>',
-      body: '<path d="' + EGG + '" fill="#23264F"/><path d="M60 98C62 76 76 62 96 58" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="5" stroke-linecap="round"/>'
-        + STROKE('#5CE1E6', 2, 'M62 144h12l6 6h8M138 144h-12l-6 6h-8M84 164v-6M116 164v-6').replace('/>', ' opacity=".55"/>')
-        + '<path class="h-core" style="transform-origin:100px 152px" d="M100 143l8 4.5v9l-8 4.5-8-4.5v-9z"/>'
-        + '<rect x="64" y="80" width="72" height="56" rx="22" fill="#0B0D1E" stroke="#8B7CF6" stroke-width="2"/>',
-      front: '<rect class="h-aiscan" x="68" y="84" width="64" height="3" rx="1.5"/>' },
+    // Nova: no body and no face, just code (novaSvg, below), flying round and now and then coming together into a shape
+    nova: { label: 'AI', named: 'Nova', kind: 'Nova, an AI made of flying code that comes together into shapes and tools' },
   };
   const WHO = Object.keys(HELPERS);
-  // the robot, the octopus and the otter are retired: whoever picked one has the AI now, with the name they gave it
-  const RETIRED = { robot: 'ai', octopus: 'ai', otter: 'ai' };
+  // the robot, the octopus and the otter are retired: whoever picked one has Nova now, with the name they gave it
+  const RETIRED = { robot: 'nova', octopus: 'nova', otter: 'nova' };
   // Tron's rider (Tron: Ares, as the Light Cycle's driver in Tesla's cars): in the Tron look, everyone's helper suits up as
   // this - black suit and helmet lit with red, the identity disc behind - whichever helper they picked (its name stays theirs).
   // Not in the picker. Its jobs are the others': a lit data pad to read, a light that sweeps the visor to search, a stylus of
@@ -184,7 +158,6 @@
     fox: { top: 56, coat: '#2F4A6D', scarf: ['#1F6F6B', '#FFF7EC'] },
     owl: { top: 56, coat: '#C98A2B', scarf: ['#D8572A', '#FFF7EC'] },
     hedgehog: { top: 62, coat: '#4E7A4A', scarf: ['#D8572A', '#FFF7EC'], shape: '<circle cx="100" cy="118" r="48"/>' },
-    ai: { top: 56, coat: '#3B2FA8', scarf: ['#5CE1E6', '#23264F'] },
     rider: { only: ['umbrella'] },
   };
   const UMBRELLA = ['#E3A72F', '#FFF7EC'];
@@ -257,7 +230,114 @@
   }
   const MOODS = ['idle', 'listen', 'think', 'read', 'scan', 'write', 'show', 'talk', 'done'];
 
+  // ---------------------------------------------------------------------------
+  // Nova: code flying round (bits of it, in three colours), drawn by the phone frame by frame (novaFrame). Idle,
+  // the bits wander and every few seconds come together into a shape (a cube, a star, a heart, a globe, a gear,
+  // </>, a bolt) and fly apart again. Each job is a shape too: sound waves to listen, a whirl to think, a book to
+  // read, a magnifying glass sweeping to search, a pencil to write, an arrow to show, a speech bubble to talk
+  // (its code changing fast) and a tick when a change is saved; a ball of it to cross aOS Home's bar. Neighbours
+  // in one shape are neighbours in the next, so it flows from one to another. Reduce Motion: the shape, still.
+  // No clothes: it doesn't dress for the weather.
+  // ---------------------------------------------------------------------------
+  const NOVA_N = 36, GLYPHS = ['{', '}', '<', '>', '/', '0', '1', ';', '=', '(', ')', '[', ']', '#', '*', '+', '$', '&', '%', 'λ', '01', '=>', 'fn', '{}'];
+  const ring = (cx, cy, rx, ry, a0 = 0, a1 = 360, n = 32) => Array.from({ length: n + 1 }, (_, i) => { const t = (a0 + (a1 - a0) * i / n) * DEG; return [cx + rx * Math.cos(t), cy + ry * Math.sin(t)]; });
+  function sample(lines) {   // NOVA_N points, evenly along the lines
+    const segs = []; let L = 0;
+    for (const l of lines) for (let i = 1; i < l.length; i++) { const [ax, ay] = l[i - 1], [bx, by] = l[i], d = Math.hypot(bx - ax, by - ay); segs.push([ax, ay, bx, by, d]); L += d; }
+    const out = []; let si = 0, acc = 0;
+    for (let k = 0; k < NOVA_N; k++) {
+      const want = (k + 0.5) * L / NOVA_N;
+      while (si < segs.length - 1 && acc + segs[si][4] < want) { acc += segs[si][4]; si++; }
+      const [ax, ay, bx, by, d] = segs[si], f = d ? (want - acc) / d : 0;
+      out.push([100 + 1.18 * (ax + (bx - ax) * f - 100), 112 + 1.18 * (ay + (by - ay) * f - 112)]);   // a little bigger: as big as the others
+    }
+    return out;
+  }
+  const NOVA = (() => {
+    const hex = a => [100 + 44 * Math.cos(a * DEG), 112 + 44 * Math.sin(a * DEG)], C = [100, 112];
+    const pt = (a, r) => [100 + r * Math.cos(a * DEG), 112 + r * Math.sin(a * DEG)];
+    const d = [Math.SQRT1_2, -Math.SQRT1_2], n = [Math.SQRT1_2, Math.SQRT1_2], tip = [64, 156], end = [138, 82];
+    const at = (p, a, b) => [p[0] + d[0] * a + n[0] * b, p[1] + d[1] * a + n[1] * b];
+    return {
+      cube: sample([[-90, -30, 30, 90, 150, 210, 270].map(hex), [hex(-150), C, hex(-30)], [C, hex(90)]]),
+      star: sample([Array.from({ length: 11 }, (_, i) => pt(-90 + i * 36, i % 2 ? 19 : 48))]),
+      heart: sample([Array.from({ length: 49 }, (_, i) => { const t = i / 48 * 2 * Math.PI; return [100 + 46 * Math.sin(t) ** 3, 108 - 2.9 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]; })]),
+      globe: sample([ring(100, 112, 42, 42), ring(100, 112, 16, 42), [[58, 112], [142, 112]]]),
+      gear: sample([Array.from({ length: 33 }, (_, i) => pt(i * 11.25 - 5.6, i % 4 < 2 ? 46 : 35)), ring(100, 112, 11, 11, 0, 360, 12)]),
+      code: sample([[[80, 86], [56, 112], [80, 138]], [[120, 86], [144, 112], [120, 138]], [[108, 80], [92, 144]]]),
+      bolt: sample([[[112, 60], [76, 118], [100, 118], [88, 166], [126, 100], [102, 100], [112, 60]]]),
+      waves: sample([ring(70, 112, 18, 18, -55, 55, 12), ring(70, 112, 36, 36, -55, 55, 16), ring(70, 112, 54, 54, -55, 55, 20)]),
+      book: sample([[[100, 90], [58, 80], [54, 140], [100, 148], [146, 140], [142, 80], [100, 90], [100, 148]]]),
+      mag: sample([ring(90, 102, 28, 28), [[110, 122], [140, 154]]]),
+      pencil: sample([[tip, at(tip, 22, 10), at(end, 0, 10), at(end, 0, -10), at(tip, 22, -10), tip], [at(tip, 22, 10), at(tip, 22, -10)]]),
+      arrow: sample([[[62, 160], [138, 84]], [[104, 84], [138, 84], [138, 118]]]),
+      bubble: sample([[...ring(68, 86, 14, 14, 180, 270, 6), ...ring(132, 86, 14, 14, 270, 360, 6), ...ring(132, 126, 14, 14, 0, 90, 6), [96, 140], [76, 162], [82, 140], ...ring(68, 126, 14, 14, 90, 180, 6), [54, 86]]]),
+      check: sample([[[58, 112], [88, 144], [144, 80]]]),
+      orb: sample([ring(100, 112, 22, 22), ring(100, 112, 10, 10)]),
+    };
+  })();
+  const NOVA_IDLE = ['cube', 'star', 'heart', 'globe', 'gear', 'code', 'bolt'];
+  const NOVA_JOB = { listen: 'waves', read: 'book', scan: 'mag', write: 'pencil', show: 'arrow', talk: 'bubble', done: 'check', cross: 'orb' };
+  const glyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+  function novaSvg() {
+    novaKick();
+    return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="nova"><g class="h-pose"><g class="h-hop"><g class="h-bob"><g class="h-lean"><g class="h-code">'
+      + NOVA.cube.map(([x, y], i) => '<text class="n' + (i % 3) + '" transform="translate(' + f1(x) + ' ' + f1(y) + ')">' + esc(glyph()) + '</text>').join('')
+      + '</g></g></g></g></g></svg>';
+  }
+  const novas = document.getElementsByClassName('h-code'), novaAt = new WeakMap();
+  let novaRaf = 0, novaLast = 0;
+  function novaKick() { if (!novaRaf) novaRaf = requestAnimationFrame(novaFrame); }
+  function novaFrame(now) {
+    novaRaf = 0;
+    if (!novas.length) { novaLast = 0; return; }
+    const dt = Math.min(0.05, novaLast ? (now - novaLast) / 1000 : 0.016), calm = still();
+    novaLast = now;
+    for (const g of novas) novaStep(g, now / 1000, dt, calm);
+    novaRaf = requestAnimationFrame(novaFrame);
+  }
+  function novaStep(g, t, dt, calm) {
+    const R = Math.random;
+    let st = novaAt.get(g);
+    if (!st) {
+      st = { mood: '', shape: '', until: 0, drawn: '', ps: [...g.children].map((el, i) => ({ el, x: NOVA.cube[i][0], y: NOVA.cube[i][1], vx: 0, vy: 0,
+        k: 70 + 50 * R(), a: R() * 6.28, b: R() * 6.28, f1: 0.35 + 0.6 * R(), f2: 0.35 + 0.6 * R(), r: 16 + 40 * R(), w: (1.4 + 1.6 * R()) * (R() < 0.5 ? -1 : 1) })) };
+      novaAt.set(g, st);
+    }
+    const host = g.closest('[data-mood]'), mood = (host && host.dataset.mood) || 'idle';
+    if (mood !== st.mood) { st.mood = mood; st.shape = mood === 'idle' && st.drawn === '' ? 'cube' : ''; st.until = t + (st.shape ? 1.6 : 1 + 2 * R()); }
+    if (mood === 'idle' && t > st.until) {
+      if (st.shape) { st.shape = ''; st.until = t + 4 + 3 * R(); }
+      else { const left = NOVA_IDLE.filter(x => x !== st.last); st.shape = st.last = left[Math.floor(R() * left.length)]; st.until = t + 2.8; }
+    }
+    const name = NOVA_JOB[mood] || (mood === 'idle' ? st.shape || (calm ? 'cube' : '') : mood === 'think' && calm ? 'globe' : '');
+    if (calm && st.drawn === mood + name) return;   // Reduce Motion: drawn once for each job
+    st.drawn = mood + name;
+    const shape = name && NOVA[name], fast = mood === 'talk' ? 0.03 : 0.004;
+    // the job's own movement: the magnifying glass sweeps, the pencil scribbles, the arrow points, the tick pops
+    const ox = calm ? 0 : mood === 'scan' ? 12 * Math.sin(t * 2.6) : mood === 'write' ? 3 * Math.sin(t * 9) : mood === 'show' ? 4 * Math.sin(t * 5) : 0;
+    const oy = calm ? 0 : mood === 'write' ? 3 * Math.cos(t * 9) : mood === 'show' ? -4 * Math.sin(t * 5) : 0;
+    const sc = !calm && mood === 'done' ? 1 + 0.07 * Math.sin(t * 8) : 1;
+    for (let i = 0; i < st.ps.length; i++) {
+      const p = st.ps[i];
+      let tx, ty, k = p.k;
+      if (shape) { tx = 100 + (shape[i][0] - 100) * sc + ox + 1.2 * Math.sin(t * 3 + p.a); ty = 112 + (shape[i][1] - 112) * sc + oy + 1.2 * Math.sin(t * 3 + p.b); }
+      else if (mood === 'think') { const an = p.a + t * p.w; tx = 100 + p.r * Math.cos(an); ty = 112 + 0.75 * p.r * Math.sin(an); k *= 0.9; }
+      else { tx = 100 + (p.r + 6) * Math.sin(t * p.f1 + p.a); ty = 112 + 0.9 * (p.r + 4) * Math.sin(t * p.f2 + p.b); k *= 0.3; }
+      if (calm) { p.x = tx; p.y = ty; }
+      else {
+        const c = 1.4 * Math.sqrt(k);
+        p.vx += (k * (tx - p.x) - c * p.vx) * dt; p.vy += (k * (ty - p.y) - c * p.vy) * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        if (R() < fast) p.el.textContent = glyph();
+      }
+      p.el.setAttribute('transform', 'translate(' + f1(p.x) + ' ' + f1(p.y) + ')');
+    }
+  }
+
+
   function charSvg(who, wear) {
+    if (who === 'nova') return novaSvg();
     const c = HELPERS[who] || HELPERS.mia, o = outfit(who, wear), lx = c.sh, sy = 120, rx = 200 - lx, hb = lx + 17.5;
     // where the hands end up for each job (the arm's rest, turned: see the CSS)
     const mg = [f1(rx + 24.4), f1(sy + 13.5)], pn = [f1(rx - 22.5), f1(sy + 16.4)], pt = [f1(rx + 21), f1(sy - 18.3)];
@@ -308,8 +388,8 @@
   };
   // in Tron your helper is Ares (Tron: Ares's rider, as in Tesla's Tron mode), whatever its name in the other looks
   const helperName = () => { if (LOOK() === 'grid') return 'Ares'; const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
-  // the chat's title: its name, or with none, what it is (Mia is Mia)
-  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (h.who === 'mia' ? 'Mia' : HELPERS[h.who].label); };
+  // the chat's title: its name, or with none, what it is (Mia is Mia, Nova is Nova)
+  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (HELPERS[h.who].named || HELPERS[h.who].label); };
   function setHelper(who, name) {
     if (!own(HELPERS, who)) return;
     ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
@@ -400,8 +480,8 @@
     // curls up and rolls out, pops up with a ta-da, rolls back (turns: from how far it goes)
     hedgehog: { speed: 1, frames: d => { const t = Math.max(1, Math.round(d / (0.3 * 56) / (2 * Math.PI))) * 360; return [[0, 0, 'scale(.8) rotate(0deg)'], [0.4, 1, 'scale(.8) rotate(' + t + 'deg)'],
       [0.45, 1, 'translateY(-22px) rotate(' + t + 'deg)'], [0.5, 1, 'rotate(' + t + 'deg)'], [0.6, 1, 'rotate(' + t + 'deg)'], [0.63, 1, 'scale(.8) rotate(' + t + 'deg)'], [0.97, 0, 'scale(.8) rotate(0deg)'], [1, 0, 'none']]; } },
-    // the AI: powers up, zips out as a streak of light, spins round at the far end, and zips back
-    ai: { speed: 0.9, frames: [[0, 0, 'none'], [0.08, 0, 'translateY(-10px) scale(.9,1.12)'], [0.12, 0, 'translateY(-10px) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'],
+    // Nova: a ball of code that zips out, spins round at the far end, and zips back
+    nova: { speed: 0.9, frames: [[0, 0, 'none'], [0.08, 0, 'translateY(-10px) scale(.9,1.12)'], [0.12, 0, 'translateY(-10px) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'],
       [0.32, 1, 'translateY(-10px) skewX(-18deg) scale(1.2,.9)'], [0.38, 1, 'translateY(-10px)'], [0.5, 1, 'translateY(-26px) rotate(360deg) scale(1.1)'], [0.58, 1, 'translateY(-10px) rotate(360deg)'],
       [0.64, 1, 'translateY(-10px) rotate(360deg) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'], [0.86, 0, 'translateY(-10px) rotate(360deg) skewX(18deg) scale(1.2,.9)'],
       [0.92, 0, 'translateY(-10px) rotate(360deg)'], [1, 0, 'rotate(360deg)']] },
@@ -546,38 +626,11 @@
 [data-mood="cross"] [data-who="rider"] .h-foot{display:none}
 [data-mood="cross"] [data-who="rider"] .h-armL{transform:rotate(-75deg)}
 [data-mood="cross"] [data-who="rider"] .h-armR{transform:rotate(-40deg)}
-/* the AI: lit eyes and mouth on its screen, shapes in orbit, a hologram building one thing after another (faster while it
-   thinks), a core that pulses; it scans its screen instead of putting glasses on, and its props are made of light */
-[data-who="ai"] .h-smile{stroke:#5CE1E6} [data-who="ai"] .h-mouth{fill:#5CE1E6} [data-who="ai"] .h-glint{opacity:.8}
-[data-who="ai"] .h-eye{filter:drop-shadow(0 0 2.5px #5CE1E6)}
-[data-who="ai"] .h-shadow{fill:#5CE1E6;opacity:.16}
-.h-orbit{animation:ipsySpin 24s linear infinite}
-.h-thrust{fill:#5CE1E6;opacity:.5;animation:ipsyThrust 1.2s ease-in-out infinite alternate}
-.h-core{fill:#5CE1E6;animation:ipsyCore 2.4s ease-in-out infinite}
-.h-beam{fill:#5CE1E6;opacity:.12}
-.h-holi{fill:none;stroke:#5CE1E6;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform-origin:100px 22px;filter:drop-shadow(0 0 2px #5CE1E6);
-  animation:ipsyHolo var(--hd,9.1s) linear infinite;animation-delay:calc(var(--i) * var(--hd,9.1s) / 7 - var(--hd,9.1s))}
-.h-beam+.h-holi{opacity:1;transform:scale(1.3)}   /* with Reduce Motion: the cube */
-.ipsy-char:is([data-wear~="umbrella"],[data-wear~="beanie"],[data-wear~="sunhat"]) .h-holo{display:none}
-.h-aiscan{fill:#5CE1E6;opacity:0;filter:drop-shadow(0 0 3px #5CE1E6)}
-[data-who="ai"] .h-specs{display:none}
-[data-mood="scan"] [data-who="ai"] .h-aiscan{opacity:.85;animation:ipsyAiScan 1.1s ease-in-out infinite alternate}
-[data-mood="think"] [data-who="ai"],[data-mood="cross"] [data-who="ai"]{--hd:2.8s}
-[data-mood="think"] [data-who="ai"] .h-core,[data-mood="done"] [data-who="ai"] .h-core{animation-duration:.6s}
-[data-mood="done"] [data-who="ai"] .h-orbit{animation-duration:2s}
-[data-who="ai"] .h-prop{filter:drop-shadow(0 0 2px #5CE1E6)}
-[data-mood="read"] [data-who="ai"] .h-book,[data-mood="scan"] [data-who="ai"] .h-mag,[data-mood="write"] [data-who="ai"] :is(.h-notepad,.h-pen){animation:ipsyMake .7s ease-out both}
-[data-who="ai"] .h-cover{fill:#3B2FA8} [data-who="ai"] .h-page{fill:rgba(92,225,230,.2);stroke:#5CE1E6} [data-who="ai"] .h-pl{stroke:#5CE1E6;opacity:.85}
-[data-who="ai"] .h-pad{fill:rgba(92,225,230,.18);stroke:#5CE1E6} [data-who="ai"] .h-padtop{fill:#8B7CF6} [data-who="ai"] .h-wl{stroke:#5CE1E6}
-[data-who="ai"] .h-pencil{fill:#5CE1E6;stroke:#3B2FA8} [data-who="ai"] .h-tip{fill:#3B2FA8}
-[data-who="ai"] .h-lens{fill:rgba(92,225,230,.25);stroke:#5CE1E6} [data-who="ai"] .h-handle{stroke:#8B7CF6}
-[data-who="ai"] .h-bubble{fill:rgba(92,225,230,.18);stroke:#5CE1E6} [data-who="ai"] .h-star{fill:#5CE1E6} [data-who="ai"] .h-wave{stroke:#5CE1E6}
-@keyframes ipsySpin{to{transform:rotate(360deg)}}
-@keyframes ipsyThrust{from{transform:scaleX(.75);opacity:.3}to{transform:scaleX(1);opacity:.6}}
-@keyframes ipsyCore{0%,100%{opacity:.6}50%{opacity:1}}
-@keyframes ipsyHolo{0%{opacity:0;transform:scale(.3) rotate(-30deg)}3%{opacity:1;transform:scale(1.4)}5%,11%{opacity:1;transform:scale(1.3)}12%{opacity:.3}12.5%{opacity:1}14.3%,100%{opacity:0;transform:scale(.6)}}
-@keyframes ipsyAiScan{from{transform:translateY(0)}to{transform:translateY(46px)}}
-@keyframes ipsyMake{0%{opacity:0}25%{opacity:.7}35%{opacity:.15}55%{opacity:.9}65%{opacity:.4}100%{opacity:1}}
+/* Nova: its code (novaStep moves it) */
+.h-code text{font:800 17px ui-monospace,SFMono-Regular,Menlo,monospace;text-anchor:middle;dominant-baseline:central}
+.h-code .n0{fill:#0B8E9A} .h-code .n1{fill:#5B48E0} .h-code .n2{fill:#CC3A84}
+:root[data-theme="dark"] .h-code .n0{fill:#4FE3E0} :root[data-theme="dark"] .h-code .n1{fill:#A397FF} :root[data-theme="dark"] .h-code .n2{fill:#FF7AB8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .h-code .n0{fill:#4FE3E0} :root:not([data-theme="light"]) .h-code .n1{fill:#A397FF} :root:not([data-theme="light"]) .h-code .n2{fill:#FF7AB8}}
 .h-peek{animation:ipsyPeek .5s cubic-bezier(.2,1.3,.35,1) both}
 /* idle: bobs, blinks, waves now and then; a tail wags */
 .h-bob{animation:ipsyBob 4.8s ease-in-out infinite}
@@ -643,7 +696,7 @@
 [data-mood="done"] .h-yay{opacity:1}
 [data-mood="done"] .h-yay .h-star{animation:ipsyTwinkle .9s ease-in-out infinite}
 [data-mood="done"] .h-wag{animation-duration:.6s}
-/* crossing aOS Home's bar (cross()): no bob; the owl flaps, the hedgehog's ta-da, the AI's arms out ahead */
+/* crossing aOS Home's bar (cross()): no bob; the owl flaps, the hedgehog's ta-da */
 [data-mood="cross"] .h-bob,[data-mood="cross"] .h-shadow{animation:none}
 [data-mood="cross"] [data-who="owl"] .h-armL{animation:ipsyFlapL .22s ease-in-out infinite alternate}
 [data-mood="cross"] [data-who="owl"] .h-armR{animation:ipsyFlapR .22s ease-in-out infinite alternate}
@@ -651,9 +704,6 @@
 [data-mood="cross"] [data-who="mia"] .h-armR{transform:rotate(40deg)}
 [data-mood="cross"] [data-who="hedgehog"] .h-armL{animation:ipsyHogL var(--cross,4s)}
 [data-mood="cross"] [data-who="hedgehog"] .h-armR{animation:ipsyHogR var(--cross,4s)}
-[data-mood="cross"] [data-who="ai"] .h-armL{transform:rotate(-80deg)}
-[data-mood="cross"] [data-who="ai"] .h-armR{transform:rotate(-100deg)}
-[data-mood="cross"] [data-who="ai"] .h-orbit{animation-duration:1.4s}
 [data-mood="cross"] [data-who="fox"] .h-armL{transform:rotate(-70deg)}
 [data-mood="cross"] [data-who="fox"] .h-armR{transform:rotate(-30deg)}
 @keyframes ipsyBob{50%{transform:translateY(-4px)}}
@@ -1416,6 +1466,6 @@
   };
 
   // helper(): { who, name } or null; helpers: [{ id, kind }]; picker(host): pick and name it (aOS Account); cross(slot, d): across aOS Home's bar
-  AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label })), name: helperName,
+  AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label, named: HELPERS[id].named || '' })), name: helperName,
     look: LOOK, settings: () => Object.keys(SETTINGS), wearing: () => WEAR, refit, dressing, dress: on => { ls.set(WEAR_KEY, on ? 'on' : 'off'); refit(); } };   // look(): 'vintage' | 'glass' | 'layers' | 'grid'; wearing(): 'umbrella coat scarf'…
 })();

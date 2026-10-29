@@ -108,7 +108,7 @@
   ];
   // the helpers to pick from (home/ipsy.js), each with how it crosses the Ipsy bar on Home
   const IPSY_WHO = [['mia', 'Mia', 'The family’s own. Zoomies!'], ['fox', 'Fox', 'Creeps, then pounces'], ['owl', 'Owl', 'Loops the loop'],
-    ['hedgehog', 'Hedgehog', 'Rolls up in a ball'], ['ai', 'AI', 'Builds shapes and tools. Zips by as light']];
+    ['hedgehog', 'Hedgehog', 'Rolls up in a ball'], ['nova', 'Nova', 'Code that flies into shapes']];
   const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
       <p>A helper you can chat with, in ${IPSY_APPS.map(id => esc(D.NAMES[id] || id)).join(', ').replace(/, ([^,]*)$/, ' and $1')}. You pick what it looks like and give it a name.</p>
       <h3>Ask in your own words</h3><p>“Is anything late?” (Orders) “When should we leave for the airport?” (Travel) “Swap Tuesday for something quick.” (Meals) “Find us a free evening next week.” (Calendar) “Sort my grocery list by aisle.” (Notes) “What happened in the game last night?” (News)</p>
@@ -324,7 +324,7 @@
   const tronIntro = () => introMode('aos.tron.intro'), vintageIntro = () => introMode('aos.vintage.intro'), glassIntro = () => introMode('aos.glass.intro'), layersIntro = () => introMode('aos.layers.intro');
   const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
-  const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
+  const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || (k && k.named) ? (h.name.trim() || k.named) + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
   const helperDresses = () => { const I = AllisonOS.ipsy; return I && I.dressing ? I.dressing() : true; };
   function acctPage(at) {
     const r0 = live[0];

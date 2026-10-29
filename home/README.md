@@ -29,7 +29,7 @@ What stays in this folder:
   own sky from the forecast. `aOS/scripts/sky-test.mjs` checks it.
 - **`ipsy.js`**: Ipsy, the helper you chat with: the character each person picks
   and names (Mia, the family's Australian Shepherd, a fox, an owl, a hedgehog or
-  the AI; `aos.helper`, synced with your settings), acting
+  Nova, flying code; `aos.helper`, synced with your settings), acting
   out each job (reading, glasses on to search, writing, showing, a hop when a change
   is saved; `jobOf` reads it from the tool's name), crossing aOS Home's bar in its
   own way (`cross`), its chat sheet, and the loop that asks Claude through the
