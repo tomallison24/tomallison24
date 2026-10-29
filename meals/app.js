@@ -618,31 +618,30 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const canAvoid = () => { const u = A() && A().user(); return !u || u.role === 'owner'; };
   const avoidChip = a => canAvoid() ? '<button class="opt" type="button" aria-checked="true" data-avoid="' + esc(a) + '" aria-label="Remove ' + esc(a) + '"><span translate="no">' + esc(cap(a)) + '</span> ✕</button>'
     : '<span class="opt" aria-checked="true" translate="no">' + esc(cap(a)) + '</span>';
+  // Settings, as in every app (../home/settings.js): Design · Family rules · Never in a plan · Ipsy · Family account
   function renderSettings() {
-    const user = A() && A().user(), t = data.taste;
+    const S = AllisonOS.settings, user = A() && A().user(), t = data.taste;
     const ai = data.ai === 'anthropic' ? modelName() + ', through Anthropic’s API' : st.state === 'ok' ? 'Not set up yet' : 'Unknown until you’re online';
-    const sel = (id, opts, v) => '<select id="' + id + '">' + opts.map(([k, n]) => '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>';
-    const learned = (who, a) => a.map(x => '<button class="opt" type="button" aria-checked="true" data-forget="' + esc(x.title) + '" aria-label="Forget ' + esc(x.title) + '"><span translate="no">' + esc(x.title) + '</span> ✕</button>').join('');
-    $('setBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<p class="label">Account</p><div class="rgroup acct"><p><strong' + (user ? ' translate="no"' : '') + '>' + esc(user ? user.name : 'Not signed in') + '</strong>'
-      + (user ? '' : 'Sign in to plan for the family.') + '</p>'
-      + (user ? '' : '<button class="btn" type="button" data-act="signin">Sign in with Face ID</button>') + '</div>'
-      + '<p class="label" id="rulesHead">Family rules</p><div class="rgroup">'
-      + '<div class="frow"><label for="sVeg">Vegetables<small>at least, in every meal</small></label><span class="step"><button class="iconbtn" type="button" data-veg="-1" aria-label="Fewer">−</button>'
-      + '<output id="sVeg">' + draft.veg + '</output><button class="iconbtn" type="button" data-veg="1" aria-label="More">+</button></span></div>'
-      + '<div class="frow"><span class="flabel" id="lPro">Protein<small>a person, every meal</small></span><span class="unit" role="radiogroup" aria-labelledby="lPro">'
-      + PROTEIN.map(([k, n, g]) => '<button type="button" role="radio" data-protein="' + k + '" aria-pressed="' + (draft.protein === k) + '" aria-checked="' + (draft.protein === k) + '">' + esc(n + ' (' + g + ' g)') + '</button>').join('') + '</span></div>'
-      + '<div class="frow"><label for="sPeople">Usually cooking for</label>' + sel('sPeople', Array.from({ length: 10 }, (_, i) => [i + 1, String(i + 1)]), draft.people) + '</div>'
-      + '<div class="frow"><label for="sWeek">Weeknight dinners<small>ready in</small></label>' + sel('sWeek', WEEKNIGHT, draft.weeknight) + '</div></div>'
+    const learned = a => a.map(x => '<button class="opt" type="button" aria-checked="true" data-forget="' + esc(x.title) + '" aria-label="Forget ' + esc(x.title) + '"><span translate="no">' + esc(x.title) + '</span> ✕</button>').join('');
+    const chips = (title, a) => a.length ? S.raw('<span class="st-title">' + esc(title) + '</span><div class="opts">' + learned(a) + '</div>', { data: { chips: '' } }) : '';
+    $('setBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'setDesign' })) : '')
+      + S.section('Family rules', [
+        S.info({ title: 'Vegetables', sub: 'At least, in every meal.', extra: '<span class="step"><button class="iconbtn" type="button" data-veg="-1" aria-label="Fewer">−</button>'
+          + '<output id="sVeg">' + draft.veg + '</output><button class="iconbtn" type="button" data-veg="1" aria-label="More">+</button></span>' }),
+        S.choice({ id: 'sProtein', title: 'Protein', sub: 'A person, every meal.', value: draft.protein, options: PROTEIN.map(([k, n, g]) => [k, n + ' (' + g + ' g)']) }),
+        S.select({ id: 'sPeople', title: 'Usually cooking for', value: draft.people, options: Array.from({ length: 10 }, (_, i) => [i + 1, String(i + 1)]) }),
+        S.select({ id: 'sWeek', title: 'Weeknight dinners', sub: 'Ready in.', value: draft.weeknight, options: WEEKNIGHT }),
+      ], { id: 'rulesHead' })
       // what the family avoids is a safety list: only the owner changes it (the server refuses anyone else)
-      + '<p class="label">Never in a plan</p><div class="opts" id="avoid">' + draftAvoid.map(avoidChip).join('') + '</div>'
-      + (canAvoid() ? '<div class="rgroup"><div class="frow"><label class="vh" for="sAdd">Add an allergy or dislike</label><input class="txt" id="sAdd" maxlength="40" placeholder="Add an allergy or dislike"><button class="btn quiet" type="button" id="sAddGo">Add</button></div></div>'
-        : '<p class="hint">Only the owner can change what the family avoids.</p>')
-      + '<p class="label">What Ipsy has learned</p>'
-      + (t.loved.length ? '<p class="hint">Loved</p><div class="opts">' + learned('up', t.loved) + '</div>' : '')
-      + (t.nope.length ? '<p class="hint">Not again</p><div class="opts">' + learned('down', t.nope) + '</div>' : '')
-      + (t.loved.length || t.nope.length ? '' : '<p class="hint">Nothing yet. Use Loved it or Not again on a recipe, and Ipsy plans with it.</p>')
-      + '<p class="hint">AI: ' + esc(ai) + '.</p>';
+      + S.section('Never in a plan', [
+        S.raw('<div class="opts" id="avoid">' + draftAvoid.map(avoidChip).join('') + '</div>', { data: { chips: '' } }),
+        canAvoid() ? S.input({ id: 'sAdd', title: 'Add an allergy or dislike', placeholder: 'Shellfish, say', attrs: 'maxlength="40"' }) : '',
+        canAvoid() ? S.action({ id: 'sAddGo', icon: 'plus', title: 'Add' }) : '',
+      ], { hint: canAvoid() ? '' : 'Only the owner can change what the family avoids.' })
+      + S.section('Ipsy', t.loved.length || t.nope.length ? [chips('Loved', t.loved), chips('Not again', t.nope)]
+        : S.info({ title: 'Nothing learned yet', sub: 'Use Loved it or Not again on a recipe, and Ipsy plans with it.' }), { hint: 'AI: ' + ai + '.' })
+      + S.section('Family account', user ? S.info({ title: 'Signed in as ' + user.name, sub: 'Plans and the shopping list are shared with the family.' })
+        : S.action({ icon: 'face', title: 'Sign in with Face ID', sub: 'Sign in to plan for the family.', data: { act: 'signin' } }));
   }
   function openSettings() {
     const s = data.settings;
@@ -655,8 +654,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (e.target.closest('[data-act="signin"]')) { closeSheet('setSheet'); return signIn(); }
     const v = e.target.closest('[data-veg]');
     if (v) { draft.veg = Math.max(0, Math.min(5, draft.veg + +v.dataset.veg)); $('sVeg').textContent = draft.veg; return; }
-    const pr = e.target.closest('[data-protein]');
-    if (pr) { draft.protein = pr.dataset.protein; $('setBody').querySelectorAll('[data-protein]').forEach(x => { x.setAttribute('aria-pressed', x === pr); x.setAttribute('aria-checked', x === pr); }); return; }
+    if (e.target.closest('#sProtein')) { const v = AllisonOS.settings.pick(e); if (v) draft.protein = v; return; }
     const fg = e.target.closest('[data-forget]');
     if (fg) {
       try { const j = await api('rate', { title: fg.dataset.forget, up: null }); data.taste = j.taste; ls.set(KEY, data); fg.remove(); toast('Forgotten.'); }

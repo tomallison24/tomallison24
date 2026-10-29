@@ -35,6 +35,18 @@ for (const app of pages) {
   if (out !== html) { stale.push(`${app}/index.html`); if (!check) writeFileSync(file, out); }
 }
 
+// ---- the shared Settings (the CSS in home/settings.js): its Vintage block, made again for Layers and Tron at its end ----
+{
+  const file = path.join(ROOT, 'home/settings.js');
+  const css = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  const v = /\/\* vintage: start \*\/\n([\s\S]*?)\/\* vintage: end \*\//.exec(css), G = /(\/\* generated: start \*\/\n)[\s\S]*?(\/\* generated: end \*\/)/;
+  if (v && G.test(css)) {
+    const gen = NEW.map(look => lookBlock(look, v[1]).replace(/data-look="vintage"/g, `data-look="${look}"`)).join('');
+    const out = css.replace(G, (m, a, b) => a + gen + b);
+    if (out !== css) { stale.push('home/settings.js'); if (!check) writeFileSync(file, out); }
+  }
+}
+
 // ---- the icons ----
 // Layers: the app's own ground in sea glass tones, lit from the top left; the disc a soft glow of light, the pill gone, the
 // drawing white.

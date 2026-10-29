@@ -1402,7 +1402,6 @@ function toast(msg) {
 // Status chip, banner and the settings sheet.
 $('gear').innerHTML = svg('cog', 22);
 for (const b of document.querySelectorAll('h2 [data-close]')) b.innerHTML = svg('close', 18);
-for (const [id, ic] of [['lkEdit', 'link'], ['lkForget', 'plug'], ['lkShare', 'handoff'], ['lkAccess', 'shield']]) $(id).insertAdjacentHTML('afterbegin', '<span class="ic">' + svg(ic, 22) + '</span>');
 const TICK = '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>';
 const sheetWrap = $('sheetWrap');
 function openSheet() {
@@ -1411,9 +1410,6 @@ function openSheet() {
   syncSheet();
 }
 $('gear').onclick = openSheet; $('bannerBtn').onclick = openSheet;
-// Settings > Design, its first section: Vintage or Standard, on this phone, at once (../home/design.js).
-// Not part of anything saved: a tap switches the design there and then.
-if (window.aosDesign) { $('designBox').innerHTML = aosDesign.picker(); aosDesign.bind($('designBox')); }
 // A new design: the colours the scripts draw (dual(), above) are drawn again; bg.js does the background.
 addEventListener('aos:design', () => render());
 dragToClose(sheetWrap); dragToClose(unitWrap); dragToClose(thermoWrap); dragToClose(devWrap);
@@ -1422,17 +1418,49 @@ let statusDetail = '';
 function syncSheet() {
   const live = mode === 'live';
   for (const s of document.querySelectorAll('.hastatus')) {
-    s.className = 'status hastatus' + (HA.status === 'error' ? ' bad' : HA.status === 'live' && live ? ' good' : '');
+    s.className = (s.dataset.base || 'status hastatus') + (HA.status === 'error' ? ' bad' : HA.status === 'live' && live ? ' good' : '');
     s.textContent = !live ? '' :
       HA.status === 'live' ? 'Connected' + (HA.version ? ' · Home Assistant ' + HA.version : '') :
       HA.status === 'error' ? statusDetail :
       HA.status === 'reconnecting' ? 'Connection lost. Reconnecting…' : 'Connecting…';
   }
-  $('lkUrl').textContent = (saved().url || '').replace(/^https?:\/\//, '');
-  $('lkLine').innerHTML = PIN.get()
-    ? `${svg('lock', 16)}Locked with your PIN.`
-    : `${svg('lockOpen', 16)}Not locked.`;
+  if ($('lkUrl')) $('lkUrl').textContent = (saved().url || '').replace(/^https?:\/\//, '');
+  const pv = $('lkLine') && $('lkLine').querySelector('.st-val'); if (pv) pv.textContent = PIN.get() ? 'Locked' : 'Not locked';
 }
+
+// Settings itself, as in every app (../home/settings.js): Design · Background · Connected accounts (Home
+// Assistant, once it is connected). Its sub-views (the PIN, Share, Join, Devices with access) and the connect
+// form are this app's own, below it; with one of those open, these sections are hidden.
+const ST = window.AllisonOS && AllisonOS.settings;
+function renderSettings() {
+  const box = $('stMain'), main = view === 'locked' || view === 'edit';
+  box.hidden = !main;
+  if (!main) return;
+  const bg = typeof BG_FAM !== 'undefined' ? BG_FAM.label() : '';
+  box.innerHTML = (window.aosDesign ? ST.section('Design', ST.raw(aosDesign.picker(), { id: 'designBox' }), { id: 'designBlock' }) : '')
+    // Standard's backgrounds (bg.js): the Vintage looks have the sky, so their CSS hides this section
+    + ST.section('Background', ST.nav({ id: 'custBg', title: 'Background', value: '<span id="custBgV">' + esc(bg) + '</span>', html: true }), { id: 'custBlock' })
+    + (view === 'locked' ? ST.section('Connected accounts', [
+      ST.info({ title: 'Home Assistant', sub: '<span class="hastatus" data-base="hastatus"></span>', html: true }),
+      ST.info({ title: 'Address', value: '<span id="lkUrl" translate="no"></span>', html: true }),
+      ST.info({ title: 'Token', value: 'Saved ••••••••' }),
+      ST.info({ id: 'lkLine', title: 'Settings PIN', sub: 'Asked for before the address or token changes.', value: PIN.get() ? 'Locked' : 'Not locked' }),
+      ST.nav({ id: 'lkEdit', title: 'Change address or token' }),
+      ST.nav({ id: 'lkShare', title: 'Share with another device' }),
+      ST.nav({ id: 'lkAccess', title: 'Devices with access' }),
+      ST.danger({ id: 'lkForget', icon: 'out', title: 'Disconnect' }),
+    ]) : '');
+  // Design: Vintage or Standard, on this phone, at once (../home/design.js); not part of anything saved
+  if (window.aosDesign) aosDesign.bind($('designBox'));
+}
+$('stMain').addEventListener('click', e => {
+  const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
+  if (b.id === 'custBg') openDev(BG_FAM, 'bg');   // the background's own popup, in place of Settings (bg.js)
+  else if (b.id === 'lkEdit') guarded(() => showView('edit'));
+  else if (b.id === 'lkShare') guarded(() => SHARE.start());
+  else if (b.id === 'lkAccess') guarded(() => ACCESS.open());
+  else if (b.id === 'lkForget') { if (ST.armed(b, 'Tap again to disconnect')) guarded(() => { store.set('ha', null); HA.stop(); goPreview(); showView('edit'); }); }
+});
 
 // ---------------------------------------------------------------------------
 // The settings PIN. It stops the address and token being changed or wiped by
@@ -1441,15 +1469,12 @@ function syncSheet() {
 let view = 'edit', pendingSave = false;
 function showView(v) {
   view = v;
-  $('vLocked').hidden = v !== 'locked';
   $('haForm').hidden = v !== 'edit';
   $('vPin').hidden = v !== 'pin';
   $('vShare').hidden = v !== 'share';
   $('vJoin').hidden = v !== 'join';
   $('vAccess').hidden = v !== 'access';
-  $('custBlock').hidden = v === 'pin' || v === 'share' || v === 'join' || v === 'access';
-  $('designBlock').hidden = !window.aosDesign || $('custBlock').hidden;   // Design: with Settings itself, not its sub-views
-  if ($('custBgV') && typeof BG_FAM !== 'undefined') $('custBgV').textContent = BG_FAM.label();
+  renderSettings();   // Design, Background and Home Assistant: with Settings itself, not its sub-views
   $('sheetTitle').textContent = v === 'pin' ? 'Settings PIN' : v === 'share' ? 'Share Home' : v === 'join' ? 'Join Home' : v === 'access' ? 'Devices with access' : 'Settings';
   const done = v === 'locked' || v === 'edit', cb = $('sheetClose');   // Settings closes with a Done tick; its sub-views with a cross
   cb.classList.toggle('okbtn', done); cb.setAttribute('aria-label', done ? 'Done' : 'Close'); cb.innerHTML = done ? TICK : svg('close', 18);
@@ -1464,6 +1489,7 @@ function showView(v) {
   }
   syncSheet();
 }
+renderSettings();   // drawn at once (the Background row shows its pick before Settings opens)
 
 // The family's Home Assistant address, from aOS (the owner sets it there, under Your
 // account): filled in while the box is empty, so a new person only needs their own
@@ -1575,8 +1601,6 @@ $('pinForgot').onclick = () => {
 // Anything that changes what is saved goes through the PIN; with none set
 // yet, it asks for one first.
 function guarded(fn) { PIN.get() ? askPin('check', fn) : askPin('choose', fn); }
-$('lkEdit').onclick = () => guarded(() => showView('edit'));
-$('lkForget').onclick = () => guarded(() => { store.set('ha', null); HA.stop(); goPreview(); showView('edit'); });
 $('haCancel').onclick = () => showView('locked');
 
 // After a save: lock it with a PIN if there is none yet, then show it locked.
@@ -1789,7 +1813,6 @@ const SHARE = {
     } catch { /* next time */ }
   },
 };
-$('lkShare').onclick = () => guarded(() => SHARE.start());
 $('shSend').onclick = () => SHARE.send();
 $('shCopy').onclick = () => SHARE.copy();
 $('shDone').onclick = () => showView('locked');
@@ -1844,7 +1867,6 @@ const ACCESS = {
     this.armed = null;
   },
 };
-$('lkAccess').onclick = () => guarded(() => ACCESS.open());
 $('acDone').onclick = () => showView('locked');
 $('acList').addEventListener('click', e => { const b = e.target.closest('.rm'); if (b && !b.disabled) ACCESS.remove(b); });
 

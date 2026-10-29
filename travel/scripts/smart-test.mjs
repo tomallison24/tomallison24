@@ -106,8 +106,9 @@ const step = async (name, fn) => { try { await fn(); console.log('ok -', name); 
 
 async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false, auto = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  // Ipsy's own check is on unless turned off: off here, so only the tests of it see what it sends
-  if (!auto) await ctx.addInitScript(() => { if (!sessionStorage.getItem('auto')) { sessionStorage.setItem('auto', '1'); localStorage.setItem('allison-travel-v1-ipsy-auto', '0'); } });
+  // Ipsy's own check runs whenever Ipsy fills in what's missing: held back here (travel/app.js __travelNoAuto), so only
+  // the tests of it see what it sends
+  if (!auto) await ctx.addInitScript(() => { window.__travelNoAuto = true; });
   await ctx.addInitScript(id => (localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'), localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' }))), ID);   // the sky held at day
   const page = await ctx.newPage();
   const problems = [];
@@ -560,11 +561,13 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('#setBtn');
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
-    assert.equal(await page.textContent('#stCalSub'), 'On. Shares bookings with the Family calendar, both ways.'); assert.match(await page.textContent('#stAiSub'), /^On\. Ipsy fills in a trip’s missing details from its email\./);
-    assert.equal(await page.textContent('#stIpsyAutoSub'), 'Off. Ipsy fills in what new bookings are missing, and moves them to Upcoming. This phone only.');
+    const on = id => page.getAttribute(id, 'aria-checked');
+    assert.equal(await page.textContent('#stCalOpt .st-sub'), 'Shares bookings with the Family calendar, both ways.'); assert.equal(await on('#stCalOpt'), 'true');
+    assert.equal(await page.textContent('#stAiOpt .st-sub'), 'Completes new bookings from their emails and moves them to Upcoming, on this phone.'); assert.equal(await on('#stAiOpt'), 'true');
+    assert.equal(await page.$$eval('#setSheet .st-sub', e => e.filter(x => (x.textContent.match(/[.!?](\s|$)/g) || []).length > 1).length), 0, 'a sentence each');
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
-    assert.equal(await page.textContent('#stCalSub'), 'Off. Shares bookings with the Family calendar, both ways.'); assert.equal(await page.textContent('#stAiSub'), 'Off. Ipsy fills in a trip’s missing details from its email.');
+    assert.equal(await on('#stCalOpt'), 'false'); assert.equal(await on('#stAiOpt'), 'false');
     assert.equal(!!(await page.$('.tripwrap [data-ai]')), false, 'and gone when it is off');
     const before = { ev: seen.events, ex: seen.extract.length };
     await page.evaluate(() => window.__travel.smartPass());
@@ -574,15 +577,15 @@ const pick = (page, f) => page.evaluate(f);
   await step('Settings says which models answer: Check, with what its last answer came from, and Ipsy', async () => {
     await page.evaluate(() => { const k = Object.keys(localStorage).find(x => /-ai-last$/.test(x)) || 'allison-travel-v1-ai-last'; localStorage.setItem(k, JSON.stringify({ check: 'claude-haiku-5-5' })); });
     await page.click('#stCalOpt'); await page.click('#stCalOpt');     // any redraw of Settings
-    await page.waitForFunction(() => /Models:/.test(document.getElementById('stAiSub').textContent), null, { timeout: 5000 });
-    let sub = await page.textContent('#stAiSub');
+    await page.waitForFunction(() => /Models:/.test(document.getElementById('stModels').textContent), null, { timeout: 5000 });
+    let sub = await page.textContent('#stModels');
     assert.match(sub, /Models: Check Haiku 5\.5 \(the last answer came from it\); Ipsy Sonnet 5\.5\./, sub);
     // a different model answering (a fallback, say) is said out loud
     await page.evaluate(() => { const k = Object.keys(localStorage).find(x => /-ai-last$/.test(x)); localStorage.setItem(k, JSON.stringify({ check: 'claude-opus-5-5-20261001' })); });
     await page.click('#stCalOpt'); await page.click('#stCalOpt');
-    sub = await page.textContent('#stAiSub');
+    sub = await page.textContent('#stModels');
     assert.match(sub, /Check Haiku 5\.5 \(but the last answer came from Opus 5\.5\); Ipsy Sonnet 5\.5\./, sub);
-    await page.$eval('#stAiSub', e => e.scrollIntoView({ block: 'center' }));
+    await page.$eval('#stModels', e => e.scrollIntoView({ block: 'center' }));
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-models.png') });
   });
   await ctx.close();
@@ -623,11 +626,12 @@ const pick = (page, f) => page.evaluate(f);
     assert.equal(seen.extract.length, n, 'already checked: not sent again');
     assert.equal(await page.$$eval('.ipsy-hint', e => e.length), 0);
     await page.click('#setBtn');
-    await page.waitForSelector('#setSheet:not([hidden]) #stIpsyAutoOpt');
-    assert.match(await page.textContent('#stIpsyAutoSub'), /^On\./);
-    await page.click('#stIpsyAutoOpt');
-    assert.match(await page.textContent('#stIpsyAutoSub'), /^Off\./);
-    assert.equal(await page.evaluate(() => localStorage.getItem('allison-travel-v1-ipsy-auto')), '0');
+    await page.waitForSelector('#setSheet:not([hidden]) #stAiOpt');
+    assert.equal(await page.getAttribute('#stAiOpt', 'aria-checked'), 'true');
+    await page.click('#stAiOpt');
+    assert.equal(await page.getAttribute('#stAiOpt', 'aria-checked'), 'false');
+    assert.equal(await page.evaluate(() => localStorage.getItem('allison-travel-v1-ai-on')), '0');
+    await page.click('#stAiOpt');
   });
   await step('signed in, the bookings (and what Ipsy filled in, then undid) went to the family\'s Google Sheet as Pat\'s', async () => {
     assert.ok(seen.sheet.length && seen.sheet.every(c => !('secret' in c)), 'synced through aOS, with no phrase');

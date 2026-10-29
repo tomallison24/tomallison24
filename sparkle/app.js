@@ -1,14 +1,14 @@
 'use strict';
 
 // Sparkle Kingdom's screens: who's playing (the frame), the kingdom she explores, a round in a land,
-// the end of a round, her castle (dress up and the Royal Boutique), and the Parent corner.
+// the end of a round, her castle (dress up and the Royal Boutique), and the grown-ups' Settings.
 //
 // Saved on this phone (localStorage sparkle.v1: { v, players, gone, settings, settingsAt }), and,
 // once a grown-up has signed in to the family account here, in that account too (../sparkle/api/
 // save), so each player's progress follows them to any family phone: merged with the account's copy
 // at the end of a round and when the game is put away (engine.js merge), never once per answer
 // (the free plan's storage writes are scarce). It never asks a child to sign in: a grown-up does,
-// in the Parent corner. The play timer counts only time she's actually playing (a tap in the last
+// in Settings. The play timer counts only time she's actually playing (a tap in the last
 // minute); a session ends after 5 minutes with no taps.
 (() => {
   const E = window.SparkleEngine, C = window.SparkleContent, A = window.SparkleArt, W = window.SparkleWorld, V = window.SparkleVoice, L = window.SparkleLetters, Ch = window.SparkleChapters, RM = window.SparkleRooms;
@@ -20,7 +20,7 @@
   const LAND = { tower: 'read', mine: 'math', meadow: 'meadow', garden: 'garden', workshop: 'spell' };
   const LAND_OF = { read: 'tower', math: 'mine', wand: 'meadow', pattern: 'meadow', spell: 'workshop', match: 'garden', missing: 'garden', recall: 'garden' };
   const GARDEN = ['match', 'missing', 'recall'], MEADOW = ['wand', 'pattern'];
-  // a skill's land, for the Parent corner's switches, the story's chapters and the play time by land
+  // a skill's land, for Settings' land switches, the story's chapters and the play time by land
   const landKey = skill => GARDEN.includes(skill) || skill === 'garden' ? 'garden' : MEADOW.includes(skill) || skill === 'meadow' ? 'wand' : skill === 'bake' ? 'castle' : skill;
   const HOST = { read: ['owl', 'Professor Hoot'], math: ['dragon', 'Pebble'], wand: ['narrator', 'your unicorn'], pattern: ['narrator', 'your unicorn'], spell: ['gemma', 'Gemma'], match: ['bloom', 'Bloom'], missing: ['bloom', 'Bloom'], recall: ['bloom', 'Bloom'], bake: ['dragon', 'Pebble'] };
   // the rounds that take longer have fewer questions, and a shorter warm-up
@@ -151,7 +151,7 @@
     }
     return me.quest;
   }
-  // after the quest: back to Story Tower once she's played other lands a while (Parent corner > Favor reading)
+  // after the quest: back to Story Tower once she's played other lands a while (Settings > Favor reading)
   const nextStop = () => { const q = quest(); const i = q.done.indexOf(false); if (i >= 0) return q.stops[i];
     const n = { normal: 3, more: 2, most: 1 }[set().focus] || 2, last = session.recent.slice(-n);
     return last.length === n && last.every(s => s !== 'read') ? 'tower' : null; };
@@ -1364,11 +1364,11 @@
     setTimeout(() => s.querySelector('#gAns').focus(), 200);
   }
 
-  // a sheet: role=dialog with its way out (Done) in its head
+  // a sheet: role=dialog with its way out (Done, a ✓ as in every app) in its head
   function sheet(title, html, opt = {}) {
     const el = document.createElement('div');
     el.className = 'sheet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', title);
-    el.innerHTML = `<div class="panel"><div class="shead">${opt.back ? `<button type="button" class="sbtn" data-x="back" aria-label="Back">‹ Back</button>` : ''}<h2>${esc(title)}</h2><button type="button" class="sbtn" data-x="done" aria-label="Done">Done</button></div><div class="sbody">${html}</div></div>`;
+    el.innerHTML = `<div class="panel"><div class="shead">${opt.back ? `<button type="button" class="sbtn" data-x="back" aria-label="Back">‹ Back</button>` : ''}<h2>${esc(title)}</h2><button type="button" class="sbtn okbtn" data-x="done" aria-label="Done"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div><div class="sbody">${html}</div></div>`;
     document.body.appendChild(el);
     el.close = () => { el.remove(); if (opt.onClose) opt.onClose(); };
     el.addEventListener('click', e => { const x = e.target.closest('[data-x]'); if (x) { if (x.dataset.x === 'back' && opt.back) { el.remove(); opt.back(); } else el.close(); } else if (e.target === el) el.close(); });
@@ -1407,48 +1407,68 @@
     paint();
   }
 
-  // ---- the Parent corner ----
+  // ---- Settings (for grown-ups) ----
   const mins = s => Math.round(s / 60);
   const minWord = s => { const m = mins(s); return m + (m === 1 ? ' minute' : ' minutes'); };
+  // Settings, as in every app (../home/settings.js), for grown-ups only (hold Grown-ups, then Face ID or the sum):
+  // Design · Players · Learning · Voice and sound · Letter sounds · Family account
+  const LANDS_OPEN = [['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['garden', 'Fairy Garden'], ['spell', 'Tiara Workshop'], ['castle', 'Bakery']];
+  const RATES = [[0.75, 'Slow'], [0.9, 'Normal'], [1.05, 'Quick']];
   function parent() {
-    const ps = players(), acct = window.AllisonOS && window.AllisonOS.account, user = acct && acct.user();
-    const st = set();
-    const s = sheet('Parent corner', `
-      <p class="label">Players</p><div class="group">${ps.map(p => { const t = E.playedOn(p, today()); return `<button type="button" class="row" data-rep="${esc(p.id)}"><span class="grow"><b>${esc(p.name)}</b><small>${mins(t)} min today · ${E.coins(p)} coins · reading level ${(p.skills.read || {}).level || '–'}</small></span><span class="val">›</span></button>`; }).join('') || '<div class="row"><span class="grow"><small>No players yet.</small></span></div>'}
-        <button type="button" class="row" data-new><span class="grow" style="color:var(--accent-text);font-weight:600">Add a player</span></button></div>
-      <p class="label">Learning</p><div class="group">
-        <div class="row"><span class="grow">Favor reading<small>How strongly the quest and the map lean to Story Tower</small></span></div>
-        <div class="row"><div class="seg" id="sFocus">${[['normal', 'Normal'], ['more', 'More'], ['most', 'Most']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${st.focus === v}">${n}</button>`).join('')}</div></div>
-        <div class="row"><span class="grow">Lands open<small>Story Tower is always open</small></span></div>
-        <div class="row"><div class="seg" id="sLands">${[['math', 'Gem Mine'], ['wand', 'Star Meadow'], ['garden', 'Fairy Garden'], ['spell', 'Tiara Workshop'], ['castle', 'Bakery']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${!(st.off || []).includes(v)}">${n}</button>`).join('')}</div></div></div>
-      <p class="label">Voice and sound</p><div class="group">
-        <div class="row"><span class="grow">Voice speed</span><div class="seg" id="sRate">${[[0.75, 'Slow'], [0.9, 'Normal'], [1.05, 'Quick']].map(([v, n]) => `<button type="button" data-v="${v}" aria-pressed="${Math.abs(st.rate - v) < 0.01}">${n}</button>`).join('')}</div></div>
-        <div class="row"><span class="grow">Sound effects</span><div class="seg" id="sSfx"><button type="button" data-v="1" aria-pressed="${!!st.sfx}">On</button><button type="button" data-v="0" aria-pressed="${!st.sfx}">Off</button></div></div>
-        <div class="row"><span class="grow">Play timer on screen<small>Minutes played this session. The game never stops play: you're in charge of screen time.</small></span><div class="seg" id="sBadge"><button type="button" data-v="1" aria-pressed="${!!st.badge}">Show</button><button type="button" data-v="0" aria-pressed="${!st.badge}">Hide</button></div></div>
-        <div class="row"><span class="grow">Natural voices<small>Each friend speaks in a real-sounding voice of their own, made by Google over the internet${token() ? '' : '. Sign in below to use them'}; otherwise the phone's voice</small></span><div class="seg" id="sNatural"><button type="button" data-v="1" aria-pressed="${st.natural !== false}">On</button><button type="button" data-v="0" aria-pressed="${st.natural === false}">Off</button></div></div>
-        <button type="button" class="row" id="sVoices"><span class="grow">Hear the voices<small>The storyteller, Professor Hoot, Pebble, Gemma and Bloom</small></span><span class="val">▶</span></button>
-        <button type="button" class="row" id="sTest"><span class="grow">Test the voice<small>Hear how this phone says some letter sounds</small></span><span class="val">▶</span></button></div>
-      <p class="label">Letter sounds</p><div class="group"><div class="row"><span class="grow"><small>Phone voices say letter names well and letter sounds poorly. Record each sound once (tap a letter, say the sound, tap again): the game plays your voice instead. Say just the sound: "mmm" for m, "t" (short, no "uh") for t, "a" as in apple.</small></span></div>
-        <div class="clips" id="clips"></div></div>
-      <p class="label">Design</p><div class="group" id="sDesign">${window.aosDesign ? aosDesign.picker() : ''}</div>
-      <p class="label">Family account</p><div class="group">${user ? `<div class="row"><span class="grow">Signed in as ${esc(user.name)}<small>Players and their progress follow you to every family phone signed in here.</small></span></div>`
-        : `<button type="button" class="row" id="sSign"><span class="grow">Sign in with Face ID<small>Keep players and their progress on every family phone.</small></span><span class="val">›</span></button>`}</div>
-      <p class="note">Sparkle Kingdom keeps everything on this phone and, signed in, in your family account. With natural voices on, the sentences the game says (a player's name among them) go to Google to be spoken; nothing else goes anywhere else.</p>`, { onClose: () => { V.rate = set().rate; V.sounds = set().sfx; save.settingsAt = Date.now(); persist(true); paintPicker(); sync(); } });
-    const seg = (id, fn) => s.querySelector('#' + id).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; fn(b.dataset.v, b); for (const x of s.querySelectorAll('#' + id + ' button')) x.setAttribute('aria-pressed', String(x === b)); save.settingsAt = Date.now(); persist(); });
-    seg('sFocus', v => { st.focus = v; });
-    s.querySelector('#sLands').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; const off = new Set(st.off || []); off.has(b.dataset.v) ? off.delete(b.dataset.v) : off.add(b.dataset.v); st.off = [...off]; b.setAttribute('aria-pressed', String(!off.has(b.dataset.v))); save.settingsAt = Date.now(); persist(); });
-    seg('sRate', v => { st.rate = +v; V.rate = +v; });
-    seg('sSfx', v => { st.sfx = v === '1'; V.sounds = st.sfx; });
-    seg('sBadge', v => { st.badge = v === '1'; });
-    seg('sNatural', v => { st.natural = v === '1'; V.natural = V.natural; });
-    s.querySelector('#sVoices').onclick = async () => { V.unlock();
-      for (const [who, line] of [['narrator', 'Once upon a time, in Sparkle Kingdom.'], ['owl', "Hoo hoo! I'm Professor Hoot."], ['dragon', "Hi! I'm Pebble. Let's count gems!"], ['gemma', "I'm Gemma. Let's spell a word!"], ['bloom', "I'm Bloom. Let's find the flowers!"]]) {
-        if (!document.body.contains(s)) return; await V.say([line], { who }); } };
-    s.querySelector('#sTest').onclick = () => V.say(['Here are some sounds.', { snd: 'm' }, { snd: 't' }, { snd: 'a' }, 'c, a, t, cat.']);
+    const S = AllisonOS.settings, ps = players(), acct = window.AllisonOS && window.AllisonOS.account, user = acct && acct.user();
+    const st = set(), off = st.off || [], rate = (RATES.find(([v]) => Math.abs(st.rate - v) < 0.01) || [''])[0];
+    const s = sheet('Settings', (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'sDesign' })) : '')
+      + S.section('Players', [
+        ...(ps.length ? ps.map(p => S.nav({ title: p.name, sub: `${mins(E.playedOn(p, today()))} min today · ${E.coins(p)} coins · ${(p.skills.read || {}).level ? 'reading level ' + p.skills.read.level : 'reading not started'}.`, data: { rep: p.id } }))
+          : [S.info({ title: 'No players yet' })]),
+        S.action({ icon: 'plus', title: 'Add a player', data: { new: '1' } }),
+      ])
+      + S.section('Learning', [
+        S.choice({ id: 'sFocus', title: 'Favor reading', sub: 'How strongly the quest and the map lean to Story Tower.', options: [['normal', 'Normal'], ['more', 'More'], ['most', 'Most']], value: st.focus }),
+        S.toggle({ title: 'Story Tower', on: true, disabled: true }),
+        ...LANDS_OPEN.map(([k, n]) => S.toggle({ title: n, on: !off.includes(k), data: { land: k } })),
+      ], { id: 'sLands', hint: 'A land that’s switched off stays closed on the map.' })
+      + S.section('Voice and sound', [
+        S.choice({ id: 'sRate', title: 'Voice speed', options: RATES, value: rate }),
+        S.toggle({ id: 'sSfx', title: 'Sound effects', on: !!st.sfx }),
+        S.toggle({ id: 'sBadge', title: 'Play timer on screen', sub: 'Minutes played this session; the game never stops play.', on: !!st.badge }),
+        S.toggle({ id: 'sNatural', title: 'Natural voices', sub: 'A real-sounding voice for each friend, made by Google over the internet' + (token() ? '' : ' (sign in below to use them)') + '.', on: st.natural !== false }),
+        S.action({ id: 'sVoices', icon: 'play', title: 'Hear the voices', sub: 'The storyteller, Professor Hoot, Pebble, Gemma and Bloom.' }),
+        S.action({ id: 'sTest', icon: 'play', title: 'Test the voice', sub: 'Hear how this phone says some letter sounds.' }),
+      ])
+      + S.section('Letter sounds', [
+        S.info({ title: 'Record each sound once', sub: 'Tap a letter, say just its sound (“mmm” for m, a short “t” with no “uh”, “a” as in apple) and tap again: the game plays your voice instead of the phone’s.' }),
+        S.raw('<div class="clips" id="clips"></div>'),
+      ])
+      + S.section('Family account', user
+        ? S.info({ title: 'Signed in as ' + user.name, sub: 'Players and their progress follow you to every family phone signed in here.' })
+        : S.action({ id: 'sSign', icon: 'face', title: 'Sign in with Face ID', sub: 'Keep players and their progress on every family phone.' }),
+        { hint: 'Sparkle Kingdom keeps everything on this phone and, signed in, in your family account; only the sentences natural voices say (a player’s name among them) go to Google, to be spoken.' }),
+      { onClose: () => { V.rate = set().rate; V.sounds = set().sfx; save.settingsAt = Date.now(); persist(true); paintPicker(); sync(); } });
+    const changed = () => { save.settingsAt = Date.now(); persist(); };
+    s.querySelector('.sbody').addEventListener('click', async e => {
+      if (e.target.closest('#clips, #sDesign')) return;   // their own: paintClips and aosDesign.bind
+      const seg = e.target.closest('.st-seg');
+      if (seg) {
+        const v = S.pick(e); if (v == null) return;
+        if (seg.id === 'sFocus') st.focus = v;
+        else if (seg.id === 'sRate') { st.rate = +v; V.rate = +v; }
+        changed(); return;
+      }
+      const b = e.target.closest('button.st-row'); if (!b || b.disabled) return;
+      if (b.dataset.land) { const on = S.flip(b), o = new Set(st.off || []); on ? o.delete(b.dataset.land) : o.add(b.dataset.land); st.off = [...o]; changed(); }
+      else if (b.id === 'sSfx') { st.sfx = S.flip(b); V.sounds = st.sfx; changed(); }
+      else if (b.id === 'sBadge') { st.badge = S.flip(b); changed(); }
+      else if (b.id === 'sNatural') { st.natural = S.flip(b); V.natural = V.natural; changed(); }
+      else if (b.id === 'sVoices') { V.unlock();
+        for (const [who, line] of [['narrator', 'Once upon a time, in Sparkle Kingdom.'], ['owl', "Hoo hoo! I'm Professor Hoot."], ['dragon', "Hi! I'm Pebble. Let's count gems!"], ['gemma', "I'm Gemma. Let's spell a word!"], ['bloom', "I'm Bloom. Let's find the flowers!"]]) {
+          if (!document.body.contains(s)) return; await V.say([line], { who }); } }
+      else if (b.id === 'sTest') V.say(['Here are some sounds.', { snd: 'm' }, { snd: 't' }, { snd: 'a' }, 'c, a, t, cat.']);
+      else if (b.id === 'sSign') { try { await acct.signIn(); s.close(); sync(true); parent(); } catch { toast('Sign-in did not finish'); } }
+      else if (b.dataset.new) { s.close(); creator(); }
+      else if (b.dataset.rep) { s.remove(); report(save.players[b.dataset.rep]); }
+    });
     if (window.aosDesign) aosDesign.bind(s.querySelector('#sDesign'));
-    s.querySelector('[data-new]').onclick = () => { s.close(); creator(); };
-    s.querySelectorAll('[data-rep]').forEach(b => b.onclick = () => { s.remove(); report(save.players[b.dataset.rep]); });
-    const sign = s.querySelector('#sSign'); if (sign) sign.onclick = async () => { try { await acct.signIn(); s.close(); sync(true); parent(); } catch { toast('Sign-in did not finish'); } };
     paintClips(s.querySelector('#clips'));
     pullClips().then(() => paintClips(s.querySelector('#clips')));
   }

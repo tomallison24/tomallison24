@@ -144,7 +144,7 @@ const toPlan = async page => { if ((await page.getAttribute('#tabs [data-tab="pl
   ok('no AI key: Make the plan is off', await page.locator('[data-act="make"]').isDisabled());
   await page.click('#setBtn'); await page.waitForTimeout(300);
   ok('no AI key: Settings say so', (await page.textContent('#setBody')).includes('Not set up yet'));
-  ok('the family\'s rules and allergies show in Settings', (await page.textContent('#sVeg')) === '2' && (await page.getAttribute('[data-protein="good"]', 'aria-checked')) === 'true'
+  ok('the family\'s rules and allergies show in Settings', (await page.textContent('#sVeg')) === '2' && (await page.getAttribute('#sProtein [data-value="good"]', 'aria-checked')) === 'true'
     && (await page.inputValue('#sPeople')) === '4' && (await page.inputValue('#sWeek')) === '40' && (await text(page, '#avoid [data-avoid]')).join('|') === 'Tree nuts ✕|Coconut ✕');
   ok('no deals anywhere', (await page.locator('#tabs [data-tab="deals"]').count()) === 0 && !/deal|store/i.test(await page.textContent('#setBody')));
   ok('no script errors', !errs.length, errs.join(' | '));
@@ -410,7 +410,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('Settings: titled Settings, with a Done tick like the other apps', (await page.textContent('#setLbl')) === 'Settings' && (await page.getAttribute('#sSave', 'aria-label')) === 'Done');
   ok('Settings: what Ipsy has learned, to forget one', (await text(page, '#setBody [data-forget]')).length === 1);
   await page.click('#setBody [data-veg="1"]');
-  await page.click('#setBody [data-protein="high"]');
+  await page.click('#sProtein [data-value="high"]');
   await page.selectOption('#sPeople', '3'); await page.selectOption('#sWeek', '30');
   await page.fill('#sAdd', 'Shellfish'); await page.click('#sAddGo');
   await page.click('[data-avoid="coconut"]');

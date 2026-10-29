@@ -1703,23 +1703,18 @@
     await pushPost('subscribe', {subscription:sub.toJSON(), session:AllisonOS.account.token(), prefs:pushPrefs()});
     push.tz = zone(); savePush();
   }
+  // Notifications are a section of Settings (renderSettings, below); the bell opens Settings there.
   function renderPush(){
     $('remBellDot').hidden = !push.on;
-    const on = push.on;
-    $('puOff').hidden = on; $('puOnBox').hidden = !on;
-    $('puStatus').textContent = !pushable()
-      ? (isIOS && !standalone() ? 'Open Notes from its Home Screen icon to turn these on.' : 'This browser can’t show notifications.')
-      : !signedIn() ? PUSH_ERRORS.signin
-      : on ? 'On in ' + place() + '.'
-      : 'Alerts this phone when a reminder or nudge is due.';
-    $('puLists').innerHTML = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'" translate="no"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
-    $('puNudges').setAttribute('aria-checked', push.nudges);
-    $('puMorning').value = push.morning;
+    renderSettings();
   }
-  function openPush(){ $('puServer').value = push.server; renderPush(); openSheet('pushSheet'); }
-  $('remBellBtn').onclick = openPush;
+  $('remBellBtn').onclick = () => {
+    openSettings();
+    const sec = $('stNotify'), body = sec && sec.closest('.sheetbody');
+    if (body) body.scrollTop += sec.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+  };
 
-  $('puOn').onclick = async () => {
+  async function turnPushOn(){
     const server = $('puServer').value.trim().replace(/\/+$/, '');
     if (!pushable()) { renderPush(); return; }
     if (!signedIn()) {
@@ -1728,7 +1723,7 @@
       return;
     }
     if (!okServer(server)) { $('puStatus').textContent = 'Enter the server address. It starts with https:// and ends in workers.dev.'; return; }
-    $('puOn').disabled = true; $('puStatus').textContent = 'Turning on…';
+    $('puSw').disabled = true; $('puSw').setAttribute('aria-checked', 'true'); $('puStatus').textContent = 'Turning on…';
     try {
       // First, while the tap still counts: iPhone only asks from a tap.
       const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
@@ -1746,9 +1741,9 @@
       push.on = true; savePush(); renderPush(); render();
       toast('Notifications on for this phone');
     } catch(e) {
-      savePush(); $('puStatus').textContent = pushErr(e);
-    } finally { $('puOn').disabled = false; }
-  };
+      savePush(); renderPush(); $('puStatus').textContent = pushErr(e);
+    } finally { $('puSw').disabled = !pushable(); }
+  }
   // A change of lists, nudges or morning time goes to the server a moment later.
   let prefsTimer = null;
   function prefsChanged(){
@@ -1760,26 +1755,18 @@
       try { await subscribeHere(sub); } catch(e) { toast(pushErr(e)); }
     }, 700);
   }
-  $('puLists').addEventListener('click', e => {
-    const b = e.target.closest('[data-pl]'); if (!b) return;
-    const id = b.dataset.pl;
-    push.skip = push.skip.includes(id) ? push.skip.filter(x => x !== id) : [...push.skip, id];
-    prefsChanged();
-  });
-  $('puNudges').onclick = () => { push.nudges = !push.nudges; prefsChanged(); };
-  $('puMorning').addEventListener('change', e => { if (/^\d{2}:\d{2}$/.test(e.target.value)) { push.morning = e.target.value; prefsChanged(); } });
-  $('puTest').onclick = async () => {
+  async function pushTest(){
     const sub = await currentSub();
     if (!sub) { push.on = false; savePush(); renderPush(); $('puStatus').textContent = PUSH_ERRORS['not-subscribed']; return; }
     try { await pushPost('test', {endpoint:sub.endpoint}); toast('Test sent. It should arrive in a few seconds.'); }
     catch(e) { if (e.message === 'not-subscribed') { push.on = false; savePush(); renderPush(); } toast(pushErr(e)); }
-  };
-  $('puOffBtn').onclick = async () => {
+  }
+  async function turnPushOff(){
     const sub = await currentSub();
     push.on = false; savePush(); renderPush(); render();
     if (sub) { pushPost('unsubscribe', {endpoint:sub.endpoint}).catch(() => {}); sub.unsubscribe().catch(() => {}); }
     toast('Notifications off for this phone');
-  };
+  }
   // After this phone syncs a change, the server reads the Sheet again, so a
   // new or moved reminder alerts on time rather than at the next 15-minute read.
   function pokePush(){
@@ -1819,26 +1806,64 @@
     const days = Math.floor((Date.now() - t) / D);
     return 'Last backup ' + (days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago') + '.';
   }
-  // Settings > Design, the sheet's first section: Vintage or Standard, at once, just on this phone (../home/design.js).
-  // Drawn once; design.js keeps its ticks right. A change redraws what is drawn in script (list and tag colours)
-  // and slides the thumbs again (Futura and the system font are different widths).
-  if (window.aosDesign) { $('bkDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('bkDesign')); }
-  else $('bkDesign').closest('.field').hidden = true;
+  // Settings, as in every app (../home/settings.js): Design · Notifications · Your data. Drawn again whenever
+  // notifications change (renderPush); what's typed in the server address is kept (fresh: the saved one, on opening).
+  function renderSettings(fresh){
+    const T = AllisonOS.settings, on = push.on, can = pushable();
+    const typed = !fresh && $('puServer') ? $('puServer').value : push.server;
+    const status = !can
+      ? (isIOS && !standalone() ? 'Open Notes from its Home Screen icon to turn these on.' : 'This browser can’t show notifications.')
+      : !signedIn() ? PUSH_ERRORS.signin
+      : on ? 'On in ' + place() + '.'
+      : 'Enter the notification server’s address, then turn the switch on.';
+    const chips = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'" translate="no"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
+    $('bkBody').innerHTML = (window.aosDesign ? T.section('Design', T.raw(aosDesign.picker(), {id:'bkDesign'})) : '')
+      + T.section('Notifications', on ? [
+          T.toggle({id:'puSw', title:'Notifications on this phone', sub:'Alerts this phone when a reminder or nudge is due.', on:true, disabled:!can}),
+          T.raw('<span class="st-title">Lists that alert this phone</span><div class="opts" role="group" aria-label="Lists that alert this phone">' + chips + '</div>', {id:'puLists'}),
+          T.toggle({id:'puNudges', title:'Note nudges', on:!!push.nudges}),
+          T.input({id:'puMorning', type:'time', title:'Alert at', sub:'For reminders with a date but no time.', value:push.morning}),
+          T.action({id:'puTest', icon:'send', title:'Send a test'}),
+        ] : [
+          T.toggle({id:'puSw', title:'Notifications on this phone', sub:'Alerts this phone when a reminder or nudge is due.', on:false, disabled:!can}),
+          T.input({id:'puServer', type:'url', title:'Server address', placeholder:'https://notes-push.….workers.dev', value:typed, attrs:'inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"'}),
+        ], {id:'stNotify', hint:status, hintId:'puStatus'})
+      + T.section('Your data', [
+          T.action({id:'bkExport', icon:'upload', title:'Back up everything', sub:'One file with every note, list and reminder.'}),
+          T.action({id:'bkImport', icon:'download', title:'Import a backup', sub:'Adds what isn’t here already.'}),
+        ], {hint:backupStatus(), hintId:'bkStatus'});
+    // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
+    if (window.aosDesign) aosDesign.bind($('bkDesign'));
+  }
+  function openSettings(){ renderSettings(true); openSheet('backupSheet'); }
+  $('bkBody').addEventListener('click', e => {
+    const pl = e.target.closest('[data-pl]');
+    if (pl) { const id = pl.dataset.pl; push.skip = push.skip.includes(id) ? push.skip.filter(x => x !== id) : [...push.skip, id]; prefsChanged(); return; }
+    const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
+    if (b.id === 'puSw') push.on ? turnPushOff() : turnPushOn();
+    else if (b.id === 'puNudges') { push.nudges = !push.nudges; prefsChanged(); }
+    else if (b.id === 'puTest') pushTest();
+    else if (b.id === 'bkExport') exportBackup();
+    else if (b.id === 'bkImport') $('bkFile').click();
+  });
+  $('bkBody').addEventListener('change', e => {
+    if (e.target.id === 'puMorning' && /^\d{2}:\d{2}$/.test(e.target.value)) { push.morning = e.target.value; prefsChanged(); }
+  });
+  // A change of design redraws what is drawn in script (list and tag colours) and slides the thumbs again
+  // (Futura and the system font are different widths).
   addEventListener('aos:design', () => { render(); requestAnimationFrame(() => { slideTabs(true); slideRem(true); }); });
   document.addEventListener('click', e => {
     if (!e.target.closest('[data-open-backup]')) return;
-    $('bkStatus').textContent = backupStatus();
-    openSheet('backupSheet');
+    openSettings();
   });
-  $('bkExport').onclick = async () => {
+  async function exportBackup(){
     const file = new File([JSON.stringify({app:'allison-notes', v:1, kind:'backup', saved:new Date().toISOString(), notes, lists, todos}, null, 2)],
       'notes-backup-' + todayStr() + '.json', {type:'application/json'});
     const r = await shareOut({title:'Notes backup', file});
     if (r === 'shared' || r === 'downloaded') { try { localStorage.setItem(LAST, String(Date.now())); } catch(e){} }
     closeSheet('backupSheet'); render();
     toast({shared:'Backup saved', downloaded:'Backup saved to Downloads', cancelled:'Backup canceled'}[r] || 'Couldn\u2019t save the backup');
-  };
-  $('bkImport').onclick = () => $('bkFile').click();
+  }
   $('bkFile').addEventListener('change', async e => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;

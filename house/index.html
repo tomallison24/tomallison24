@@ -418,7 +418,6 @@
   .rowi .v { font-weight: 600; font-variant-numeric: tabular-nums; opacity: .9; }
   .rowi .v.full { color: rgb(240,179,187); opacity: 1; }
   #custBg .v { font-weight: 500; opacity: .6; } #custBg .chev { display: flex; opacity: .4; margin-left: -6px; }
-  #custBlock[hidden] { display: none; }
   .rowi .v.due { color: rgb(236,214,150); opacity: 1; }
   /* Glass switches: a clear track with a lit rim that lets the sky through,
      and a frosted knob. On, the track takes a soft wash of the unit's colour
@@ -547,14 +546,8 @@
   .btn:disabled { opacity: 0.5; }
   .btn[hidden] { display: none; }
 
-  /* Settings views: locked (what is saved), edit (the form), pin (the pad). */
+  /* Settings' own views: edit (the form), pin (the pad), share, join, access. */
   .view[hidden] { display: none; }
-  #vLocked .group { margin-top: 6px; }
-  #vLocked .rowi { min-height: 50px; font-size: 15px; }
-  #vLocked .rowi .k { color: var(--muted); flex: none; }
-  #vLocked .rowi .v { flex: 1; min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lockline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin: 14px 8px 0; }
-  .lockline svg { flex: none; }
   /* Share: the code to read out, and how long it has left */
   .sharecode { margin: 6px 0 0; text-align: center; font-size: 32px; font-weight: 400; letter-spacing: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
   .sharecode.gone { opacity: .35; text-decoration: line-through; }
@@ -604,10 +597,9 @@
   #sheetWrap .sheet-body > * { flex-shrink: 0; }
   #sheetWrap .view:not([hidden]) { display: flex; flex-direction: column; gap: 14px; }
   #sheetWrap .view > * { margin-top: 0; margin-bottom: 0; }
-  #sheetWrap #custBlock { display: flex; flex-direction: column; gap: 14px; }
-  #sheetWrap #custBlock[hidden] { display: none; }
-  #sheetWrap #designBlock { display: flex; flex-direction: column; gap: 14px; }   /* Settings > Design (../home/design.js) */
-  #sheetWrap #designBlock[hidden] { display: none; }
+  #stMain[hidden] { display: none; }
+  #stMain .hastatus.good { color: var(--good); }   /* Connected accounts > Home Assistant: how the connection stands */
+  #stMain .hastatus.bad { color: var(--bad); }
   /* its swatches are .sw too (design.js's name), not switches: no knob, no frosting */
   .aos-design .sw { -webkit-backdrop-filter: none; backdrop-filter: none; }
   .aos-design .sw::after { content: none; }
@@ -616,19 +608,16 @@
   #sheetWrap .group { border-radius: 26px; margin-top: 0; }
   #sheetWrap .rowi { min-height: 48px; font-size: 15px; }
   #sheetWrap button.rowi { padding: 12px 14px; font-weight: 600; }
-  #sheetWrap #vLocked .rowi .k { color: var(--text); }
-  #sheetWrap #vLocked .rowi .v { font-weight: 400; color: var(--muted); }
   #sheetWrap .rowi.danger .k, #sheetWrap .rowi.danger .ic { color: var(--bad); }
   #sheetWrap .rowi.danger { color: var(--bad); }
   #sheetWrap .rowi .ic { width: 26px; height: auto; background: none; border-radius: 0; color: var(--accent); }
   #sheetWrap .group .field { margin: 0; border-radius: 0; background: none; box-shadow: none; padding: 10px 16px; }
   #sheetWrap .group .field + .field { border-top: 0.5px solid var(--tile-edge); }
-  #sheetWrap .help, #sheetWrap .lockline, #sheetWrap .status { margin: 0 12px; font-size: 12px; line-height: 1.55; text-align: start; }
+  #sheetWrap .help, #sheetWrap .status { margin: 0 12px; font-size: 12px; line-height: 1.55; text-align: start; }
   #sheetWrap .status { font-size: 14px; min-height: 0; color: var(--muted); }
   #sheetWrap .status.bad { color: var(--bad); }
   #sheetWrap .status.good { color: var(--good); }
   #sheetWrap .status:empty { display: none; }
-  #sheetWrap .lockline { color: var(--muted); }
   #sheetWrap .btns { margin: 0; }
   #sheetWrap .linkbtn { margin-top: 0; align-self: center; }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet, .toast { background: var(--lgs-solid); } }
@@ -749,7 +738,7 @@
      light rules included; Settings > Design switches it off for the Standard
      (Sea glass) design (../home/design.js). Behind it all is the shared
      Vintage sky (../home/sky.js); the Background picked in Settings >
-     Customization (bg.js) is Standard's, so it is hidden here. Only colours,
+     Background (bg.js) is Standard's, so it is hidden here. Only colours,
      shapes and type change: every control works the same in both. */
   :root {
     --bg: var(--mc-ground);   /* the page: cream or walnut, washed by the sky (../home/sky.js) */
@@ -779,7 +768,7 @@
   /* no blur anywhere, and nothing moving behind the page */
   *, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   .bgfx { display: none; }
-  #sheetWrap #custBlock { display: none; }   /* Customization (bg.js): Standard's backgrounds; Vintage has the sky */
+  #sheetWrap #custBlock { display: none; }   /* Settings > Background (bg.js): Standard's backgrounds; Vintage has the sky */
   body { font-family: "Futura", "Futura-Medium", "Avenir Next", "Jost", system-ui, sans-serif; }
   button, input, textarea, select { font-family: inherit; }
 
@@ -1037,28 +1026,9 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <div class="grab"></div>
     <h2><span id="sheetTitle">Settings</span><button data-close id="sheetClose" aria-label="Done"></button></h2>
     <div class="sheet-body">
-      <!-- Design: Vintage or Standard, on this phone, at once (app.js fills it from ../home/design.js). -->
-      <div id="designBlock" hidden>
-        <p class="label">Design</p>
-        <div class="group" id="designBox"></div>
-      </div>
-
-      <!-- Locked: what is saved. Changing or disconnecting needs the PIN. -->
-      <div class="view" id="vLocked" hidden>
-        <p class="label">Home Assistant</p>
-        <div class="group">
-          <div class="rowi"><span class="k">Address</span><span class="v" id="lkUrl" translate="no"></span></div>
-          <div class="rowi"><span class="k">Token</span><span class="v">Saved ••••••••</span></div>
-        </div>
-        <div class="status hastatus"></div>
-        <div class="lockline hint" id="lkLine"></div>
-        <div class="group">
-          <button class="rowi" type="button" id="lkEdit"><span class="k">Change address or token</span></button>
-          <button class="rowi danger" type="button" id="lkForget"><span class="k">Disconnect</span></button>
-          <button class="rowi" type="button" id="lkShare"><span class="k">Share with another device</span></button>
-          <button class="rowi" type="button" id="lkAccess"><span class="k">Devices with access</span></button>
-        </div>
-      </div>
+      <!-- Settings itself: Design · Background · Connected accounts (app.js, renderSettings, ../home/settings.js).
+           The PIN, Share, Join and Devices with access are its sub-views, and the form connects Home Assistant. -->
+      <div id="stMain"></div>
 
       <!-- Devices with access: every token and sign-in of this Home Assistant user. -->
       <div class="view" id="vAccess" hidden>
@@ -1128,11 +1098,6 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
         <button type="button" class="linkbtn" id="pinForgot">Forgot PIN?</button>
       </div>
 
-      <!-- Customization: how the app looks, kept on this phone. -->
-      <div id="custBlock">
-        <p class="label">Customization</p>
-        <div class="group"><button class="rowi" type="button" id="custBg"><span class="ic" id="custBgIc"></span><span class="k">Background</span><span class="v" id="custBgV"></span><span class="chev" id="custBgChev"></span></button></div>
-      </div>
     </div>
   </div>
 </div>
@@ -1188,6 +1153,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>   <!-- Settings, the same in every app -->
 <script src="app.js"></script>
 <script src="devices.js"></script>
 <script src="heaters.js"></script>

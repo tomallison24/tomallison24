@@ -88,7 +88,9 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['Podcasts is one page now, Library: Listen Now is gone, and its new episodes are Library\'s New. Ipsy tags each show you follow (Music, Talk, News, Comedy and more); pick a tag in the pill at the bottom of Shows, as in Home, and change a show\'s tags on its page (they follow you to your other phones). Settings > AI turns Ipsy\'s tagging off.',
+      notes: ['Settings looks and works the same in every app now: called Settings, with the same sections in the same order (Design, the app\'s own, Connected accounts, Ipsy, Notifications, Your data, Family account), the same words for the same job (Check now, Disconnect Gmail, Back up everything) and a sentence at most under each row. Learn it in one app and you know it in all of them',
+        'Every setting that is on or off is a new switch, the same in every app and in aOS: a slim frosted track that glows in your look\'s colour when on, a small glass bead, and a | when on and an o when off, so it reads without colour. That includes Travel\'s, aOS\'s Notifications and Dress for the weather, Notes\' and Mail\'s notifications, Podcasts\' Play the next episode, Money\'s daily check and Sparkle Kingdom\'s sound, timer and voices. Travel has one switch for Ipsy now, Ipsy fills in what\'s missing, in place of two. Notes\' notifications moved into its Settings',
+        'Podcasts is one page now, Library: Listen Now is gone, and its new episodes are Library\'s New. Ipsy tags each show you follow (Music, Talk, News, Comedy and more); pick a tag in the pill at the bottom of Shows, as in Home, and change a show\'s tags on its page (they follow you to your other phones). Settings > Ipsy turns Ipsy\'s tagging off.',
         'Podcasts\' Search no longer stops at "The server answered 429" when Apple\'s directory is busy: searches and Top shows are remembered for a while, a busy moment tries Apple from your phone, and Podcast Index answers instead once its key is set up; otherwise it says to try again in a minute or paste the show\'s RSS link.',
         'Travel reads Gmail 90 emails at a time, newest first, so your upcoming trips come in first; a longer read (the first one goes back a year) carries on after a minute\'s break, the most Gmail lets an app read without slowing it down. And Ipsy fills in what new bookings are missing by itself (Settings > Smart help turns it off): a booking it completes goes straight to Upcoming instead of waiting in To check, with Undo in Ipsy\'s chat',
         'Your helper dresses for the weather where you are (from Weather\'s forecast on your phone): an umbrella in the rain, a scarf when it\'s chilly, a coat when it\'s cold, a woolly hat in snow, and a sun hat and sunglasses on a warm sunny day. In Tron, Ares keeps his suit and takes an umbrella. Turn it off in Account, Your helper (or ask Ipsy).',
@@ -1119,12 +1121,12 @@
         {
           "i": "people",
           "t": "For grown-ups",
-          "d": "Press and hold Grown-ups for the Parent corner: each child's progress, words to practice together, play time and the letter sounds you record."
+          "d": "Press and hold Grown-ups for Settings: each child's progress, words to practice together, play time and the letter sounds you record."
         },
         {
           "i": "sliders",
           "t": "Four designs",
-          "d": "Vintage, Standard in Sea glass, Layers or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design."
+          "d": "Vintage, Standard in Sea glass, Layers or Tron, for the player picker and Settings. Pick one in Settings > Design."
         }
       ]
     }
@@ -2157,8 +2159,8 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: ['#players .pcard', '#players'], t: 'Reading first', d: 'Story Tower follows her school\'s reading plan, from syllables to little stories, with the Gem Mine for math and Star Meadow for memory.' },
     { sel: ['#players .pcard', '#players'], t: 'Just hard enough', d: 'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.' },
     { sel: ['#players .pcard', '#players'], t: 'Earned by learning', d: 'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.' },
-    { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for the Parent corner: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
-    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
+    { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for Settings: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
+    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and Settings. Pick one in Settings > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
   const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
@@ -2367,7 +2369,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['layers', 'Layers', 'A still sky by the time of day'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'], ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'], ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];   // word for word home/design.js's picker
   const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now

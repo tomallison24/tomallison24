@@ -495,7 +495,7 @@ for (const scheme of ['light', 'dark']) {
   await pg.click('#fitBtn'); await pg.waitForTimeout(2500);
   ok('Design: Vintage by default, with the Vintage icon and Retro dots', await look(pg) === 'vintage' && !/glass/.test(await pg.getAttribute('link[rel="apple-touch-icon"]', 'href')) && (await fill(pg, 'osm-food')) === 'rgb(216, 87, 42)');
   await pg.click('#setBtn'); await pg.waitForTimeout(400);
-  ok('Design: the gear opens Settings, Design first, Vintage picked', await pg.isVisible('#setSheet') && (await pg.textContent('#setBody .label')) === 'Design'
+  ok('Design: the gear opens Settings, Design first, Vintage picked', await pg.isVisible('#setSheet') && (await pg.textContent('#setBody .st-sec:first-child .st-lbl')) === 'Design'
     && (await pg.getAttribute('#setBody [data-design="vintage"]', 'aria-checked')) === 'true' && (await pg.getAttribute('#setBody [data-design="glass"]', 'aria-checked')) === 'false');
   const w0 = await pg.$eval('#seg .slthumb', e => e.getBoundingClientRect().width);
   await pg.click('#setBody [data-design="glass"]'); await pg.waitForTimeout(300);

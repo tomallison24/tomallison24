@@ -136,7 +136,7 @@ const noSheetUi = async page => {
   for (const gone of SHEET_UI) assert.equal(await page.$(gone), null, gone + ': no Sheet controls in the app');
   const set = await page.textContent('#setSheet');
   assert.doesNotMatch(set, /Backup Log|Sync now|Sign in to sync/, 'Settings has no Sheet row');
-  assert.match(set, /Backup\s*Export shows/, 'Backup (Import / Export) stays');
+  assert.match(set, /Your data\s*Back up everything/, 'Your data (Back up / Import) stays');
 };
 const syncedAt = page => page.evaluate(k => [+localStorage.getItem(k + '-sync-at') || 0, localStorage.getItem(k + '-synced')], KEY);
 const lib = page => page.evaluate(() => { const S = window.__podcasts.S; return { follows: S.follows.map(f => f.id), saved: S.saved.map(e => e.k), hist: S.hist.map(e => e.k), prog: S.prog, graves: S.graves }; });
@@ -478,7 +478,7 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
     // Settings: a mustard thumb, an orange Done
     await rp.click('#setBtn'); await rp.waitForSelector('#setSheet:not([hidden])'); await rp.waitForTimeout(600);
     assert.equal((await q('#setSheet .okbtn', ['backgroundColor']))[0], orange, 'Done is solid orange');
-    assert.equal((await q('#setBack .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under the chosen option');
+    assert.equal((await q('#setBack [aria-checked="true"]', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(255, 248, 236)' : 'rgb(74, 62, 54)', 'the chosen option is marked in Vintage’s colours');
     assert.equal((await q('#setSheet .sheet', ['backgroundColor']))[0], cream, 'Settings is a flat panel');
     assert.equal(await rp.getAttribute('#setDesign [data-design="vintage"]', 'aria-checked'), 'true', 'Settings > Design shows Vintage');
     await shot(rp, '22-retro-settings-' + scheme);
@@ -523,9 +523,9 @@ await test('Settings > Design: the first section; Standard and back at once (the
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);
   assert.equal(await look(), 'vintage');
   await openSettings(p);
-  assert.deepEqual(await p.$$eval('#setSheet .sheetbody > *', els => els.slice(0, 3).map(e => e.id || e.className)), ['label', 'setDesign', 'label'], 'Design comes first: its label and the rows, then the next setting');
-  assert.equal(await p.textContent('#setSheet .sheetbody > .label'), 'Design');
-  assert.equal(await p.$('#setSheet .hint'), null, 'no explanations in Settings');
+  assert.deepEqual(await p.$$eval('#setBody > .st-sec', els => els.slice(0, 2).map(e => [e.querySelector('.st-lbl').textContent, !!e.querySelector('#setDesign')])), [['Design', true], ['Playback', false]], 'Design comes first: its label and the rows, then the next setting');
+  assert.equal(await p.textContent('#setBody .st-sec:first-child .st-lbl'), 'Design');
+  assert.equal(await p.$('#setSheet .hint, #setSheet .st-hint'), null, 'no explanations in Settings');
   assert.equal(await p.getAttribute('#setDesign [data-design="vintage"]', 'aria-checked'), 'true');
   await p.click('#setDesign [data-design="glass"]'); await p.waitForTimeout(300);
   assert.equal(await look(), 'glass', 'Standard at once');
@@ -538,7 +538,9 @@ await test('Settings > Design: the first section; Standard and back at once (the
   assert.equal(await look(), 'glass', 'Standard is kept');
   await openSettings(p);
   // a re-render of the options leaves the rows working
-  await p.click('#setBack [data-v="30"]'); await p.waitForTimeout(200);
+  await p.click('#setBack [data-value="30"]'); await p.waitForTimeout(200);
+  await p.selectOption('#setFwd', '45'); await p.waitForTimeout(200);
+  await p.selectOption('#setCc', 'gb'); await p.waitForTimeout(200);
   await p.click('#setDesign [data-design="vintage"]'); await p.waitForTimeout(300);
   assert.equal(await look(), 'vintage', 'Vintage at once');
   await p.click('#setSheet .sheethead [data-close]'); await p.waitForTimeout(500);
@@ -547,6 +549,7 @@ await test('Settings > Design: the first section; Standard and back at once (the
   assert.equal(await look(), 'vintage', 'Vintage is kept');
   assert.equal(await p.evaluate(() => localStorage.getItem('design.podcasts')), 'vintage');
   assert.equal(await p.evaluate(k => JSON.parse(localStorage.getItem(k)).set.back, KEY), 30, 'the other settings work as before');
+  assert.deepEqual(await p.evaluate(k => { const s = JSON.parse(localStorage.getItem(k)).set; return [s.fwd, s.cc, s.ccChosen]; }, KEY), [45, 'gb', true], 'Skip forward and Top shows from are kept');
   await P.ctx.close();
 });
 
@@ -672,7 +675,7 @@ await test('tags: Ipsy tags the shows (POST tags, signed in), Library filters by
   await openSettings(p);
   assert.equal(await p.getAttribute('#setAi', 'role'), 'switch');
   assert.equal(await p.getAttribute('#setAi', 'aria-checked'), 'true', 'on to start');
-  assert.ok(await p.$('#setAi > .switch'), 'the switch, as in Notes and Orders');
+  assert.ok(await p.$('#setAi > .st-sw'), 'the shared switch, as in every app');
   await p.$eval('#setAi', e => e.scrollIntoView({ block: 'center' })); await p.waitForTimeout(300);
   await shot(p, '07-settings-ai-light');
   await p.click('#setAi'); await p.waitForTimeout(200);

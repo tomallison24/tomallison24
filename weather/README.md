@@ -6,8 +6,8 @@ The Signal dashboard's W3 "Vivid" weather card (ha-config,
 ## The two designs
 
 One app, one set of places: the design changes only how Weather looks, at once,
-and is kept on this phone (**Settings → Design**, the first section of the
-Places sheet: the cog "Places" button under the forecast, or the place name),
+and is kept on this phone (**Settings → Design**, the first section of
+Settings: the cog "Places" button under the forecast, or the place name),
 as in Clock. `../home/design.js`, loaded in `<head>`, applies it before the
 page is drawn. Every number, chart, view, sheet and swipe is the same in both.
 
@@ -107,13 +107,13 @@ on that phone; nothing old is deleted. The radar helper is asked at
   location (the last known place at once, then its fresh forecast), whatever
   you were looking at last. If location is off, it opens your first saved
   city, or asks you to allow location or search.
-- **Places**: tap the place name (it has a chevron) for the Places sheet:
-  My Location first, then your saved cities with their weather; search "Add a
-  city", remove one with its ✕, switch units. Up to 12 cities. Each place's
+- **Places**: tap the place name (it has a chevron) for Settings, whose Your
+  places section has the search ("Add a city"), My Location, then your saved
+  cities with their weather (remove one with its ✕); Units under it. Up to 12 cities. Each place's
   forecast is kept for instant switching and topped up quietly in the
   background. (Older versions kept one place; it is carried over as a saved
   city.)
-- **Trip**: signed in to the family account, the Places sheet (and the page
+- **Trip**: signed in to the family account, Settings' Your places (and the page
   dots) also has where your next trip goes, with its dates under the name, for
   as long as the trip is ahead or on. It comes from your Travel layer (the
   bookings Travel keeps in your account for Calendar, `GET ../aOS/api/layer`,

@@ -304,8 +304,10 @@
     if ((b = ev.target.closest('[data-plan-stop]'))) return setPlan(b, { cancel: true });
     if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
   }
-  // Look: Vintage (mid-century, the default), Sea glass, Layers or Tron, kept on this phone (look.js); every app takes it too
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century, Retro colors'], ['glass', 'Sea glass', 'The original look'], ['layers', 'Layers', 'A still sky by the time of day'], ['grid', 'Tron Special Edition', 'Light cycles, red on black']];
+  // Look: Vintage (mid-century, the default), Standard (Sea glass), Layers or Tron, kept on this phone (look.js); every app takes it
+  // too. Named and described word for word as in every app's Settings > Design (home/design.js, aosDesign.picker())
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'], ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
+    ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];
   const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${id === 'grid' ? 'Tron <span class="se">Special Edition</span>' : esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
   // a link to Updates or Subscription (a notification, the plan card) opens that one
@@ -326,18 +328,33 @@
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
   const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
   const helperDresses = () => { const I = AllisonOS.ipsy; return I && I.dressing ? I.dressing() : true; };
+  // Appearance, in the shared Settings rows (../home/settings.js): the Look list, Light or dark and Home layout, then the
+  // intro of the look you're in (each look's own Intro section shows only in that look: index.html, .tronnote and the rest)
+  const INTRO_KEY = { tronIntroPick: 'aos.tron.intro', vintageIntroPick: 'aos.vintage.intro', glassIntroPick: 'aos.glass.intro', layersIntroPick: 'aos.layers.intro' };
+  function appearance() {
+    const S = AllisonOS.settings;
+    const intro = (sec, id, name, mode, play) => S.section('Intro', [
+      S.choice({ id, title: name + ' intro', sub: 'Plays as aOS opens.', options: TRON_INTRO, value: mode }),
+      S.action({ icon: 'play', title: 'Play the intro', data: { [play]: '1' } }),
+    ], { id: sec });
+    return `<div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>`
+      + S.section('', [
+        S.choice({ id: 'theme', title: 'Light or dark', html: true, sub: '<span class="tronnote">Tron is always dark, as in the car; your choice comes back with another look.</span>', options: W.theme.list, value: W.theme.read() }),
+        S.choice({ id: 'homeLayout', title: 'Home layout', sub: 'Thumb arc puts Home, Mail, Weather, Calendar and your four favorites where your thumb rests, and every app on one screen.', options: HOME_LAYOUTS, value: homeLayout() }),
+      ])
+      + intro('tronIntroSec', 'tronIntroPick', 'Tron', tronIntro(), 'tiplay') + intro('vintageIntroSec', 'vintageIntroPick', 'Sunrise', vintageIntro(), 'viplay')
+      + intro('glassIntroSec', 'glassIntroPick', 'Tide', glassIntro(), 'giplay') + intro('layersIntroSec', 'layersIntroPick', 'Skylight', layersIntro(), 'liplay');
+  }
   function acctPage(at) {
+    const S = AllisonOS.settings;
     const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>
       <div class="group acct" id="acct"><p class="note">Checking…</p></div>
       <div class="group acct"><button type="button" class="soft runsetup" data-setup>Run through setup</button></div>
       <div class="group acct">
-        ${fold('fLook', 'Appearance', looksLine(), `<div class="seg" id="theme">${W.theme.list.map(([t, n]) => `<button type="button" data-t="${t}" aria-pressed="${t === W.theme.read()}">${n}</button>`).join('')}</div><p class="lnote tronnote">Tron is always dark, as in the car. Your choice comes back with another look.</p><p class="lnote tronnote">Tron intro, as aOS opens</p><div class="seg tronnote" id="tronIntroPick" role="group" aria-label="Tron intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-ti="${m}" aria-pressed="${m === tronIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft tronnote" data-tiplay>Play the intro</button><p class="lnote vintnote">Sunrise intro, as aOS opens</p><div class="seg vintnote" id="vintageIntroPick" role="group" aria-label="Sunrise intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-vi="${m}" aria-pressed="${m === vintageIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft vintnote" data-viplay>Play the intro</button><p class="lnote glassnote">Tide intro, as aOS opens</p><div class="seg glassnote" id="glassIntroPick" role="group" aria-label="Tide intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-gi="${m}" aria-pressed="${m === glassIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft glassnote" data-giplay>Play the intro</button><p class="lnote layersnote">Skylight intro, as aOS opens</p><div class="seg layersnote" id="layersIntroPick" role="group" aria-label="Skylight intro">${TRON_INTRO.map(([m, n]) => `<button type="button" data-li="${m}" aria-pressed="${m === layersIntro()}">${n}</button>`).join('')}</div><button type="button" class="soft layersnote" data-liplay>Play the intro</button>
-          <div class="dlist" id="looks" role="listbox" aria-label="Look">${lookOpts()}</div>
-          <p class="lnote">Home layout</p>
-          <div class="seg" id="homeLayout">${HOME_LAYOUTS.map(([v, n]) => `<button type="button" data-hl="${v}" aria-pressed="${v === homeLayout()}">${n}</button>`).join('')}</div>
-          <p class="note">Thumb arc puts Home, Mail, Weather and Calendar and your four favorites in the corner your thumb rests on, and every app on one screen.</p>`, 'lookSub')}
-        ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><p class="lnote">Dress for the weather</p><div class="seg" id="helperWx" role="group" aria-label="Dress for the weather">${[['on', 'On'], ['off', 'Off']].map(([v, n]) => `<button type="button" data-hwx="${v}" aria-pressed="${(v === 'on') === helperDresses()}">${n}</button>`).join('')}</div><p class="note">An umbrella in the rain, a scarf or a coat when it’s cold, a sun hat when it’s warm and sunny, from Weather’s forecast.</p><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
+        ${fold('fLook', 'Appearance', looksLine(), appearance(), 'lookSub')}
+        ${fold('fHelper', 'Your helper', esc(helperLine()), '<div id="helperPick"></div>' + S.section('', S.toggle({ id: 'helperWx', title: 'Dress for the weather', sub: 'An umbrella in the rain, a coat in the cold or a sun hat in the sun, from Weather’s forecast.', on: helperDresses() }),
+          { hint: 'Your helper is yours alone, in every app, and follows you to your other devices.' }), 'helperSub', 'helper')}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
           <ul data-ipsy="as-is">${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
@@ -345,21 +362,19 @@
       </div>`, { up: true });
     el.addEventListener('click', ev => {
       const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
-      const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
-      const hwx = ev.target.closest('[data-hwx]'); if (hwx && AllisonOS.ipsy && AllisonOS.ipsy.dress) { AllisonOS.ipsy.dress(hwx.dataset.hwx === 'on'); el.querySelectorAll('[data-hwx]').forEach(b => b.setAttribute('aria-pressed', String(b === hwx))); }
-      const hl = ev.target.closest('[data-hl]'); if (hl && window.aosHomeTab) { aosHomeTab.layout(hl.dataset.hl); el.querySelectorAll('[data-hl]').forEach(b => b.setAttribute('aria-pressed', String(b === hl))); }
-      const ti = ev.target.closest('[data-ti]'); if (ti) { try { localStorage.setItem('aos.tron.intro', ti.dataset.ti); } catch {} el.querySelectorAll('[data-ti]').forEach(b => b.setAttribute('aria-pressed', String(b === ti))); }
+      // a choice (S.choice): Light or dark, Home layout, a look's intro
+      const seg = ev.target.closest('#fLook .st-seg'), v = seg && S.pick(ev);
+      if (v != null && seg.id === 'theme') { W.theme.set(v); $('lookSub').textContent = looksLine(); }
+      if (v != null && seg.id === 'homeLayout' && window.aosHomeTab) aosHomeTab.layout(v);
+      if (v != null && INTRO_KEY[seg.id]) { try { localStorage.setItem(INTRO_KEY[seg.id], v); } catch {} }
+      const hwx = ev.target.closest('#helperWx'); if (hwx && AllisonOS.ipsy && AllisonOS.ipsy.dress) AllisonOS.ipsy.dress(S.flip(hwx));
       if (ev.target.closest('[data-tiplay]') && window.aosTronIntro) aosTronIntro.show({ force: true });
-      const vi = ev.target.closest('[data-vi]'); if (vi) { try { localStorage.setItem('aos.vintage.intro', vi.dataset.vi); } catch {} el.querySelectorAll('[data-vi]').forEach(b => b.setAttribute('aria-pressed', String(b === vi))); }
       if (ev.target.closest('[data-viplay]') && window.aosVintageIntro) aosVintageIntro.show({ force: true });
-      const gi = ev.target.closest('[data-gi]'); if (gi) { try { localStorage.setItem('aos.glass.intro', gi.dataset.gi); } catch {} el.querySelectorAll('[data-gi]').forEach(b => b.setAttribute('aria-pressed', String(b === gi))); }
       if (ev.target.closest('[data-giplay]') && window.aosGlassIntro) aosGlassIntro.show({ force: true });
-      const lyi = ev.target.closest('[data-li]'); if (lyi) { try { localStorage.setItem('aos.layers.intro', lyi.dataset.li); } catch {} el.querySelectorAll('[data-li]').forEach(b => b.setAttribute('aria-pressed', String(b === lyi))); }
       if (ev.target.closest('[data-liplay]') && window.aosLayersIntro) aosLayersIntro.show({ force: true });
       const lk = ev.target.closest('[data-look]');
       if (lk) Promise.resolve(window.aosHomeTab && aosHomeTab.everyLook ? aosHomeTab.everyLook(lk.dataset.look) : aosLook.set(lk.dataset.look, { apps: D.APPS }))
         .then(() => { el.querySelector('#looks').innerHTML = lookOpts(); $('lookSub').textContent = looksLine(); });
-      if (t) $('lookSub').textContent = looksLine();
       if (ev.target.closest('[data-replay]')) W.play();
       if (ev.target.closest('[data-setup]')) setupPage(0);
       onPlanTap(ev);
@@ -726,23 +741,22 @@
     let on = false, sub = null;
     if (pushOK() && Notification.permission === 'granted') { try { sub = (await thisPhone()).sub; on = !!sub; } catch {} }
     if (!$('nBox')) return;
-    let html;
-    if (!pushOK()) html = `<p>${iphone && !standalone ? 'Add aOS to your Home Screen to turn these on.' : 'This browser can\'t show notifications from aOS.'}</p>`;
-    else if (Notification.permission === 'denied') html = `<p>Blocked: allow them in ${iphone ? 'Settings → Notifications → aOS' : 'this browser\'s site settings'}.</p>`;
-    else if (on) html = '<p>On: you hear when aOS is updated, and when the family has news.</p><button type="button" class="soft" id="nOff">Turn off</button>';
-    else html = '<p>Hear when aOS is updated, and when the family has news.</p><button type="button" class="go" id="nOn">Turn on notifications</button>';
+    const S = AllisonOS.settings;
+    const html = S.section('', !pushOK() ? S.info({ title: 'Notifications', sub: iphone && !standalone ? 'Add aOS to your Home Screen to turn these on.' : 'This browser can’t show notifications from aOS.' })
+      : Notification.permission === 'denied' ? S.info({ title: 'Notifications', sub: `Blocked: allow them in ${iphone ? 'Settings → Notifications → aOS' : 'this browser’s site settings'}.` })
+      : S.toggle({ id: 'nSw', title: 'Notifications', sub: 'Hear when aOS is updated, and when the family has news.', on }));
     box.innerHTML = `<div>${html}<div class="err" id="nMsg"></div></div>`;
     if ($('nSub')) $('nSub').textContent = !pushOK() ? 'Not on this phone' : Notification.permission === 'denied' ? 'Blocked' : on ? 'On' : 'Off';   // on its fold, under Account
     if (msg) { const m = $('nMsg'); m.style.color = msg.err ? '' : 'var(--muted)'; m.textContent = msg.t; }
-    if ($('nOn')) $('nOn').onclick = turnOn;
-    if ($('nOff')) $('nOff').onclick = async () => {
-      busy($('nOff'), true);
-      try { const { sub: s } = await thisPhone(); if (s) { const ep = s.endpoint; await s.unsubscribe(); await ACC.call('push/unsubscribe', { endpoint: ep }); } paintNotify({ t: 'Off for this phone.' }); }
-      catch (e) { paintNotify({ err: 1, t: why(e) }); }
-    };
+    if ($('nSw')) $('nSw').onclick = () => (on ? turnOff() : turnOn());
+  }
+  async function turnOff() {
+    busy($('nSw'), true); $('nSw').setAttribute('aria-checked', 'false');
+    try { const { sub: s } = await thisPhone(); if (s) { const ep = s.endpoint; await s.unsubscribe(); await ACC.call('push/unsubscribe', { endpoint: ep }); } paintNotify({ t: 'Off for this phone.' }); }
+    catch (e) { paintNotify({ err: 1, t: why(e) }); }
   }
   async function turnOn() {
-    busy($('nOn'), true);
+    busy($('nSw'), true); $('nSw').setAttribute('aria-checked', 'true');
     try {
       const perm = await Notification.requestPermission();   // from the tap
       if (perm !== 'granted') return paintNotify({ err: 1, t: perm === 'denied' ? 'Blocked. You can allow it in Settings.' : 'Not turned on.' });

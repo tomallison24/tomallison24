@@ -525,13 +525,13 @@
     keepBarInPlace();
   }
 
-  // ---- Settings: the design, Vintage or Standard (Sea glass), at once and just on this phone ----
+  // ---- Settings, as in every app (../home/settings.js): Design, at once and just on this phone ----
   // ../home/design.js draws the rows (the same in every app) and keeps the choice; nothing to save.
   const setWrap = $('set-sheet'), setSheetEl = setWrap.querySelector('.sheet'), setBody = $('set-body'), setBtn = $('setBtn');
   let setOpen = false, setReturn = null;
   if (window.aosDesign) {
-    setBody.innerHTML = '<div class="sect"><h3>Design</h3><div class="card" id="set-design">' + aosDesign.picker() + '</div>'
-      + '<p class="sheet-note">Changes how News looks on this phone.</p></div>';
+    const S = AllisonOS.settings;
+    setBody.innerHTML = S.section('Design', S.raw(aosDesign.picker(), { id: 'set-design' }));
     aosDesign.bind(setBody);
   } else setBtn.hidden = true;
 

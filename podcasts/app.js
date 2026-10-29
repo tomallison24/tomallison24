@@ -883,7 +883,7 @@
     renderTagbar();
   }
   const reslide = () => {
-    slideChips($('libView'), 'lib', {jump:true}); if (st.lib === 'new') slideChips($('libBody'), 'new', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true}); slideOpts(true);
+    slideChips($('libView'), 'lib', {jump:true}); if (st.lib === 'new') slideChips($('libBody'), 'new', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true});
   };
   window.addEventListener('resize', reslide);
   window.addEventListener('aos:design', () => requestAnimationFrame(reslide));   // Futura and the system font are different widths
@@ -1437,37 +1437,46 @@
   // =====================================================================
   // SETTINGS, IMPORT AND EXPORT
   // =====================================================================
+  // Settings, as in every app (../home/settings.js): Design · Playback · Discover · Your data
   function renderSettings(){
-    const opts = (id, list, val, set) => {
-      $(id).innerHTML = list.map(([v, label]) => '<button class="opt" type="button" role="radio" data-v="' + esc(v) + '" aria-checked="' + (String(v) === String(val)) + '">' + esc(label) + '</button>').join('');
-      $(id).onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; set(b.dataset.v); save(); renderSettings(); if (cur) { renderMini(); if (!$('np').hidden) renderNP(); } };
-    };
-    opts('setBack', [[10, '10 sec'], [15, '15 sec'], [30, '30 sec']], S.set.back, v => { S.set.back = +v; });
-    opts('setFwd', [[15, '15 sec'], [30, '30 sec'], [45, '45 sec'], [60, '60 sec']], S.set.fwd, v => { S.set.fwd = +v; });
-    opts('setAuto', [['1', 'Play next in Up Next'], ['0', 'Stop']], S.set.auto ? '1' : '0', v => { S.set.auto = v === '1'; });
-    opts('setCc', Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), S.set.cc, v => { S.set.cc = v; S.set.ccChosen = true; st.top = null; });
-    $('setAi').setAttribute('aria-checked', String(!!S.set.ai));
-    slideOpts();
+    const T = AllisonOS.settings, secs = n => [n, n + ' sec'];
+    $('setBody').innerHTML = (window.aosDesign ? T.section('Design', T.raw(aosDesign.picker(), {id:'setDesign'})) : '')
+      + T.section('Playback', [
+        T.choice({id:'setBack', title:'Skip back', options:[10, 15, 30].map(secs), value:S.set.back}),
+        T.select({id:'setFwd', title:'Skip forward', options:[15, 30, 45, 60].map(secs), value:S.set.fwd}),
+        T.toggle({id:'setAuto', title:'Play the next episode', sub:'Plays what’s next in Up Next when an episode ends.', on:!!S.set.auto}),
+      ])
+      + T.section('Discover', T.select({id:'setCc', title:'Top shows from', options:Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), value:S.set.cc}))
+      + T.section('Ipsy', T.toggle({id:'setAi', title:'Ipsy tags your shows', sub:'Ipsy tags each show you follow; off, nothing in Podcasts asks Claude.', on:!!S.set.ai}))
+      + T.section('Your data', [
+        T.action({id:'setExport', icon:'upload', title:'Back up everything', sub:'Your shows as an OPML file.'}),
+        T.action({id:'setImport', icon:'download', title:'Import a backup', sub:'From an OPML file.'}),
+      ]);
+    if (window.aosDesign) aosDesign.bind($('setDesign'));
   }
-  // AI: off, nothing in Podcasts asks Claude (the tags it has stay, and you change them yourself); on again, Ipsy tags the rest.
-  $('setAi').onclick = () => {
-    S.set.ai = !S.set.ai; save(); renderSettings(); render();
-    if (S.set.ai) { tagOff = false; tagSoon(); }
-  };
-  // Each choice's thumb; only once the sheet is open, as a hidden one can't be measured.
-  const slideOpts = jump => ['setBack', 'setFwd', 'setAuto', 'setCc'].forEach(id => slide($(id), $(id).querySelector('[aria-checked="true"]'), 'opt:' + id, {jump}));
-  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideOpts(); };
-  // Design, the first section: Vintage or Standard, at once and just on this phone (../home/design.js); not part of the other settings
-  if (window.aosDesign) {
-    $('setBack').parentElement.insertAdjacentHTML('afterbegin', '<p class="label">Design</p><div class="rgroup glass" id="setDesign">' + aosDesign.picker() + '</div>');
-    aosDesign.bind($('setDesign'));
-  }
-  $('setExport').onclick = () => {
+  // a setting changed: kept, and the player shows it
+  const setChanged = () => { save(); renderSettings(); if (cur) { renderMini(); if (!$('np').hidden) renderNP(); } };
+  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); };
+  $('setBody').addEventListener('click', e => {
+    const back = AllisonOS.settings.pick(e);
+    if (back != null && e.target.closest('#setBack')) { S.set.back = +back; setChanged(); return; }
+    const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
+    if (b.id === 'setAuto') { S.set.auto = !S.set.auto; setChanged(); }
+    // Ipsy: off, nothing in Podcasts asks Claude (the tags it has stay, and you change them yourself); on again, Ipsy tags the rest.
+    else if (b.id === 'setAi') { S.set.ai = !S.set.ai; save(); renderSettings(); render(); if (S.set.ai) { tagOff = false; tagSoon(); } }
+    else if (b.id === 'setExport') exportShows();
+    else if (b.id === 'setImport') $('opmlFile').click();
+  });
+  $('setBody').addEventListener('change', e => {
+    if (e.target.id === 'setFwd') { S.set.fwd = +e.target.value; setChanged(); }
+    else if (e.target.id === 'setCc') { S.set.cc = e.target.value; S.set.ccChosen = true; st.top = null; setChanged(); }
+  });
+  function exportShows(){
     if (!S.follows.length) { toast('You’re not following any shows yet.'); return; }
     const body = S.follows.map(f => '    <outline type="rss" text="' + esc(f.title) + '" title="' + esc(f.title) + '" xmlUrl="' + esc(f.feed) + '"/>').join('\n');
     const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n  <head><title>Podcasts</title><dateCreated>' + new Date().toUTCString() + '</dateCreated></head>\n  <body>\n' + body + '\n  </body>\n</opml>\n';
     saveFile('Podcasts.opml', xml, 'text/x-opml');
-  };
+  }
   async function saveFile(name, text, type){
     const file = new File([text], name, {type});
     if (navigator.canShare && navigator.canShare({files:[file]})) {
@@ -1478,7 +1487,6 @@
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
   }
-  $('setImport').onclick = () => $('opmlFile').click();
   $('opmlFile').onchange = async () => {
     const file = $('opmlFile').files[0];
     $('opmlFile').value = '';

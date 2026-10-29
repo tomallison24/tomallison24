@@ -66,10 +66,13 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
   const names = await p.locator('#looks .dopt b').allTextContents();
-  if (names.join() !== 'Vintage,Sea glass,Layers,Tron Special Edition') pr.push('the picker offers ' + names.join());
+  if (names.join() !== 'Vintage,Standard,Layers,Tron Special Edition') pr.push('the picker offers ' + names.join());
+  // the same names and words as every app's Settings > Design (home/design.js)
+  const notes = await p.locator('#looks .dopt small').allTextContents();
+  if (notes.join('|') !== 'Mid-century: cream and walnut, mustard, teal and orange|Sea glass: frosted glass in the AllisonOS colors|A still sky by the time of day, frosted glass over it|Light cycles: red light on a black grid, as in Tron: Ares') pr.push('the picker describes them as ' + notes.join('|'));
   if (await selected(p) !== 'vintage') pr.push('Vintage is not the one picked: ' + await selected(p));
   if (await p.locator('#looks [data-look="grid"] .se').evaluate(e => getComputedStyle(e).animationName) !== 'aosSeShine') pr.push('Tron\'s Special Edition badge does not animate');
-  report('aOS opens in Vintage; Appearance > Look offers Vintage, Sea glass, Layers and Tron Special Edition (its badge animated), Vintage picked', pr); await ctx.close();
+  report('aOS opens in Vintage; Appearance > Look offers Vintage, Standard, Layers and Tron Special Edition, in every app\'s words (its badge animated), Vintage picked', pr); await ctx.close();
 }
 
 // 2. Sea glass at once, kept over a reload, with no flash of Vintage; Vintage again
@@ -115,7 +118,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
   const names = await p.locator('#aos-welcome .c-look b').allTextContents();
-  if (names.join() !== 'Vintage,Sea glass,Layers,Tron Special Edition') pr.push('the install step offers ' + names.join());
+  if (names.join() !== 'Vintage,Standard,Layers,Tron Special Edition') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());
@@ -274,7 +277,7 @@ for (const scheme of ['light', 'dark']) {
   // played again from Account: the phone won't start the sound by itself, so it asks; a tap plays it; Skip ends it
   await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   await openLook(p);
-  if (!(await p.isVisible('#tronIntroPick [data-ti="sound"][aria-pressed="true"]'))) pr.push('Account has no Tron intro setting, Sound picked');
+  if (!(await p.isVisible('#tronIntroPick [data-value="sound"][aria-checked="true"]'))) pr.push('Account has no Tron intro setting, Sound picked');
   if (!(await p.isVisible('.tronnote'))) pr.push('Account does not say Tron is always dark');
   await p.click('[data-tiplay]');   // a tap: its sound plays at once
   await p.waitForSelector('#tronIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
@@ -284,7 +287,7 @@ for (const scheme of ['light', 'dark']) {
     await p.waitForFunction(() => !document.getElementById('tronIntro'), null, { timeout: 2000 }).catch(() => pr.push('Skip did not end the intro'));
   } else pr.push('the intro did not hold on while its sound played');
   // Off: a new launch opens straight to aOS
-  await p.click('[data-ti="off"]');
+  await p.click('#tronIntroPick [data-value="off"]');
   const p2 = await ctx.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
   if (await p2.evaluate(() => !!document.getElementById('tronIntro'))) pr.push('the intro played with Off picked');
   // an app in Tron: dark, its trail showing (its #app wrapper clear)
@@ -457,13 +460,13 @@ for (const scheme of ['light', 'dark']) {
   // Account, in Vintage: Sound picked, Play plays it (with its sound), Skip ends it, Off stops it on the next launch
   await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   await openLook(p);
-  if (!(await p.isVisible('#vintageIntroPick [data-vi="sound"][aria-pressed="true"]'))) pr.push('Account has no Sunrise intro setting, Sound picked');
+  if (!(await p.isVisible('#vintageIntroPick [data-value="sound"][aria-checked="true"]'))) pr.push('Account has no Sunrise intro setting, Sound picked');
   if (await p.isVisible('#tronIntroPick')) pr.push('Account shows the Tron intro setting in Vintage');
   await p.click('[data-viplay]');
   await p.waitForSelector('#vintageIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
   await p.click('#vintageIntro:not(.out) .vi-skip', { timeout: 3000 }).catch(() => pr.push('no Skip on the intro'));
   await p.waitForFunction(() => !document.getElementById('vintageIntro'), null, { timeout: 2000 }).catch(() => pr.push('Skip did not end the intro'));
-  await p.click('[data-vi="off"]');
+  await p.click('#vintageIntroPick [data-value="off"]');
   if (await p.evaluate(() => localStorage.getItem('aos.vintage.intro')) !== 'off') pr.push('Off was not kept');
   const p2 = await c.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
   if (await p2.evaluate(() => !!document.getElementById('vintageIntro'))) pr.push('the intro played with Off picked');
@@ -523,13 +526,13 @@ for (const scheme of ['light', 'dark']) {
   // Account, in Sea glass: Sound picked, Play plays it (with its sound), Skip ends it, Off stops it on the next launch
   await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   await openLook(p);
-  if (!(await p.isVisible('#glassIntroPick [data-gi="sound"][aria-pressed="true"]'))) pr.push('Account has no Tide intro setting, Sound picked');
+  if (!(await p.isVisible('#glassIntroPick [data-value="sound"][aria-checked="true"]'))) pr.push('Account has no Tide intro setting, Sound picked');
   if (await p.isVisible('#vintageIntroPick') || await p.isVisible('#tronIntroPick')) pr.push('Account shows another look\'s intro setting in Sea glass');
   await p.click('[data-giplay]');
   await p.waitForSelector('#glassIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
   await p.click('#glassIntro:not(.out) .gi-skip', { timeout: 3000 }).catch(() => pr.push('no Skip on the intro'));
   await p.waitForFunction(() => !document.getElementById('glassIntro'), null, { timeout: 2000 }).catch(() => pr.push('Skip did not end the intro'));
-  await p.click('[data-gi="off"]');
+  await p.click('#glassIntroPick [data-value="off"]');
   if (await p.evaluate(() => localStorage.getItem('aos.glass.intro')) !== 'off') pr.push('Off was not kept');
   const p2 = await c.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
   if (await p2.evaluate(() => !!document.getElementById('glassIntro'))) pr.push('the intro played with Off picked');
@@ -588,13 +591,13 @@ for (const scheme of ['light', 'dark']) {
   // Account, in Layers: Sound picked, Play plays it (with its sound), Skip ends it, Off stops it on the next launch
   await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   await openLook(p);
-  if (!(await p.isVisible('#layersIntroPick [data-li="sound"][aria-pressed="true"]'))) pr.push('Account has no Skylight intro setting, Sound picked');
+  if (!(await p.isVisible('#layersIntroPick [data-value="sound"][aria-checked="true"]'))) pr.push('Account has no Skylight intro setting, Sound picked');
   if (await p.isVisible('#vintageIntroPick') || await p.isVisible('#tronIntroPick') || await p.isVisible('#glassIntroPick')) pr.push('Account shows another look\'s intro setting in Layers');
   await p.click('[data-liplay]');
   await p.waitForSelector('#layersIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
   await p.click('#layersIntro:not(.out) .li-skip', { timeout: 3000 }).catch(() => pr.push('no Skip on the intro'));
   await p.waitForFunction(() => !document.getElementById('layersIntro'), null, { timeout: 2000 }).catch(() => pr.push('Skip did not end the intro'));
-  await p.click('[data-li="off"]');
+  await p.click('#layersIntroPick [data-value="off"]');
   if (await p.evaluate(() => localStorage.getItem('aos.layers.intro')) !== 'off') pr.push('Off was not kept');
   const p2 = await c.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
   if (await p2.evaluate(() => !!document.getElementById('layersIntro'))) pr.push('the intro played with Off picked');

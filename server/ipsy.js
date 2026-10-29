@@ -112,7 +112,7 @@ export const SETTING_IDS = ['theme', 'look', 'favorites', 'calendar.week_start',
   ...['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather', 'meals', 'orders', 'news'].map(l => 'calendar.show_' + l), 'calendar.new_event_length', 'calendar.new_event_alert',
   'clock.24_hour', 'clock.seconds', 'clock.face', 'weather.units', 'podcasts.skip_back', 'podcasts.skip_forward', 'podcasts.when_episode_ends', 'fitness.step_goal', 'fitness.move_goal',
   ...['pickup', 'food', 'digital', 'other'].map(k => 'orders.count_' + k), ...['orders', 'travel', 'calendar'].map(a => 'ipsy.gmail_' + a),
-  'orders.ipsy_keeps_orders_up_to_date', 'travel.ipsy_fills_in', 'travel.ipsy_checks_by_itself', ...SET_APPS.map(id => 'design_' + id), 'helper.character', 'helper.name', 'helper.dress_for_weather'];
+  'orders.ipsy_keeps_orders_up_to_date', 'travel.ipsy_fills_in', ...SET_APPS.map(id => 'design_' + id), 'helper.character', 'helper.name', 'helper.dress_for_weather'];
 export const SETTING_PLACES = ['aos.helper', 'aos.appearance', 'aos.notifications', 'aos.subscription', 'aos.updates', 'aos.lost_phone', 'aos.replacing_phone', 'aos.owner_tools', 'aos.account', ...SET_APPS];
 export const SETTINGS_TOOLS = [
   { name: 'get_settings', description: 'The settings you can change for the person, in aOS and every app: each one\'s id, what it is, its value now, the values it takes, and whether it asks the person first. Look here before changing one.',

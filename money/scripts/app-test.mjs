@@ -340,7 +340,7 @@ await test('a card’s rate in Settings changes what it earned', async () => {
   await p.click('#setBtn');
   await p.waitForSelector('#setSheet:not([hidden])');
   const s = await p.locator('#setBody').innerText();
-  assert.match(s, /You read Monarch’s emails for the family/); assert.match(s, /Gmail connected/); assert.match(s, /Card rewards/i);
+  assert.match(s, /You read Monarch’s emails for the family/); assert.match(s, /Gmail\n.*, read-only\./); assert.match(s, /Card rewards/i);
   await snap(p, 'settings');
   const base = p.locator('#setBody input[data-rule="base"][data-key="rocket credit card"]');
   assert.equal(await base.inputValue(), '3');
@@ -594,7 +594,7 @@ await test('Mail’s Gmail sign-in is used first: Monarch’s emails read with i
   assert.equal(ls.mail, mail, 'Mail’s token as it was');
   await M.p.click('#setBtn');
   const t = await M.p.locator('#setBody').innerText();
-  assert.match(t, /Gmail connected through Mail/); assert.doesNotMatch(t, /Disconnect Gmail/, 'nothing of Money’s own to disconnect');
+  assert.match(t, /Gmail\nMail’s sign-in, read-only\./); assert.doesNotMatch(t, /Disconnect Gmail/, 'nothing of Money’s own to disconnect');
   assert.deepEqual(M.errs, []);
   await M.ctx.close();
 });
@@ -620,7 +620,7 @@ await test('Mail’s token refused by Gmail: Money’s own has its turn, and Mai
   const ls = await M.p.evaluate(() => ({ own: JSON.parse(localStorage.getItem('money.token')).t, mail: localStorage.getItem('mail.token') }));
   assert.equal(ls.own, 'fake-token', 'Money’s own kept'); assert.equal(ls.mail, mail, 'Mail’s token as it was: Mail’s to renew');
   await M.p.click('#setBtn');
-  assert.match(await M.p.locator('#setBody').innerText(), /Gmail connected(?! through)[\s\S]*Disconnect Gmail/);
+  assert.match(await M.p.locator('#setBody').innerText(), /Gmail\n(?!Mail’s sign-in).*, read-only\.[\s\S]*Disconnect Gmail/);
   assert.deepEqual(M.errs, []);
   await M.ctx.close();
 });
