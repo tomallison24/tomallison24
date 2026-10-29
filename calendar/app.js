@@ -1458,68 +1458,92 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Settings
   // ---------------------------------------------------------------------
-  function renderSettings() {
-    const status = st.api === 'ok' ? { cls: 'ok', text: '<b>Connected</b> to the ' + esc(st.calendar && st.calendar.name || 'Family') + ' calendar in iCloud.' + (st.lastRefresh ? ' Last checked ' + esc(ago(st.lastRefresh)) + '.' : '') }
-      : st.api === 'checking' ? { cls: '', text: 'Checking…' }
-      : st.api === 'off' ? { cls: 'bad', text: esc(offWords()) }
-      : st.api === 'unconfigured' ? { cls: 'bad', text: 'Not set up yet: add the ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD secrets, then run the News workflow (Calendar README, “Set up”).' }
-      : st.api === 'offline' ? { cls: 'bad', text: 'Offline. Showing the events last seen' + (st.lastRefresh ? ', ' + esc(ago(st.lastRefresh)) : '') + '.' }
-      : { cls: 'bad', text: esc(errText({ code: st.apiError })) + (st.calendars && st.calendars.length ? ' Calendars there: ' + esc(st.calendars.join(', ')) + '.' : '') };
-    const sw = (id, on, disabled) => '<button class="switch" type="button" role="switch" data-layer="' + id + '" aria-checked="' + on + '"' + (disabled ? ' disabled' : '') + '></button>';
-    const seg = (id, opts, val) => '<div class="seg small ' + (opts.length === 2 ? 'two' : 'three') + '" role="radiogroup">' + opts.map(([v, l]) => '<button type="button" data-set="' + id + '" data-val="' + esc(v) + '" aria-pressed="' + (String(val) === String(v)) + '">' + esc(l) + '</button>').join('') + '</div>';
-    const mailNote = !settings.layers.mail ? '' : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, to show it here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : '');
-    const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
-    const wxNote = !settings.layers.weather ? '' : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
-    $('stBody').innerHTML = ''
-      + '<p class="label">Design</p><div class="rgroup glass">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<p class="label">iCloud</p><div class="rgroup glass"><div class="status ' + status.cls + '"><i></i><span>' + status.text + '</span></div>'
-      + '<button class="rowbtn" type="button" id="stRefresh"><span class="ic">' + ICON.refresh + '</span><span>Check for changes now</span></button>'
-      + (st.api === 'error' || st.api === 'ok' ? '<button class="rowbtn" type="button" id="stForget"><span class="ic">' + ICON.cal + '</span><span>Look up the calendar again<span class="sub">If the Family calendar was renamed or moved</span></span></button>' : '') + '</div>'
-      + '<p class="label">Calendars</p><div class="rgroup glass">'
-      + '<div class="lrow" id="stFamily" style="--c:' + esc(calColor()) + '"><i></i><span class="l"><span translate="no">' + esc(st.calendar && st.calendar.name || 'Family') + '</span><small>iCloud, shared with the family</small></span>' + sw('family', true, true) + '</div>'
-      + ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'news', 'drinks', 'weather'].map(k => { const key = { holiday: 'holidays', note: 'notes' }[k] || k; const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k); return '<div class="lrow" style="--c:' + LAYER[k].color + '"><i></i><span class="l">' + esc(LAYER[k].name) + '<small>' + esc(note) + '</small></span>' + sw(key, settings.layers[key]) + '</div>'; }).join('')
-      + '</div>'
-      + '<p class="label">Display</p><div class="rgroup glass">'
-      + '<div class="frow"><span class="l">Week starts on</span>' + seg('weekStart', [[0, 'Sunday'], [1, 'Monday']], settings.weekStart) + '</div>'
-      + '<div class="frow"><span class="l">Time</span>' + seg('clock', [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], settings.clock) + '</div>'
-      + '<div class="frow"><span class="l">Temperature</span>' + seg('units', [['auto', 'Auto'], ['f', '°F'], ['c', '°C']], settings.units) + '</div>'
-      + '<div class="frow"><label for="stDayStart">Day view opens at</label><select id="stDayStart">' + opt(Array.from({ length: 24 }, (_, h) => [h, fmtHour(h)]), settings.dayStart) + '</select></div>'
-      + '</div>'
-      + '<p class="label">New events</p><div class="rgroup glass">'
-      + '<div class="frow"><label for="stDur">Length</label><select id="stDur">' + opt(DUR, settings.duration) + '</select></div>'
-      + '<div class="frow"><label for="stAlert">Alert</label><select id="stAlert">' + opt(ALERTS_TIMED, settings.alertTimed) + '</select></div>'
-      + '<div class="frow"><label for="stAlertAD">All-day alert</label><select id="stAlertAD">' + opt(ALERTS_ALLDAY, settings.alertAllDay) + '</select></div>'
-      + '</div>';
-    $('stRefresh').onclick = () => { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadWeather(true); }); };
-    const fg = $('stForget'); if (fg) fg.onclick = async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); };
-    slideSegs();
-    $('stDayStart').onchange = e => { settings.dayStart = +e.target.value; saveSettings(); };
-    $('stDur').onchange = e => { settings.duration = +e.target.value; saveSettings(); };
-    $('stAlert').onchange = e => { settings.alertTimed = e.target.value; saveSettings(); };
-    $('stAlertAD').onchange = e => { settings.alertAllDay = e.target.value; saveSettings(); };
+  // Settings, as in every app (../home/settings.js): Design · Calendars · Display · New events · Connected accounts
+  // a line under a row is one sentence, ending with a full stop
+  const sentence = s => (s && !/[.…!?]$/.test(s) ? s + '.' : s || '');
+  const oneSentence = s => sentence(String(s || '').replace(/\.\s+([A-Z])/g, (_, c) => '; ' + c.toLowerCase()));
+  function icloudLine() {
+    if (st.api === 'ok') return 'Connected to the ' + (st.calendar && st.calendar.name || 'Family') + ' calendar in iCloud.';
+    if (st.api === 'checking') return 'Checking…';
+    // the whole of why is in the notice on the page (offWords)
+    if (st.api === 'off') return /github\.io$/i.test(location.hostname) ? 'This is the GitHub Pages copy of the site, which has no iCloud connection.' : API_ERRORS.unavailable;
+    if (st.api === 'unconfigured') return 'Not set up yet: add the ICLOUD_APPLE_ID and ICLOUD_APP_PASSWORD secrets, then run the News workflow (Calendar README, “Set up”).';
+    if (st.api === 'offline') return 'Offline: showing the events last seen' + (st.lastRefresh ? ' ' + ago(st.lastRefresh) : '') + '.';
+    return oneSentence(errText({ code: st.apiError }).replace(/\.$/, '') + (st.calendars && st.calendars.length ? ': calendars there are ' + st.calendars.join(', ') : ''));
   }
+  function renderSettings() {
+    const S = AllisonOS.settings;
+    const mailNote = !settings.layers.mail ? LAYER.mail.sub : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, to show it here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : LAYER.mail.sub);
+    const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
+    const wxNote = !settings.layers.weather ? LAYER.weather.sub : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
+    // each calendar's name with its colour beside it, as on the page
+    const named = (name, color, id) => '<i class="st-dot"' + (id ? ' id="' + id + '"' : '') + ' style="--c:' + esc(color) + '" aria-hidden="true"></i><span translate="no">' + esc(name) + '</span>';
+    const layers = ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'news', 'drinks', 'weather'].map(k => {
+      const key = { holiday: 'holidays', note: 'notes' }[k] || k;
+      const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k);
+      return S.toggle({ html: true, title: named(LAYER[k].name, LAYER[k].color), sub: esc(sentence(note)), on: !!settings.layers[key], data: { layer: key } });
+    });
+    const last = st.lastRefresh;
+    $('stBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'stDesign' })) : '')
+      + S.section('Calendars', [
+        // the Family calendar is always shown: a switch that's on, and can't be turned off
+        S.toggle({ html: true, title: named(st.calendar && st.calendar.name || 'Family', calColor(), 'stFamily'), sub: 'iCloud, shared with the family.', on: true, disabled: true, data: { layer: 'family' } }),
+        ...layers,
+      ])
+      + S.section('Display', [
+        S.choice({ id: 'stWeekStart', title: 'Week starts on', options: [[0, 'Sunday'], [1, 'Monday']], value: settings.weekStart, data: { set: 'weekStart' } }),
+        S.choice({ id: 'stClock', title: 'Time', options: [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], value: settings.clock, data: { set: 'clock' } }),
+        S.choice({ id: 'stUnits', title: 'Temperature', options: [['auto', 'Auto'], ['f', '°F'], ['c', '°C']], value: settings.units, data: { set: 'units' } }),
+        S.select({ id: 'stDayStart', title: 'Day view opens at', options: Array.from({ length: 24 }, (_, h) => [h, fmtHour(h)]), value: settings.dayStart }),
+      ])
+      + S.section('New events', [
+        S.select({ id: 'stDur', title: 'Length', options: DUR, value: settings.duration }),
+        S.select({ id: 'stAlert', title: 'Alert', options: ALERTS_TIMED, value: settings.alertTimed }),
+        S.select({ id: 'stAlertAD', title: 'All-day alert', options: ALERTS_ALLDAY, value: settings.alertAllDay }),
+      ])
+      + S.section('Connected accounts', [
+        S.info({ id: 'stICloud', title: 'iCloud', sub: icloudLine() }),
+        S.action({ id: 'stRefresh', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
+        st.api === 'error' || st.api === 'ok' ? S.action({ id: 'stForget', icon: 'link', title: 'Look up the calendar again', sub: 'If the Family calendar was renamed or moved.' }) : '',
+      ]);
+  }
+  if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: at once (../home/design.js)
+  // one listener for the sheet's taps, one for its selects
   $('stBody').addEventListener('click', e => {
-    const sw = e.target.closest('[data-layer]');
-    if (sw && !sw.disabled) {
-      const k = sw.dataset.layer; settings.layers[k] = !settings.layers[k]; saveSettings();
+    const S = AllisonOS.settings;
+    const v = S.pick(e);
+    if (v != null) {
+      const k = e.target.closest('[data-set]').dataset.set;
+      settings[k] = k === 'weekStart' ? +v : v; if (k === 'weekStart') settings.weekStartPicked = true;
+      saveSettings(); render(); renderSettings(); return;
+    }
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.layer) {
+      const k = b.dataset.layer; settings.layers[k] = !settings.layers[k]; saveSettings();
       if (LAYER_APPS.includes(k) && settings.layers[k]) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => renderSettings());
       if (k === 'drinks') { if (settings.layers.drinks) loadDrinks(true).then(() => renderSettings()); else st.drinks = null; }
       if (k === 'weather' && settings.layers.weather) loadWeather(true);
       rebuild(); render(); renderSettings(); return;
     }
-    const b = e.target.closest('[data-set]');
-    if (b) { const k = b.dataset.set; settings[k] = k === 'weekStart' ? +b.dataset.val : b.dataset.val; if (k === 'weekStart') settings.weekStartPicked = true; saveSettings(); render(); renderSettings(); }
+    if (b.id === 'stRefresh') { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadWeather(true); }); }
+    else if (b.id === 'stForget') (async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); })();
   });
-  // measured a frame later, once the page's words are in
-  const slideSegs = () => $('stBody').querySelectorAll('.seg').forEach(g => slide(g, g.querySelector('[aria-pressed="true"]'), 'seg:' + g.querySelector('[data-set]').dataset.set));   // at once; in Russian, ../home/slide.js places them again once the words are swapped (aos:words)
-  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); slideSegs(); };
-  if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: Vintage or Standard, at once (../home/design.js)
+  $('stBody').addEventListener('change', e => {
+    const id = e.target.id, v = e.target.value;
+    if (id === 'stDayStart') settings.dayStart = +v;
+    else if (id === 'stDur') settings.duration = +v;
+    else if (id === 'stAlert') settings.alertTimed = v;
+    else if (id === 'stAlertAD') settings.alertAllDay = v;
+    else return;
+    saveSettings();
+  });
+  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); };
   // A new design: the Family calendar's and Notes' colours follow it; Futura and the system font are
-  // different widths, so the sliding thumbs are measured again.
+  // different widths, so the view bar's sliding thumb is measured again.
   addEventListener('aos:design', () => {
     rebuild(); render();
     const fam = $('stFamily'); if (fam) fam.style.setProperty('--c', calColor());
-    requestAnimationFrame(() => { slideTabs(true); if (!$('setSheet').hidden) slideSegs(); });
+    requestAnimationFrame(() => slideTabs(true));
   });
   const ago = t => { const m = Math.round((Date.now() - t) / MIN); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
 
