@@ -136,6 +136,7 @@ jobs:
           - group: standalone
             tests: |
               aOS/scripts/standalone-test.mjs
+              aOS/scripts/design-check.mjs .
               aOS/scripts/today-test.mjs
               aOS/scripts/names-test.mjs
               home/scripts/ipsy-weather-test.mjs

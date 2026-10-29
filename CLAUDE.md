@@ -62,6 +62,15 @@ notice, add a line for it:
   (not in aOS's What's new); the apps keep showing the last version that wasn't
   silent, with no update screens.
 
+## The design charter
+
+`DESIGN.md` is the charter every app follows, new or old: the looks, sheets, Settings, controls,
+words, Ipsy, motion, light and dark, accessibility and the shared parts in `home/`, each rule with
+pictures (`docs/design/`, drawn by `node aOS/scripts/design-shots.mjs`). Read it before changing how
+an app looks or works. `node aOS/scripts/design-check.mjs` checks every app against the rules a
+script can (CI runs it in the `standalone` group, on any app's change); it must pass. When a rule
+changes, change `DESIGN.md`, the check and the pictures in the same PR.
+
 ## Adding or changing an app
 
 Follow `.claude/skills/new-aos-app/SKILL.md`: every place an app must be wired
