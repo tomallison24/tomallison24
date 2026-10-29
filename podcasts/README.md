@@ -12,13 +12,15 @@ in a mid-century Vintage design or the same frosted glass as Mail, Notes and New
   Talk, News, Comedy, True Crime, Sport, Education, Kids, Business, Health,
   Society, Other), picked by Ipsy ("Tags", below). On Shows, a pill at the
   bottom, as Home's view picker, says which (**All shows** to start); tap it
-  for a menu, opening upwards, of the tags in use, with how many. A show's page
+  for a menu, opening upwards, of the tags in use, with how many, and then
+  **Top shows** (below), which shows Apple's chart right there in Library. A show's page
   shows its tags; tap them (or **⋯ → Tags**) to change them, or **Let Ipsy
-  Pick** again. **Settings → Ipsy** turns Ipsy's tagging off.
-- **Search** (the round button at the bottom right, as on iOS 26; it, or its ✕, goes back to Library): Apple's
-  **Top shows** chart for your country (the US unless changed in Settings), search by name, or paste a show's
-  RSS feed link. Private and premium feeds (Patreon, Supercast and the like)
-  work too.
+  Pick** again. **Settings → AI helper** turns Ipsy's tagging off.
+- **Search** (the round button at the bottom right, as on iOS 26; it, or its ✕, goes back to Library): it
+  opens empty, ready to type: search by name, or paste a show's RSS feed link. Private and premium feeds
+  (Patreon, Supercast and the like) work too.
+- **Top shows**: Apple's chart for your country (the US unless changed in Settings), picked in the pill at
+  the bottom of Shows; it's only asked for when it's picked.
 - **A show**: artwork, Follow, the description, and its episodes, with
   Unplayed, Video / Audio (when a show has both) and Newest / Oldest first.
   The **⋯** button: Mark All as Played, Share Show (a link that opens it in
@@ -138,7 +140,7 @@ tags yet (25 at a time: id, title, author, Apple's genre and the start of the de
 News) to pick one or two from the list, and keeps only tags from the list, for the shows it was asked
 about. At most 30 calls a person a day (`podcasts:tags:<id>:<day>` in the accounts' KV); over that,
 signed out or with no key, the app stops asking until it's opened again. A show Claude couldn't place is
-**Other**. **Settings → Ipsy** (`S.set.ai`, on to start, kept on the phone) off: nothing in Podcasts asks Claude,
+**Other**. **Settings → AI helper** (`S.set.ai`, on to start, kept on the phone) off: nothing in Podcasts asks Claude,
 the tags you have stay, and **Let Ipsy Pick** goes; on again, Ipsy tags the shows that have none.
 
 A show's tags are `tags` on its entry in `S.follows`, with `tagBy`: `ai`, or `you` once you change them

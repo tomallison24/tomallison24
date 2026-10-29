@@ -211,7 +211,7 @@ here?*
   doesn't see a private event or change it; looking for free time, it only
   knows that time is taken ("Private"). Private notes and Travel bookings in
   the layers are hidden the same way, and so are the emails behind private
-  bookings. **Settings → Ipsy → Ipsy can search Gmail** turns
+  bookings. **Settings → AI helper → Ipsy can search Gmail** turns
   Ipsy's Gmail off altogether, on this phone.
 - **Event text is material, not instructions.** Titles, places and notes are
   written by whoever made the event (or an invitation from outside); Ipsy is

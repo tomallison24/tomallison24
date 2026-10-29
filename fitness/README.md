@@ -243,7 +243,7 @@ Ipsy, the AllisonOS helper you chat with (`../home/ipsy.js`), looks for
 patterns in your own days: "How did I sleep after leg days?", "Is my resting
 heart rate trending down?", "Did I miss meds more on low-sleep days?".
 
-- **Off until you turn it on**: **Settings → Ipsy → Ask Ipsy about your
+- **Off until you turn it on**: **Settings → AI helper → Ask Ipsy about your
   patterns**, just on this phone, and signed in only (it goes through your
   family account). Off, there is no Ipsy button; turning it off also clears its
   chat from the phone. On, it sits just above the bottom row on the left.

@@ -47,7 +47,7 @@ with the details filled in.
   named and dated by them. Its emails are hidden too (the email, its thread,
   and any email that names its confirmation or flight number), in Calendar's
   Ipsy as well, and its Family calendar event is marked private. It still syncs
-  and shows as usual, and the family still sees it. **Settings → Ipsy can search Gmail** turns Ipsy's Gmail
+  and shows as usual, and the family still sees it. **Settings → AI helper can search Gmail** turns Ipsy's Gmail
   off altogether, on this phone.
 - **Just me** (on a booking of yours, or **Just me trip** on a trip's page) is
   something else: only you see it. It stays on your phone and in the family's
@@ -484,6 +484,26 @@ flight number and date, nothing about who's flying. The flight board lookup
 (Smart help) sends an airline, two airports, a day and a time, is capped at 30
 a month on a phone, and each answer is kept for an hour. Ipsy's look-ups (above)
 count toward the same two caps.
+
+## Check-in after the drive
+
+On the day you fly in, a trip's timeline puts the hotel's check-in after the
+flight and the car hire, at about when you'll get there: the flight lands, half
+an hour for bags, the car is picked up (if it's later), then the drive to the
+hotel. Never before the hotel's own check-in time; if that is later, it shows
+that. The row shows `~6:05 PM` and "about 25 min drive from the car hire".
+
+The drive comes from the same function (`GET /travel/api/drive`): Photon
+(OpenStreetMap search, as Places uses) finds the car hire desk or the airport
+and the hotel, and OSRM's free demo server works out the drive. No key, no
+cost: OSRM asks for reasonable non-commercial use, at most one request a
+second, and the app named in the User-Agent. Each pair of places is asked once
+(kept 30 days on the server and on the phone), and each person at most 30 a
+day. Until it answers, or if it can't, the app counts 45 minutes; if OSRM is
+down but both places were found, the server estimates from the straight-line
+distance. Sent: the two places' words (the hotel's address), nothing about
+who's travelling. Not checked against the real Photon or OSRM from here (the
+network blocked both); tested with stand-ins (`scripts/api-test.mjs`).
 
 ## The family's Google Sheet
 

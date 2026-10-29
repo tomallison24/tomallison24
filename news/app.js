@@ -525,13 +525,13 @@
     keepBarInPlace();
   }
 
-  // ---- Settings, as in every app (../home/settings.js): Design, at once and just on this phone ----
-  // ../home/design.js draws the rows (the same in every app) and keeps the choice; nothing to save.
+  // ---- Settings, as in every app (../home/settings.js): Design, and Ipsy (Use Claude in News), at once and just on this phone ----
+  // ../home/design.js draws the Design rows (the same in every app) and keeps the choice; nothing to save; settings.js turns Claude.
   const setWrap = $('set-sheet'), setSheetEl = setWrap.querySelector('.sheet'), setBody = $('set-body'), setBtn = $('setBtn');
   let setOpen = false, setReturn = null;
   if (window.aosDesign) {
     const S = AllisonOS.settings;
-    setBody.innerHTML = S.section('Design', S.raw(aosDesign.picker(), { id: 'set-design' }));
+    setBody.innerHTML = S.section('Design', S.raw(aosDesign.picker(), { id: 'set-design' })) + S.section('AI helper', S.claude('news'));
     aosDesign.bind(setBody);
   } else setBtn.hidden = true;
 
@@ -609,6 +609,7 @@
   let aiOpen = false, aiRun = 0, ai = null;     // ai: { url, title, source, phase: 'loading' | 'done' | 'error', sum, error, qa: [{ q, a, wait, error }] }
   const AI_SAY = {
     'no-ai': 'Summaries need the owner to add Anthropic’s key first (see News’ README).',
+    'ai-off': 'Claude is turned off for News on this phone (Settings, AI helper), so there are no summaries.',
     'accounts-off': 'Family accounts aren’t switched on yet, so summaries aren’t available.',
     'setup': 'Family accounts aren’t switched on yet, so summaries aren’t available.',
     'signin': 'Sign in with your family account to summarize stories.',

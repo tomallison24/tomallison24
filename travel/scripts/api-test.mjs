@@ -8,12 +8,14 @@
 // server/auth.js and a stand-in for Anthropic's API: its guards (header, accounts, sign-in, key),
 // Sonnet 5.5 with Ipsy's instructions and tools, the phone's conversation passed on exactly as
 // sent, the answer passed back untouched, and the daily count.
+// And drive: Photon and OSRM stubbed, what is sent to each, the 30-day cache, the rough answer when OSRM
+// can't route, and the daily count.
 //
 //   node travel/scripts/api-test.mjs
 import assert from 'assert/strict';
 import { issue, putJSON } from '../../server/auth.js';
 
-const { onRequestGet, onRequestPost, IPSY_MODEL, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, FLIGHTS_DAILY, AI_DAILY } = await import('../../functions/travel/api/[[route]].js');
+const { onRequestGet, onRequestPost, IPSY_MODEL, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, FLIGHTS_DAILY, AI_DAILY, DRIVES_DAILY } = await import('../../functions/travel/api/[[route]].js');
 
 const store = new Map();
 globalThis.caches = { default: {
@@ -316,6 +318,50 @@ await test('ipsy: Anthropic\'s errors come back as short codes; TRAVEL_IPSY_MODE
   await ipsy(body, { tok, env: { ACCOUNTS: db, ...A, TRAVEL_IPSY_MODEL: 'claude-opus-5-5' } });
   assert.equal(asked.at(-1).body.model, 'claude-opus-5-5');
 });
+await test('drive: finds both places with Photon, routes with OSRM, keeps the answer', async () => {
+  const fetch0 = globalThis.fetch, seen = [];
+  const point = { LAX: [-118.4085, 33.9416], hotel: [-118.2437, 34.0522] };
+  globalThis.fetch = async (url, init) => {
+    const u = new URL(String(url)); seen.push({ u, ua: init.headers['User-Agent'] });
+    if (u.host === 'photon.komoot.io') {
+      const q = u.searchParams.get('q'), c = /aerodrome/.test(u.searchParams.get('osm_tag') || '') ? (q === 'LAX' ? point.LAX : null) : /Figueroa/.test(q) ? point.hotel : null;
+      return new Response(JSON.stringify({ features: c ? [{ geometry: { type: 'Point', coordinates: c } }] : [] }), { status: 200 });
+    }
+    if (u.host === 'router.project-osrm.org') return new Response(JSON.stringify({ code: 'Ok', routes: [{ duration: 1530, distance: 27840 }] }), { status: 200 });
+    return new Response('{}', { status: 404 });
+  };
+  try {
+    const q = 'drive?' + new URLSearchParams({ from: 'LAX airport, Los Angeles', to: '900 W Olympic Blvd at Figueroa, Los Angeles', airport: 'LAX' });
+    const r = await call(q, { key: '' });
+    assert.equal(r.status, 200); assert.deepEqual(r.body, { ok: true, min: 26, km: 27.8 });
+    const ph = seen.filter(x => x.u.host === 'photon.komoot.io');
+    assert.equal(ph[0].u.searchParams.get('osm_tag'), 'aeroway:aerodrome', 'an airport: the aerodrome first');
+    assert.equal(ph[1].u.searchParams.get('q'), 'LAX', 'then by its code');
+    assert.equal(ph[2].u.searchParams.get('lat'), '33.9416', 'the hotel looked for near the airport');
+    const os = seen.find(x => x.u.host === 'router.project-osrm.org');
+    assert.equal(os.u.pathname, '/route/v1/driving/-118.4085,33.9416;-118.2437,34.0522');
+    assert.ok(seen.every(x => /AllisonOS-Travel/.test(x.ua)), 'the app is named to both');
+    const n0 = seen.length;
+    assert.deepEqual((await call(q, { key: '' })).body, { ok: true, min: 26, km: 27.8 }); assert.equal(seen.length, n0, 'the second ask is kept');
+    // OSRM down: as the crow flies, a third longer, at 60 km/h; not kept
+    globalThis.fetch = async url => {
+      const u = new URL(String(url));
+      if (u.host === 'router.project-osrm.org') return new Response('busy', { status: 503 });
+      return new Response(JSON.stringify({ features: [{ geometry: { coordinates: u.searchParams.get('osm_tag') ? point.LAX : point.hotel } }] }), { status: 200 });
+    };
+    const rough = await call('drive?from=LAX&to=Figueroa%20Hotel&airport=LAX', { key: '' });
+    assert.equal(rough.body.rough, true); assert.ok(rough.body.min >= 20 && rough.body.min <= 30, JSON.stringify(rough.body));
+    // nothing found: says so
+    globalThis.fetch = async () => new Response(JSON.stringify({ features: [] }), { status: 200 });
+    assert.deepEqual((await call('drive?from=Nowhere&to=Elsewhere', { key: '' })).body, { ok: false, found: false });
+  } finally { globalThis.fetch = fetch0; }
+});
+await test('drive: odd input is turned away before anything is asked', async () => {
+  const c0 = calls.length;
+  for (const q of ['drive?from=&to=x', 'drive?from=x', 'drive?from=x&to=' + 'y'.repeat(161), 'drive?from=x&to=y&airport=LAXX', 'drive?from=x&to=y&airport=../'])
+    assert.equal((await call(q)).status, 400, q);
+  assert.equal(calls.length, c0);
+});
 await test('live flights and email reads count toward the day for the person signed in; past the limit they are told so, and the cache still answers', async () => {
   const dbc = fakeKV(); await dbc.put('owner', 'u1'); await putJSON(dbc, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
   const t = await issue(dbc, 'u1'), env = { ACCOUNTS: dbc, AERODATABOX_KEY: 'k-123', ANTHROPIC_API_KEY: 'ak' };
@@ -339,5 +385,7 @@ await test('live flights and email reads count toward the day for the person sig
   assert.equal((await post(email)).status, 200); assert.equal(dbc.m.get(key('ai')), '1');
   dbc.m.set(key('ai'), String(AI_DAILY));
   const e = await post(email); assert.equal(e.status, 429); assert.equal(e.body.error, 'limit');
+  dbc.m.set(key('ai').replace(':ai:', ':drives:'), String(DRIVES_DAILY));
+  const d = await get('drive?from=Somewhere%20new&to=A%20hotel'); assert.equal(d.status, 429, 'drives count too'); assert.equal(d.body.error, 'limit');
 });
 console.log(n + ' passed');
