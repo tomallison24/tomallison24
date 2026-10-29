@@ -8,7 +8,7 @@ its own **Settings → Design**: **Vintage** (mid-century modern, the default) a
 ## What it does
 
 - **World Clock.** The main clock on a big face (with the date): this
-  phone's time, or a city picked in **Settings → Main Clock** (it then says
+  phone's time, or a city picked in **Settings → Main clock** (it then says
   how far ahead or behind this phone it is; alarms and Nightstand keep the
   phone's time, and "This phone's time zone" goes back). Then the
   cities you add with **+**: each shows its time, a small face (dark at night
@@ -47,8 +47,9 @@ its own **Settings → Design**: **Vintage** (mid-century modern, the default) a
   fading away after a few seconds (tap to bring them back). It asks the phone
   to keep the screen on (the Screen Wake Lock API); if the phone says no, it
   says so, and how to set Auto-Lock to Never.
-- **Settings**: the design; the main clock's city; 24-hour time;
-  Nightstand's seconds and face; Test the sound.
+- **Settings** (drawn by `../home/settings.js`, as in every app): Design; Main
+  clock (its city); Time (24-hour time); Nightstand (seconds and the clock
+  face); Sound (Test the sound).
 
 ## What a web app can't do
 

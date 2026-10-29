@@ -265,7 +265,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // World Clock
   // ---------------------------------------------------------------------
-  // The main clock (the big face): this phone's own time, or a city picked in Settings > Main Clock.
+  // The main clock (the big face): this phone's own time, or a city picked in Settings > Main clock.
   // Alarms and Nightstand always keep this phone's time.
   function phoneName() { const tz = hereZone(), c = L.CITIES.find(x => x.tz === tz) || L.zoneCity(tz); return c ? c.name : 'Here'; }
   const mainTz = () => (S.set.home && S.set.home.tz) || hereZone();
