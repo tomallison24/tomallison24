@@ -12,7 +12,7 @@ designs (**Settings → Design**; see "The two designs" below): **Vintage**,
 mid-century modern over the Vintage sky, the default, and **Standard**, Sea
 glass. In Standard, behind it all, the page is a quiet tone (dark, or pale in light mode) - Slate, a blue-grey as Google Home's,
 by default - with something slow moving behind the glass, small faint
-Bubbles by default (`bg.js`; both picked in **Settings → Customization →
+Bubbles by default (`bg.js`; both picked in **Settings →
 Background** and kept on the phone). Every card is as clear as the energy
 tiles: the faint tile over the background, a hairline edge, and its own
 colour only as a light tint.
@@ -90,7 +90,7 @@ is drawn. Every tap, popup, connection and setting works the same in both.
   nothing downloaded).
 - **Standard**: Sea glass, as described above and below: the DG1 glass,
   the card and popup skies, and the background picked in **Settings →
-  Customization → Background** (`bg.js`).
+  Background** (`bg.js`).
 
 **The sky.** In Vintage the page behind the title is the shared **Vintage
 sky** (`../home/sky.js`, as in every Vintage design): by day a ground washed
@@ -99,7 +99,7 @@ washed with deep teal, the moon and twinkling stars; each over cream (Light)
 or walnut (Dark). Sunrise and sunset are for the phone's place (only if the
 app already has location permission: it never asks), else its time zone, and
 the sky changes by itself while the app is open; it holds still with reduced
-motion. Nothing moves behind it, and **Customization** (the background's
+motion. Nothing moves behind it, and **Background** (the background's
 colour and movement, `bg.js`) is hidden in Vintage: it is Standard's, and
 what is picked there is kept for Standard.
 
@@ -459,7 +459,7 @@ is left out of the drop-down while it has none - as now. From here so far:
 the thermostat cards (design B of the second round, after G of the first),
 the automation tiles (design D of four) and the backgrounds.
 
-The backgrounds that were tried here moved to **Settings → Customization →
+The backgrounds that were tried here moved to **Settings →
 Background** (`bg.js`): a popup with **Colour** - **Temperature** (the
 default: Google Home's grey at 72.5°F outside, eased toward a very faint
 blue at 60°F and a faint red at 85°F, held beyond them; the weather pill's
@@ -472,8 +472,8 @@ paused while the app is hidden, still with reduced motion.
 
 ## Connecting to Home Assistant
 
-The gear (top right) opens Settings, laid out like every other aOS app's (titled
-Settings, a Done tick, labelled groups): the Home Assistant **address** and a
+The gear (top right) opens Settings, laid out like every other aOS app's (`../home/settings.js`:
+Design, Background, Connected accounts, and a Done tick): the Home Assistant **address** and a
 **long-lived access token**. Both are kept in `localStorage` on that phone
 and go nowhere except to that address.
 
@@ -668,7 +668,7 @@ night moon (1%) and sun (100%) chips work, every view in the drop-down opens
 with something in it, and nothing errors or trips the page's policy. It also
 covers both designs: Vintage by default (Futura, flat cream or walnut cards,
 the sky's ground, the mustard sun, the Retro colours the scripts draw, no
-Customization), Standard (the Vintage block off, no sky, the Sea glass ground
+Background row), Standard (the Vintage block off, no sky, the Sea glass ground
 and icon, the background back), Settings → Design switching both ways at once
 and kept across a reload, and the old Home Vintage address (served from
 `house/`, as the deploy does) moving that app's data over once.

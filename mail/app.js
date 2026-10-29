@@ -1414,26 +1414,27 @@ async function undoMarketing(back) {
 }
 
 let showKeeps = false;                // Settings: the always-kept list, folded away until asked for
-// Settings: Marketing and Tidy are one section, "Inbox clean-up": two
-// switches, one note on what always stays, and Tidy's own buttons.
+// Settings: Marketing and Tidy are one section, "Inbox clean-up": the bucket's name and how long it
+// keeps mail, two switches (each with how it stands, in a sentence), Tidy's own buttons and the
+// senders Tidy always keeps. (../home/settings.js draws the rows; the taps go to the page's one
+// data-act listener.)
 function tidyHTML() {
+  const T = AllisonOS.settings, act = a => ({ act: a });
   const last = Number(ls.get(K.tidied, 0)), keeps = tidyKeeps(), on = tidyOn();
   const mon = mktSortOn(), mlast = Number(ls.get(K.mktSorted, 0));
-  const since = t => ' Last run ' + (ago(t) === 'now' ? 'just now' : ago(t) + ' ago') + '.';
-  const sw = (act, v, label) => '<div class="frow"><span class="l">' + label + '</span><button class="switch" role="switch" data-act="' + act + '" aria-checked="' + v + '" aria-label="' + label + '"></button></div>';
-  return '<p class="label">Inbox clean-up</p>' +
-    '<div class="sgroup">' + sw('mkt-toggle', mon, 'Move marketing out of the inbox') + '</div>' +
-    '<p class="hint">Moves Promotions to ' + esc(settings.label) + ', emptied after ' + settings.days + ' days.' +
-      (mon && mlast ? since(mlast) : '') + '</p>' +
-    '<div class="sgroup">' + sw('tidy-toggle', on, 'Tidy old unread mail') + '</div>' +
-    '<p class="hint">Daily, archives automated mail from strangers unread for ' + TIDY_DAYS + ' days.' +
-      (on && last ? since(last) : '') + '</p>' +
-    '<div class="sgroup">' +
-      '<button class="rowbtn" type="button" data-act="tidy-preview"><span class="ic">' + ICON.eye + '</span><span>Preview Tidy</span></button>' +
-      '<button class="rowbtn" type="button" data-act="tidy-see"><span class="ic">' + ICON.archive + '</span><span>See tidied mail</span></button>' +
-      (keeps.length ? '<div class="frow"><span class="l">Always kept</span><button class="textbtn" data-act="tidy-keeps">' + keeps.length + (showKeeps ? ' · Hide' : ' · Show') + '</button></div>' +
-        (showKeeps ? keeps.map(e => '<div class="frow"><span class="l">' + esc(e) + '</span><button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button></div>').join('') : '') : '') +
-    '</div>';
+  const since = t => '; last run ' + (ago(t) === 'now' ? 'just now' : ago(t) + ' ago') + '.';
+  return T.section('Inbox clean-up', [
+    T.input({ id: 'lab', title: 'Bucket label', value: settings.label, attrs: 'maxlength="40" autocomplete="off"' }),
+    T.input({ id: 'days', type: 'number', title: 'Delete after', sub: 'Days, from 1 to 30.', value: String(settings.days), attrs: 'min="1" max="30" inputmode="numeric"' }),
+    T.toggle({ data: act('mkt-toggle'), title: 'Move marketing out of the inbox', on: mon,
+      sub: 'Moves Promotions to ' + settings.label + ', emptied after ' + settings.days + ' days' + (mon && mlast ? since(mlast) : '.') }),
+    T.toggle({ data: act('tidy-toggle'), title: 'Tidy old unread mail', on,
+      sub: 'Daily, archives automated mail from strangers unread for ' + TIDY_DAYS + ' days' + (on && last ? since(last) : '.') }),
+    T.action({ data: act('tidy-preview'), icon: 'eye', title: 'Preview Tidy' }),
+    T.action({ data: act('tidy-see'), icon: 'list', title: 'See tidied mail' }),
+    keeps.length ? T.nav({ data: act('tidy-keeps'), title: 'Always kept', value: keeps.length + (showKeeps ? ' · Hide' : ' · Show') }) : '',
+    ...(keeps.length && showKeeps ? keeps.map(e => T.info({ title: e, extra: '<button class="textbtn" data-act="tidy-unkeep" data-email="' + esc(e) + '">Remove</button>' })) : []),
+  ]);
 }
 
 // The preview: what would go, grouped by sender, and what is kept and why.
@@ -1777,10 +1778,6 @@ function slideSeg(jump) {
   segOn = on;
   slide(seg, on, 'unread', { jump });
 }
-function slideNotify(jump) {
-  const g = document.querySelector('.notify-modes');
-  if (g) slide(g, g.querySelector('[aria-checked="true"]'), 'notify', { jump });
-}
 let tagPicks = 0;                   // each tag sheet starts afresh: its thumb appears where it's picked
 function slideTags(jump) {
   const g = $('#sheet .tagpick');
@@ -1850,7 +1847,6 @@ function paint(html) {
   screen.classList.toggle('quiet', quietOnce);
   quietOnce = false;
   screen.innerHTML = html;
-  slideNotify();
   openRow = null;
   freshFrom = Infinity;
   $('#foot').innerHTML = footHTML();
@@ -1993,29 +1989,20 @@ function viewRules() {
   return autoTagsHTML() + form + none + yours.map(tagCard).join('') + otherCard + leftCard;
 }
 
+// Settings, as in every app (../home/settings.js): Design · Inbox clean-up · Blocked senders ·
+// Connected accounts · Notifications
 function viewSettings() {
-  const ic = s => '<span class="ic">' + s + '</span>';
-  const UP = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.6"/><path d="M2.8 19.6a6.2 6.2 0 0 1 12.4 0"/><path d="M16.6 5a3.4 3.4 0 0 1 0 6.6"/><path d="M18.2 14a5.6 5.6 0 0 1 3 5.2"/></svg>';
-  const OUT = '<svg class="i s" width="22" height="22" viewBox="0 0 24 24"><path d="M10 4H6.8A2.8 2.8 0 0 0 4 6.8v10.4A2.8 2.8 0 0 0 6.8 20H10"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9.6"/></svg>';
-  return (window.aosDesign ? '<p class="label">Design</p><div class="sgroup">' + aosDesign.picker() + '</div>' +
-      '<p class="hint">Changes how Mail looks on this phone.</p>' : '') +
-    '<p class="label">Account</p>' +
-    '<div class="sgroup">' +
-      '<div class="frow"><span class="l">Signed in</span><span class="v">' + esc(state.me || '—') + '</span></div>' +
-      '<div class="frow"><span class="l">Filter permission</span><span class="v">' + (canFilter() ? 'granted' : 'not granted') + '</span></div>' +
-      '<button class="rowbtn" type="button" data-act="signin-pick">' + ic(UP) + '<span>Switch account</span></button>' +
-      '<button class="rowbtn danger" type="button" data-act="signout">' + ic(OUT) + '<span>Sign out</span></button>' +
-    '</div>' +
-    '<p class="label">Marketing</p>' +
-    '<div class="sgroup">' +
-      '<div class="frow"><label for="lab">Bucket label</label><input type="text" id="lab" maxlength="40" value="' + esc(settings.label) + '" autocomplete="off"></div>' +
-      '<div class="frow"><label for="days">Delete after</label><span class="num"><input type="number" id="days" min="1" max="30" value="' + settings.days + '"> days</span></div>' +
-    '</div>' +
+  const T = AllisonOS.settings;
+  return (window.aosDesign ? T.section('Design', T.raw(aosDesign.picker(), { id: 'stDesign' })) : '') +
     tidyHTML() +
-    '<p class="label">App icon</p>' +
-    '<div class="sgroup"><div class="frow"><span class="l">Unread count on the app icon</span><button class="switch" role="switch" data-act="badge" aria-checked="' + badgeOn() + '" aria-label="Unread count on the app icon"></button></div></div>' +
-    notifyHTML() +
-    blockedHTML();
+    blockedHTML() +
+    T.section('Connected accounts', [
+      T.info({ id: 'stGmailWho', title: 'Gmail', sub: 'Signed in as ' + (state.me || 'your account') + '.' }),
+      T.info({ title: 'Filter permission', value: canFilter() ? 'Granted' : 'Not granted' }),
+      T.action({ data: { act: 'signin-pick' }, icon: 'refresh', title: 'Switch account' }),
+      T.danger({ data: { act: 'signout' }, icon: 'out', title: 'Disconnect Gmail' }),
+    ]) +
+    notifyHTML();
 }
 
 // Settings is a sheet over whatever Mail is showing, as in every other app. It is
@@ -2042,7 +2029,6 @@ function paintSettings() {
   body.innerHTML = viewSettings();
   for (const k of keep) { const e = document.getElementById(k.id); if (e) { e.value = k.v; if (k.f) e.focus({ preventScroll: true }); } }
   body.scrollTop = top;
-  slideNotify();
 }
 
 // ---------------------------------------------------------------------------
@@ -2059,27 +2045,29 @@ const NOTIFY_MODES = () => [
   ['tags', 'Only mail with one of your tags'],
 ];
 
+// Notifications, in Settings: the count on the app icon, then new-mail notifications (a server
+// address to set first), what to be notified about, a test, and a change of server.
 function notifyHTML() {
-  const on = notifyMode(), url = pushUrl();
+  const T = AllisonOS.settings, on = notifyMode(), url = pushUrl();
+  const badge = T.toggle({ data: { act: 'badge' }, title: 'Unread count on the app icon', on: badgeOn() });
   if (!url) {
-    return '<p class="label">Notifications</p>' +
-      '<div class="sgroup">' +
-        '<div class="frow"><span class="l">New-mail notifications</span><span class="v">not set up</span></div>' +
-        '<div class="frow"><input type="url" id="push-url" placeholder="https://mail-push….workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Notification server address"></div>' +
-        '<button class="rowbtn" type="button" data-act="push-url-save"><span>Save address</span></button>' +
-      '</div>' +
-      '<p class="hint">Paste the notification server’s address.</p>';
+    return T.section('Notifications', [
+      badge,
+      T.info({ title: 'New-mail notifications', value: 'Not set up' }),
+      T.input({ id: 'push-url', type: 'url', title: 'Notification server', sub: 'Paste the notification server’s address.', placeholder: 'https://mail-push….workers.dev',
+        attrs: 'autocapitalize="off" autocorrect="off" spellcheck="false"' }),
+      T.action({ data: { act: 'push-url-save' }, icon: 'link', title: 'Save address' }),
+    ]);
   }
-  return '<p class="label">Notifications</p>' +
-    '<div class="sgroup"><div class="frow"><span class="l">New-mail notifications</span><button class="switch" role="switch" data-act="notify-toggle" aria-checked="' + !!on + '" aria-label="New-mail notifications"></button></div></div>' +
-    '<div class="notify-modes" role="radiogroup" aria-label="Notify me about">' +
-      NOTIFY_MODES().map(([id, label]) => '<button class="textbtn" role="radio" data-act="notify-mode" data-mode="' + id + '" aria-checked="' + (on === id) + '">' + esc(label) + '</button>').join('') +
-    '</div>' +
-    '<div class="sgroup">' +
-      (on ? '<button class="rowbtn" type="button" data-act="notify-test"><span>Send a test</span></button>' : '') +
-      '<button class="rowbtn" type="button" data-act="push-url-change"><span>Change server</span></button>' +
-    '</div>' +
-    '<p class="hint">Choose which new mail notifies this phone.</p>';
+  const mode = NOTIFY_MODES().find(m => m[0] === on);
+  return T.section('Notifications', [
+    badge,
+    T.toggle({ data: { act: 'notify-toggle' }, title: 'New-mail notifications', sub: 'Choose which new mail notifies this phone.', on: !!on }),
+    T.choice({ id: 'stNotifyMode', data: { act: 'notify-mode' }, title: 'Notify me about', label: 'Notify me about', value: on,
+      sub: mode ? mode[1] + '.' : 'Pick one to turn notifications on.', options: [['all', 'All'], ['primary', 'Primary'], ['tags', 'Tagged']] }),
+    on ? T.action({ data: { act: 'notify-test' }, icon: 'send', title: 'Send a test' }) : '',
+    T.action({ data: { act: 'push-url-change' }, icon: 'link', title: 'Change server' }),
+  ]);
 }
 
 async function pushCall(path, body) {
@@ -2161,10 +2149,10 @@ function blockedHTML() {
     refreshFilters().then(() => { if (state.sheet?.settings) render(); }).catch(() => {});
     return '';
   }
-  const list = blockedList();
-  return '<p class="label">Blocked senders</p>' +
-    '<div class="sgroup"><div class="frow"><span class="l">Blocked senders</span><span class="v">' + (list.length || 'none') + '</span></div>' +
-    list.map(b => '<div class="frow"><span class="l">' + esc(b.email) + '</span><button class="textbtn" data-act="unblock" data-id="' + esc(b.id) + '">Unblock</button></div>').join('') + '</div>';
+  const T = AllisonOS.settings, list = blockedList();
+  return T.section('Blocked senders', list.length
+    ? list.map(b => T.info({ title: b.email, extra: '<button class="textbtn" data-act="unblock" data-id="' + esc(b.id) + '">Unblock</button>' }))
+    : T.info({ title: 'Nobody is blocked.' }));
 }
 
 
@@ -3901,7 +3889,9 @@ document.addEventListener('click', async e => {
     case 'forget-cid': ls.del(K.clientId); return render();
     case 'signin': return signIn();
     case 'signin-pick': return signIn({ chooseAccount: true });
-    case 'signout': closeSheet(true); state.view = 'inbox'; state.lists = {}; return signOut();
+    case 'signout':
+      if (el.closest('#stBody') && !AllisonOS.settings.armed(el, 'Tap again to disconnect')) return;
+      closeSheet(true); state.view = 'inbox'; state.lists = {}; return signOut();
 
     case 'settings-done': {
       const dEl = $('#days'), lEl = $('#lab');
@@ -4161,7 +4151,7 @@ document.addEventListener('click', async e => {
       state.search = 'label:' + TIDY_LABEL; state.showSearch = true;
       if ($('#q')) $('#q').value = state.search;
       return go();
-    case 'notify-mode': return turnOnNotifications(el.dataset.mode);
+    case 'notify-mode': { const mode = el.dataset.mode || AllisonOS.settings.pick(e); if (mode) return turnOnNotifications(mode); return; }
     case 'notify-off': return turnOffNotifications();
     case 'notify-toggle': return notifyMode() ? turnOffNotifications() : turnOnNotifications('all');
     case 'notify-test':
@@ -4348,9 +4338,9 @@ document.addEventListener('pointerdown', e => {
   b.style.setProperty('--y', (e.clientY - r.top) + 'px');
 }, { passive: true });
 
-addEventListener('resize', () => { closeBoxMenu(true); slideSeg(true); slideNotify(true); slideTags(true); });
+addEventListener('resize', () => { closeBoxMenu(true); slideSeg(true); slideTags(true); });
 // Futura (Vintage) and the system font (Standard) are different widths: fit the title and place the sliding thumbs again
-addEventListener('aos:design', () => requestAnimationFrame(() => { fitTitle(); slideSeg(true); slideNotify(true); slideTags(true); }));
+addEventListener('aos:design', () => requestAnimationFrame(() => { fitTitle(); slideSeg(true); slideTags(true); }));
 addEventListener('aos:words', fitTitle);   // your helper's name went into the page (../home/names.js): the title is measured again
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;

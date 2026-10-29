@@ -120,10 +120,11 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
       await page.click('#gear'); await page.waitForTimeout(700);
       const [sbg, sradius, sfilter] = await q('#sheet .sheet', ['backgroundColor', 'borderRadius', 'backdropFilter']);
       ok(scheme + ': Settings is a flat cream / walnut panel', sbg === cream && sradius === '28px' && flat(sfilter), [sbg, sradius, sfilter].join(' | '));
-      ok(scheme + ': Settings opens on Design, in a group of its own, with its hint', await page.evaluate(() => {
+      ok(scheme + ': Settings opens on Design, in a group of its own, with no note under it, then the sections in the standard order', await page.evaluate(() => {
         const b = document.getElementById('stBody'), first = b.firstElementChild;
-        return first.matches('p.label') && first.textContent === 'Design' && first.nextElementSibling.matches('.sgroup') && !!first.nextElementSibling.querySelector('.aos-design')
-          && first.nextElementSibling.nextElementSibling.matches('p.hint') && /Changes how Mail looks on this phone/.test(first.nextElementSibling.nextElementSibling.textContent);
+        const order = [...b.children].map(s => s.querySelector('.st-lbl')?.textContent);
+        return first.matches('section.st-sec') && first.querySelector('.st-lbl').textContent === 'Design' && !!first.querySelector('.st-group #stDesign .aos-design') && !first.querySelector('.st-hint')
+          && JSON.stringify(order.filter(l => l !== 'Blocked senders')) === JSON.stringify(['Design', 'Inbox clean-up', 'Connected accounts', 'Notifications']);
       }));
       await shot(page, 'vintage-settings-' + scheme);
       ok(scheme + ': a mailbox: no script errors', !errs.length, errs.join(' | '));

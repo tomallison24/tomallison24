@@ -226,6 +226,8 @@ let revoked = null, googleTrip = false;
 await ctx.route('https://oauth2.googleapis.com/revoke', route => { revoked = route.request().postData(); route.fulfill({ status: 200, body: '' }); });
 await ctx.route('https://accounts.google.com/**', route => { googleTrip = true; route.fulfill({ status: 200, contentType: 'text/html', body: 'google' }); });
 await page.click('#gear'); await page.waitForTimeout(300);
+await page.click('[data-act="signout"]'); await page.waitForTimeout(300);
+check(revoked === null && (await page.textContent('[data-act="signout"]')).includes('Tap again to disconnect'), 'Disconnect Gmail asks again before it signs out');
 await page.click('[data-act="signout"]'); await page.waitForTimeout(800);
 check(revoked === 'token=SECRET-TOKEN', 'Sign Out asks Google to cancel the token' + (revoked ? '' : ' (no request)'));
 const left = await page.evaluate(() => ['mail.token', 'mail.token.ever', 'mail.hint', 'mail.pending', 'mail.unsubbed'].filter(k => localStorage.getItem(k) != null));

@@ -334,7 +334,7 @@ for (const scheme of ['light', 'dark']) {
     assert.equal(await page.$('#syUrl, #sySecret, #syConnect, #syShare, #syOff'), null, 'no link or phrase to type, no setup link, no Disconnect');
     assert.doesNotMatch(await page.textContent('#backupSheet'), /Sync now|Sign in and sync/);
     assert.ok(await page.isVisible('#bkExport') && await page.isVisible('#bkImport'), 'Backup and Import are still there');
-    assert.equal((await q('#backupSheet .rgroup', ['borderRadius']))[0], '20px');
+    assert.equal((await q('#backupSheet .st-group', ['borderRadius']))[0], '20px');
     await page.click('#backupSheet .sheethead [data-close]');
     await page.waitForSelector('#backupSheet', { state: 'hidden' });
     await page.evaluate(() => { document.getElementById('toastMsg').textContent = 'Moved to Trash'; document.getElementById('toast').hidden = false; });
@@ -485,9 +485,11 @@ await step('Settings > Design: the first section of Settings; Standard and back,
   await page.click('#setBtn');
   await page.waitForSelector('#backupSheet:not([hidden])');
   assert.equal(await page.textContent('#bkLbl'), 'Settings');
-  assert.equal(await page.$eval('#bkBody > :first-child .label', e => e.textContent), 'Design', 'Design is the first section');
+  assert.equal(await page.$eval('#bkBody > :first-child .st-lbl', e => e.textContent), 'Design', 'Design is the first section');
+  assert.deepEqual(await page.$$eval('#bkBody > .st-sec > .st-lbl', ls => ls.map(l => l.textContent)), ['Design', 'Notifications', 'Your data'], 'then Notifications and Your data, in the standard order');
+  assert.ok(await page.isVisible('#backupSheet .sheethead .okbtn[data-close][aria-label="Done"]'), 'Settings closes with a Done tick');
   assert.equal(await page.$$eval('#bkBody > :first-child [data-design]', bs => bs.map(b => b.dataset.design + ':' + b.getAttribute('aria-checked')).join(' ')), 'vintage:true glass:false layers:false grid:false');
-  assert.equal(await page.$('#bkBody > :first-child .hint'), null, 'no explanation under Design');
+  assert.equal(await page.$('#bkBody > :first-child .st-hint, #bkBody > :first-child .hint'), null, 'no explanation under Design');
   await shot(page, 'settings-vintage-light');
   await page.click('#bkDesign [data-design="glass"]'); await page.waitForTimeout(250);
   assert.equal(await look(page), 'glass', 'Standard at once');
