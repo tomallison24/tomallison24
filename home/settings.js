@@ -114,7 +114,7 @@ button.st-row:not(:disabled):active { background: var(--st-press) }
 /* the same switch on its own, outside a Settings row (an editor's Private, an alarm): the button is the switch (S.sw) */
 button.st-sw { margin: 0; padding: 0; border: 0; cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent }
 button.st-sw:disabled { opacity: .5; cursor: default }
-button.st-sw > b { position: absolute; inset: -11px -4px }
+button.st-sw > .st-hit { position: absolute; inset: -11px -4px }
 button.st-sw:focus-visible { outline: 2px solid var(--st-accent); outline-offset: 3px }
 .st-sw[aria-checked="true"] { background: color-mix(in srgb, var(--st-on) 88%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-on) 70%, #fff), 0 0 14px -2px var(--st-glow) }
 .st-sw[aria-checked="true"]::after { transform: translateX(26px) }
@@ -232,8 +232,8 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
     input: o => `<label class="st-row st-input">${text(o)}<input class="st-field" type="${esc(o.type || 'text')}" value="${esc(o.value || '')}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${attrs(o)} ${o.attrs || ''}></label>`,
     // anything else that lives in a group (the Design picker, a list of chips): given as it is
     raw: (html, o = {}) => `<div class="st-row st-raw"${attrs(o)}>${html}</div>`,
-    // the same switch on its own, outside a Settings row (an editor's Private, an alarm). label: what VoiceOver says; the <b> makes its tap area 44 tall
-    sw: o => `<button type="button" class="st-sw" role="switch" aria-checked="${!!o.on}"${o.disabled ? ' disabled' : ''}${attrs(o)}><i aria-hidden="true"></i><b aria-hidden="true"></b></button>`,
+    // the same switch on its own, outside a Settings row (an editor's Private, an alarm). label: what VoiceOver says; .st-hit makes its tap area 44 tall
+    sw: o => `<button type="button" class="st-sw" role="switch" aria-checked="${!!o.on}"${o.disabled ? ' disabled' : ''}${attrs(o)}><i aria-hidden="true"></i><span class="st-hit" aria-hidden="true"></span></button>`,
     // asking first, in the app, never the browser's confirm(): resolves true for yes. danger: the yes button in red
     //   if (!await S.ask({ title: 'Remove Ella?', text: 'Her progress goes on every phone.', yes: 'Remove', danger: true })) return;
     ask({ title, text = '', yes = 'OK', no = 'Cancel', danger = false } = {}) {
