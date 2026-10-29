@@ -2062,7 +2062,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('stAiSub').textContent = aiAvail === false ? 'Not set up on this copy of the site.' : aiOn() ? 'On. Ipsy fills in a trip’s missing details from its email.' + modelsLine() : 'Off. Ipsy fills in a trip’s missing details from its email.';
     const auto = ls.get(K.ipsyAuto, '');
     $('stIpsyAutoOpt').hidden = aiAvail === false || !aiOn();
-    $('stIpsyAutoSub').textContent = (auto === '0' ? 'Off. ' : 'On. ') + 'Ipsy fills in what new bookings are missing, and moves them to Upcoming.';
+    $('stIpsyAutoSub').textContent = (auto === '0' ? 'Off. ' : 'On. ') + 'Ipsy fills in what new bookings are missing, and moves them to Upcoming. This phone only.';
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
     $('stIpsyGmailOpt').hidden = !PV;
     if (PV) $('stIpsyGmailSub').textContent = (PV.gmail('travel') ? 'On. ' : 'Off. ') + 'Lets Ipsy search and read your email in chats.';

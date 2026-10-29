@@ -291,7 +291,8 @@ board, and last the AI:
   first): after each read of Gmail, when Travel opens and after you change a
   booking (once the calendar and the flight board have had their go), every upcoming booking
   still missing something is checked, once per email, at most 10 at a time, quietly (with the
-  family session it has, never a Face ID prompt; signed out, it stops and says so once). A booking
+  family session it has, never a Face ID prompt; signed out, it stops and says so once). The switch is
+  each phone's own (not synced): off on one phone leaves it on on the others. A booking
   it completes (nothing missing any more) leaves To check for Upcoming; one still missing
   something is marked **Check** and waits in To check. Undo for either is in Ipsy's chat, and
   Ipsy says in its corner what it did. With the switch off, only the button sends
