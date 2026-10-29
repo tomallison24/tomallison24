@@ -82,14 +82,20 @@ for (const [design, want] of [['vintage', '--lc:var(--lc0);--lci:var(--lci0)'], 
   const page = await fresh();
   await showReminders(page);
   const file = { name: 'recipes.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ kind: 'backup', ...evil('backup') })) };
-  let asked = '';
-  page.once('dialog', d => { asked = d.message(); d.dismiss(); });
-  await page.setInputFiles('#bkFile', file); await page.waitForTimeout(500);
+  // it asks in the app (home/settings.js's S.ask), never with the browser's confirm()
+  let browserAsked = '';
+  page.on('dialog', d => { browserAsked = d.message(); d.dismiss(); });
+  await page.setInputFiles('#bkFile', file);
+  await page.waitForSelector('.st-ask', { timeout: 3000 }).catch(() => {});
+  const asked = await page.evaluate(() => document.querySelector('.st-ask') ? document.querySelector('.st-ask').innerText : '');
   ok('backup: asks before adding anything', /Add 1 note, 1 reminder and 1 list from this file\?/.test(asked), asked);
+  ok('backup: asks in the app, not with the browser\'s confirm()', !!asked && !browserAsked && /Only restore files you made yourself\./.test(asked), browserAsked || asked);
+  await page.click('.st-ask .st-no'); await page.waitForTimeout(300);
   const listsAfterNo = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-notes-v1')).lists.length);
-  ok('backup: Cancel adds nothing', listsAfterNo === 1, String(listsAfterNo));
-  page.once('dialog', d => d.accept());
-  await page.setInputFiles('#bkFile', file); await page.waitForTimeout(500);
+  ok('backup: Cancel adds nothing', listsAfterNo === 1 && !(await page.$('.st-ask')), String(listsAfterNo));
+  await page.setInputFiles('#bkFile', file);
+  await page.waitForSelector('.st-ask .st-yes', { timeout: 3000 });
+  await page.click('.st-ask .st-yes'); await page.waitForTimeout(500);
   await showReminders(page);
   ok('backup: accepted, nothing runs', !(await pwned(page)), await pwned(page));
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-notes-v1')));
