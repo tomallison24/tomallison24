@@ -677,10 +677,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     // Just me trip: every booking in it that is yours (someone else's stays shared: only they can change that)
     const yours = g.items.filter(mine), only = yours.filter(b => b.only).length;
     const jm = !!yours.length && only === yours.length;
-    h += '<div class="opts"><button class="opt" type="button" id="tpPriv" aria-pressed="' + all + '">' + I.lock + 'Private trip</button>'
-      + (yours.length ? '<button class="opt" type="button" id="tpOnly" aria-pressed="' + jm + '">' + I.me + 'Just me trip</button>' : '') + '</div><p class="hint">Private trip hides this trip and its emails from Ipsy.</p>';
-    if (yours.length) h += '<p class="hint" id="tpOnlyHint">Just me trip: only you see it, not the family.</p>';
-    else h += '<p class="hint">' + esc(g.items.some(b => b.by) && whose(g.items[0]) ? whose(g.items[0]) + '’s trip, shared with the family.' : 'Shared with the family.') + '</p>';
+    // Private and Just me: the shared switch rows (home/settings.js)
+    const S = AllisonOS.settings;
+    h += S.section('', [
+      S.toggle({ id: 'tpPriv', title: 'Private trip', sub: 'Hides this trip and its emails from Ipsy.', on: all }),
+      yours.length ? S.toggle({ id: 'tpOnly', title: 'Just me trip', sub: 'Only you see it, not the family.', on: jm }) : '',
+    ], { hint: yours.length ? '' : g.items.some(b => b.by) && whose(g.items[0]) ? whose(g.items[0]) + '’s trip, shared with the family.' : 'Shared with the family.' });
     // Search for more around this trip.
     const flights = g.live.filter(b => b.type === 'flight');
     const hotel = g.live.find(b => b.type === 'hotel');
@@ -768,13 +770,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (b.source && b.source.from) h += '<p class="hint">From ' + esc(b.source.from.replace(/<[^>]*>/g, '').trim() || b.source.from) + (b.source.date ? ', ' + esc(new Date(b.source.date).toLocaleDateString()) : '') + '.</p>';
     if (!st.isNew) {
       const own = mine(b), who = whose(b);
-      h += '<div class="opts"><button class="opt" type="button" id="bkCx" aria-pressed="' + (b.status === 'cancelled') + '">' + (b.status === 'cancelled' ? 'Canceled' : 'Mark as canceled') + '</button>'
-        + '<button class="opt" type="button" id="bkPriv" aria-pressed="' + !!b.private + '">' + I.lock + 'Private</button>'
-        + (own ? '<button class="opt" type="button" id="bkOnly" aria-pressed="' + !!b.only + '">' + I.me + 'Just me</button>' : '') + '</div>'
-        + '<p class="hint">Private hides this booking and its email from Ipsy.</p>'
+      // Canceled, Private and Just me: the shared switch rows (home/settings.js)
+      const S = AllisonOS.settings;
+      h += S.section('', [
+        S.toggle({ id: 'bkCx', title: 'Canceled', on: b.status === 'cancelled' }),
+        S.toggle({ id: 'bkPriv', title: 'Private', sub: 'Hides this booking and its email from Ipsy.', on: !!b.private }),
         // Just me is its own person's to set: someone else's booking just says whose it is
-        + '<p class="hint" id="bkOnlyHint">' + (!own ? esc((who ? who + '’s' : 'Someone else’s') + ' booking, shared with the family.')
-          : 'Just me: only you see it, not the family.') + '</p>';
+        own ? S.toggle({ id: 'bkOnly', title: 'Just me', sub: 'Only you see it, not the family.', on: !!b.only }) : '',
+      ], own ? {} : { hint: (who ? who + '’s' : 'Someone else’s') + ' booking, shared with the family.', hintId: 'bkOnlyHint' });
       h += '<button class="btn quiet danger" type="button" id="bkDel">Delete booking</button>';
     }
     $('bkBody').innerHTML = h;
