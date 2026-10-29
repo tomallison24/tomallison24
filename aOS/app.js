@@ -453,7 +453,7 @@
         <li>Open <b>Find My</b> on another Apple device, or go to <b>icloud.com/find</b>.</li>
         <li>Choose the lost iPhone, then <b>Mark As Lost</b> to lock it.</li>
         <li>If it's gone for good, choose <b>Erase This Device</b>.</li></ol></div></div>
-      <div class="glbl">2. Erase aOS from your other devices</div>
+      <div class="glbl">2. Erase <span class="nocase">aOS</span> from your other devices</div>
       <div class="group acct lost"><div><ol>
         <li>Back up first: open each app, online, on a phone you still have.</li>
         <li>Here in aOS, tap <b>Sign out and erase my other devices</b>.</li>

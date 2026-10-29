@@ -55,6 +55,7 @@
 /* ---- the shapes, the same in every look ---- */
 .st-sec { margin: 0 0 22px; color: var(--st-text) }
 .st-sec:last-child { margin-bottom: 0 }
+.st-sec[hidden], .st-row[hidden] { display: none }
 .st-lbl { margin: 0 8px 8px; font-size: 12px; font-weight: 600; line-height: 1.2; letter-spacing: .12em; text-transform: uppercase; color: var(--st-muted) }
 .st-group { border-radius: 20px; background: var(--st-card); box-shadow: inset 0 0 0 1px var(--st-edge); overflow: hidden }
 html[data-look="glass"] .st-group, html[data-look="layers"] .st-group { -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%) }
