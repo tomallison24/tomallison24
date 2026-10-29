@@ -127,14 +127,10 @@ the same kinds of row and the same words.**
     here too (Notes' bell opens this section).
   - Rows: the kinds in rule 5. At most one line under a section (`hint`).
 - **Enforced:** CI: `shared`, `title`, `design-first`, `order`.
-- **Known gaps:** every app is on the shared component (since aOS2.2), but:
-  its button isn't labelled Settings in Meals ("Family rules, design and your
-  account"), Weather (the city name and "⚙ Settings" under the forecast; the
-  check wants the gear's label), Home ("Home Assistant settings") and Sparkle
-  (Grown-ups, behind its grown-up check). Clock draws its own Design rows, as
-  its looks live in `clock/design.js`. Home's connect form and sub-views (PIN,
-  Share, Devices with access) are still its own markup. Mail shows its gear
-  only once you're signed in to Gmail.
+- **Known gaps:** none. Allowed differences: Clock draws its own Design rows,
+  as its looks live in `clock/design.js` (the check takes them); Sparkle's
+  button, "Settings, for grown-ups", opens on a press and hold behind its
+  grown-up sum; Mail shows its gear only once you're signed in to Gmail.
 
 ![Travel's Settings, the example to copy](docs/design/settings.png)
 
@@ -165,21 +161,18 @@ that asks twice, an info row for how things stand.**
     place: the first tap turns it into "Tap again to confirm" for 4 seconds
     (`S.armed`). Never `confirm()`, `alert()` or `prompt()`: they look like the
     browser, not the app, and say "localhost says". Ipsy asks in its own chat
-    (rule 7).
+    (rule 7). Where a row can't ask twice (a list's Remove, a sheet's Send),
+    ask in the app: `await S.ask({ title, text, yes, danger })`.
   - **Info** (`S.info`): how things stand, no tap.
   Outside Settings (an editor's Private, a filter) the same rules hold: an
-  on/off is the shared switch.
+  on/off is the shared switch, as a row (`S.toggle`) or on its own (`S.sw`,
+  labelled for VoiceOver, tapped across 44 points).
 - **Enforced:** CI: `switch-css` (no private copy of the switch's CSS),
   `no-dialogs`, `shared` (every switch in Settings is the shared one).
   Choosing the right kind: Review.
-- **Known gaps:** every Settings switch is the shared one; a switch of its own
-  is left outside Settings, in Mail (auto-tags), Calendar and Notes (their
-  editors' Private and Just me), Clock (alarms, the sleep schedule), Orders
-  (an order's Private and Hide), Money (its recategorize sheet), Podcasts and
-  Travel (leftover `.switch` CSS). Home's device controls keep the Signal
-  dashboard's switches (`CLAUDE.md`), so it is exempt. `confirm()`: aOS (six,
-  `aOS/app.js`: signing out and erasing, sending a notification, removing
-  someone), Notes (restoring a file), Sparkle (removing a player).
+- **Known gaps:** none: every switch, in Settings and out, is the shared one,
+  and no app calls `confirm()`. Home's device controls keep the Signal
+  dashboard's switches (`CLAUDE.md`), so they are exempt.
 
 ![The switch, on and off, in each look](docs/design/switch.png)
 
@@ -221,7 +214,9 @@ with a lowercase a.**
   Review.
 - **Known gaps:** none in Settings today. Outside it, Orders' and Travel's
   Gmail button is labelled "Look for new orders (bookings) in Gmail", which is
-  fine: it's a button, not a row.
+  fine: it's a button, not a row. An order's Hidden switch has two sentences under it
+  ("For gifts: off every list, search and Ipsy. Settings shows it, with Face
+  ID."); the check reads only Settings.
 
 ![The shared words](docs/design/words.png)
 
@@ -246,7 +241,7 @@ Settings > Ipsy, and anything marked Private stays out of what it reads.**
   they read (`AllisonOS.ipsy.privacy`). In Tron the helper is Ares.
 - **Enforced:** Review (Undo and the chat's asking are `home/ipsy.js`'s own;
   CI: `order` checks where the Ipsy section sits).
-- **Known gaps:** Calendar's Private is on its own switch (rule 5).
+- **Known gaps:** none.
 
 ![Ipsy in the bottom left corner, in each look](docs/design/ipsy-corner.png)
 
