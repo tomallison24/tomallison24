@@ -8,6 +8,8 @@
 //  4. the old Mail Vintage address (/mailvintage/, which the deploy serves from mail/): that app's
 //     mailv.* data moves to mail.* once and shows in the app, what it had seen carries over, nothing
 //     old is deleted; and on a phone that had both, Mail's own data is kept.
+//  5. Manage Tags: each auto-tag's switch is the shared one (home/settings.js's S.sw), named for its tag,
+//     in Vintage and Tron.
 // Needs Playwright with Chromium (npm i -g playwright); runs from anywhere:
 //   node mail/scripts/design-test.mjs
 import { createRequire } from 'module';
@@ -209,6 +211,27 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
   ok('both: Mail\'s own data is kept', got.label === 'Promos' && got.days !== '7' && got.done === '1', JSON.stringify(got));
   ok('both: no script errors', !errs.length, errs.join(' | '));
   await ctx.close();
+}
+
+{ // 5. Manage Tags: each auto-tag's switch is the shared one (home/settings.js's S.sw), named for what it tags
+  for (const design of ['vintage', 'grid']) {
+    const { ctx, page, errs } = await phone('light', { design, signed: true });
+    await page.waitForSelector('#screen li[data-id]', { timeout: 8000 });
+    await page.click('#boxbtn'); await page.waitForTimeout(300);
+    await page.click('#boxmenu [data-view="rules"]');
+    await page.waitForSelector('#screen li[data-preset] [role="switch"]', { timeout: 8000 });
+    const sw = await page.evaluate(() => [...document.querySelectorAll('#screen li[data-preset]')].map(li => {
+      const b = li.querySelector('[role="switch"]');
+      return { shared: b.matches('button.st-sw[data-act="preset-toggle"]'), label: b.getAttribute('aria-label'), name: li.dataset.preset, on: b.getAttribute('aria-checked'), w: b.offsetWidth };
+    }));
+    ok(design + ': auto-tags: every switch is the shared one, off, named "<tag> auto-tag"', sw.length > 0 && sw.every(x => x.shared && x.label === x.name + ' auto-tag' && x.on === 'false' && x.w === 48), JSON.stringify(sw));
+    ok(design + ': auto-tags: no switch of Mail\'s own left', !(await page.$('.switch')));
+    const busy = await page.evaluate(() => { presetBusy.add('Travel'); render(); const b = document.querySelector('#screen li[data-preset="Travel"] .st-sw'), r = { disabled: b.disabled, anim: getComputedStyle(b, '::after').animationName }; presetBusy.delete('Travel'); render(); return r; });
+    ok(design + ': auto-tags: turning one on or off, its switch breathes and waits', busy.disabled && busy.anim === 'breathe', JSON.stringify(busy));
+    await page.waitForTimeout(700); await shot(page, 'autotags-' + design);
+    ok(design + ': auto-tags: no script errors', !errs.length, errs.join(' | '));
+    await ctx.close();
+  }
 }
 
 await browser.close(); server.close();
