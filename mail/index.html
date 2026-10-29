@@ -1175,7 +1175,6 @@
     --lgs-field: rgba(255, 255, 255, 0.10);   /* a text field or tag on it */
     --lgs-filter: blur(28px) saturate(180%) brightness(.92);
     --lgs-scrim: rgba(0, 0, 0, 0.30);
-    --sw-off: rgba(120, 120, 128, 0.36);      /* a switch's track when off */
   }
   @media (prefers-color-scheme: light) {
     :root {
@@ -1187,7 +1186,6 @@
       --lgs-field: rgba(255, 255, 255, 0.62);
       --lgs-filter: blur(28px) saturate(200%) brightness(1.06);
       --lgs-scrim: rgba(0, 0, 0, 0.10);
-      --sw-off: rgba(120, 120, 128, 0.20);
     }
   }
   #sheet .scrim { background: var(--lgs-scrim); }
@@ -1384,23 +1382,8 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
   }
   .send:active { background: var(--cta); filter: brightness(.94); }
-  /* iOS 26's switch (the icon's count, Tidy, auto-tags, notifications), the same as every app's: green when on, and a
-     pill-shaped knob that swells into a clear lens while pressed */
-  .switch {
-    position: relative; flex: none; width: 58px; height: 30px; border-radius: 999px;
-    background: var(--sw-off); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lift);
-    transition: background .25s;
-  }
-  .switch::after {
-    content: ''; position: absolute; top: 3px; left: 3px; width: 34px; height: 24px; border-radius: 999px;
-    background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 0 0 .5px rgba(0, 0, 0, 0.04);
-    transition: transform .3s cubic-bezier(.3, 1.3, .5, 1), scale .2s var(--ease), background .2s;
-  }
-  .switch[aria-checked="true"] { background: #34C759; }   /* the same green as every app's switch in Sea glass */
-  .switch[aria-checked="true"]::after { transform: translateX(18px); }
-  .switch:not([disabled]):active::after { scale: 1.18; background: rgba(255, 255, 255, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.22); }
-  .switch[disabled] { opacity: .6; }
-  .switch.busy::after { animation: breathe 1.2s ease-in-out infinite; }   /* an auto-tag turning on or off */
+  /* an auto-tag turning on or off: the shared switch (home/settings.js's S.sw) breathes while it works */
+  .st-sw[data-busy]::after { animation: breathe 1.2s ease-in-out infinite; }
   /* where the glass can't blur, or Reduce Transparency is on: near-solid */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .sheet, .menu, #toast { background: var(--bar-solid); }
@@ -1447,7 +1430,6 @@
     --gi-mix: 26%; --armed-mix: 88%; --armed-mix-l: 88%; --tint-mix: 30%;
     --lgs-top: #322A25; --lgs-bottom: #322A25; --lgs-rim: transparent; --lgs-edge: rgba(244, 236, 221, 0.14);
     --lgs-row: rgba(244, 236, 221, 0.07); --lgs-field: #241E1A; --lgs-filter: none; --lgs-scrim: rgba(12, 8, 5, 0.5);
-    --sw-off: rgba(244, 236, 221, 0.24);
     --vb-top: #4A3426; --vb-bottom: #4A3426; --vb-chip: #E3A72F; --vb-press: rgba(244, 236, 221, 0.14);
     --vb-rim: inset 0 0 0 1px rgba(244, 236, 221, 0.12), 0 12px 24px -10px rgba(0, 0, 0, 0.6);
     --aurora: 0.9;
@@ -1476,7 +1458,6 @@
       --gi-mix: 24%; --armed-mix: 90%; --armed-mix-l: 90%; --tint-mix: 14%;
       --lgs-top: #FBF5E9; --lgs-bottom: #FBF5E9; --lgs-rim: transparent; --lgs-edge: rgba(43, 37, 34, 0.12);
       --lgs-row: rgba(43, 37, 34, 0.05); --lgs-field: #F4ECDD; --lgs-filter: none; --lgs-scrim: rgba(43, 37, 34, 0.30);
-      --sw-off: rgba(43, 37, 34, 0.22);
       --vb-top: #4A3426; --vb-bottom: #4A3426; --vb-chip: #E3A72F; --vb-press: rgba(244, 236, 221, 0.14);
       --vb-rim: 0 10px 22px -10px rgba(43, 37, 34, 0.55);
       --aurora: 1;
@@ -1644,20 +1625,17 @@
   #toast button { color: var(--accent-text); }
   #toast.bad { box-shadow: inset 0 0 0 2px var(--danger), 0 12px 26px -10px var(--lift-strong); }
 
-  /* the toolbar on a message, compose, switches */
+  /* the toolbar on a message, compose */
   .rgroup { background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 10px 22px -10px var(--lift-strong); }
   .rb { color: var(--icon); }
-  .switch { background: var(--sw-off); box-shadow: none; }
-  .switch::after { background: #FFF8EC; box-shadow: 0 1px 3px rgba(43, 37, 34, 0.3); }
-  .switch[aria-checked="true"] { background: var(--mc-teal); }
   .panel input[type=text]:focus { border-color: transparent; }
   .rtext a { color: var(--accent-text); }
 </style>
 <style id="layers" media="not all">
 /* Layers: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-ground:#0D1219;--mc-card:#191F26;--mc-card-2:#20262D;--mc-edge:rgba(235,239,243,0.14);--mc-ink:#EBEFF3;--mc-mustard:#DEB164;--mc-teal:#6ABBA9;--mc-orange:#D96662;--mc-olive:#96BAFA;--mc-walnut:#232931;--mc-cream-ink:#F7FAFE;--mc-on-mustard:#141920;--bg:#0D1219;--page:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-ink:#EBEFF3;--accent-text:#76C5B3;--sel-ink:#EBEFF3;--cta:#D96662;--cta-ink:#F7FAFE;--icon:#DEB164;--icon-text:#DEB164;--tag:#DEB164;--danger:#E87772;--danger-ink:#F59B95;--danger-text:#F59B95;--bad-text:#F49D97;--gb:#20262D;--gb-edge:rgba(235,239,243,0.14);--glass:#191F26;--glass-2:#20262D;--fill:rgba(235,239,243,0.07);--pill:#20262D;--hair:rgba(235,239,243,0.14);--hair-2:rgba(235,239,243,0.09);--lift:rgba(0,0,0,0.22);--lift-strong:rgba(0,0,0,0.4);--tile:#191F26;--tile-edge:rgba(235,239,243,0.05);--sheet:#191F26;--toast:#20262D;--scrim:rgba(1,2,6,0.55);--grab:rgba(235,239,243,0.28);--ring:rgba(235,239,243,0.4);--bar-top:#191F26;--bar-bottom:#191F26;--bar-rim:rgba(235,239,243,0.14);--bar-solid:#151B22;--lg-bg:#191F26;--lg-rim:inset 0 0 0 1.5px rgba(235,239,243,0.14);--seg-thumb:#DEB164;--pill-rim:rgba(235,239,243,0.16);--chip-on-text:#EBEFF3;--swipe-track:rgba(106,187,169,0.12);--tag-ink:#94D8C8;--armed-ink:#F7FAFE;--flag-tint:#DEB164;--arch-tint:#96BAFA;--bin-tint:#D96662;--flag-ink:#F4CD8C;--arch-ink:#C8DBFE;--bin-ink:#F59B95;--lgs-top:#191F26;--lgs-bottom:#191F26;--lgs-edge:rgba(235,239,243,0.14);--lgs-row:rgba(235,239,243,0.07);--lgs-field:#0D1219;--lgs-scrim:rgba(1,2,6,0.5);--sw-off:rgba(235,239,243,0.24);--vb-top:#232931;--vb-bottom:#232931;--vb-chip:#DEB164;--vb-press:rgba(235,239,243,0.14);--vb-rim:inset 0 0 0 1px rgba(235,239,243,0.12), 0 12px 24px -10px rgba(0,0,0,0.6)}
+:root{--mc-ground:#0D1219;--mc-card:#191F26;--mc-card-2:#20262D;--mc-edge:rgba(235,239,243,0.14);--mc-ink:#EBEFF3;--mc-mustard:#DEB164;--mc-teal:#6ABBA9;--mc-orange:#D96662;--mc-olive:#96BAFA;--mc-walnut:#232931;--mc-cream-ink:#F7FAFE;--mc-on-mustard:#141920;--bg:#0D1219;--page:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-ink:#EBEFF3;--accent-text:#76C5B3;--sel-ink:#EBEFF3;--cta:#D96662;--cta-ink:#F7FAFE;--icon:#DEB164;--icon-text:#DEB164;--tag:#DEB164;--danger:#E87772;--danger-ink:#F59B95;--danger-text:#F59B95;--bad-text:#F49D97;--gb:#20262D;--gb-edge:rgba(235,239,243,0.14);--glass:#191F26;--glass-2:#20262D;--fill:rgba(235,239,243,0.07);--pill:#20262D;--hair:rgba(235,239,243,0.14);--hair-2:rgba(235,239,243,0.09);--lift:rgba(0,0,0,0.22);--lift-strong:rgba(0,0,0,0.4);--tile:#191F26;--tile-edge:rgba(235,239,243,0.05);--sheet:#191F26;--toast:#20262D;--scrim:rgba(1,2,6,0.55);--grab:rgba(235,239,243,0.28);--ring:rgba(235,239,243,0.4);--bar-top:#191F26;--bar-bottom:#191F26;--bar-rim:rgba(235,239,243,0.14);--bar-solid:#151B22;--lg-bg:#191F26;--lg-rim:inset 0 0 0 1.5px rgba(235,239,243,0.14);--seg-thumb:#DEB164;--pill-rim:rgba(235,239,243,0.16);--chip-on-text:#EBEFF3;--swipe-track:rgba(106,187,169,0.12);--tag-ink:#94D8C8;--armed-ink:#F7FAFE;--flag-tint:#DEB164;--arch-tint:#96BAFA;--bin-tint:#D96662;--flag-ink:#F4CD8C;--arch-ink:#C8DBFE;--bin-ink:#F59B95;--lgs-top:#191F26;--lgs-bottom:#191F26;--lgs-edge:rgba(235,239,243,0.14);--lgs-row:rgba(235,239,243,0.07);--lgs-field:#0D1219;--lgs-scrim:rgba(1,2,6,0.5);--vb-top:#232931;--vb-bottom:#232931;--vb-chip:#DEB164;--vb-press:rgba(235,239,243,0.14);--vb-rim:inset 0 0 0 1px rgba(235,239,243,0.12), 0 12px 24px -10px rgba(0,0,0,0.6)}
 @media (prefers-color-scheme: light){
-:root{--mc-ground:#F1F3F6;--mc-card:#F9FBFE;--mc-card-2:#E9EBEF;--mc-edge:rgba(19,26,35,0.14);--mc-ink:#131A23;--mc-teal:#306E61;--mc-olive:#5B82CB;--bg:#F1F3F6;--page:#F1F3F6;--text:#131A23;--muted:#3A414A;--faint:#535A62;--accent:#306E61;--on-accent:#FBFDFF;--accent-ink:#306E61;--accent-text:#306E61;--sel-ink:#131A23;--cta:#C05552;--cta-ink:#FBFDFF;--icon:#306E61;--icon-text:#306E61;--tag:#C05552;--danger:#AF4C49;--danger-ink:#973F3D;--danger-text:#973F3D;--bad-text:#A63A39;--gb:#E9EBEF;--gb-edge:rgba(19,26,35,0.14);--glass:#F9FBFE;--glass-2:#E9EBEF;--fill:rgba(19,26,35,0.06);--pill:#E9EBEF;--hair:rgba(19,26,35,0.14);--hair-2:rgba(19,26,35,0.08);--lift:rgba(19,26,35,0.10);--lift-strong:rgba(19,26,35,0.22);--tile:#F9FBFE;--tile-edge:rgba(19,26,35,0.05);--sheet:#F9FBFE;--toast:#F9FBFE;--scrim:rgba(19,26,35,0.35);--grab:rgba(19,26,35,0.28);--ring:rgba(19,26,35,0.38);--bar-top:#F9FBFE;--bar-bottom:#F9FBFE;--bar-rim:rgba(19,26,35,0.12);--bar-solid:#F9FBFE;--lg-bg:#F9FBFE;--lg-rim:inset 0 0 0 1.5px rgba(19,26,35,0.12);--seg-thumb:#D8AB63;--pill-rim:rgba(19,26,35,0.16);--chip-on-text:#131A23;--swipe-track:rgba(48,110,97,0.10);--tag-ink:#306E61;--armed-ink:#FBFDFF;--flag-ink:#72572A;--arch-ink:#385385;--bin-ink:#973F3D;--lgs-top:#F9FBFE;--lgs-bottom:#F9FBFE;--lgs-edge:rgba(19,26,35,0.12);--lgs-row:rgba(19,26,35,0.05);--lgs-field:#F1F3F6;--lgs-scrim:rgba(19,26,35,0.30);--sw-off:rgba(19,26,35,0.22);--vb-top:#262D36;--vb-bottom:#262D36;--vb-chip:#D8AB63;--vb-press:rgba(241,243,246,0.14);--vb-rim:0 10px 22px -10px rgba(19,26,35,0.55)}
+:root{--mc-ground:#F1F3F6;--mc-card:#F9FBFE;--mc-card-2:#E9EBEF;--mc-edge:rgba(19,26,35,0.14);--mc-ink:#131A23;--mc-teal:#306E61;--mc-olive:#5B82CB;--bg:#F1F3F6;--page:#F1F3F6;--text:#131A23;--muted:#3A414A;--faint:#535A62;--accent:#306E61;--on-accent:#FBFDFF;--accent-ink:#306E61;--accent-text:#306E61;--sel-ink:#131A23;--cta:#C05552;--cta-ink:#FBFDFF;--icon:#306E61;--icon-text:#306E61;--tag:#C05552;--danger:#AF4C49;--danger-ink:#973F3D;--danger-text:#973F3D;--bad-text:#A63A39;--gb:#E9EBEF;--gb-edge:rgba(19,26,35,0.14);--glass:#F9FBFE;--glass-2:#E9EBEF;--fill:rgba(19,26,35,0.06);--pill:#E9EBEF;--hair:rgba(19,26,35,0.14);--hair-2:rgba(19,26,35,0.08);--lift:rgba(19,26,35,0.10);--lift-strong:rgba(19,26,35,0.22);--tile:#F9FBFE;--tile-edge:rgba(19,26,35,0.05);--sheet:#F9FBFE;--toast:#F9FBFE;--scrim:rgba(19,26,35,0.35);--grab:rgba(19,26,35,0.28);--ring:rgba(19,26,35,0.38);--bar-top:#F9FBFE;--bar-bottom:#F9FBFE;--bar-rim:rgba(19,26,35,0.12);--bar-solid:#F9FBFE;--lg-bg:#F9FBFE;--lg-rim:inset 0 0 0 1.5px rgba(19,26,35,0.12);--seg-thumb:#D8AB63;--pill-rim:rgba(19,26,35,0.16);--chip-on-text:#131A23;--swipe-track:rgba(48,110,97,0.10);--tag-ink:#306E61;--armed-ink:#FBFDFF;--flag-ink:#72572A;--arch-ink:#385385;--bin-ink:#973F3D;--lgs-top:#F9FBFE;--lgs-bottom:#F9FBFE;--lgs-edge:rgba(19,26,35,0.12);--lgs-row:rgba(19,26,35,0.05);--lgs-field:#F1F3F6;--lgs-scrim:rgba(19,26,35,0.30);--vb-top:#262D36;--vb-bottom:#262D36;--vb-chip:#D8AB63;--vb-press:rgba(241,243,246,0.14);--vb-rim:0 10px 22px -10px rgba(19,26,35,0.55)}
 }
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
 header h1::after{background:none}
@@ -1666,7 +1644,6 @@ header h1::after{background:none}
 .fab{box-shadow:0 8px 18px -8px rgba(20,25,32,0.55)}
 ul.list > li.confirm::after{background:linear-gradient(105deg, transparent 20%, rgba(222,177,100,0.30) 50%, transparent 78%)}
 ul.list > li.confirm.blue::after{background:linear-gradient(105deg, transparent 20%, rgba(106,187,169,0.28) 50%, transparent 78%)}
-.switch::after{background:#F7FAFE;box-shadow:0 1px 3px rgba(20,25,32,0.3)}
 /* Layers: a still sky behind the page, its colours by the time of day (data-tod, set by home/design.js when the
    page opens and when you come back; it never animates), clear behind the title and frosted from there down, as a
    dock of glass over it. Vintage's disc, dot and pill go: the sky is the one shape. System type, bold headings. */
@@ -1690,9 +1667,9 @@ ul.list > li.confirm.blue::after{background:linear-gradient(105deg, transparent 
 </style>
 <style id="grid" media="not all">
 /* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-ground:#050608;--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,0.14);--mc-ink:#EEF0F2;--mc-mustard:#FF8F7F;--mc-teal:#FFA39B;--mc-orange:#F93433;--mc-olive:#C9DBF3;--mc-walnut:#16181B;--mc-cream-ink:#F8FAFC;--mc-on-mustard:#090B0D;--bg:#050608;--page:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-ink:#EEF0F2;--accent-text:#FCB5AE;--sel-ink:#EEF0F2;--cta:#F93433;--cta-ink:#F8FAFC;--icon:#FF8F7F;--icon-text:#FF8F7F;--tag:#FF8F7F;--danger:#FA6258;--danger-ink:#FE9185;--danger-text:#FE9185;--bad-text:#FC9387;--gb:#131518;--gb-edge:rgba(238,240,242,0.14);--glass:#0D0F11;--glass-2:#131518;--fill:rgba(238,240,242,0.07);--pill:#131518;--hair:rgba(238,240,242,0.14);--hair-2:rgba(238,240,242,0.09);--lift:rgba(0,0,0,0.22);--lift-strong:rgba(0,0,0,0.4);--tile:#0D0F11;--tile-edge:rgba(238,240,242,0.05);--sheet:#0D0F11;--toast:#131518;--scrim:rgba(0,0,0,0.55);--grab:rgba(238,240,242,0.28);--ring:rgba(238,240,242,0.4);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,0.14);--bar-solid:#0A0C0E;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,0.14);--seg-thumb:#FF8F7F;--pill-rim:rgba(238,240,242,0.16);--chip-on-text:#EEF0F2;--swipe-track:rgba(255,163,155,0.12);--tag-ink:#FED3CF;--armed-ink:#F8FAFC;--flag-tint:#FF8F7F;--arch-tint:#C9DBF3;--bin-tint:#F93433;--flag-ink:#FCBAAF;--arch-ink:#F9FCFF;--bin-ink:#FE9185;--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,0.14);--lgs-row:rgba(238,240,242,0.07);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,0.5);--sw-off:rgba(238,240,242,0.24);--vb-top:#16181B;--vb-bottom:#16181B;--vb-chip:#FF8F7F;--vb-press:rgba(238,240,242,0.14);--vb-rim:inset 0 0 0 1px rgba(238,240,242,0.12), 0 12px 24px -10px rgba(0,0,0,0.6)}
+:root{--mc-ground:#050608;--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,0.14);--mc-ink:#EEF0F2;--mc-mustard:#FF8F7F;--mc-teal:#FFA39B;--mc-orange:#F93433;--mc-olive:#C9DBF3;--mc-walnut:#16181B;--mc-cream-ink:#F8FAFC;--mc-on-mustard:#090B0D;--bg:#050608;--page:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-ink:#EEF0F2;--accent-text:#FCB5AE;--sel-ink:#EEF0F2;--cta:#F93433;--cta-ink:#F8FAFC;--icon:#FF8F7F;--icon-text:#FF8F7F;--tag:#FF8F7F;--danger:#FA6258;--danger-ink:#FE9185;--danger-text:#FE9185;--bad-text:#FC9387;--gb:#131518;--gb-edge:rgba(238,240,242,0.14);--glass:#0D0F11;--glass-2:#131518;--fill:rgba(238,240,242,0.07);--pill:#131518;--hair:rgba(238,240,242,0.14);--hair-2:rgba(238,240,242,0.09);--lift:rgba(0,0,0,0.22);--lift-strong:rgba(0,0,0,0.4);--tile:#0D0F11;--tile-edge:rgba(238,240,242,0.05);--sheet:#0D0F11;--toast:#131518;--scrim:rgba(0,0,0,0.55);--grab:rgba(238,240,242,0.28);--ring:rgba(238,240,242,0.4);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,0.14);--bar-solid:#0A0C0E;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,0.14);--seg-thumb:#FF8F7F;--pill-rim:rgba(238,240,242,0.16);--chip-on-text:#EEF0F2;--swipe-track:rgba(255,163,155,0.12);--tag-ink:#FED3CF;--armed-ink:#F8FAFC;--flag-tint:#FF8F7F;--arch-tint:#C9DBF3;--bin-tint:#F93433;--flag-ink:#FCBAAF;--arch-ink:#F9FCFF;--bin-ink:#FE9185;--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,0.14);--lgs-row:rgba(238,240,242,0.07);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,0.5);--vb-top:#16181B;--vb-bottom:#16181B;--vb-chip:#FF8F7F;--vb-press:rgba(238,240,242,0.14);--vb-rim:inset 0 0 0 1px rgba(238,240,242,0.12), 0 12px 24px -10px rgba(0,0,0,0.6)}
 @media (prefers-color-scheme: light){
-:root{--mc-ground:#F3F5F7;--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,0.14);--mc-ink:#171B20;--mc-teal:#973835;--mc-olive:#707F92;--bg:#F3F5F7;--page:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-ink:#973835;--accent-text:#973835;--sel-ink:#171B20;--cta:#D41C21;--cta-ink:#FCFDFF;--icon:#973835;--icon-text:#973835;--tag:#D41C21;--danger:#C11019;--danger-ink:#A50310;--danger-text:#A50310;--bad-text:#AD0B14;--gb:#ECEEF0;--gb-edge:rgba(23,27,32,0.14);--glass:#FAFCFE;--glass-2:#ECEEF0;--fill:rgba(23,27,32,0.06);--pill:#ECEEF0;--hair:rgba(23,27,32,0.14);--hair-2:rgba(23,27,32,0.08);--lift:rgba(23,27,32,0.10);--lift-strong:rgba(23,27,32,0.22);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,0.05);--sheet:#FAFCFE;--toast:#FAFCFE;--scrim:rgba(23,27,32,0.35);--grab:rgba(23,27,32,0.28);--ring:rgba(23,27,32,0.38);--bar-top:#FAFCFE;--bar-bottom:#FAFCFE;--bar-rim:rgba(23,27,32,0.12);--bar-solid:#FAFCFE;--lg-bg:#FAFCFE;--lg-rim:inset 0 0 0 1.5px rgba(23,27,32,0.12);--seg-thumb:#FB6049;--pill-rim:rgba(23,27,32,0.16);--chip-on-text:#171B20;--swipe-track:rgba(151,56,53,0.10);--tag-ink:#973835;--armed-ink:#FCFDFF;--flag-ink:#821709;--arch-ink:#454F5C;--bin-ink:#A50310;--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,0.12);--lgs-row:rgba(23,27,32,0.05);--lgs-field:#F3F5F7;--lgs-scrim:rgba(23,27,32,0.30);--sw-off:rgba(23,27,32,0.22);--vb-top:#292D33;--vb-bottom:#292D33;--vb-chip:#FB6049;--vb-press:rgba(243,245,247,0.14);--vb-rim:0 10px 22px -10px rgba(23,27,32,0.55)}
+:root{--mc-ground:#F3F5F7;--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,0.14);--mc-ink:#171B20;--mc-teal:#973835;--mc-olive:#707F92;--bg:#F3F5F7;--page:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-ink:#973835;--accent-text:#973835;--sel-ink:#171B20;--cta:#D41C21;--cta-ink:#FCFDFF;--icon:#973835;--icon-text:#973835;--tag:#D41C21;--danger:#C11019;--danger-ink:#A50310;--danger-text:#A50310;--bad-text:#AD0B14;--gb:#ECEEF0;--gb-edge:rgba(23,27,32,0.14);--glass:#FAFCFE;--glass-2:#ECEEF0;--fill:rgba(23,27,32,0.06);--pill:#ECEEF0;--hair:rgba(23,27,32,0.14);--hair-2:rgba(23,27,32,0.08);--lift:rgba(23,27,32,0.10);--lift-strong:rgba(23,27,32,0.22);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,0.05);--sheet:#FAFCFE;--toast:#FAFCFE;--scrim:rgba(23,27,32,0.35);--grab:rgba(23,27,32,0.28);--ring:rgba(23,27,32,0.38);--bar-top:#FAFCFE;--bar-bottom:#FAFCFE;--bar-rim:rgba(23,27,32,0.12);--bar-solid:#FAFCFE;--lg-bg:#FAFCFE;--lg-rim:inset 0 0 0 1.5px rgba(23,27,32,0.12);--seg-thumb:#FB6049;--pill-rim:rgba(23,27,32,0.16);--chip-on-text:#171B20;--swipe-track:rgba(151,56,53,0.10);--tag-ink:#973835;--armed-ink:#FCFDFF;--flag-ink:#821709;--arch-ink:#454F5C;--bin-ink:#A50310;--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,0.12);--lgs-row:rgba(23,27,32,0.05);--lgs-field:#F3F5F7;--lgs-scrim:rgba(23,27,32,0.30);--vb-top:#292D33;--vb-bottom:#292D33;--vb-chip:#FB6049;--vb-press:rgba(243,245,247,0.14);--vb-rim:0 10px 22px -10px rgba(23,27,32,0.55)}
 }
 body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 header h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23CB504C'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FF8F7F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23F93433'/%3E%3C/svg%3E") no-repeat}
@@ -1701,45 +1678,6 @@ header h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 .fab{box-shadow:0 8px 18px -8px rgba(9,11,13,0.55)}
 ul.list > li.confirm::after{background:linear-gradient(105deg, transparent 20%, rgba(255,143,127,0.30) 50%, transparent 78%)}
 ul.list > li.confirm.blue::after{background:linear-gradient(105deg, transparent 20%, rgba(255,163,155,0.28) 50%, transparent 78%)}
-.switch::after{background:#F8FAFC;box-shadow:0 1px 3px rgba(9,11,13,0.3)}
-/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
-   only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
-   over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.
-   Orbitron headings, Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
-   dot and pill behind the title go: the car's screen is calm. */
-@font-face{font-family:"Orbitron";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/orbitron-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@font-face{font-family:"Exo 2";font-style:normal;font-weight:400 700;font-display:swap;src:url("../home/fonts/exo-2-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@property --tr-a{syntax:'<angle>';inherits:false;initial-value:0deg}
-:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif;font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
-:root{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.16);color-scheme:dark}
-:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){display:none}
-:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
-  background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
-  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
-:root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
-:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px 4px 4px;z-index:-1;pointer-events:none;border-radius:30px 30px var(--tr-foot) var(--tr-foot);--tr-foot:max(30px,calc(env(safe-area-inset-bottom) + 14px))}
-:root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
-:root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
-  filter:drop-shadow(0 0 4px #FF2A2A);animation:trRun 7s linear infinite}
-@keyframes trRun{to{--tr-a:360deg}}
-@media (prefers-reduced-motion:reduce){:root::after{animation:none;opacity:0}}
-:is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
-</style>
-<style id="grid" media="not all">
-/* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-ground:#050608;--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,0.14);--mc-ink:#EEF0F2;--mc-mustard:#FF8F7F;--mc-teal:#FFA39B;--mc-orange:#F93433;--mc-olive:#C9DBF3;--mc-walnut:#16181B;--mc-cream-ink:#F8FAFC;--mc-on-mustard:#090B0D;--bg:#050608;--page:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-ink:#EEF0F2;--accent-text:#FCB5AE;--sel-ink:#EEF0F2;--cta:#F93433;--cta-ink:#F8FAFC;--icon:#FF8F7F;--icon-text:#FF8F7F;--tag:#FF8F7F;--danger:#FA6258;--danger-ink:#FE9185;--danger-text:#FE9185;--bad-text:#FC9387;--gb:#131518;--gb-edge:rgba(238,240,242,0.14);--glass:#0D0F11;--glass-2:#131518;--fill:rgba(238,240,242,0.07);--pill:#131518;--hair:rgba(238,240,242,0.14);--hair-2:rgba(238,240,242,0.09);--lift:rgba(0,0,0,0.22);--lift-strong:rgba(0,0,0,0.4);--tile:#0D0F11;--tile-edge:rgba(238,240,242,0.05);--sheet:#0D0F11;--toast:#131518;--scrim:rgba(0,0,0,0.55);--grab:rgba(238,240,242,0.28);--ring:rgba(238,240,242,0.4);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,0.14);--bar-solid:#0A0C0E;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,0.14);--seg-thumb:#FF8F7F;--pill-rim:rgba(238,240,242,0.16);--chip-on-text:#EEF0F2;--swipe-track:rgba(255,163,155,0.12);--tag-ink:#FED3CF;--armed-ink:#F8FAFC;--flag-tint:#FF8F7F;--arch-tint:#C9DBF3;--bin-tint:#F93433;--flag-ink:#FCBAAF;--arch-ink:#F9FCFF;--bin-ink:#FE9185;--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,0.14);--lgs-row:rgba(238,240,242,0.07);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,0.5);--sw-off:rgba(238,240,242,0.24);--vb-top:#16181B;--vb-bottom:#16181B;--vb-chip:#FF8F7F;--vb-press:rgba(238,240,242,0.14);--vb-rim:inset 0 0 0 1px rgba(238,240,242,0.12), 0 12px 24px -10px rgba(0,0,0,0.6)}
-@media (prefers-color-scheme: light){
-:root{--mc-ground:#F3F5F7;--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,0.14);--mc-ink:#171B20;--mc-teal:#973835;--mc-olive:#707F92;--bg:#F3F5F7;--page:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-ink:#973835;--accent-text:#973835;--sel-ink:#171B20;--cta:#D41C21;--cta-ink:#FCFDFF;--icon:#973835;--icon-text:#973835;--tag:#D41C21;--danger:#C11019;--danger-ink:#A50310;--danger-text:#A50310;--bad-text:#AD0B14;--gb:#ECEEF0;--gb-edge:rgba(23,27,32,0.14);--glass:#FAFCFE;--glass-2:#ECEEF0;--fill:rgba(23,27,32,0.06);--pill:#ECEEF0;--hair:rgba(23,27,32,0.14);--hair-2:rgba(23,27,32,0.08);--lift:rgba(23,27,32,0.10);--lift-strong:rgba(23,27,32,0.22);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,0.05);--sheet:#FAFCFE;--toast:#FAFCFE;--scrim:rgba(23,27,32,0.35);--grab:rgba(23,27,32,0.28);--ring:rgba(23,27,32,0.38);--bar-top:#FAFCFE;--bar-bottom:#FAFCFE;--bar-rim:rgba(23,27,32,0.12);--bar-solid:#FAFCFE;--lg-bg:#FAFCFE;--lg-rim:inset 0 0 0 1.5px rgba(23,27,32,0.12);--seg-thumb:#FB6049;--pill-rim:rgba(23,27,32,0.16);--chip-on-text:#171B20;--swipe-track:rgba(151,56,53,0.10);--tag-ink:#973835;--armed-ink:#FCFDFF;--flag-ink:#821709;--arch-ink:#454F5C;--bin-ink:#A50310;--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,0.12);--lgs-row:rgba(23,27,32,0.05);--lgs-field:#F3F5F7;--lgs-scrim:rgba(23,27,32,0.30);--sw-off:rgba(23,27,32,0.22);--vb-top:#292D33;--vb-bottom:#292D33;--vb-chip:#FB6049;--vb-press:rgba(243,245,247,0.14);--vb-rim:0 10px 22px -10px rgba(23,27,32,0.55)}
-}
-body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
-header h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23CB504C'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FF8F7F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23F93433'/%3E%3C/svg%3E") no-repeat}
-.vbar > button{color:#EEF0F2}
-.vbar .vb-chev svg{color:#FF8F7F}
-.fab{box-shadow:0 8px 18px -8px rgba(9,11,13,0.55)}
-ul.list > li.confirm::after{background:linear-gradient(105deg, transparent 20%, rgba(255,143,127,0.30) 50%, transparent 78%)}
-ul.list > li.confirm.blue::after{background:linear-gradient(105deg, transparent 20%, rgba(255,163,155,0.28) 50%, transparent 78%)}
-.switch::after{background:#F8FAFC;box-shadow:0 1px 3px rgba(9,11,13,0.3)}
 /* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
    only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
    over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.

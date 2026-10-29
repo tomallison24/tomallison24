@@ -426,6 +426,10 @@ for (const scheme of ['light', 'dark']) {
     const store = (await texts(page, '#list .ocard .ostore'))[0], re = new RegExp(store);
     await page.click('#list .ocard');
     await page.waitForSelector('#opage:not([hidden]) #opHide');
+    // Private and Hidden are the shared switch rows (home/settings.js), not a switch of Orders' own
+    assert.deepEqual(await page.$$eval('#opPrivate, #opHide', bs => bs.map(b => [b.id, b.getAttribute('role'), b.getAttribute('aria-checked'), b.matches('.st-switch') && !!b.querySelector('.st-sw')])),
+      [['opPrivate', 'switch', 'false', true], ['opHide', 'switch', 'false', true]]);
+    assert.equal(await page.$$eval('#opBody .switch, #opBody .swrow', n => n.length), 0, 'no switch of its own');
     await page.click('#opHide');
     await page.waitForSelector('#opage[hidden]', { state: 'attached' });
     assert.match(await page.textContent('#toast'), /Hidden/);

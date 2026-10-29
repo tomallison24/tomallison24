@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; img-src 'self' data: blob: https:; font-src 'self'; media-src 'self' blob: https:; connect-src 'self' https:">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="aos-build" content="podcasts-v34">   <!-- the same as PAGE in app.js and CACHE in sw.js: a release changes all three -->
+<meta name="aos-build" content="podcasts-v35">   <!-- the same as PAGE in app.js and CACHE in sw.js: a release changes all three -->
 <title>Podcasts</title>
 <meta name="description" content="Follow podcasts, play audio and video episodes, and pick up where you left off, in a mid-century Vintage design or Sea glass.">
 <meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
@@ -317,17 +317,6 @@ html.locked .tagbar{opacity:0;transform:translateY(12px);pointer-events:none}
 .tagmenu .tmsep{height:1px;margin:4px 12px;background:var(--hair-2)}
 .tagmenu [aria-selected="true"] .tick{opacity:1}
 @keyframes menuUp{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:none}}
-/* a row with iOS 26's switch (as in Notes and Orders): a pill-shaped knob that swells into a clear lens while pressed */
-.swrow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 12px 10px 14px;text-align:left;font-size:15px;font-weight:600;color:var(--text)}
-.swrow .grow{flex:1;min-width:0}
-.swrow .sub{display:block;font-weight:400;color:var(--muted);font-size:13px}
-.swrow > svg{width:22px;height:22px;flex:none;color:var(--icon)}
-.switch{position:relative;flex:none;width:58px;height:30px;border-radius:999px;background:var(--fill);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 2px var(--lift);transition:background .2s}
-.switch::after{content:"";position:absolute;top:3px;left:3px;width:34px;height:24px;border-radius:999px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.28);
-  transition:transform .3s cubic-bezier(.3,1.3,.5,1),scale .2s var(--ease),background .2s}
-[aria-checked="true"] > .switch{background:var(--accent)}
-[aria-checked="true"] > .switch::after{transform:translateX(18px)}
-.swrow:active > .switch::after{scale:1.18;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
 .mini{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + 60px + env(safe-area-inset-bottom,0px));padding:0 14px;z-index:6;pointer-events:none}
 .mbar{pointer-events:auto;position:relative;display:flex;align-items:center;gap:4px;height:60px;padding:0 6px 0 8px;border-radius:999px;overflow:hidden;
   background:var(--gb-shine),var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:var(--lg-rim),0 10px 30px var(--lift-strong);animation:popIn .4s var(--ease) both}
@@ -698,10 +687,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .tagbtn .tb-chev{color:var(--mc-mustard)}
 .tagmenu{background:var(--mc-card);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
 .tagmenu button:active,.tagmenu button[aria-selected="true"]{background:var(--mc-card-2)}
-/* the switch: a flat track, teal when on, with a cream knob */
-.switch{background:color-mix(in srgb,var(--mc-ink) 22%,transparent);box-shadow:none}
-.switch::after,.swrow:active > .switch::after{background:var(--mc-card);box-shadow:0 1px 3px rgba(43,37,34,.3)}
-[aria-checked="true"] > .switch{background:var(--mc-teal)}
 
 /* the filters: cream pills, with a mustard thumb under the chosen one */
 .chip{background:var(--mc-card);border:0;box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.04em}
@@ -808,7 +793,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 :root[data-theme="dark"]{--mc-card:#191F26;--mc-card-2:#20262D;--mc-edge:rgba(235,239,243,.14);--mc-ink:#EBEFF3;--mc-teal:#6ABBA9;--mc-olive:#96BAFA;--bg:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-ink:#EBEFF3;--accent-text:#76C5B3;--sel-ink:#141920;--cta:#D96662;--cta-ink:#F7FAFE;--icon:#DEB164;--danger:#E87772;--danger-ink:#F59B95;--danger-text:#F59B95;--glass:#191F26;--glass-2:#20262D;--sheet:#191F26;--toast:#20262D;--gb-edge:rgba(235,239,243,.14);--hair:rgba(235,239,243,.14);--hair-2:rgba(235,239,243,.09);--fill:rgba(235,239,243,.07);--pill:#20262D;--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(1,2,6,.55);--grab:rgba(235,239,243,.28);--ring:rgba(235,239,243,.4);--bar-top:#191F26;--bar-bottom:#191F26;--bar-rim:rgba(235,239,243,.14);--bar-solid:#151B22;--lg-bg:#191F26;--lg-rim:inset 0 0 0 1.5px rgba(235,239,243,.14);--tile:#191F26;--tile-edge:rgba(235,239,243,.05);--lgs-top:#191F26;--lgs-bottom:#191F26;--lgs-edge:rgba(235,239,243,.14);--lgs-field:#0D1219;--lgs-scrim:rgba(1,2,6,.5);--art-a:#C09955;--art-b:#BA5854;--track:rgba(235,239,243,.2)}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
 .title::after{background:none}
-.switch::after,.swrow:active > .switch::after{box-shadow:0 1px 3px rgba(19,26,35,.3)}
 .fbtn[aria-pressed="true"]{color:#FBFDFF}
 .scrub::-webkit-slider-thumb{box-shadow:inset 0 0 0 2px #131A23}
 .scrub:not(:disabled):active::-webkit-slider-thumb{box-shadow:inset 0 0 0 2px #131A23}
@@ -836,47 +820,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 :root :is(body,#app.app){background:transparent}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3),:root .aos-sky-cap{display:none}   /* and no fade under a solid status bar: the sky runs on up into it */
 :is(.fab,.okbtn){box-shadow:var(--ly-lift)}
-</style>
-<style id="grid" media="not all">
-/* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,.14);--mc-ink:#171B20;--mc-mustard:#FB6049;--mc-teal:#973835;--mc-orange:#E41F24;--mc-olive:#707F92;--mc-on-mustard:#171B20;--bg:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-ink:#973835;--accent-text:#973835;--sel-ink:#171B20;--cta:#D41C21;--cta-ink:#FCFDFF;--icon:#973835;--danger:#C11019;--danger-ink:#A50310;--danger-text:#A50310;--glass:#FAFCFE;--glass-2:#ECEEF0;--sheet:#FAFCFE;--toast:#FAFCFE;--gb-edge:rgba(23,27,32,.14);--hair:rgba(23,27,32,.14);--hair-2:rgba(23,27,32,.08);--fill:rgba(23,27,32,.06);--pill:#ECEEF0;--lift:rgba(23,27,32,.10);--lift-strong:rgba(23,27,32,.22);--scrim:rgba(23,27,32,.35);--grab:rgba(23,27,32,.28);--ring:rgba(23,27,32,.38);--bar-top:#FAFCFE;--bar-bottom:#FAFCFE;--bar-rim:rgba(23,27,32,.12);--bar-solid:#FAFCFE;--seg-thumb:#FB6049;--lg-bg:#FAFCFE;--lg-rim:inset 0 0 0 1.5px rgba(23,27,32,.12);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,.05);--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,.12);--lgs-field:#F3F5F7;--lgs-scrim:rgba(23,27,32,.30);--art-a:#FB6049;--art-b:#E41F24;--track:rgba(23,27,32,.16)}
-@media (prefers-color-scheme:dark){
-:root:not([data-theme="light"]){--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-ink:#EEF0F2;--mc-teal:#FFA39B;--mc-olive:#C9DBF3;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-ink:#EEF0F2;--accent-text:#FCB5AE;--sel-ink:#090B0D;--cta:#F93433;--cta-ink:#F8FAFC;--icon:#FF8F7F;--danger:#FA6258;--danger-ink:#FE9185;--danger-text:#FE9185;--glass:#0D0F11;--glass-2:#131518;--sheet:#0D0F11;--toast:#131518;--gb-edge:rgba(238,240,242,.14);--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--pill:#131518;--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(0,0,0,.55);--grab:rgba(238,240,242,.28);--ring:rgba(238,240,242,.4);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,.14);--bar-solid:#0A0C0E;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,.14);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,.14);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,.5);--art-a:#F96050;--art-b:#DB1C22;--track:rgba(238,240,242,.2)}
-}
-:root[data-theme="dark"]{--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-ink:#EEF0F2;--mc-teal:#FFA39B;--mc-olive:#C9DBF3;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-ink:#EEF0F2;--accent-text:#FCB5AE;--sel-ink:#090B0D;--cta:#F93433;--cta-ink:#F8FAFC;--icon:#FF8F7F;--danger:#FA6258;--danger-ink:#FE9185;--danger-text:#FE9185;--glass:#0D0F11;--glass-2:#131518;--sheet:#0D0F11;--toast:#131518;--gb-edge:rgba(238,240,242,.14);--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--pill:#131518;--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(0,0,0,.55);--grab:rgba(238,240,242,.28);--ring:rgba(238,240,242,.4);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,.14);--bar-solid:#0A0C0E;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,.14);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,.14);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,.5);--art-a:#F96050;--art-b:#DB1C22;--track:rgba(238,240,242,.2)}
-body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
-.title::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23973835'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FB6049'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23E41F24'/%3E%3C/svg%3E") no-repeat}
-.switch::after,.swrow:active > .switch::after{box-shadow:0 1px 3px rgba(23,27,32,.3)}
-.fbtn[aria-pressed="true"]{color:#FCFDFF}
-.scrub::-webkit-slider-thumb{box-shadow:inset 0 0 0 2px #171B20}
-.scrub:not(:disabled):active::-webkit-slider-thumb{box-shadow:inset 0 0 0 2px #171B20}
-.scrub:focus-visible::-webkit-slider-thumb{box-shadow:inset 0 0 0 2px #171B20,0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
-.scrub::-moz-range-thumb{box-shadow:inset 0 0 0 2px #171B20}
-.scrub:not(:disabled):active::-moz-range-thumb{box-shadow:inset 0 0 0 2px #171B20}
-.scrub:focus-visible::-moz-range-thumb{box-shadow:inset 0 0 0 2px #171B20,0 0 0 3px color-mix(in srgb,var(--accent) 60%,transparent)}
-/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
-   only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
-   over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.
-   Orbitron headings, Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
-   dot and pill behind the title go: the car's screen is calm. */
-@font-face{font-family:"Orbitron";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/orbitron-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@font-face{font-family:"Exo 2";font-style:normal;font-weight:400 700;font-display:swap;src:url("../home/fonts/exo-2-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@property --tr-a{syntax:'<angle>';inherits:false;initial-value:0deg}
-:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif;font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
-:root{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.16);color-scheme:dark}
-:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){display:none}
-:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
-  background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
-  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
-:root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
-:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px 4px 4px;z-index:-1;pointer-events:none;border-radius:30px 30px var(--tr-foot) var(--tr-foot);--tr-foot:max(30px,calc(env(safe-area-inset-bottom) + 14px))}
-:root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
-:root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
-  filter:drop-shadow(0 0 4px #FF2A2A);animation:trRun 7s linear infinite}
-@keyframes trRun{to{--tr-a:360deg}}
-@media (prefers-reduced-motion:reduce){:root::after{animation:none;opacity:0}}
-:is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
 </style>
 <style id="grid" media="not all">
 /* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
@@ -1093,7 +1036,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="../home/settings.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: syncing with the family's Google Sheet needs you signed in -->
 <script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
-<script src="app.js?v=podcasts-v34"></script>   <!-- ?v= is the release (aos-build above): sw.js keeps each with its page -->
+<script src="app.js?v=podcasts-v35"></script>   <!-- ?v= is the release (aos-build above): sw.js keeps each with its page -->
 <script src="../home/welcome.js" data-app="podcasts" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
 </body>
 </html>

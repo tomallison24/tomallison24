@@ -16,9 +16,9 @@ import fs from 'fs';
 
 const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'money', 'house', 'sparkle'];
 // tests that open every app: any app's change needs them
-const ALWAYS = ['aOS/scripts/apps-smoke-test.mjs', 'aOS/scripts/standalone-test.mjs'];
+const ALWAYS = ['aOS/scripts/apps-smoke-test.mjs', 'aOS/scripts/standalone-test.mjs', 'aOS/scripts/design-check.mjs'];   // design-check: DESIGN.md, in every app
 // changes no browser test can see
-const QUIET = [/^labs\//, /\.md$/i, /^LICENSE/, /^\.claude\//];
+const QUIET = [/^labs\//, /\.md$/i, /^LICENSE/, /^\.claude\//, /^docs\//];   // docs/design: DESIGN.md's pictures
 
 // the app a file belongs to, or null for shared code
 function appOf(f) {

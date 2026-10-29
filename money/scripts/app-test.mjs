@@ -365,6 +365,8 @@ await test('your own category: always for the merchant (the default), just one, 
   await p.waitForSelector('#recatBox:not([hidden])');
   assert.match(await p.locator('#recatBox').innerText(), /Always for\s+Corner Diner/);
   assert.equal(await p.locator('#recatAll').getAttribute('aria-checked'), 'true', 'always for the merchant, unless you say not');
+  assert.ok(await p.$eval('#recatAll', b => b.getAttribute('role') === 'switch' && b.matches('.st-switch') && !!b.querySelector('.st-sw')), 'the shared switch row (home/settings.js)');
+  assert.equal(await p.$$eval('#recatBox .switch, #recatBox .swrow', n => n.length), 0, 'no switch of Money’s own');
   await p.fill('#newCat', 'Eating out'); await p.click('#newCatGo');
   const t = await p.locator('#txBody').innerText();
   assert.match(t, /Eating out/); assert.match(t, /Monarch said:\s+Restaurants/);
@@ -379,6 +381,7 @@ await test('your own category: always for the merchant (the default), just one, 
   await p.evaluate(id => window.__money.openTx(id), amz.id);
   await p.click('#txBody [data-recat]');
   await p.click('#recatAll');
+  assert.equal(await p.locator('#recatAll').getAttribute('aria-checked'), 'false', 'turned off: just this one');
   await p.click('#recatBox [data-pick="Eating out"]');
   let all = await asSeen();
   assert.equal(all.find(x => x.id === amz.id).cat, 'Eating out'); assert.equal(all.find(x => x.id === amz.id).how, 'tx');

@@ -460,7 +460,7 @@
         <li>Open <b>Find My</b> on another Apple device, or go to <b>icloud.com/find</b>.</li>
         <li>Choose the lost iPhone, then <b>Mark As Lost</b> to lock it.</li>
         <li>If it's gone for good, choose <b>Erase This Device</b>.</li></ol></div></div>
-      <div class="glbl">2. Erase aOS from your other devices</div>
+      <div class="glbl">2. Erase <span class="nocase">aOS</span> from your other devices</div>
       <div class="group acct lost"><div><ol>
         <li>Back up first: open each app, online, on a phone you still have.</li>
         <li>Here in aOS, tap <b>Sign out and erase my other devices</b>.</li>
@@ -481,15 +481,15 @@
     const lErr = el.querySelector('#lErr');
     if (el.querySelector('#lEraseOthers')) el.querySelector('#lEraseOthers').onclick = async e => {
       const b = e.currentTarget;
-      if (!confirm('Sign out and erase every other device, and the other aOS apps on this phone?')) return;
+      if (!await AllisonOS.settings.ask({ title: 'Sign out and erase every other device, and the other aOS apps on this phone?', yes: 'Sign out and erase', danger: true })) return;
       busy(b, true); lErr.textContent = ''; lErr.style.color = '';
       try { await ACC.signOutOthers(true);
         lErr.style.color = 'var(--muted)'; lErr.textContent = 'Done: each erases itself when it next opens online.'; }
       catch (x) { lErr.textContent = why(x); }
       busy(b, false);
     };
-    el.querySelector('#lEraseHere').onclick = () => {
-      if (!confirm('Sign out and erase what aOS keeps on this phone?')) return;
+    el.querySelector('#lEraseHere').onclick = async () => {
+      if (!await AllisonOS.settings.ask({ title: 'Sign out and erase what aOS keeps on this phone?', yes: 'Sign out and erase', danger: true })) return;
       AllisonOS.erase();
     };
     if (u && u.role === 'owner') paintLostFamily(el.querySelector('#lFam'));
@@ -501,7 +501,7 @@
     box.onclick = async e => {
       const b = e.target.closest('[data-erase]'); if (!b) return;
       const name = b.parentElement.querySelector('span').textContent;
-      if (!confirm(`Sign out and erase every aOS app on ${name}'s devices (their account stays)?`)) return;
+      if (!await AllisonOS.settings.ask({ title: `Sign out and erase every aOS app on ${name}'s devices (their account stays)?`, yes: 'Erase their devices', danger: true })) return;
       busy(b, true);
       try { await ACC.call('erase', { id: b.dataset.erase }); b.textContent = 'Erased'; } catch (x) { b.textContent = why(x); busy(b, false); }
     };
@@ -605,7 +605,7 @@
       <button type="button" class="soft" id="aOthers">Sign out everywhere else</button><div class="err" id="oErr"></div>
       <button type="button" class="soft" data-lost>Erase a lost phone, step by step</button>`));
     $('aOthers').onclick = async () => {
-      if (!confirm('Sign out everywhere else, including the other apps on this phone?')) return;
+      if (!await AllisonOS.settings.ask({ title: 'Sign out everywhere else, including the other apps on this phone?', yes: 'Sign out', danger: true })) return;
       busy($('aOthers'), true); const m = $('oErr'); m.textContent = ''; m.style.color = '';
       try { await ACC.signOutOthers(); m.style.color = 'var(--muted)'; m.textContent = 'Done: everywhere else is signed out.'; }
       catch (e) { m.textContent = why(e); }
@@ -804,7 +804,7 @@
       const title = $('nTitle').value.trim(), body = $('nBody').value.trim();
       if (!title) { m.textContent = 'Give it a title.'; return; }
       if (!audience.length) { m.textContent = 'No one has notifications on yet.'; return; }
-      if (!confirm(`Send "${title}" to ${audience.length} ${audience.length === 1 ? 'person' : 'people'}?`)) return;
+      if (!await AllisonOS.settings.ask({ title: `Send "${title}" to ${audience.length} ${audience.length === 1 ? 'person' : 'people'}?`, yes: 'Send' })) return;
       busy($('nGo'), true);
       let sent = 0, failed = 0;
       try {
@@ -872,7 +872,7 @@
     $('fam').onclick = async e => {
       const b = e.target.closest('[data-rm]'); if (!b) return;
       const name = b.parentElement.querySelector('span').firstChild.textContent;
-      if (!confirm(`Remove ${name} from the family? They're signed out of every app, and their account and everything aOS keeps for them is deleted. This can't be undone.`)) return;
+      if (!await AllisonOS.settings.ask({ title: `Remove ${name} from the family?`, text: 'They\'re signed out of every app, and their account and everything aOS keeps for them is deleted. This can\'t be undone.', yes: 'Remove', danger: true })) return;
       try { await ACC.call('remove', { id: b.dataset.rm }); } catch {}
       paintFamily();
     };

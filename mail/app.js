@@ -1062,8 +1062,8 @@ function autoTagsHTML() {
       return '<li data-preset="' + esc(p.name) + '"><div class="rowtop"><span class="open" data-act="preset-see" role="button" tabindex="0" aria-label="' +
         esc((on ? 'Show ' : 'Preview ') + p.name) + '"><span class="who">' +
         '<span class="tchip" translate="no" style="--h:' + tagHue(p.name) + '">' + esc(p.name) + '</span></span><span class="snip">' + line + '</span></span>' +
-        '<span class="gtools"><button class="switch' + (busy ? ' busy' : '') + '" role="switch" data-act="preset-toggle" aria-checked="' + on + '" aria-label="' + esc(p.name) + ' auto-tag"' +
-          (busy ? ' disabled' : '') + '></button></span></div></li>';
+        '<span class="gtools">' + AllisonOS.settings.sw({ on, label: p.name + ' auto-tag', disabled: busy, data: busy ? { act: 'preset-toggle', busy: '1' } : { act: 'preset-toggle' } }) +
+          '</span></div></li>';
     }).join('') + '</ul></div>';
 }
 

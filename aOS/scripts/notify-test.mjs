@@ -56,14 +56,14 @@ async function open(role, { standalone = true, push = true, acct = true, hash = 
     if (route === 'family') return J({ family: [] });
     return J({});
   });
-  const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
+  const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); const dialogs = []; p.on('dialog', d => { dialogs.push(d.message()); d.accept(); });   // none: aOS asks in the app (S.ask)
   await p.goto(BASE + '/aOS/' + hash);
   await p.waitForSelector('.tab:not([hidden]) [data-acct]');   // aOS2 opens on Home
   if (acct) {   // Account, then its Notifications fold (every section there is folded until tapped)
     await p.click('.tab:not([hidden]) [data-acct]'); await p.waitForSelector('[aria-controls="fNotify"]', { timeout: 15000 });
     await p.click('[aria-controls="fNotify"]'); await p.waitForSelector('#nBox .st-row', { timeout: 15000 });
   }
-  return { ctx, p, calls, errs };
+  return { ctx, p, calls, errs, dialogs };
 }
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 
@@ -95,7 +95,7 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 
 // 3. the owner's composer
 {
-  const { ctx, p, calls, errs } = await open('owner'); const pr = [...errs];
+  const { ctx, p, calls, errs, dialogs } = await open('owner'); const pr = [...errs];
   await p.waitForSelector('#tToggle');
   if (!(await p.locator('#nGo').isHidden())) pr.push('the owner tools are open before Owner tools is tapped');
   await p.click('#tToggle');
@@ -107,17 +107,25 @@ const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
   // Announce the update: "aOS updated to 1.x", "Click for update details.", and a tap opens the Updates screen
   const ver = await p.evaluate(() => AllisonOS.welcome.data.RELEASES.find(r => !r.silent).v);
   if (await p.inputValue('#nTitle') !== 'aOS updated to ' + ver || await p.inputValue('#nBody') !== 'Click for update details.') pr.push('Announce the update filled "' + await p.inputValue('#nTitle') + '" / "' + await p.inputValue('#nBody') + '"');
-  await p.click('#nGo'); await p.waitForFunction(() => /Sent to 3 phones/.test(document.getElementById('nErr').textContent), null, { timeout: 8000 }).catch(() => pr.push('the announcement did not send'));
+  await p.click('#nGo');
+  // it asks first, in the app (the shared sheet), not with the browser's confirm()
+  const ask = await p.waitForSelector('.st-ask .st-yes', { timeout: 5000 }).then(() => text(p, '.st-ask'), () => '');
+  if (!/Send "aOS updated to [^"]+" to 2 people\?/.test(ask)) pr.push('sending did not ask first in the app: ' + JSON.stringify(ask));
+  await p.click('.st-ask .st-no');
+  await p.waitForTimeout(300);
+  if (await p.locator('.st-ask').count() || calls.some(c => c.route === 'push/send')) pr.push('Cancel on the question still sent, or left it open');
+  await p.click('#nGo'); await p.click('.st-ask .st-yes'); await p.waitForFunction(() => /Sent to 3 phones/.test(document.getElementById('nErr').textContent), null, { timeout: 8000 }).catch(() => pr.push('the announcement did not send'));
   const ann = calls.filter(c => c.route === 'push/send');
   if (ann.length !== 2 || ann.some(c => c.body.url !== './#whats-new')) pr.push('the announcement does not open the Updates screen: ' + ann.map(c => c.body.url));
   calls.length = 0;
   await p.fill('#nTitle', 'Hello family'); await p.fill('#nBody', 'Notifications are on.');
-  await p.click('#nGo');
+  await p.click('#nGo'); await p.click('.st-ask .st-yes');
   await p.waitForFunction(() => /Sent to 3 phones/.test(document.getElementById('nErr').textContent), null, { timeout: 8000 }).catch(async () => pr.push('result says: ' + (await text(p, '#nErr'))));
   const sends = calls.filter(c => c.route === 'push/send');
   if (sends.map(s => s.body.to).join() !== 'u1,u2') pr.push('sent to ' + sends.map(s => s.body.to).join() + ', not each person in turn');
   if (sends.some(s => s.body.url !== './')) pr.push('a message of your own opens the Updates screen');
   if (sends.some(s => s.body.title !== 'Hello family' || s.body.body !== 'Notifications are on.')) pr.push('the message changed on the way');
+  if (dialogs.length) pr.push('the browser\'s own dialog came up: ' + dialogs.join(' / '));
   report('the owner writes a notification and it goes out person by person', pr); await ctx.close();
 }
 

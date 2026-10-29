@@ -2,7 +2,7 @@
 // function (the same routes functions/calendar/api answers, kept in memory),
 // with events dated around today, Notes and Travel data in storage, and the
 // weather stubbed: the month grid, the day and week grids, opening an event,
-// editing it (the write carries the etag), a new event (with its time zone
+// editing it (the write carries the etag), the editor's All-day and Private (the shared switch), a new event (with its time zone
 // block), deleting one occurrence of a repeating event (an EXDATE), search,
 // the switches' sliding thumbs, the layers, settings, and that nothing
 // trips the page's Content Security Policy. Screenshots go to the folder given as the second argument.
@@ -280,6 +280,29 @@ await test('a new event goes to iCloud as its own file', async () => {
   assert.equal(files.size, 4);
   await page.waitForTimeout(200);
   assert.ok((await page.textContent('#main')).includes('Piano lesson'));
+});
+
+await test('the editor\'s All-day and Private are the shared switch (home/settings.js), and turn', async () => {
+  calls.length = 0;
+  await page.click('#fab');
+  await page.waitForSelector('#edSheet:not([hidden])');
+  const sw = id => page.$eval(id, b => ({ shared: b.matches('button.st-sw[role="switch"]'), label: b.getAttribute('aria-label'), on: b.getAttribute('aria-checked'), w: b.offsetWidth, h: b.offsetHeight }));
+  for (const [id, label] of [['#edAllDay', 'All-day'], ['#edPrivate', 'Private']]) {
+    const s = await sw(id);
+    assert.ok(s.shared && s.label === label && s.on === 'false' && s.w === 48 && s.h === 22, id + ': ' + JSON.stringify(s));
+  }
+  assert.equal(await page.$('#edSheet .switch'), null, 'no switch of Calendar\'s own');
+  await page.click('#edAllDay');
+  assert.equal((await sw('#edAllDay')).on, 'true');
+  assert.equal(await page.getAttribute('#edStart', 'type'), 'date', 'all-day: the start is a date');
+  await page.click('#edPrivate');
+  assert.ok((await sw('#edPrivate')).shared && (await sw('#edPrivate')).on === 'true', 'Private is on, still the shared switch');
+  await shot(page, '05b-editor-switches');
+  await page.click('#edAllDay');
+  assert.equal(await page.getAttribute('#edStart', 'type'), 'datetime-local', 'and back');
+  await page.click('#edCancel');
+  await page.waitForFunction(() => document.getElementById('edSheet').hidden);
+  assert.ok(!calls.some(c => c.method === 'PUT'), 'nothing written');
 });
 
 await test('deleting one occurrence of a repeating event adds an EXDATE', async () => {

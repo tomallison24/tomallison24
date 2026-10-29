@@ -87,7 +87,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     spark: '<svg viewBox="0 0 24 24"><path d="M11 3.6l1.9 5.1 5.1 1.9-5.1 1.9L11 17.6l-1.9-5.1L4 10.6l5.1-1.9z"/><path d="M18.4 15.2l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
     box: '<svg viewBox="0 0 24 24"><path d="M3.8 8.2L12 4l8.2 4.2v7.6L12 20l-8.2-4.2z"/><path d="M3.8 8.2L12 12.4l8.2-4.2M12 12.4V20"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
-    eyeOff: '<svg viewBox="0 0 24 24"><path d="M3.4 12s3.2-6 8.6-6 8.6 6 8.6 6-3.2 6-8.6 6-8.6-6-8.6-6z"/><circle cx="12" cy="12" r="2.6"/><path d="M4.4 4.4l15.2 15.2"/></svg>',
     ret: '<svg viewBox="0 0 24 24"><path d="M8.6 5.4L4.4 9.6l4.2 4.2"/><path d="M4.6 9.6h10.2a4.8 4.8 0 0 1 0 9.6H11"/></svg>',
   };
   const KIND_ROWS = [
@@ -703,10 +702,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!hasRet(o) && (o.status === 'delivered' || o.status === 'pickedup')) acts.push('<button class="rowbtn" type="button" id="opRetStart"><span class="ic">' + I.ret + '</span><span>Start a return<span class="sub">Keeps track of it until the refund</span></span></button>');
     h += '<div class="rgroup glass">' + acts.join('') + '</div>';
     // Private: hidden from Ipsy (ipsy-tools.js), with its emails; it still syncs and shows here as usual.
-    h += '<div class="rgroup glass"><button class="swrow" type="button" role="switch" id="opPrivate" aria-checked="' + !!o.private + '">' + I.lock
-      + '<span class="grow">Private<span class="sub">Hides this order and its emails from Ipsy.</span></span><span class="switch" aria-hidden="true"></span></button>'
-      + '<button class="swrow" type="button" role="switch" id="opHide" aria-checked="' + !!o.hide + '">' + I.eyeOff
-      + '<span class="grow">Hidden<span class="sub">For gifts: off every list, search and Ipsy. Settings shows it, with Face ID.</span></span><span class="switch" aria-hidden="true"></span></button></div>';
+    const S = AllisonOS.settings;
+    h += S.section('', [
+      S.toggle({ id: 'opPrivate', title: 'Private', sub: 'Hides this order and its emails from Ipsy.', on: !!o.private }),
+      S.toggle({ id: 'opHide', title: 'Hidden', sub: 'For gifts: off every list, search and Ipsy. Settings shows it, with Face ID.', on: !!o.hide }),
+    ]);
     if (o.source && o.source.from) h += '<p class="srcnote">From ' + esc(o.source.from.replace(/<[^>]*>/g, '').trim() || o.source.from) + (o.source.date ? ', ' + esc(new Date(o.source.date).toLocaleDateString('en-US')) : '') + '.' + (o.ai ? ' Details fixed by Ipsy.' : '') + (o.auto ? ' Marked as received in a clean-up.' : '') + '</p>';
     h += '<button class="btn quiet danger" type="button" id="opDel">Delete order</button>';
     $('opBody').innerHTML = h;

@@ -635,8 +635,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     box.innerHTML = '<p class="label">Move to</p><div class="rgroup" style="padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap">'
       + cats.map(c => '<button class="chip quiet" type="button" data-pick="' + esc(c.name) + '" data-emoji="' + esc(c.emoji || '') + '">' + (c.emoji ? '<span aria-hidden="true">' + esc(c.emoji) + '</span> ' : '') + no(c.name)
         + (x.how && x.how !== 'merge' && C.catKey(c.name) === C.catKey(x.mcat) ? ' <small>(Monarch’s)</small>' : '') + '</button>').join('') + '</div></div>'
-      + '<div class="rgroup"><div class="frow"><label for="newCat">New category</label><input class="txt" id="newCat" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"><button class="chip" type="button" id="newCatGo">Use it</button></div>'
-      + '<button class="swrow" type="button" role="switch" id="recatAll" aria-checked="true"><span class="grow"><span>Always for</span> ' + no(x.merchant) + '<span class="sub">Its other transactions too, and those to come.</span></span><span class="switch" aria-hidden="true"></span></button></div>'
+      + '<div class="rgroup"><div class="frow"><label for="newCat">New category</label><input class="txt" id="newCat" type="text" maxlength="40" autocomplete="off" enterkeyhint="done"><button class="chip" type="button" id="newCatGo">Use it</button></div></div>'
+      + AllisonOS.settings.section('', AllisonOS.settings.toggle({ id: 'recatAll', html: true, title: 'Always for ' + no(x.merchant), sub: 'Its other transactions too, and those to come.', on: true }))
       + (x.how === 'merge' ? '<p class="note">Its category was merged into another: Settings, Categories.</p>' : '');
     box.hidden = false;
     box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -708,7 +708,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const rb = e.target.closest('[data-recat]'); if (rb) { recatOpen(rb.dataset.recat); return; }
     const pk = e.target.closest('[data-pick]'); if (pk) { setCat(st.txId, pk.dataset.pick, pk.dataset.emoji || ''); return; }
     if (e.target.closest('#newCatGo')) { setCat(st.txId, $('newCat').value, ''); return; }
-    if (e.target.closest('#recatAll')) { const b = $('recatAll'); b.setAttribute('aria-checked', String(b.getAttribute('aria-checked') !== 'true')); return; }
+    if (e.target.closest('#recatAll')) { AllisonOS.settings.flip($('recatAll')); return; }
     const t = e.target.closest('[data-tx]'); if (t) openTx(t.dataset.tx, !!st.list);
   });
 

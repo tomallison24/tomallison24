@@ -162,11 +162,8 @@ svg.b{stroke-width:2.2}
 .track i{display:block;height:100%;border-radius:3px;background:var(--accent);transition:width .5s var(--ease)}
 .sum .line{font-size:13px;color:var(--muted)}
 
-
-
-  background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
-  background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,hsl(var(--h) 80% 55%) 60%,transparent),inset 0 1px 1px var(--lgs-rim)}
+/* Change a category: its parts spaced as the sheet's own are */
+#recatBox:not([hidden]){display:flex;flex-direction:column;gap:14px}
 .frow{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--hair-2);font-size:15px;min-height:52px}
 .frow:first-child{border-top:0}
 .frow > label{flex:1 0 auto;white-space:nowrap}
@@ -482,19 +479,6 @@ button.row:active{background:var(--fill)}
 .bigamt{font-size:34px;font-weight:700;letter-spacing:-.03em;text-align:center;margin:4px 0 0;font-variant-numeric:tabular-nums}
 .bigamt.in{color:var(--up)}
 .sub{font-size:14px;color:var(--muted);text-align:center;margin:0}
-/* the switch every aOS app shares (as in Orders, Travel): a pill-shaped knob that swells into a clear lens while pressed */
-.swrow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 12px 10px 16px;text-align:left;font-size:16px;font-weight:600;color:var(--text)}
-.swrow .grow{flex:1;min-width:0}
-.swrow .sub{display:block;font-weight:400;color:var(--muted);font-size:13px}
-.rgroup > .swrow{border-top:1px solid var(--hair-2)}
-.rgroup > .swrow:first-child{border-top:0}
-.switch{position:relative;flex:none;width:58px;height:30px;border-radius:999px;background:rgba(118,118,128,.16);box-shadow:inset 0 0 0 1px rgba(128,128,128,.22);transition:background .2s}
-.switch::after{content:"";position:absolute;top:3px;left:3px;width:34px;height:24px;border-radius:999px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.28);
-  transition:transform .3s cubic-bezier(.3,1.3,.5,1),scale .2s cubic-bezier(.2,.8,.2,1),background .2s}
-[aria-checked="true"] > .switch{background:#34C759}
-[aria-checked="true"] > .switch::after{transform:translateX(18px)}
-.swrow:active > .switch::after{scale:1.18;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.22)}
-@media (prefers-reduced-motion:reduce){.switch,.switch::after{transition:none}}
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -679,10 +663,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .bigamt{font-weight:600}
 .badge{background:color-mix(in srgb,var(--mc-teal) 18%,transparent);letter-spacing:.02em}
 .badge.warn{background:color-mix(in srgb,var(--mc-orange) 22%,transparent)}
-/* the shared switch, in Vintage's colours */
-.switch{background:color-mix(in srgb,var(--text) 22%,transparent);box-shadow:none}
-.switch::after{background:#FFF8EC;box-shadow:0 1px 3px rgba(43,37,34,.3)}
-[aria-checked="true"] > .switch{background:var(--mc-teal)}
 </style>
 <style id="layers" media="not all">
 /* Layers: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
@@ -699,7 +679,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 .vbar .vb-chev svg{color:#D8AB63}
 [data-k="4"]{--k:#A79170}
 [data-k="5"]{--k:#92979D}
-.switch::after{background:#FBFDFF;box-shadow:0 1px 3px rgba(19,26,35,.3)}
 /* Layers: a still sky behind the page, its colours by the time of day (data-tod, set by home/design.js when the
    page opens and when you come back; it never animates), clear behind the title and frosted from there down, as a
    dock of glass over it. Vintage's disc, dot and pill go: the sky is the one shape. System type, bold headings. */
@@ -720,46 +699,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 :root :is(body,#app.app){background:transparent}
 :root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3),:root .aos-sky-cap{display:none}   /* and no fade under a solid status bar: the sky runs on up into it */
 :is(.fab,.okbtn){box-shadow:var(--ly-lift)}
-</style>
-<style id="grid" media="not all">
-/* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
-:root{--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,.14);--mc-ink:#171B20;--mc-mustard:#FB6049;--mc-teal:#973835;--mc-orange:#E41F24;--mc-olive:#707F92;--mc-walnut:#292D33;--mc-on-mustard:#171B20;--bg:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-text:#973835;--icon:#973835;--cta:#D41C21;--cta-ink:#FCFDFF;--danger:#C11019;--danger-text:#A50310;--flag:#B6191C;--glass:#FAFCFE;--glass-2:#ECEEF0;--sheet:#FAFCFE;--gb-edge:rgba(23,27,32,.14);--hair:rgba(23,27,32,.14);--hair-2:rgba(23,27,32,.08);--fill:rgba(23,27,32,.06);--lift:rgba(23,27,32,.10);--lift-strong:rgba(23,27,32,.22);--scrim:rgba(23,27,32,.35);--grab:rgba(23,27,32,.28);--bar-top:#FAFCFE;--bar-bottom:#FAFCFE;--bar-rim:rgba(23,27,32,.12);--bar-solid:#FAFCFE;--seg-thumb:#FB6049;--lg-bg:#FAFCFE;--lg-rim:inset 0 0 0 1.5px rgba(23,27,32,.12);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,.05);--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,.12);--lgs-field:#F3F5F7;--lgs-scrim:rgba(23,27,32,.30);--up:#4D5B6C;--down:#AD0B14;--af:#526072;--k-beer:#FB6049;--k-wine:#E41F24;--k-spirits:#843327;--k-cocktail:#973835;--k-seltzer:#E76963;--k-cider:#707F92;--k-other:#94979B;--sw-off:rgba(23,27,32,.22)}
-@media (prefers-color-scheme:dark){
-:root:not([data-theme="light"]){--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-ink:#EEF0F2;--mc-teal:#FFA39B;--mc-olive:#C9DBF3;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--icon:#FF8F7F;--cta:#F93433;--cta-ink:#F8FAFC;--danger:#FA6258;--danger-text:#FE9185;--flag:#FE9185;--glass:#0D0F11;--glass-2:#131518;--sheet:#0D0F11;--gb-edge:rgba(238,240,242,.14);--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(0,0,0,.55);--grab:rgba(238,240,242,.28);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,.14);--bar-solid:#0A0C0E;--seg-thumb:#FF8F7F;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,.14);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,.14);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,.5);--up:#C9DBF3;--down:#FE9185;--af:#E4EFFE;--k-spirits:#E86757;--k-cocktail:#FFA39B;--k-seltzer:#FDDBD8;--k-cider:#C9DBF3;--sw-off:rgba(238,240,242,.24)}
-}
-:root[data-theme="dark"]{--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-ink:#EEF0F2;--mc-teal:#FFA39B;--mc-olive:#C9DBF3;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--icon:#FF8F7F;--cta:#F93433;--cta-ink:#F8FAFC;--danger:#FA6258;--danger-text:#FE9185;--flag:#FE9185;--glass:#0D0F11;--glass-2:#131518;--sheet:#0D0F11;--gb-edge:rgba(238,240,242,.14);--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(0,0,0,.55);--grab:rgba(238,240,242,.28);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,.14);--bar-solid:#0A0C0E;--seg-thumb:#FF8F7F;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,.14);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,.14);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,.5);--up:#C9DBF3;--down:#FE9185;--af:#E4EFFE;--k-spirits:#E86757;--k-cocktail:#FFA39B;--k-seltzer:#FDDBD8;--k-cider:#C9DBF3;--sw-off:rgba(238,240,242,.24)}
-body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
-.title::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23973835'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FB6049'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23E41F24'/%3E%3C/svg%3E") no-repeat}
-.vbar::before{box-shadow:inset 0 0 0 1px rgba(243,245,247,.12),0 10px 22px -10px rgba(23,27,32,.6)}
-.vbar > button{color:#F3F5F7}
-.vbar > button:active{background:rgba(243,245,247,.14)}
-.vbar .vb-chev svg{color:#FB6049}
-[data-k="4"]{--k:#B46354}
-[data-k="5"]{--k:#94979B}
-.switch::after{background:#FCFDFF;box-shadow:0 1px 3px rgba(23,27,32,.3)}
-/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
-   only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
-   over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.
-   Orbitron headings, Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
-   dot and pill behind the title go: the car's screen is calm. */
-@font-face{font-family:"Orbitron";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/orbitron-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@font-face{font-family:"Exo 2";font-style:normal;font-weight:400 700;font-display:swap;src:url("../home/fonts/exo-2-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@property --tr-a{syntax:'<angle>';inherits:false;initial-value:0deg}
-:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif;font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
-:root{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.16);color-scheme:dark}
-:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){display:none}
-:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
-  background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
-  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
-:root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
-:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px 4px 4px;z-index:-1;pointer-events:none;border-radius:30px 30px var(--tr-foot) var(--tr-foot);--tr-foot:max(30px,calc(env(safe-area-inset-bottom) + 14px))}
-:root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
-:root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
-  filter:drop-shadow(0 0 4px #FF2A2A);animation:trRun 7s linear infinite}
-@keyframes trRun{to{--tr-a:360deg}}
-@media (prefers-reduced-motion:reduce){:root::after{animation:none;opacity:0}}
-:is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
 </style>
 <style id="grid" media="not all">
 /* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */

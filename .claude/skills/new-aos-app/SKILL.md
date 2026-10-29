@@ -114,6 +114,9 @@ per person is deleted in `functions/aOS/api` `remove`.
 
 ## 3. The ground rules
 
+The full rules, with pictures, are the design charter, `DESIGN.md` at the top of the repo, and
+`node aOS/scripts/design-check.mjs --only <id>` must pass for the app (CI runs it). In short:
+
 - **It works on its own.** People add only the apps they want, so an app may
   never need another app installed or used: its own storage, its own sign-in
   (`../home/account.js`), and anything shared through the family account (as

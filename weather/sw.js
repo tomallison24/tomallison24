@@ -2,7 +2,7 @@
 // deploy shows up on the next open; the cache is the fallback when offline.
 // Forecast requests are never cached here - the page keeps the last one in
 // localStorage and labels it with its time.
-const CACHE = 'weather-v67';
+const CACHE = 'weather-v68';
 // slide.js is Home's, shared by every app (the switches' sliding thumb); design.js too (Vintage or
 // Standard). Not sky.js: Weather draws its own Vintage sky, from the forecast. The glass icons carry
 // the page's own ?v=, which design.js keeps when it swaps the icon.

@@ -56,6 +56,7 @@
 /* ---- the shapes, the same in every look ---- */
 .st-sec { margin: 0 0 22px; color: var(--st-text) }
 .st-sec:last-child { margin-bottom: 0 }
+.st-sec[hidden], .st-row[hidden] { display: none }
 .st-lbl { margin: 0 8px 8px; font-size: 12px; font-weight: 600; line-height: 1.2; letter-spacing: .12em; text-transform: uppercase; color: var(--st-muted) }
 .st-group { border-radius: 20px; background: var(--st-card); box-shadow: inset 0 0 0 1px var(--st-edge); overflow: hidden }
 html[data-look="glass"] .st-group, html[data-look="layers"] .st-group { -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%) }
@@ -110,6 +111,33 @@ button.st-row:not(:disabled):active { background: var(--st-press) }
 [aria-checked="true"] > .st-sw::before { opacity: 0 }
 [aria-checked="true"] > .st-sw > i { opacity: .95 }
 .st-switch:not(:disabled):active > .st-sw::after { scale: 1.2 }
+/* the same switch on its own, outside a Settings row (an editor's Private, an alarm): the button is the switch (S.sw) */
+button.st-sw { margin: 0; padding: 0; border: 0; cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent }
+button.st-sw:disabled { opacity: .5; cursor: default }
+button.st-sw > .st-hit { position: absolute; inset: -11px -4px }
+button.st-sw:focus-visible { outline: 2px solid var(--st-accent); outline-offset: 3px }
+.st-sw[aria-checked="true"] { background: color-mix(in srgb, var(--st-on) 88%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-on) 70%, #fff), 0 0 14px -2px var(--st-glow) }
+.st-sw[aria-checked="true"]::after { transform: translateX(26px) }
+.st-sw[aria-checked="true"]::before { opacity: 0 }
+.st-sw[aria-checked="true"] > i { opacity: .95 }
+button.st-sw:not(:disabled):active::after { scale: 1.2 }
+
+/* asking first, in the app (S.ask): never the browser's confirm(). A card over a dimmed page, its buttons at the bottom */
+.st-ask { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(0,0,0,.32); animation: st-fade .18s ease }
+.st-ask-card { width: 100%; max-width: 420px; border-radius: 24px; padding: 20px 18px 16px; background: var(--st-card); color: var(--st-text);
+  box-shadow: inset 0 0 0 1px var(--st-edge), 0 18px 40px -12px rgba(0,0,0,.4); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); animation: st-rise .26s cubic-bezier(.2,.8,.2,1) }
+html[data-look="glass"] .st-ask-card, html[data-look="layers"] .st-ask-card { background: color-mix(in srgb, var(--st-card) 92%, transparent) }
+.st-ask h2 { margin: 0 2px 6px; font-size: 18px; font-weight: 650; line-height: 1.3 }
+.st-ask p { margin: 0 2px 16px; font-size: 15px; line-height: 1.4; color: var(--st-muted) }
+.st-ask-btns { display: flex; gap: 10px }
+.st-ask-btns button { flex: 1; min-height: 48px; border: 0; border-radius: 16px; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; background: var(--st-seg); color: var(--st-text) }
+.st-ask-btns .st-yes { background: var(--st-accent); color: var(--st-card) }
+.st-ask-btns .st-yes.st-bad { background: var(--st-danger); color: var(--st-card) }
+.st-ask-btns button:focus-visible { outline: 2px solid var(--st-accent); outline-offset: 2px }
+@keyframes st-fade { from { opacity: 0 } }
+@keyframes st-rise { from { transform: translateY(24px); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .st-ask, .st-ask-card { animation: none } }
 @media (prefers-reduced-motion: reduce) { .st-sw, .st-sw::after, .st-sw::before, .st-sw > i, .st-seg button { transition: none } }
 
 /* ---- Vintage: flat cream cards, teal for on, Futura-ish labels from the page ---- */
@@ -204,6 +232,25 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
     input: o => `<label class="st-row st-input">${text(o)}<input class="st-field" type="${esc(o.type || 'text')}" value="${esc(o.value || '')}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${attrs(o)} ${o.attrs || ''}></label>`,
     // anything else that lives in a group (the Design picker, a list of chips): given as it is
     raw: (html, o = {}) => `<div class="st-row st-raw"${attrs(o)}>${html}</div>`,
+    // the same switch on its own, outside a Settings row (an editor's Private, an alarm). label: what VoiceOver says; .st-hit makes its tap area 44 tall
+    sw: o => `<button type="button" class="st-sw" role="switch" aria-checked="${!!o.on}"${o.disabled ? ' disabled' : ''}${attrs(o)}><i aria-hidden="true"></i><span class="st-hit" aria-hidden="true"></span></button>`,
+    // asking first, in the app, never the browser's confirm(): resolves true for yes. danger: the yes button in red
+    //   if (!await S.ask({ title: 'Remove Ella?', text: 'Her progress goes on every phone.', yes: 'Remove', danger: true })) return;
+    ask({ title, text = '', yes = 'OK', no = 'Cancel', danger = false } = {}) {
+      return new Promise(done => {
+        const was = document.activeElement, box = document.createElement('div');
+        box.className = 'st-ask'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-modal', 'true');
+        box.innerHTML = `<div class="st-ask-card"><h2 id="st-ask-t">${esc(title)}</h2>${text ? `<p>${esc(text)}</p>` : ''}`
+          + `<div class="st-ask-btns"><button type="button" class="st-no">${esc(no)}</button><button type="button" class="st-yes${danger ? ' st-bad' : ''}">${esc(yes)}</button></div></div>`;
+        box.setAttribute('aria-labelledby', 'st-ask-t');
+        const end = v => { document.removeEventListener('keydown', key, true); box.remove(); if (was && was.focus) try { was.focus({ preventScroll: true }); } catch {} done(v); };
+        const key = e => { if (e.key === 'Escape') { e.preventDefault(); end(false); } };
+        box.addEventListener('click', e => { if (e.target === box || e.target.closest('.st-no')) end(false); else if (e.target.closest('.st-yes')) end(true); });
+        document.addEventListener('keydown', key, true);
+        document.body.appendChild(box);
+        box.querySelector(danger ? '.st-no' : '.st-yes').focus({ preventScroll: true });
+      });
+    },
     // Claude for this app on this phone (AllisonOS.claude, ../home/account.js): the first row of the app's AI helper
     // section, and the same row in aOS Account > AI helper's list. It turns itself (below), so the page doesn't handle it.
     claude(app) {

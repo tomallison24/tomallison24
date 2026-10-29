@@ -225,7 +225,10 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#edPrivate');
     assert.equal(await page.getAttribute('#edPrivate', 'aria-checked'), 'true');
     await page.waitForTimeout(400);
-    assert.equal((await q('#edPrivate .switch', ['backgroundColor']))[0], teal, 'a switch that is on is teal');
+    assert.ok(await page.$eval('#edPrivate', b => b.matches('button.st-row.st-switch[role="switch"]') && !!b.querySelector('.st-sw') && !b.querySelector('.switch')), 'the shared switch row (home/settings.js)');
+    // the shared track is the look's teal at 88% (color-mix in srgb: Chromium gives it as color(srgb r g b / a))
+    const rgb = c => { const n = c.match(/[\d.]+/g).map(Number); return (/^color\(/.test(c) ? n.slice(0, 3).map(v => Math.round(v * 255)) : n.slice(0, 3)).join(', '); };
+    assert.equal(rgb((await q('#edPrivate .st-sw', ['backgroundColor']))[0]), rgb(teal), 'a switch that is on is teal');
     await page.click('#edPrivate');
     await shot(page, '03-editor-' + scheme);
     await page.click('#edDone');
