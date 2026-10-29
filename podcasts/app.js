@@ -13,6 +13,21 @@
   const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
   const MAX_EPS = 250;                     // newest episodes kept for each show
   const $ = id => document.getElementById(id);
+  // This script and its page go together (PAGE, the page's aos-build, its ?v= on app.js and sw.js's CACHE: a
+  // release changes all four; sw.js keeps each release's script with its page). A page from another release
+  // lacks what this script draws into, and the app would stop with an empty Library (your shows are safe on the
+  // phone and in the Sheet): so the app opens again, once, to get the pair; if that can't (offline), it says so.
+  const PAGE = 'podcasts-v32';
+  if ((document.querySelector('meta[name="aos-build"]') || {}).content !== PAGE) {
+    let tried = '';
+    try { tried = sessionStorage.getItem(KEY + '-page'); sessionStorage.setItem(KEY + '-page', PAGE); } catch(e) {}
+    if (tried !== PAGE && navigator.onLine !== false) { location.reload(); return; }
+    const m = document.createElement('p');
+    m.style.cssText = 'position:fixed;inset:auto 16px calc(24px + env(safe-area-inset-bottom,0px));z-index:99;margin:0;padding:14px 16px;border-radius:16px;background:#2B2522;color:#FBF5E9;font:600 15px/1.35 -apple-system,system-ui,sans-serif;text-align:center';
+    m.textContent = 'Podcasts was updated. Close it and open it again when you’re online. Your shows are safe.';
+    document.body.appendChild(m);
+    return;
+  }
   // Switches with a sliding glass thumb: the shared AllisonOS one (home/slide.js).
   // Without it, the chosen option keeps its own background.
   const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
@@ -509,7 +524,20 @@
   // Apple's directory: search, and the top shows chart.
   const itShow = r => ({title: r.collectionName || r.trackName || '', author: r.artistName || '', feed: r.feedUrl || '',
     art: media(r.artworkUrl600 || r.artworkUrl100 || ''), genre: r.primaryGenreName || ''});
-  const cleanShow = r => ({title: String(r.title || ''), author: String(r.author || ''), feed: webUrl(r.feed), art: media(r.art), genre: String(r.genre || '')});
+  const cleanShow = r => Object.assign({title: String(r.title || ''), author: String(r.author || ''), feed: webUrl(r.feed), art: media(r.art), genre: String(r.genre || '')},
+    /^\d{1,12}$/.test(r.apple || '') ? {apple: r.apple} : {}, r.trend ? {trend: true} : {});
+  // A chart show that came without its feed (Apple wouldn't look them up): its feed, asked for when it's tapped.
+  async function feedOf(r){
+    if (r.feed || !r.apple) return r.feed;
+    const [x] = ((await (await api('lookup?id=' + r.apple)).json()).results || []).map(cleanShow);
+    if (!x || !x.feed) throw new Error('That show has no public feed.');
+    Object.assign(r, {feed: x.feed, author: r.author || x.author, art: r.art || x.art, genre: r.genre || x.genre});
+    return r.feed;
+  }
+  async function withFeed(r, then){
+    try { await feedOf(r); } catch(e) { toast(quiet(e.message) ? 'That show can’t be opened right now.' : e.message); return; }
+    renderSearchIfOpen(); then(r);
+  }
   async function directory(path, direct, bg){
     try { return ((await (await api(path, bg)).json()).results || []).map(cleanShow); }
     catch(e) {
@@ -761,11 +789,11 @@
   const looksLikeFeed = q => /^(https?:\/\/|feed:\/\/|www\.)\S+$/i.test(q) || /^[\w-]+(\.[\w-]+)+\/\S*$/.test(q);
   const feedFromInput = q => webUrl(q.replace(/^feed:\/\//i, 'https://').replace(/^(?!https?:\/\/)/i, 'https://'));
   function srow(r, i, rank){
-    const id = r.feed ? showId(r.feed) : '', on = id && isFollowed(id);
-    return '<div class="srow" style="--i:' + i + '"><button class="sopen" type="button" data-res="' + i + '"' + (r.feed ? '' : ' disabled') + '>'
+    const id = r.feed ? showId(r.feed) : '', on = id && isFollowed(id), can = r.feed || r.apple;
+    return '<div class="srow" style="--i:' + i + '"><button class="sopen" type="button" data-res="' + i + '"' + (can ? '' : ' disabled') + '>'
       + (rank ? '<span class="rank">' + rank + '</span>' : '') + art(r.art, 56)
-      + '<span class="stx"><b' + (r.open ? '' : ' translate="no"') + '>' + esc(r.title) + '</b><span' + (r.feed ? ' translate="no"' : '') + '>' + esc(r.feed ? [r.author, r.genre].filter(Boolean).join(' · ') : 'Only on Apple Podcasts') + '</span></span></button>'
-      + '<button class="fbtn" type="button" data-fres="' + i + '" aria-pressed="' + !!on + '" aria-label="' + (on ? 'Following ' : 'Follow ') + esc(r.title) + '"' + (r.feed ? '' : ' disabled') + '>' + (on ? I.check : I.plus) + '</button></div>';
+      + '<span class="stx"><b' + (r.open ? '' : ' translate="no"') + '>' + esc(r.title) + '</b><span' + (can ? ' translate="no"' : '') + '>' + esc(can ? [r.author, r.genre].filter(Boolean).join(' · ') : 'Only on Apple Podcasts') + '</span></span></button>'
+      + '<button class="fbtn" type="button" data-fres="' + i + '" aria-pressed="' + !!on + '" aria-label="' + (on ? 'Following ' : 'Follow ') + esc(r.title) + '"' + (can ? '' : ' disabled') + '>' + (on ? I.check : I.plus) + '</button></div>';
   }
   const CC = {us:'the US', gb:'the UK', ie:'Ireland', ca:'Canada', au:'Australia', nz:'New Zealand'};
   function renderSearch(){
@@ -774,7 +802,7 @@
     let h = '';
     if (!q) {
       st.list = st.top || [];
-      h += '<section><p class="sechead">Top shows in ' + esc(CC[S.set.cc] || 'the US') + '</p>';
+      h += '<section><p class="sechead">' + (st.top && st.top.some(r => r.trend) ? 'Trending podcasts' : 'Top shows in ' + esc(CC[S.set.cc] || 'the US')) + '</p>';
       if (st.topErr) h += '<div class="notice glass"><span>' + esc(st.topErr) + '</span><button class="linkbtn" type="button" data-act="top-retry">Try again</button></div>';
       else if (!st.top) h += '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
       else if (!st.top.length) h += '<div class="empty glass"><span>No chart right now.</span></div>';
@@ -804,8 +832,11 @@
     topBusy = true; st.topErr = ''; st.top = null; renderSearchIfOpen();
     try {
       st.top = await topShows(); st.topCc = S.set.cc;
-      try { localStorage.setItem(CK, JSON.stringify({cc: S.set.cc, at: Date.now(), results: st.top})); } catch(e) {}
-    } catch(e) { st.topErr = navigator.onLine === false ? 'You’re offline.' : 'The chart couldn’t be loaded.'; }
+      // only a whole chart is kept on the phone (one still to be looked up is asked for again next time)
+      if (st.top.every(r => r.feed)) try { localStorage.setItem(CK, JSON.stringify({cc: S.set.cc, at: Date.now(), results: st.top})); } catch(e) {}
+    } catch(e) {   // the server's reason, when it gave one
+      st.topErr = navigator.onLine === false ? 'You’re offline.' : 'The chart couldn’t be loaded' + (e.message && !/isn’t available right now\.$/.test(e.message) ? ' (' + e.message.replace(/\.$/, '') + ').' : '.');
+    }
     topBusy = false;
     renderSearchIfOpen();
   }
@@ -1150,11 +1181,11 @@
     else if (d.save) toggleSave(d.save);
     else if (d.more) epMenu(d.more);
     else if (d.show) { closeSheet('epSheet'); closeSheet('np'); if (st.show !== d.show) openShowById(d.show); }
-    else if (d.res) { const r = st.list && st.list[+d.res]; if (r) openShow(r); }
+    else if (d.res) { const r = st.list && st.list[+d.res]; if (r) withFeed(r, openShow); }
     else if (d.fres) {
       const r = st.list && st.list[+d.fres];
-      if (!r || !r.feed) return;
-      if (isFollowed(showId(r.feed))) unfollow(showId(r.feed)); else follow(r);
+      if (!r || !(r.feed || r.apple)) return;
+      withFeed(r, r => { if (isFollowed(showId(r.feed))) unfollow(showId(r.feed)); else follow(r); });
     }
     else if (t.classList.contains('ts')) {
       const box = t.closest('[data-k]'), ep = box && getEp(box.dataset.k);
