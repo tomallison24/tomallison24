@@ -94,17 +94,22 @@ button.st-row:not(:disabled):active { background: var(--st-press) }
 .st-input .st-field { flex: 1 1 100%; max-width: none; margin: 4px 0 0; padding: 9px 12px; border-radius: 12px; background: var(--st-seg); color: var(--st-text); text-align: left; text-align-last: auto; cursor: text }
 .st-input .st-field::placeholder { color: var(--st-muted) }
 
-/* the switch: Glass. A frosted track that glows with the look's colour when on, and a lens for a knob */
-.st-sw { position: relative; flex: none; width: 52px; height: 28px; border-radius: 999px;
+/* the switch: Bead + Labeled. A slim frosted track that glows with the look's colour when on, a small lens bead,
+   and a | in the track when on, an o when off, so it reads without colour */
+.st-sw { position: relative; flex: none; width: 50px; height: 26px; border-radius: 999px;
   background: color-mix(in srgb, var(--st-card) 60%, transparent); -webkit-backdrop-filter: blur(8px) saturate(160%); backdrop-filter: blur(8px) saturate(160%);
   box-shadow: inset 0 0 0 1px var(--st-off), inset 0 1px 2px rgba(0,0,0,.12); transition: background .22s ease, box-shadow .22s ease }
-.st-sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+.st-sw::after { content: ""; position: absolute; top: 6px; left: 6px; width: 14px; height: 14px; border-radius: 50%;
   background: radial-gradient(120% 120% at 30% 25%, #fff 0%, var(--st-knob) 45%, color-mix(in srgb, var(--st-knob) 80%, #9aa3ad) 100%);
-  box-shadow: 0 2px 5px rgba(0,0,0,.25), inset 0 -1px 1px rgba(0,0,0,.08); transition: transform .32s cubic-bezier(.3,1.35,.5,1), scale .2s ease }
+  box-shadow: 0 1px 4px rgba(0,0,0,.28), inset 0 -1px 1px rgba(0,0,0,.08); transition: transform .32s cubic-bezier(.3,1.35,.5,1), scale .2s ease }
+.st-sw::before { content: ""; position: absolute; top: 50%; right: 9px; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--st-off); transition: opacity .2s }
+.st-sw > i { position: absolute; top: 50%; left: 12px; width: 1.5px; height: 10px; margin-top: -5px; border-radius: 1px; background: var(--st-knob); opacity: 0; transition: opacity .2s }
 [aria-checked="true"] > .st-sw { background: color-mix(in srgb, var(--st-on) 88%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-on) 70%, #fff), 0 0 14px -2px var(--st-glow) }
 [aria-checked="true"] > .st-sw::after { transform: translateX(24px) }
-.st-switch:not(:disabled):active > .st-sw::after { scale: 1.1 }
-@media (prefers-reduced-motion: reduce) { .st-sw, .st-sw::after, .st-seg button { transition: none } }
+[aria-checked="true"] > .st-sw::before { opacity: 0 }
+[aria-checked="true"] > .st-sw > i { opacity: .95 }
+.st-switch:not(:disabled):active > .st-sw::after { scale: 1.2 }
+@media (prefers-reduced-motion: reduce) { .st-sw, .st-sw::after, .st-sw::before, .st-sw > i, .st-seg button { transition: none } }
 
 /* ---- Vintage: flat cream cards, teal for on, Futura-ish labels from the page ---- */
 /* vintage: start */
@@ -177,7 +182,7 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
         + (hint || hintId ? `<p class="st-hint"${hintId ? ` id="${esc(hintId)}"` : ''}>${html ? hint : esc(hint)}</p>` : '') + '</section>';
     },
     // on or off
-    toggle: o => `<button type="button" class="st-row st-switch" role="switch" aria-checked="${!!o.on}"${o.disabled ? ' disabled' : ''}${attrs(o)}>${text(o)}<span class="st-sw" aria-hidden="true"></span></button>`,
+    toggle: o => `<button type="button" class="st-row st-switch" role="switch" aria-checked="${!!o.on}"${o.disabled ? ' disabled' : ''}${attrs(o)}>${text(o)}<span class="st-sw" aria-hidden="true"><i></i></span></button>`,
     // does something: an icon and a verb
     action: o => `<button type="button" class="st-row ${o.danger ? 'st-danger' : 'st-act'}"${o.disabled ? ' disabled' : ''}${attrs(o)}>${ICONS[o.icon] || ''}${text(o)}${val(o)}</button>`,
     // deletes or signs out: red, and asks again (S.armed)

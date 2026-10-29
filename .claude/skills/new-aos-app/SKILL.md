@@ -146,7 +146,7 @@ per person is deleted in `functions/aOS/api` `remove`.
   One sentence at most under a row, ending with a full stop, never "On." or "Off.". The same job
   has the same words everywhere: Check now, Disconnect Gmail, Back up everything, Import a backup,
   Export as a spreadsheet, Delete all data, Sign in with Face ID / Signed in as …. Travel's
-  `renderSettings` is the example to copy. Its look (and the Glass switch) is the component's:
+  `renderSettings` is the example to copy. Its look (and the Bead + Labeled switch) is the component's:
   don't restyle it in the app. Device controls in Home keep the Signal dashboard's own switches.
 - **Simple**: one main screen where possible; a sheet for each thing you open;
   the fewest controls that do the job. Tap targets 44 px. Real `<button>`s and
