@@ -1,13 +1,13 @@
 // Drives the Weather app in headless Chromium at iPhone size, light and dark, against made-up weather
 // (scripts/fake-weather.mjs stands in for the National Weather Service, Open-Meteo, BigDataCloud and the map
 // tiles, so no network is used): it opens to where you are, the hourly, feels like, humidity, wind and radar
-// views, the hour and day sheets, the Places sheet (search, add a city, units, page dots, and the Trip place from your Travel layer, signed in), the alerts, the
+// views, the hour and day sheets, Settings (Design, then the search, add a city, units, page dots, and the Trip place from your Travel layer, signed in), the alerts, the
 // radar's forecast frames through Weather's own helper (../weather/api/hrrr), and that nothing trips the
 // page's Content Security Policy; that its storage is wx.*.
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look: Futura, flat cream
 // (walnut) cards, a mustard thumb, an orange main button, a flat disc and atomic shapes for the sky instead
 // of a gradient, with text that reads on every colour it lands on; and Standard (Sea glass): the gradient
-// skies and glowing icons, no Vintage styles. Settings > Design (the first section of the Places sheet)
+// skies and glowing icons, no Vintage styles. Settings > Design (its first section)
 // switches between them at once, redraws what is open and keeps the choice; and the old Weather Vintage
 // address (served from weather/, as the deploy does) moves that app's data on the phone over to Weather's
 // names, once. Seeds localStorage['aos.seen'] so the walkthrough stays away, and aos.sky (as every Vintage
@@ -256,9 +256,10 @@ for (const scheme of ['light', 'dark']) {
   await step(scheme + ': Places: search, add a city, units, page dots; and its storage', async () => {
     await page.click('#hero .w3-place');
     await page.waitForSelector('#sheetWrap.open #placesList .prow');
-    assert.equal(await page.$eval('#sheetWrap .sheet-body > :not([hidden])', e => e.id), 'designLabel', 'Design is the first section');
+    assert.equal(await text(page, '#sheetTitle'), 'Settings');
+    assert.deepEqual(await texts(page, '#setBody .st-lbl'), ['Design', 'Your places', 'Units'], 'Design first, then Your places and Units');
     assert.equal((await texts(page, '#placesList .prow b'))[0], 'My Location');
-    assert.equal((await q('#units .slthumb', ['backgroundColor']))[0], rgb(227, 167, 47), 'a mustard thumb under the units');
+    assert.equal(await page.getAttribute('#units [data-value="us"]', 'aria-checked'), 'true', '°F, mph and inches picked');
     await page.fill('#q', 'Colum');
     await page.waitForSelector('#results button[data-pick]');
     assert.equal((await texts(page, '#results button')).length, 2);
@@ -271,7 +272,8 @@ for (const scheme of ['light', 'dark']) {
     assert.equal(places.length, 1); assert.equal(places[0].name, 'Columville');
     assert.equal((await q('#dots .dot.on i', ['backgroundColor']))[0], rgb(216, 87, 42), 'the current dot is an orange pill');
     await page.click('#hero .w3-place');
-    await page.click('#units [data-u="metric"]');
+    await page.click('#units [data-value="metric"]');
+    assert.equal(await page.getAttribute('#units [data-value="metric"]', 'aria-checked'), 'true', 'metric picked at once');
     await page.waitForFunction(() => +document.querySelector('#hero .w3-temp').textContent.replace('°', '') < 40);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wx.units'))), 'metric');
     await page.keyboard.press('Escape');
@@ -423,7 +425,7 @@ for (const scheme of ['light', 'dark']) {
 }
 
 {
-  // Settings > Design, the first section of the Places sheet: Vintage, then Standard and back, at once, kept across a reload
+  // Settings > Design, the first section of Settings: Vintage, then Standard and back, at once, kept across a reload
   const { ctx, page, problems } = await newPage('light');
   await page.goto(BASE + '/weather/');
   await ready(page);
@@ -451,8 +453,7 @@ for (const scheme of ['light', 'dark']) {
     const st = await page.evaluate(() => ({ c: document.documentElement.dataset.c, body: document.body.style.background, top: document.getElementById('sky').style.top, sky: document.querySelector('.w3-sky').style.background, ico: document.querySelector('#hero .w3-ico svg').style.filter }));
     assert.equal(st.c, undefined); assert.match(st.body, /linear-gradient/); assert.equal(st.top, ''); assert.match(st.sky, /linear-gradient/); assert.match(st.ico, /drop-shadow/);
     assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
-    const thumb = await page.$eval('#units .slthumb', e => { const t = e.getBoundingClientRect(), b = document.querySelector('#units [aria-pressed="true"]').getBoundingClientRect(); return Math.abs(t.width - b.width) < 2 && Math.abs(t.left - b.left) < 2; });
-    assert.ok(thumb, 'the units thumb sits under the chosen units');
+    assert.equal(await page.getAttribute('#units [data-value="us"]', 'aria-checked'), 'true', 'the units still as picked');
     if (SHOTS) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOTS, 'settings-glass.png') }); }
   });
   await step('Design: Standard is kept across a reload', async () => {
