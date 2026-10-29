@@ -165,6 +165,13 @@
   try { st.view = localStorage.getItem(KEY+'-view') || 'grid'; st.tab = localStorage.getItem(KEY+'-tab') || 'notes'; } catch(e){}
 
   const $ = id => document.getElementById(id);
+  // The editors' on/off rows (Just me, Private, Flag, Sort into store sections): home/settings.js's switch row
+  // (S.toggle), the whole row the switch, drawn into each <div class="st-group" data-toggle="<id>"> in index.html;
+  // the line under it (data-describedby) stays a hint below the group, as it was.
+  document.querySelectorAll('[data-toggle]').forEach(g => {
+    g.innerHTML = AllisonOS.settings.toggle({ id: g.dataset.toggle, title: g.dataset.title });
+    if (g.dataset.describedby) g.firstElementChild.setAttribute('aria-describedby', g.dataset.describedby);
+  });
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const normTag = s => s.trim().replace(/^#+/,'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-_]/g,'');
@@ -1876,7 +1883,8 @@
       const addN = saneAll(data.notes, saneNote).filter(n => Array.isArray(n.tags) && !haveN.has(n.id));
       const addT = saneAll(data.todos, saneTodo).filter(t => !haveT.has(t.id));
       if (!addL.length && !addN.length && !addT.length) { toast('Nothing new in that file.'); return; }
-      if (!confirm('Add ' + plural(addN.length, 'note') + ', ' + plural(addT.length, 'reminder') + ' and ' + plural(addL.length, 'list') + ' from this file? Only restore files you made yourself.')) return;
+      if (!await AllisonOS.settings.ask({ title: 'Add ' + plural(addN.length, 'note') + ', ' + plural(addT.length, 'reminder') + ' and ' + plural(addL.length, 'list') + ' from this file?',
+        text: 'Only restore files you made yourself.', yes: 'Add' })) return;
       lists.push(...addL); notes.push(...addN); todos.push(...addT); fixNotes();
       const known = new Set(lists.map(l => l.id)); todos.forEach(t => { if (!known.has(t.list)) t.list = lists[0].id; });
       save(); render();

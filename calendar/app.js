@@ -1192,7 +1192,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<div class="rgroup glass"><div class="frow big"><input class="txt" id="edTitle" placeholder="Title" value="' + esc(f.title) + '" autocomplete="off" enterkeyhint="next"></div>'
       + '<div class="frow"><span class="ic">' + ICON.map + '</span><input class="txt" id="edLoc" placeholder="Location" value="' + esc(f.location) + '" autocomplete="off"></div></div>'
       + '<div class="rgroup glass">'
-      + '<div class="frow"><span class="ic">' + ICON.clock + '</span><label for="edAllDay">All-day</label><button class="switch" id="edAllDay" type="button" role="switch" aria-checked="' + f.allDay + '" aria-label="All-day"></button></div>'
+      + '<div class="frow"><span class="ic">' + ICON.clock + '</span><label for="edAllDay">All-day</label>' + AllisonOS.settings.sw({ id: 'edAllDay', on: f.allDay, label: 'All-day' }) + '</div>'
       + '<div class="frow"><label for="edStart">Starts</label><input id="edStart" type="' + (f.allDay ? 'date' : 'datetime-local') + '" value="' + startV + '"></div>'
       + '<div class="frow"><label for="edEnd">Ends</label><input id="edEnd" type="' + (f.allDay ? 'date' : 'datetime-local') + '" value="' + endV + '"></div>'
       + (f.allDay ? '' : '<div class="frow"><label for="edTz">Time Zone</label><select id="edTz" translate="no">' + opt(zones.map(z => [z, z]), f.tz, zoneLabel) + '</select></div>')
@@ -1212,7 +1212,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + '<div class="frow"><span class="ic">' + ICON.bell + '</span><label for="edAlert1">Alert</label><select id="edAlert1">' + opt(alerts.concat(f.alarms[0] && !alerts.some(a => a[0] === f.alarms[0]) ? [[f.alarms[0], alarmWords({ minutes: I.parseDuration(f.alarms[0]) / MIN }, f.allDay)]] : []), f.alarms[0] || '') + '</select></div>'
       + (f.alarms[0] ? '<div class="frow sub"><label for="edAlert2">Second Alert</label><select id="edAlert2">' + opt(alerts.concat(f.alarms[1] && !alerts.some(a => a[0] === f.alarms[1]) ? [[f.alarms[1], alarmWords({ minutes: I.parseDuration(f.alarms[1]) / MIN }, f.allDay)]] : []), f.alarms[1] || '') + '</select></div>' : '')
       + '<div class="frow"><span class="ic">' + ICON.busy + '</span><label for="edTransp">Show As</label><select id="edTransp">' + opt([['OPAQUE', 'Busy'], ['TRANSPARENT', 'Free']], f.transp) + '</select></div>'
-      + '<div class="frow"><span class="ic">' + ICON.lock + '</span><label for="edPrivate">Private</label><button class="switch" id="edPrivate" type="button" role="switch" aria-checked="' + !!f.private + '" aria-label="Private"></button></div>'
+      + '<div class="frow"><span class="ic">' + ICON.lock + '</span><label for="edPrivate">Private</label>' + AllisonOS.settings.sw({ id: 'edPrivate', on: f.private, label: 'Private' }) + '</div>'
       + '</div><p class="hint">Private hides this event from Ipsy.</p>'
       + '<div class="rgroup glass"><div class="frow"><span class="ic">' + ICON.link + '</span><input class="txt" id="edUrl" type="url" inputmode="url" placeholder="URL" value="' + esc(f.url) + '" autocomplete="off" autocapitalize="off"></div>'
       + '<div class="frow"><span class="ic">' + ICON.notes + '</span><textarea id="edNotes" placeholder="Notes">' + esc(f.notes) + '</textarea></div></div>'

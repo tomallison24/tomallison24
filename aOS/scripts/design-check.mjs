@@ -5,7 +5,8 @@
 //                 open sheet is made of its sections (.st-sec)
 //   title         a button labelled "Settings" opens a sheet named "Settings"
 //   done          the sheet's way out is the ✓ labelled Done, in the head's right corner
-//   design-first  the first section is Design, with the shared picker (aosDesign.picker())
+//   design-first  the first section is Design, with the shared picker (aosDesign.picker()); Clock, whose looks
+//                 live in clock/design.js (DESIGN.md rule 14), with its own picker of the four looks
 //   order         the sections in the standard order: Design · the app's own · Connected accounts · Ipsy ·
 //                 Notifications · Your data · Family account
 //   on-off        no "On." or "Off." in the words
@@ -55,6 +56,11 @@ export const CHECKS = [
 ];
 const SETTINGS_CHECKS = ['shared', 'title', 'done', 'design-first', 'order', 'on-off', 'one-sentence'];
 const NA = { aos: SETTINGS_CHECKS, house: ['switch-css'] };
+// Clock keeps its looks in clock/design.js (DESIGN.md rule 14 names it the one exception to home/design.js), so its
+// Design section draws Clock's own picker rather than aosDesign.picker(): design-first takes that picker there, as
+// long as Design is still the first section and offers the four looks.
+const OWN_PICKER = { clock: true };
+const FOUR_LOOKS = ['vintage', 'glass', 'layers', 'grid'];
 
 // ---------------------------------------------------------------------------------------------------
 // The static checks: the app's files as they are
@@ -215,7 +221,8 @@ function pageSheet() {
     .map(el => el.outerHTML.replace(/\s+/g, ' ').slice(0, 90));
   const switches = [...dlg.querySelectorAll('[role="switch"]')].filter(vis).filter(s => !s.querySelector('.st-sw')).length;
   const text = dlg.innerText;
-  return { name: nameOf(dlg), done, labels, subs, loose, unnamed, switches, picker: !!dlg.querySelector('.st-sec .aos-design'), text, upper: (text.match(/(^|[^\w])AOS([^\w]|$)/g) || []).length };
+  return { name: nameOf(dlg), done, labels, subs, loose, unnamed, switches, picker: !!dlg.querySelector('.st-sec .aos-design'),
+    looks: [...((dlg.querySelector('.st-sec') || dlg).querySelectorAll('[role="radiogroup"] [role="radio"][data-design]'))].map(b => b.dataset.design), text, upper: (text.match(/(^|[^\w])AOS([^\w]|$)/g) || []).length };
 }
 
 const ORDER = ['Design', '', 'Connected accounts', 'Ipsy', 'Notifications', 'Your data', 'Family account'];
@@ -267,7 +274,9 @@ async function browserChecks(browser, base, id) {
     const d = s.done[0];
     r.done = !d ? ['no Done in the sheet\'s head'] : [...(d.right > 40 ? ['Done isn\'t in the right corner'] : []), ...(!d.tick ? ['Done is a word, not the ✓'] : []), ...(d.w < 44 || d.h < 44 ? [`Done is ${Math.round(d.w)}×${Math.round(d.h)}, under 44`] : [])];
     r.shared = (r.shared || []).concat(!s.labels.length ? ['the sheet has no shared sections (.st-sec)'] : s.loose ? [`${s.loose} control${s.loose === 1 ? '' : 's'} outside the shared sections`] : [], s.switches ? [`${s.switches} switch${s.switches === 1 ? '' : 'es'} not the shared one`] : []);
-    r['design-first'] = !s.labels.length ? ['no shared sections'] : s.labels[0] !== 'Design' ? [`first section is "${s.labels[0] || '(no label)'}"`] : !s.picker ? ['Design has no shared picker'] : [];
+    const ownPicker = OWN_PICKER[id] && JSON.stringify(s.looks) === JSON.stringify(FOUR_LOOKS);   // Clock's own, with the four looks
+    r['design-first'] = !s.labels.length ? ['no shared sections'] : s.labels[0] !== 'Design' ? [`first section is "${s.labels[0] || '(no label)'}"`]
+      : !s.picker && !ownPicker ? [OWN_PICKER[id] ? `Design doesn't offer the four looks (${s.looks.join(', ') || 'none'})` : 'Design has no shared picker'] : [];
     const ranks = s.labels.map(rank), bad = [];
     for (let i = 1; i < ranks.length; i++) if (ranks[i] < ranks[i - 1]) bad.push(`"${s.labels[i]}" after "${s.labels[i - 1]}"`);
     r.order = !s.labels.length ? ['no shared sections'] : bad;
