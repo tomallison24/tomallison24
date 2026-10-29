@@ -2043,35 +2043,34 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('lgHint').hidden = !i;
     closeSheet('setSheet'); openSheet('logSheet');
   }
+  // Settings, as in every app (../home/settings.js): Design · Trips · Connected accounts · Ipsy · Your data
   function renderSettings() {
-    const own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
-    const me = ls.get(K.me, '');
-    let rows = '';
-    if (own || viaMail || ever) {
-      rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new bookings now<span class="sub">'
-        + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) : 'Not checked yet') + '</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stLog"><span class="ic">' + I.mail + '</span><span>What Travel read<span class="sub">' + esc(scanSummary()) + '</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Bookings you edited, checked or deleted stay as they are</span></span></button>';
-      if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
-    } else {
-      rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only</span></span></button>';
-    }
-    $('stGmail').innerHTML = rows;
-    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser.' : '';
-    $('stGmailHint').hidden = !viaMail;
-    // switches: the switch says on or off, the line under it says what it does, in a sentence
-    const sw = (id, on, sub, off) => { const b = $(id); b.setAttribute('aria-checked', String(!!on && !off)); b.disabled = !!off; b.querySelector('.sub').textContent = off || sub; };
-    sw('stCalOpt', calOn(), 'Shares bookings with the Family calendar, both ways.', calAvail === false && 'Not available on this copy of the site.');
-    sw('stAiOpt', aiOn(), 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', aiAvail === false && 'Not set up on this copy of the site.');
+    const S = AllisonOS.settings, own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
+    const me = ls.get(K.me, ''), last = +ls.get(K.lastScan, 0), n = lookupsThisMonth();
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
-    $('stIpsyGmailOpt').hidden = !PV;
-    if (PV) sw('stIpsyGmailOpt', PV.gmail('travel'), 'Lets Ipsy search and read your email in chats.');
     const ml = aiOn() && aiAvail !== false ? modelsLine() : '';
-    $('stModels').textContent = ml; $('stModels').hidden = !ml;
-    const n = lookupsThisMonth();
-    $('stLive').textContent = liveAvail === true ? 'Working. ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.'
-      : liveAvail === false ? 'Not available on this copy of the site.'
-      : 'Checking…';
+    const gmail = own || viaMail || ever ? [
+      S.info({ id: 'stGmailWho', title: 'Gmail', sub: (me || (viaMail ? 'Mail’s sign-in' : 'Signed in')) + ', read-only.' }),
+      S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
+      S.nav({ id: 'stLog', title: 'What Travel read', sub: scanSummary() }),
+      S.action({ id: 'stRescan', icon: 'refresh', title: 'Read the last year again', sub: 'Bookings you edited, checked or deleted stay as they are.' }),
+      own || ever ? S.danger({ id: 'stOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
+    ] : [S.action({ id: 'stIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Travel can’t change or send anything.' })];
+    $('stBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'stDesign' })) : '')
+      + S.section('Trips', [
+        S.toggle({ id: 'stCalOpt', title: 'Family calendar', sub: calAvail === false ? 'Not available on this copy of the site.' : 'Shares bookings with the Family calendar, both ways.', on: calOn() && calAvail !== false, disabled: calAvail === false }),
+        S.info({ id: 'stLive', title: 'Live flight status', sub: liveAvail === true ? 'Working: ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.' : liveAvail === false ? 'Not available on this copy of the site.' : 'Checking…' }),
+      ])
+      + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
+      + S.section('Ipsy', [
+        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false }),
+        PV ? S.toggle({ id: 'stIpsyGmailOpt', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('travel') }) : '',
+      ], { hint: ml, hintId: 'stModels' })
+      + S.section('Your data', [
+        S.action({ id: 'stExport', icon: 'upload', title: 'Back up everything', sub: 'One file with every booking.' }),
+        S.action({ id: 'stImport', icon: 'download', title: 'Import a backup', sub: 'Adds what isn’t here already.' }),
+      ]);
+    if (window.aosDesign) aosDesign.bind($('stDesign'));
   }
   function openSettings() {
     renderSettings(); openSheet('setSheet');
@@ -2088,19 +2087,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
-  // Design: Vintage or Standard, at once, the first section of Settings (../home/design.js)
-  if (window.aosDesign) {
-    $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign'));
-    document.querySelectorAll('#setSheet [data-design-row]').forEach(e => { e.hidden = false; });
-  }
-  $('stCalOpt').onclick = () => { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); };
-  $('stAiOpt').onclick = () => { const on = !aiOn(); ls.set(K.aiOn, on ? '1' : '0'); renderSettings(); render(); if (on) { ls.del(K.ipsyTried); ipsyAutoCheck(); } };
-  $('stIpsyGmailOpt').onclick = () => { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('travel', !PV.gmail('travel')); renderSettings(); };
-  $('stGmail').addEventListener('click', e => {
-    if (e.target.closest('#stIn')) signIn({ choose: true });
-    else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
-    else if (e.target.closest('#stLog')) openLog();
-    else if (e.target.closest('#stRescan')) {
+  $('stBody').addEventListener('click', e => {
+    const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
+    const id = b.id;
+    if (id === 'stCalOpt') { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); }
+    else if (id === 'stAiOpt') { const on = !aiOn(); ls.set(K.aiOn, on ? '1' : '0'); renderSettings(); render(); if (on) { ls.del(K.ipsyTried); ipsyAutoCheck(); } }
+    else if (id === 'stIpsyGmailOpt') { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('travel', !PV.gmail('travel')); renderSettings(); }
+    else if (id === 'stIn') signIn({ choose: true });
+    else if (id === 'stScan') { closeSheet('setSheet'); scan({ loud: true }); }
+    else if (id === 'stLog') openLog();
+    else if (id === 'stRescan') {
       // Start over: bookings read from email (and not edited or checked by
       // you) are made again as their emails are read again, so an improved reader replaces its
       // old mistakes. Anything not found again goes, on both phones.
@@ -2109,14 +2105,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       reviveFrom(bookings.filter(b => b.source && b.source.msgId && seen.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked));
       closeSheet('setSheet'); scan({ loud: true });
     }
-    else if (e.target.closest('#stOut')) signOut();
+    else if (id === 'stOut') { if (AllisonOS.settings.armed(b, 'Tap again to disconnect')) signOut(); }
+    else if (id === 'stExport') exportBackup();
+    else if (id === 'stImport') $('stFile').click();
   });
-  $('stExport').onclick = async () => {
+  async function exportBackup() {
     const file = new File([JSON.stringify({ app: 'allison-travel', v: 1, kind: 'backup', saved: new Date().toISOString(), bookings, trips }, null, 2)], 'travel-backup-' + todayStr() + '.json', { type: 'application/json' });
     const r = await shareOut(file, 'Travel backup');
     toast({ shared: 'Backup saved', downloaded: 'Backup saved to Downloads', cancelled: 'Backup canceled' }[r] || 'Couldn’t save the backup');
-  };
-  $('stImport').onclick = () => $('stFile').click();
+  }
   $('stFile').addEventListener('change', async e => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;

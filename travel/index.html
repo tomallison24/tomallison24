@@ -1138,31 +1138,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="stLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
       <div class="sheetbody">
-        <p class="label" data-design-row hidden>Design</p>
-        <div class="rgroup glass" id="stDesign" data-design-row hidden></div>
-        <p class="label">Gmail</p>
-        <div class="rgroup glass" id="stGmail"></div>
-        <p class="hint" id="stGmailHint" hidden></p>
-        <p class="label">Live flight status</p>
-        <div class="box glass"><span class="hint" style="margin:0" id="stLive">Checking…</span></div>
-        <p class="label">Smart help</p>
-        <div class="rgroup glass">
-          <button class="swrow" type="button" role="switch" id="stCalOpt" aria-checked="false"><span class="grow">Family calendar<span class="sub" id="stCalSub"></span></span><span class="switch" aria-hidden="true"></span></button>
-          <button class="swrow" type="button" role="switch" id="stAiOpt" aria-checked="false"><span class="grow">Ipsy fills in what’s missing<span class="sub" id="stAiSub"></span></span><span class="switch" aria-hidden="true"></span></button>
-          <button class="swrow" type="button" role="switch" id="stIpsyGmailOpt" aria-checked="false"><span class="grow">Ipsy can search Gmail<span class="sub" id="stIpsyGmailSub"></span></span><span class="switch" aria-hidden="true"></span></button>
-        </div>
-        <p class="hint" id="stModels" hidden></p>
-        <p class="label">Backup</p>
-        <div class="rgroup glass">
-          <button class="rowbtn" type="button" id="stExport">
-            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 14.2V3.8"/><path d="M7.6 7.8l3.7-3.7a1 1 0 0 1 1.4 0l3.7 3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-            <span>Back up everything<span class="sub">One file with every booking</span></span>
-          </button>
-          <button class="rowbtn" type="button" id="stImport">
-            <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.8v10.4"/><path d="M7.6 10.2l3.7 3.7a1 1 0 0 0 1.4 0l3.7-3.7"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/></svg></span>
-            <span>Import a backup<span class="sub">Adds what isn’t here already</span></span>
-          </button>
-        </div>
+        <div id="stBody"></div>   <!-- the sections, written by renderSettings (../home/settings.js) -->
         <input type="file" id="stFile" accept=".json,application/json" hidden>
       </div>
     </div>
@@ -1202,6 +1178,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: signs calls to travel/api and calendar/api in -->
 <script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
 <script src="parse.js"></script>
