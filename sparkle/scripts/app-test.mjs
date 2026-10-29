@@ -289,6 +289,15 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await shot(p, '11-report');
   await p.click('[data-lv="read"][data-d="1"]'); await p.waitForTimeout(150);
   if ((await sp(p, () => window.sparkle.save.players.p1.skills.read.level)) !== 6) pr.push('+ did not raise her reading level');
+  // Remove this player asks first, in the app (the shared sheet, in red), never the browser's confirm(); Cancel keeps her
+  const dialogs = []; p.on('dialog', d => { dialogs.push(d.message()); d.dismiss(); });
+  await p.click('#rEdit'); await p.click('#cDel');
+  const ask = await p.waitForSelector('.st-ask .st-yes.st-bad', { timeout: 5000 }).then(() => p.locator('.st-ask').innerText(), () => '');
+  if (!/Remove Ava\?/.test(ask) || !/deleted on every phone/.test(ask)) pr.push('Remove this player did not ask in the app: ' + JSON.stringify(ask));
+  await shot(p, '11b-remove');
+  await p.click('.st-ask .st-no'); await p.waitForTimeout(200);
+  if (await p.locator('.st-ask').count() || !(await sp(p, () => !!window.sparkle.save.players.p1))) pr.push('Cancel on Remove did not keep her');
+  if (dialogs.length) pr.push('the browser\'s own dialog came up: ' + dialogs.join(' / '));
   await p.click('.sheet [data-x="done"]'); await p.waitForTimeout(200);
   await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
   if (await p.locator('#timer').isVisible()) pr.push('the play timer still shows after Hide');

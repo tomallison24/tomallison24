@@ -1400,8 +1400,8 @@
       else { const np = E.newPlayer(uidOf(), name, look); save.players[np.id] = np; }
       persist(true); paintPicker(); s.close(); sync();
     };
-    if (editing) s.querySelector('#cDel').onclick = () => {
-      if (!confirm(`Remove ${p.name}? Their progress, coins and treasures are deleted on every phone.`)) return;
+    if (editing) s.querySelector('#cDel').onclick = async () => {
+      if (!await AllisonOS.settings.ask({ title: `Remove ${p.name}?`, text: 'Their progress, coins and treasures are deleted on every phone.', yes: 'Remove', danger: true })) return;
       delete save.players[p.id]; save.gone[p.id] = Date.now(); persist(true); paintPicker(); s.close(); sync();
     };
     paint();
