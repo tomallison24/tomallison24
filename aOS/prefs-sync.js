@@ -52,6 +52,7 @@
     { id: 'aos.home.grid', key: 'aos.home.grid', app: 'aos' },   // Layers' grid: the order you put the apps in (aOS/home-tab.js)
     { id: 'aos.home.layout', key: 'aos.home.layout', app: 'aos', blank: v => v === 'classic' },   // Classic or Thumb arc (aOS/home-tab.js)
     { id: 'aos.helper', key: 'aos.helper', app: 'aos' },   // your helper and its name (home/ipsy.js)
+    { id: 'aos.helper.weather', key: 'aos.helper.weather', app: 'aos', blank: v => v === 'on' },   // your helper dresses for the weather, or not (home/ipsy.js)
     { id: 'home.settings#theme', key: 'home.settings', field: 'theme', app: 'aos', blank: v => v === '"auto"' },
   ];
   // as the app first had it: nothing set up yet
