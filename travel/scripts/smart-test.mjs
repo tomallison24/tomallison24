@@ -104,8 +104,10 @@ const browser = await chromium.launch();
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 8).join('\n   ')); } };
 
-async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false } = {}) {
+async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false, auto = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  // Ipsy's own check is on unless turned off: off here, so only the tests of it see what it sends
+  if (!auto) await ctx.addInitScript(() => { if (!sessionStorage.getItem('auto')) { sessionStorage.setItem('auto', '1'); localStorage.setItem('allison-travel-v1-ipsy-auto', '0'); } });
   await ctx.addInitScript(id => (localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'), localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' }))), ID);   // the sky held at day
   const page = await ctx.newPage();
   const problems = [];
@@ -208,7 +210,7 @@ const pick = (page, f) => page.evaluate(f);
     const old = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'OLD1AA'));
     assert.ok(old, 'but it is still kept as history');
   });
-  await step('nothing is sent to the AI by itself: not when reading Gmail, not when opening', async () => {
+  await step('with Ipsy\'s own check off, nothing is sent to the AI by itself: not when reading Gmail, not when opening', async () => {
     assert.equal(seen.extract.length, 0, JSON.stringify(seen.extract.map(x => x.missing)));
     await page.evaluate(() => window.__travel.smartPass());
     assert.equal(seen.extract.length, 0);
@@ -227,7 +229,7 @@ const pick = (page, f) => page.evaluate(f);
     assert.ok(!JSON.stringify(seen.extract[0]).includes('pat@example.com'));
     assert.ok(seen.extract[0].text.length <= 8000, 'an excerpt the server takes (functions/travel/api MAX_BODY): ' + seen.extract[0].text.length);
     const b = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'TRZ4KD'));
-    assert.equal(b.from, 'MCO'); assert.equal(b.to, 'PHL'); assert.equal(b.filled.from, 'ai'); assert.equal(b.guess, true);
+    assert.equal(b.from, 'MCO'); assert.equal(b.to, 'PHL'); assert.equal(b.filled.from, 'ai'); assert.equal(b.guess, false, 'nothing is missing now: out of To check');
     const ua = await pick(page, () => window.__travel.bookings.find(x => x.conf === 'KQ7T2M'));
     assert.equal(ua.guess, false); assert.equal(ua.filled, undefined);
     // the undated Cleveland email says no date anywhere, so there was nothing to ask the AI to read
@@ -436,6 +438,41 @@ const pick = (page, f) => page.evaluate(f);
   EMAILS.pop();
 }
 
+// =================== a long read goes in passes of 90, newest first, and a re-reading leaves no hole between them ===================
+{
+  const KEY = 'allison-travel-v1';
+  const FILLER = Array.from({ length: 130 }, (_, i) => ({ id: 'n' + i, threadId: 'n' + i, from: 'United Airlines <news@united.com>', subject: 'Your receipt ' + i, text: 'Thanks for flying with us. Nothing booked here. ' + i }));
+  EMAILS.unshift(...FILLER);      // newer than the bookings' emails: read first
+  const old = { type: 'flight', status: 'confirmed', conf: 'WRONG1', airlineCode: 'F9', flightNo: '3073', from: 'RDU', to: 'CLE', dep: iso(day(30)) + 'T10:00', guess: true, id: 'f-stale', created: 1, notes: '', source: { msgId: 'e1', date: 1 } };
+  const mine = n => ({ type: 'hotel', status: 'confirmed', conf: 'MINE' + n, name: 'My own hotel ' + n, checkIn: iso(day(40 + n)), checkOut: iso(day(41 + n)), guess: false, edited: true, id: 'h-mine' + n, created: 1, notes: '' });
+  const { ctx, page } = await open({ calendar: false, stored: {
+    [KEY]: JSON.stringify({ bookings: [old, mine(1), mine(2), mine(3)], trips: [] }),
+    [KEY + '-query-v']: '3', [KEY + '-seen']: JSON.stringify(['e1', 'e2']), [KEY + '-scan']: String(Date.now() - 60000) } });
+  const state = () => page.evaluate(KEY => ({ info: JSON.parse(localStorage.getItem(KEY + '-scan-info') || 'null'), more: localStorage.getItem(KEY + '-scan-more'), last: localStorage.getItem(KEY + '-scan'),
+    stale: window.__travel.bookings.some(b => b.id === 'f-stale'), rebuilt: window.__travel.bookings.some(b => b.conf === 'ZQ4RTE' && b.id !== 'f-stale'), mine: window.__travel.bookings.filter(b => /^h-mine/.test(b.id)).length }), KEY);
+  await step('a long read: the newest 90 emails first, the old reader\'s booking kept until its email comes, and Settings says what is left', async () => {
+    await page.waitForFunction(KEY => JSON.parse(localStorage.getItem(KEY + '-scan-info') || 'null'), KEY, { timeout: 20000 });
+    const r = await state();
+    assert.equal(r.info.ok, true); assert.equal(r.info.read, 90); assert.ok(r.info.more > 0, JSON.stringify(r.info));
+    assert.equal(r.more, '1', 'the read goes on'); assert.equal(r.last, null, 'and the next pass looks back as far');
+    assert.equal(r.stale, true, 'no hole: the old reader\'s booking stays until its email is read again');
+    await page.click('#setBtn');
+    await page.waitForSelector('#setSheet:not([hidden]) #stLog');
+    assert.match(await page.textContent('#stLog'), /, \d+ more to read$/);
+    await page.evaluate(() => document.querySelectorAll('.sheetwrap').forEach(w => { if (!w.hidden) w.querySelector('[data-close]').click(); }));
+  });
+  await step('the next pass reads the rest, makes the old booking again, and the read is done', async () => {
+    await page.evaluate(() => window.__travel.scan());
+    const r = await state();
+    assert.equal(r.info.ok, true); assert.equal(r.info.more, 0); assert.equal(r.info.read, r.info.listed - 90);
+    assert.equal(r.more, null); assert.ok(+r.last > 0, 'done: the next look reads only what is new');
+    assert.equal(r.stale, false, 'the old reader\'s booking gave way'); assert.equal(r.rebuilt, true, 'to the new reader\'s'); assert.equal(r.mine, 3, 'what you typed stays');
+    assert.equal(await page.evaluate(KEY => localStorage.getItem(KEY + '-revive'), KEY), null);
+  });
+  await ctx.close();
+  EMAILS.splice(0, FILLER.length);
+}
+
 // =================== a re-read that cannot download the mail puts back what it cleared, and tries again ===================
 {
   const KEY = 'allison-travel-v1';
@@ -443,8 +480,9 @@ const pick = (page, f) => page.evaluate(f);
   const { ctx, page } = await open({ calendar: false, failGets: true, stored: { [KEY]: JSON.stringify({ bookings: [old], trips: [] }), [KEY + '-query-v']: '3', [KEY + '-seen']: JSON.stringify(['e1', 'e2']), [KEY + '-scan']: String(Date.now() - 3600e3) } });
   await step('when the mail cannot be downloaded, nothing the old reader made is lost, the re-read is tried again, and Settings says what happened', async () => {
     await page.waitForFunction(KEY => JSON.parse(localStorage.getItem(KEY + '-scan-info') || 'null'), KEY, { timeout: 15000 });
-    const r = await page.evaluate(KEY => ({ have: window.__travel.bookings.map(b => b.id), v: localStorage.getItem(KEY + '-query-v'), seen: JSON.parse(localStorage.getItem(KEY + '-seen') || '[]').length, info: JSON.parse(localStorage.getItem(KEY + '-scan-info')) }), KEY);
-    assert.deepEqual(r.have, ['f-old'], 'the booking is still there'); assert.equal(r.v, '3', 'the update is not marked done'); assert.equal(r.seen, 0, 'so the next look reads everything again');
+    const r = await page.evaluate(KEY => ({ have: window.__travel.bookings.map(b => b.id), more: localStorage.getItem(KEY + '-scan-more'), revive: JSON.parse(localStorage.getItem(KEY + '-revive') || '[]'), seen: JSON.parse(localStorage.getItem(KEY + '-seen') || '[]').length, info: JSON.parse(localStorage.getItem(KEY + '-scan-info')) }), KEY);
+    assert.deepEqual(r.have, ['f-old'], 'the booking is still there'); assert.equal(r.seen, 0, 'nothing was read');
+    assert.equal(r.more, '1', 'so the re-reading goes on next time'); assert.deepEqual(r.revive, ['f-old'], 'and still makes the old booking again');
     assert.equal(r.info.ok, false); assert.match(r.info.err, /could not be downloaded/);
     await page.click('#setBtn');
     await page.waitForSelector('#setSheet:not([hidden]) #stLog');
@@ -523,7 +561,7 @@ const pick = (page, f) => page.evaluate(f);
     await page.waitForSelector('#setSheet:not([hidden]) #stCalOpt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
     assert.equal(await page.textContent('#stCalSub'), 'On. Shares bookings with the Family calendar, both ways.'); assert.match(await page.textContent('#stAiSub'), /^On\. Ipsy fills in a trip’s missing details from its email\./);
-    assert.equal(await page.textContent('#stIpsyAutoSub'), 'Asks first. Ipsy checks new bookings that are missing details.');
+    assert.equal(await page.textContent('#stIpsyAutoSub'), 'Off. Ipsy fills in what new bookings are missing, and moves them to Upcoming.');
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
     assert.equal(await page.textContent('#stCalSub'), 'Off. Shares bookings with the Family calendar, both ways.'); assert.equal(await page.textContent('#stAiSub'), 'Off. Ipsy fills in a trip’s missing details from its email.');
@@ -550,35 +588,31 @@ const pick = (page, f) => page.evaluate(f);
   await ctx.close();
 }
 
-// =================== Ipsy checks by itself: offered once, then each booking's email read quietly, with Undo ===================
+// =================== Ipsy checks by itself: on unless turned off, each booking's email read quietly, with Undo ===================
 {
-  const { ctx, page, seen, problems } = await open({ calendar: false, stored: { 'aos.session': JSON.stringify({ token: 'sess-1', user: { id: 'u1', name: 'Pat' } }) } });
+  const { ctx, page, seen, problems } = await open({ calendar: false, auto: true, stored: { 'aos.session': JSON.stringify({ token: 'sess-1', user: { id: 'u1', name: 'Pat' } }) } });
   page.on('dialog', d => { problems.push('a browser dialog: ' + d.message()); d.dismiss(); });
   const orl = () => pick(page, () => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); return b && { from: b.from, to: b.to, guess: b.guess, filled: b.filled || null }; });
-  await step('Ipsy\'s own check: offered once, from its corner, before anything is sent', async () => {
-    await page.waitForSelector('.ipsy-hint', { timeout: 12000 });
-    assert.match(await page.textContent('.ipsy-hint'), /missing details\. Want me to look\?/);
-    assert.equal(seen.extract.length, 0, 'nothing is sent before a yes');
-    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-ipsy-offer.png') });
-    await page.click('.ipsy-hint');
-    await page.waitForSelector('.ipsy-ask [data-ans="yes"]');
-    assert.match(await page.textContent('.ipsy-ask'), /fill in what your upcoming bookings are missing, by myself/);
-    await page.click('.ipsy-ask [data-ans="yes"]');
-  });
-  await step('Ipsy\'s own check: each booking missing something is asked about once, signed in quietly, with Undo in the chat', async () => {
+  await step('Ipsy\'s own check: on without asking; each booking missing something is asked about once, signed in quietly', async () => {
     await page.waitForFunction(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); return b && b.from === 'MCO'; }, null, { timeout: 15000 });
+    assert.equal(await page.$$eval('.ipsy-ask', e => e.length), 0, 'nothing asked first');
     assert.equal(seen.extract.length, 1, JSON.stringify(seen.extract.map(x => x.missing)));
     assert.deepEqual(seen.extract[0].missing.sort(), ['from', 'to']);
     assert.equal(seen.auth[0], 'Bearer sess-1', 'the family session, never a Face ID prompt');
+  });
+  await step('Ipsy\'s own check: a booking it completes leaves To check for Upcoming, with Undo in the chat', async () => {
     const b = await orl();
-    assert.equal(b.to, 'PHL'); assert.equal(b.filled.from, 'ai'); assert.equal(b.guess, true, 'what Ipsy fills in waits in To check');
-    await page.waitForFunction(() => /I filled in 2 details/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 8000 });
+    assert.equal(b.to, 'PHL'); assert.equal(b.filled.from, 'ai'); assert.equal(b.guess, false, 'nothing is missing now');
+    assert.ok(!(await pick(page, () => window.__travel.checkList().map(x => x.conf))).includes('TRZ4KD'), 'not in To check');
+    assert.ok(await pick(page, () => window.__travel.groupTrips().some(g => !g.past && g.items.some(x => x.conf === 'TRZ4KD'))), 'in Upcoming');
+    await page.waitForFunction(() => /I filled in 2 details on 1 booking\. Nothing is missing now, so it’s in Upcoming\./.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 8000 });
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-ipsy-filled.png') });
     await page.click('.ipsy-hint');
     await page.waitForSelector('.ipsy-change');
-    assert.match(await page.textContent('.ipsy-change'), /Filled in 2 details on .*Marked Check\..*Undo/);
+    assert.match(await page.textContent('.ipsy-change'), /Filled in 2 details on .*Nothing is missing now: in Upcoming\..*Undo/);
     await page.locator('.ipsy-change .ipsy-undo').first().click();
     await page.waitForFunction(() => { const b = window.__travel.bookings.find(x => x.conf === 'TRZ4KD'); return b && !b.from && !b.filled; }, null, { timeout: 5000 });
+    assert.equal((await orl()).guess, true, 'Undo puts it back as it was');
     await page.keyboard.press('Escape');
   });
   await step('Ipsy\'s own check: the same email is never asked about twice, and Settings turns it off', async () => {
