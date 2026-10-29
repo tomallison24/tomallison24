@@ -19,9 +19,10 @@ await new Promise(r => server.listen(0, r)); const BASE = 'http://localhost:' + 
 const b = await chromium.launch();
 let failed = 0;
 const report = (name, problems) => { if (problems.length) { failed++; console.log('not ok - ' + name + '\n  ' + problems.join('\n  ')); } else console.log('ok - ' + name); };
-// a forecast as Weather keeps it: one place, the one on screen (wx.here)
-const HERE = { lat: 40.7128, lon: -74.006, name: 'Here' }, KEY = '40.713,-74.006';
-const wx = (c, tF, o = {}) => JSON.stringify({ [KEY]: { cur: { tF, fF: tF, c }, daily: [], hourly: o.hourly || [], fetchedAt: o.at != null ? o.at : Date.now(), key: KEY } });
+// a forecast as Weather keeps it: one place, the one on screen (wx.here). Fetched just now by the page's own clock
+// (NOW, put in on the page: its clock is set to an hour of the day, not the test's), or at o.at
+const HERE = { lat: 40.7128, lon: -74.006, name: 'Here' }, KEY = '40.713,-74.006', NOW = '"@now"';
+const wx = (c, tF, o = {}) => JSON.stringify({ [KEY]: { cur: { tF, fF: tF, c }, daily: [], hourly: o.hourly || [], fetchedAt: o.at != null ? o.at : '@now', key: KEY } });
 const at = h => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };   // today at h, on the phone's clock
 
 async function blank(hour = 13) {   // a page on the site with Ipsy's script, and a helper drawn in it
@@ -36,8 +37,8 @@ async function blank(hour = 13) {   // a page on the site with Ipsy's script, an
   await p.evaluate(() => AllisonOS.ipsy.character(document.getElementById('h'), {}));
   return { ctx, p, errs };
 }
-const dressAs = async (p, cache) => p.evaluate(c => { if (c == null) localStorage.removeItem('wx.cache'); else localStorage.setItem('wx.cache', c); AllisonOS.ipsy.refit();
-  const s = document.querySelector('#h .ipsy-char'); return { wear: s.dataset.wear || '', who: s.dataset.who, limb: s.style.getPropertyValue('--limb').trim(), clip: !!s.querySelector('clipPath'), umb: !!s.querySelector('.h-umb'), hat: !!s.querySelector('.h-sunhat'), beanie: !!s.querySelector('.h-beanie') }; }, cache);
+const dressAs = async (p, cache) => p.evaluate(([c, NOW]) => { if (c == null) localStorage.removeItem('wx.cache'); else localStorage.setItem('wx.cache', c.replace(NOW, String(Date.now()))); AllisonOS.ipsy.refit();
+  const s = document.querySelector('#h .ipsy-char'); return { wear: s.dataset.wear || '', who: s.dataset.who, limb: s.style.getPropertyValue('--limb').trim(), clip: !!s.querySelector('clipPath'), umb: !!s.querySelector('.h-umb'), hat: !!s.querySelector('.h-sunhat'), beanie: !!s.querySelector('.h-beanie') }; }, [cache, NOW]);
 
 // 1. each kind of weather, by day
 {
@@ -64,8 +65,8 @@ const dressAs = async (p, cache) => p.evaluate(c => { if (c == null) localStorag
 {
   const { ctx, p, errs } = await blank(22); const pr = [];
   if ((await dressAs(p, wx('sunny', 82))).wear !== '') pr.push('a sun hat at 10 PM');
-  const other = await ctx.newPage(); await other.goto(BASE + '/x.html');
-  await other.evaluate(c => localStorage.setItem('wx.cache', c), wx('rainy', 40));
+  const other = await ctx.newPage(); await other.clock.setFixedTime(at(22)); await other.goto(BASE + '/x.html');
+  await other.evaluate(([c, NOW]) => localStorage.setItem('wx.cache', c.replace(NOW, String(Date.now()))), [wx('rainy', 40), NOW]);
   await p.waitForFunction(() => document.querySelector('#h .ipsy-char').dataset.wear === 'umbrella coat scarf', null, { timeout: 3000 }).catch(() => pr.push('a forecast from another page did not dress it'));
   // turned off in another app or frame: as usual at once, whatever the weather; on again, dressed again
   await other.evaluate(() => localStorage.setItem('aos.helper.weather', 'off'));
@@ -97,7 +98,7 @@ const dressAs = async (p, cache) => p.evaluate(c => { if (c == null) localStorag
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const user = { id: 'u1', name: 'Sarah', role: 'member', apps: {} };
   await ctx.addInitScript(([here, cache]) => { try { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.helper', '{"who":"owl","name":"Hoot"}'); localStorage.setItem('wx.here', here); localStorage.setItem('wx.cache', cache);
+    localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.helper', '{"who":"owl","name":"Hoot"}'); localStorage.setItem('wx.here', here); localStorage.setItem('wx.cache', cache.replace('"@now"', String(Date.now())));
     localStorage.setItem('aos.seen', JSON.stringify({ aos: '999' })); localStorage.setItem('aos.signin.asked', '1'); } catch {} }, [JSON.stringify(HERE), wx('rainy', 41)]);
   await ctx.route('**/*', r => {
     const u = new URL(r.request().url()); if (u.origin !== BASE) return r.abort();
