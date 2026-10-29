@@ -268,6 +268,9 @@
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
   const lsDel = k => { try { localStorage.removeItem(k); } catch(e) {} };
   const signedIn = () => !!(window.AllisonOS && AllisonOS.account && AllisonOS.account.token());
+  // Claude turned off for Podcasts on this phone (Settings > AI helper, Use Claude in Podcasts; ../home/account.js): no tags from Ipsy
+  const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('podcasts');
+  addEventListener('aos:claude', () => { renderSettings(); render(); });
   // Synced with the family Sheet at least once: from then on the phone keeps 90 days of History.
   let synced = lsGet(SK.synced) === '1';
   const pruneFrom = () => synced ? addDays(today(), -(KEEP_DAYS - 1)) : null;
@@ -568,7 +571,7 @@
   let tagBusy = false, tagOff = false, tagTimer = 0;
   const tagSoon = () => { clearTimeout(tagTimer); tagTimer = setTimeout(autoTag, 2500); };
   async function autoTag(){
-    if (!S.set.ai || tagBusy || tagOff || apiGone || !signedIn() || navigator.onLine === false) return;
+    if (!S.set.ai || !claudeOn() || tagBusy || tagOff || apiGone || !signedIn() || navigator.onLine === false) return;
     const todo = S.follows.filter(f => !Array.isArray(f.tags) && (f.title || shows.has(f.id))).slice(0, TAG_MAX);
     if (!todo.length) return;
     tagBusy = true;
@@ -605,7 +608,7 @@
       g.tags = TAGS.filter(x => now.has(x)); g.tagBy = 'you';
       save(); render(); tagMenu(id);
     }}));
-    if (S.set.ai && signedIn()) rows.push({label: 'Let Ipsy Pick', sub: 'From the show’s description', icon: I.tag, run: () => {
+    if (S.set.ai && claudeOn() && signedIn()) rows.push({label: 'Let Ipsy Pick', sub: 'From the show’s description', icon: I.tag, run: () => {
       const g = followOf(id); if (!g) return;
       delete g.tags; delete g.tagBy; tagOff = false;
       save(); render(); autoTag();
@@ -1478,7 +1481,7 @@
         T.toggle({id:'setAuto', title:'Play the next episode', sub:'Plays what’s next in Up Next when an episode ends.', on:!!S.set.auto}),
       ])
       + T.section('Discover', T.select({id:'setCc', title:'Top shows from', options:Object.entries(CC).map(([k, v]) => [k, v.replace(/^the /, '')]), value:S.set.cc}))
-      + T.section('Ipsy', T.toggle({id:'setAi', title:'Ipsy tags your shows', sub:'Ipsy tags each show you follow; off, nothing in Podcasts asks Claude.', on:!!S.set.ai}))
+      + T.section('AI helper', [T.claude('podcasts'), T.toggle({id:'setAi', title:'Ipsy tags your shows', sub:'Ipsy tags each show you follow; off, nothing in Podcasts asks Claude.', on:!!S.set.ai && claudeOn(), disabled:!claudeOn()})])
       + T.section('Your data', [
         T.action({id:'setExport', icon:'upload', title:'Back up everything', sub:'Your shows as an OPML file.'}),
         T.action({id:'setImport', icon:'download', title:'Import a backup', sub:'From an OPML file.'}),

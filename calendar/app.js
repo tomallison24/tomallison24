@@ -1507,7 +1507,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         st.api === 'error' || st.api === 'ok' ? S.action({ id: 'stForget', icon: 'link', title: 'Look up the calendar again', sub: 'If the Family calendar was renamed or moved.' }) : '',
         ...(G ? G.accounts(S) : []),   // Gmail for Ipsy (ipsy-gmail.js)
       ])
-      + (G ? S.section('Ipsy', G.ipsy(S)) : '');
+      + S.section('AI helper', [S.claude('calendar'), ...(G ? G.ipsy(S) : [])]);
   }
   if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: at once (../home/design.js)
   // one listener for the sheet's taps, one for its selects

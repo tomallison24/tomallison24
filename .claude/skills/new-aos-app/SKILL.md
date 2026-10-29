@@ -139,7 +139,7 @@ per person is deleted in `functions/aOS/api` `remove`.
 - **Settings, the same in every app** (`../home/settings.js`: load it before `app.js` and list it in
   `sw.js` SHELL; read its header). The sheet is called **Settings** and closes with the ✓. Its body is
   sections in this order, leaving out what the app doesn't have: **Design** (the shared picker) · the
-  app's own · **Connected accounts** · **Ipsy** · **Notifications** · **Your data** · **Family
+  app's own · **Connected accounts** · **AI helper** (your helper goes by the name you gave it, so the section isn't called Ipsy) · **Notifications** · **Your data** · **Family
   account**. Rows come from `AllisonOS.settings`: a switch for anything on or off (never On/Off
   buttons, a check mark or words), a choice for two or three options, a select for four or more,
   an action (icon and verb), a danger row that asks again (`S.armed`, never `confirm()`), an info row.
@@ -148,6 +148,12 @@ per person is deleted in `functions/aOS/api` `remove`.
   Export as a spreadsheet, Delete all data, Sign in with Face ID / Signed in as …. Travel's
   `renderSettings` is the example to copy. Its look (and the Bead + Labeled switch) is the component's:
   don't restyle it in the app. Device controls in Home keep the Signal dashboard's own switches.
+- **Claude, app by app, on this phone**: an app that asks Claude (through its own server route) lists
+  those routes in `CLAUDE` in `../home/account.js` and its name and what it uses Claude for in
+  `AllisonOS.claude.apps` (aOS Account > AI helper shows that list), and its Settings > AI helper section
+  starts with `S.claude('<id>')`, Use Claude in …. Turned off, `account.js` answers those routes on the
+  phone with `{ error: 'ai-off' }` (503) and nothing leaves: the app says so in its own words (as
+  for `no-ai`) and stops what it was doing with Claude, and everything else works as before.
 - **Simple**: one main screen where possible; a sheet for each thing you open;
   the fewest controls that do the job. Tap targets 44 px. Real `<button>`s and
   labels; color never the only signal.
