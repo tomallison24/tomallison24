@@ -10,6 +10,10 @@
 //                                                       check this trip: is it still up to date, or cancelled?)
 //   POST /travel/api/ipsy                               one step of a chat with Ipsy, the helper (below): the whole
 //                                                       conversation in, Anthropic's answer out, as it comes
+//   GET  /travel/api/drive?from=BOS%20airport&to=275%20Tremont%20St,%20Boston&airport=BOS
+//                                                       {ok, min, km}: about how long the drive is, for when you'll
+//                                                       get to the hotel on the day you fly in (Photon finds the two
+//                                                       places, OSRM the route; both OpenStreetMap, free, no key)
 //   GET  /travel/api/ping                               {ok, status, find, ai, models} - what is set up, and which models answer?
 //
 // It asks AeroDataBox (through RapidAPI) and keeps the key here, as a Pages
@@ -32,6 +36,12 @@
 //
 // Sent to AeroDataBox: the flight number and the date (or, for find, the
 // airports, the airline and a time window). Nothing about who is travelling.
+//
+// drive sends the two places (a car hire desk or an airport, and the hotel's address) to Photon
+// (photon.komoot.io, which Places uses too) and their points to OSRM's demo server
+// (router.project-osrm.org: reasonable non-commercial use, at most a request a second, the app
+// named in the User-Agent). Both are fixed addresses; the places only go in their query strings.
+// Each pair's answer is kept for 30 days, and each person asks at most DRIVES_DAILY a day.
 //
 // extract needs the ANTHROPIC_API_KEY secret, set the same way. What it sends
 // to Claude is a short excerpt of one email with what identifies a person taken
@@ -74,7 +84,7 @@ const AI_TIMEOUT_MS = 28000;
 // at most FLIGHTS_DAILY lookups that reach AeroDataBox and AI_DAILY email reads a person a day, counted
 // in the accounts' KV (travel:flights:<user id>:<day>, travel:ai:<user id>:<day>; gone after two days),
 // written before the call. The lock in front (_middleware.js) means there is always a person to count.
-export const FLIGHTS_DAILY = 60, AI_DAILY = 40;
+export const FLIGHTS_DAILY = 60, AI_DAILY = 40, DRIVES_DAILY = 30;
 async function countFor(env, request, what, daily) {
   const db = kv(env); if (!db) return true;   // accounts off: the lock has already refused strangers, or this is a test
   const me = await sessionUser(db, request); if (!me) return true;
@@ -95,6 +105,7 @@ export async function onRequestGet({ request, params, env, waitUntil }) {
   if (route === 'ping') return reply({ ok: true, status: !!key, find: !!key, ai: !!String(env.ANTHROPIC_API_KEY || '').trim(),
     models: { check: String(env.TRAVEL_AI_MODEL || '').trim() || CHECK_MODEL, ipsy: ipsyModelOf(env) } });
   if (route === 'find') return find(q, key, waitUntil, env, request);
+  if (route === 'drive') return drive(q, waitUntil, env, request);
   if (route !== 'flight') return reply({ error: 'not-found' }, 404);
   if (!key) return reply({ error: 'no-key' }, 503);
 
@@ -129,6 +140,53 @@ export async function onRequestGet({ request, params, env, waitUntil }) {
 
   function keep(body) {
     const r = new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + CACHE_S } });
+    waitUntil(cache.put(cacheKey, r));
+    return reply(body);
+  }
+}
+
+// ---- drive: how long from the car hire (or the airport) to the hotel? ------------
+const PHOTON = 'https://photon.komoot.io/api/';
+const OSRM = 'https://router.project-osrm.org/route/v1/driving/';
+const MAPS_UA = 'AllisonOS-Travel/1 (family trip planner; https://tomallison24-news.pages.dev/travel/)';
+const DRIVE_CACHE_S = 30 * 86400;
+async function place(text, near, airport) {
+  const p = new URLSearchParams({ q: text, limit: '1', lang: 'en' });
+  if (near) { p.set('lat', String(near[1])); p.set('lon', String(near[0])); }
+  if (airport) p.set('osm_tag', 'aeroway:aerodrome');
+  const r = await fetch(PHOTON + '?' + p, { headers: { 'User-Agent': MAPS_UA, Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!r.ok) return null;
+  const c = (((await r.json()).features || [])[0] || {}).geometry?.coordinates;
+  return Array.isArray(c) && c.length >= 2 && c.every(n => typeof n === 'number' && isFinite(n)) ? [c[0], c[1]] : null;
+}
+async function drive(q, waitUntil, env, request) {
+  const clean = v => String(v || '').replace(/[\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const from = clean(q.get('from')), to = clean(q.get('to')), airport = String(q.get('airport') || '').toUpperCase();
+  if (!from || !to || from.length > 160 || to.length > 160 || (airport && !/^[A-Z]{3}$/.test(airport))) return reply({ error: 'bad-request' }, 400);
+  const cache = caches.default;
+  const cacheKey = new Request('https://travel-drive.cache/' + encodeURIComponent((airport + '|' + from + '|' + to).toLowerCase()));
+  const hit = await cache.match(cacheKey);
+  if (hit) return reply(await hit.json());
+  if (!(await countFor(env, request, 'drives', DRIVES_DAILY))) return reply({ error: 'limit' }, 429);
+  let a, b, route;
+  try {
+    // An airport: the aerodrome by its words, then by its code; anything else, the words as they are.
+    a = (airport && ((await place(from, null, true)) || (await place(airport, null, true)))) || (await place(from));
+    b = a && (await place(to, a));   // the hotel nearest the start, when its words would fit more than one
+    if (!a || !b) return keep({ ok: false, found: false });
+    const r = await fetch(OSRM + a.join(',') + ';' + b.join(',') + '?overview=false', { headers: { 'User-Agent': MAPS_UA, Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (r.ok) route = ((await r.json()).routes || [])[0];
+  } catch {
+    return reply({ error: 'unreachable' }, 502);
+  }
+  if (route && route.duration > 0) return keep({ ok: true, min: Math.round(route.duration / 60), km: Math.round(route.distance / 100) / 10 });
+  // No route (OSRM busy or down): as the crow flies, a third longer on the roads at 60 km/h.
+  const rad = x => x * Math.PI / 180, dLat = rad(b[1] - a[1]), dLon = rad(b[0] - a[0]);
+  const km = 2 * 6371 * Math.asin(Math.sqrt(Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(dLon / 2) ** 2)) * 1.3;
+  return reply({ ok: true, min: Math.max(5, Math.round(km)), km: Math.round(km * 10) / 10, rough: true });
+
+  function keep(body) {
+    const r = new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + DRIVE_CACHE_S } });
     waitUntil(cache.put(cacheKey, r));
     return reply(body);
   }
