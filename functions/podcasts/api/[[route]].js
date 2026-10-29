@@ -6,6 +6,15 @@
 //   /podcasts/api/search?term=<words>     Apple Podcasts search (shows)
 //   /podcasts/api/top?cc=us               Apple's top shows for a country
 //
+// Apple's directory answers about 20 calls a minute from one address, and this
+// runs on Cloudflare's addresses, which other sites share, so Apple often turns
+// it away ("The server answered 429") however little the family searches. So
+// each search and chart is kept at Cloudflare (kept()), and when Apple won't
+// answer a search, Podcast Index (podcastindex.org, the open podcast
+// directory) is asked instead, once its free key is set up: the
+// PODCASTINDEX_KEY and PODCASTINDEX_SECRET secrets (podcasts/README.md,
+// "Search").
+//
 // It runs only where the site is on Cloudflare Pages (behind Cloudflare
 // Access, like the rest of it). Wrangler picks up this functions/ folder when
 // .github/workflows/news.yml deploys from the repository root. On GitHub Pages
@@ -24,14 +33,14 @@ const MAX_BYTES = 25 * 1024 * 1024;
 const TIMEOUT_MS = 20000;
 const COUNTRIES = new Set(['gb', 'us', 'ie', 'ca', 'au', 'nz']);
 
-export async function onRequestGet({ request, params }) {
+export async function onRequestGet({ request, params, env = {}, waitUntil }) {
   if (request.headers.get('X-Podcasts') !== '1') return reply('Not found', 404);
   const route = [].concat(params.route || []).join('/');
   const q = new URL(request.url).searchParams;
   try {
     if (route === 'feed') return await feed(q.get('url'));
-    if (route === 'search') return await search(q.get('term'), q.get('cc'));
-    if (route === 'top') return await top(q.get('cc'));
+    if (route === 'search') return await search(q.get('term'), q.get('cc'), env, waitUntil);
+    if (route === 'top') return await top(q.get('cc'), waitUntil);
   } catch (e) {
     return reply(JSON.stringify({ error: String(e && e.message || e).slice(0, 200) }), 502, 'application/json');
   }
@@ -131,17 +140,93 @@ const show = r => ({
   count: r.trackCount || 0,
 });
 
-async function search(term, country) {
+// A search or chart, kept at Cloudflare: used as it is while fresh; an older
+// copy (up to 30 days) only when the directories can't answer. Nothing empty
+// is kept, as Apple sometimes answers a busy moment with no results.
+const FRESH_SEARCH = 86400, FRESH_TOP = 21600, KEEP = 30 * 86400;
+async function kept(key, fresh, make, waitUntil) {
+  const cache = typeof caches !== 'undefined' && caches.default;
+  const req = new Request('https://podcasts-directory.cache/' + key);
+  let old = null;
+  if (cache) {
+    try {
+      const hit = await cache.match(req);
+      const v = hit && await hit.json();
+      if (v && Array.isArray(v.results)) {
+        if (Date.now() - v.at < fresh * 1000) return v.results;
+        old = v.results;
+      }
+    } catch {}
+  }
+  let results;
+  try { results = await make(); }
+  catch (e) { if (old) return old; throw e; }
+  if (cache && results.length) {
+    const put = cache.put(req, new Response(JSON.stringify({ at: Date.now(), results }), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + KEEP },
+    })).catch(() => {});
+    if (waitUntil) waitUntil(put); else await put;
+  }
+  return results;
+}
+
+const BUSY = 'Podcast search is busy right now. Try again in a minute, or paste the show’s RSS link.';
+
+async function search(term, country, env, waitUntil) {
   term = String(term || '').trim().slice(0, 100);
   if (!term) return json({ results: [] });
-  const data = await itunes(`search?media=podcast&entity=podcast&limit=30&country=${cc(country)}&term=${encodeURIComponent(term)}`);
-  return json({ results: (data.results || []).map(show).filter(s => s.title) }, 600);
+  const c = cc(country);
+  const results = await kept('search/' + c + '/' + encodeURIComponent(term.toLowerCase()), FRESH_SEARCH, async () => {
+    let failed = false;
+    try {
+      const data = await itunes(`search?media=podcast&entity=podcast&limit=30&country=${c}&term=${encodeURIComponent(term)}`);
+      const found = (data.results || []).map(show).filter(s => s.title);
+      if (found.length) return found;
+    } catch { failed = true; }
+    let other = null;
+    try { other = await indexSearch(term, env); } catch {}
+    if (other && other.length) return other;
+    if (failed) throw new Error(BUSY);
+    return [];
+  }, waitUntil);
+  return json({ results }, 600);
+}
+
+// Podcast Index's search (search/byterm), signed as its API asks: the key, the
+// time, and a SHA-1 of the key, secret and time. null without a key.
+async function indexSearch(term, env) {
+  const key = String(env.PODCASTINDEX_KEY || '').trim(), secret = String(env.PODCASTINDEX_SECRET || '').trim();
+  if (!key || !secret) return null;
+  const date = String(Math.floor(Date.now() / 1000));
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(key + secret + date)));
+  const res = await fetch('https://api.podcastindex.org/api/1.0/search/byterm?max=30&q=' + encodeURIComponent(term), {
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    headers: {
+      'User-Agent': UA, Accept: 'application/json', 'X-Auth-Key': key, 'X-Auth-Date': date,
+      Authorization: [...hash].map(b => b.toString(16).padStart(2, '0')).join(''),
+    },
+  });
+  if (!res.ok) throw new Error('Podcast Index answered ' + res.status);
+  const data = JSON.parse(await readText(res));
+  return (data.feeds || []).filter(f => f && f.title && f.url && !f.dead).map(f => ({
+    id: String(f.itunesId || 'pi' + f.id),
+    title: String(f.title),
+    author: String(f.author || f.ownerName || ''),
+    feed: String(f.url),
+    art: String(f.artwork || f.image || ''),
+    genre: String(Object.values(f.categories || {})[0] || ''),
+    count: Number(f.episodeCount) || 0,
+  }));
 }
 
 // Apple's chart gives ids, names and artwork but no feeds; one lookup call
 // adds the feeds. The newer chart first, then the older one.
-async function top(country) {
+async function top(country, waitUntil) {
   const c = cc(country);
+  return json({ results: await kept('top/' + c, FRESH_TOP, () => chart(c), waitUntil) }, 21600);
+}
+
+async function chart(c) {
   let ids = [];
   try {
     const { res } = await get(`https://rss.applemarketingtools.com/api/v2/${c}/podcasts/top/50/podcasts.json`, 'application/json');
@@ -152,8 +237,8 @@ async function top(country) {
     const data = await itunes(`${c}/rss/toppodcasts/limit=50/json`);
     ids = ((data.feed && data.feed.entry) || []).map(e => e.id && e.id.attributes && e.id.attributes['im:id']).filter(Boolean);
   }
-  if (!ids.length) return json({ results: [] });
+  if (!ids.length) return [];
   const data = await itunes(`lookup?entity=podcast&country=${c}&id=${ids.slice(0, 50).join(',')}`);
   const byId = new Map((data.results || []).map(r => [String(r.collectionId), show(r)]));
-  return json({ results: ids.map(id => byId.get(id)).filter(s => s && s.feed) }, 21600);
+  return ids.map(id => byId.get(id)).filter(s => s && s.feed);
 }

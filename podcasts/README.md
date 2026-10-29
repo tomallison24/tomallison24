@@ -72,11 +72,40 @@ they need a connection.
   a feed directly, which works only for feeds that allow it, and says
   "This show's feed can't be read from here" for the rest. Search and Top
   shows may not work there either.
+- **Search** (and Top shows): see "Search" below.
 - **Show notes** are the publisher's HTML. The app rebuilds them from plain
   text, paragraphs, lists and web links only: nothing in them runs, and their
   pictures (often trackers) aren't loaded.
 - **Artwork** comes from Apple's directory (600 px) where there is one, as
   feeds' own pictures can be several megabytes.
+
+## Search
+
+Search and Top shows come from Apple's directory, which answers about 20
+calls a minute from one address. The feed fetcher runs on Cloudflare, whose
+addresses other sites share, so Apple sometimes turns it away ("The server
+answered 429") however little the family searches. So:
+
+- **Each search and chart is kept** at Cloudflare: a search for a day, Top
+  shows for six hours; an older copy (up to 30 days) when nobody answers.
+- **Podcast Index** (podcastindex.org, the open podcast directory) is asked
+  when Apple won't answer a search, or finds nothing, once its key is set.
+- **The phone** then asks Apple itself, from its own address, where Apple lets
+  a page read it.
+- If all of them fail, Search says it is busy: try again in a minute, or paste
+  the show's RSS link (that never goes through a directory).
+
+**Setting up Podcast Index** (the owner, once; free):
+
+1. Sign up at **api.podcastindex.org** and get an API key and secret by email.
+2. In GitHub: **Settings → Secrets and variables → Actions → New repository
+   secret**: `PODCASTINDEX_KEY` (the key) and `PODCASTINDEX_SECRET` (the
+   secret).
+3. The next release (any merge) hands them to Cloudflare
+   (`.github/workflows/news.yml`). They stay on the server; no phone gets them.
+
+Without them Search works as before, with the kept copies and the phone's own
+try.
 
 ## The family's Google Sheet
 
@@ -241,6 +270,8 @@ node podcasts/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sh
                                        # reached as aOS reaches it: who gets in, each person only theirs (and the
                                        # same show followed by two), your phones kept the same, VERSION 1 rows
                                        # becoming the owner's, the 90 days and older on asking, the Who column
+node podcasts/scripts/api-test.mjs     # functions/podcasts/api with Apple, Podcast Index and Cloudflare's cache stubbed:
+                                       # Apple's 429 answered from Podcast Index, the kept copies, the busy message
 node podcasts/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright): the library; the
                                        # family's Sheet end to end on the real script, with **/sheet/api/podcasts
                                        # answered here and who's asking from the page's aos.session (signed out,
