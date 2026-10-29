@@ -909,23 +909,7 @@ body,.face .nm,.face .dg{font-family:"Exo 2","Avenir Next","Helvetica Neue",syst
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="setLbl">Settings</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
       <div class="sheetbody">
-        <p class="label" id="setDesignLbl">Design</p>
-        <div class="rgroup" id="setDesign" role="radiogroup" aria-labelledby="setDesignLbl">
-          <button class="snd" type="button" role="radio" data-design="vintage" aria-checked="true"><span class="sw vintage" aria-hidden="true"></span><span class="grow"><b>Vintage</b><small>Mid-century colours and starburst clock faces</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
-          <button class="snd" type="button" role="radio" data-design="glass" aria-checked="false"><span class="sw glass" aria-hidden="true"></span><span class="grow"><b>Standard</b><small>Sea glass, like the other aOS apps</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
-          <button class="snd" type="button" role="radio" data-design="layers" aria-checked="false"><span class="sw layers" aria-hidden="true"></span><span class="grow"><b>Layers</b><small>A still sky by the time of day, frosted glass over it</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
-          <button class="snd" type="button" role="radio" data-design="grid" aria-checked="false"><span class="sw grid" aria-hidden="true"></span><span class="grow"><b>Tron <span class="se">Special Edition</span></b><small>Light cycles: red light on a black grid</small></span><span class="tick"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></span></button>
-        </div>
-        <p class="label">Main Clock</p>
-        <div class="rgroup"><button class="frow" id="setHome" type="button"><span class="lb">City</span><span class="val" id="setHomeName"></span></button></div>        <p class="label">Time</p>
-        <div class="rgroup"><button class="swrow" id="set24" type="button" role="switch" aria-checked="false"><span class="grow">24-Hour Time<small>13:00 rather than 1:00 PM</small></span><span class="switch" aria-hidden="true"></span></button></div>
-        <p class="label">Nightstand</p>
-        <div class="rgroup">
-          <button class="swrow" id="setSecs" type="button" role="switch" aria-checked="false"><span class="grow">Show seconds</span><span class="switch" aria-hidden="true"></span></button>
-          <button class="swrow" id="setAnalog" type="button" role="switch" aria-checked="false"><span class="grow">Clock face<small>Hands rather than numbers</small></span><span class="switch" aria-hidden="true"></span></button>
-        </div>
-        <p class="label">Sound</p>
-        <div class="rgroup"><button class="rowbtn" id="setTest" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4.4 9.6h3.2l4.8-4v12.8l-4.8-4H4.4z"/><path d="M15.6 9a4 4 0 0 1 0 6M18 6.6a7.4 7.4 0 0 1 0 10.8"/></svg></span><span>Test the sound</span></button></div>
+        <div id="setBody"></div>   <!-- the sections, written by paintSettings (../home/settings.js) -->
       </div>
     </div>
   </div>
@@ -957,6 +941,7 @@ body,.face .nm,.face .dg{font-family:"Exo 2","Avenir Next","Helvetica Neue",syst
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>   <!-- Settings, the same in every app -->
 <script src="logic.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="clock" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->

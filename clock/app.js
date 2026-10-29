@@ -811,30 +811,50 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Settings
   // ---------------------------------------------------------------------
+  // As in every app (../home/settings.js): Design · Main clock · Time · Nightstand · Sound. Clock keeps its design with
+  // the rest of Clock (set.design, design.js), so it draws the Design rows itself, in the words of every other app's
+  // (../home/design.js, aosDesign.picker()).
+  const ST = window.AllisonOS.settings;
+  const DESIGNS = [
+    ['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'],
+    ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
+    ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'],
+    ['grid', 'Tron <span class="se">Special Edition</span>', 'Light cycles: red light on a black grid, as in Tron: Ares'],
+  ];
+  const designPicker = () => '<div role="radiogroup" aria-label="Design">' + DESIGNS.map(([id, name, note]) => `<button class="snd" type="button" role="radio" data-design="${id}" aria-checked="${S.set.design === id}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${name}</b><small>${note}</small></span><span class="tick">${ICON.tick}</span></button>`).join('') + '</div>';
   function paintSettings() {
-    if (S.set.home) $('setHomeName').setAttribute('translate', 'no'); else $('setHomeName').removeAttribute('translate');   // a place name stays as it is in Russian
-    $('setHomeName').textContent = S.set.home ? S.set.home.name : phoneName() + ' (this phone)';
-    document.querySelectorAll('#setDesign [data-design]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.design === S.set.design)));
-    $('set24').setAttribute('aria-checked', String(h24()));
-    $('setSecs').setAttribute('aria-checked', String(!!S.set.secs));
-    $('setAnalog').setAttribute('aria-checked', String(!!S.set.analog));
+    const home = S.set.home ? '<span id="setHomeName" translate="no">' + esc(S.set.home.name) + '</span>' : '<span id="setHomeName">' + esc(phoneName() + ' (this phone)') + '</span>';
+    $('setBody').innerHTML = ST.section('Design', ST.raw(designPicker(), { id: 'setDesign' }))
+      + ST.section('Main clock', ST.nav({ id: 'setHome', title: 'City', value: home, html: true }))
+      + ST.section('Time', ST.toggle({ id: 'set24', title: '24-hour time', sub: '13:00 rather than 1:00 PM.', on: h24() }))
+      + ST.section('Nightstand', [
+        ST.toggle({ id: 'setSecs', title: 'Show seconds', on: !!S.set.secs }),
+        ST.toggle({ id: 'setAnalog', title: 'Clock face', sub: 'Hands rather than numbers.', on: !!S.set.analog }),
+      ])
+      + ST.section('Sound', ST.action({ id: 'setTest', icon: 'play', title: 'Test the sound' }));
   }
   $('setBtn').addEventListener('click', () => { paintSettings(); openSheet('setSheet'); });
-  // Design: Vintage, Standard, Layers or Tron, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
-  $('setDesign').addEventListener('click', e => {
-    const b = e.target.closest('[data-design]'); if (!b || b.dataset.design === S.set.design) return;
-    S.set.design = b.dataset.design; save();
-    if (window.clockDesign) clockDesign.set(S.set.design);
-    paintSettings(); requestAnimationFrame(() => slideTabs(true));   // Futura and the system font are different widths
-  });
   // aOS's Appearance picked a look for every app (design.js has applied it): keep it, so a save here doesn't put the old one back
   addEventListener('clock:design', () => { if (window.clockDesign && clockDesign.get() !== S.set.design) { S.set.design = clockDesign.get(); paintSettings(); } });
-  $('setHome').addEventListener('click', () => openCities('home'));
-  $('set24').addEventListener('click', () => { S.set.h24 = !h24(); S.set.h24Picked = true; save(); paintSettings(); renderPane(S.tab); });   // picked: kept in either language
-  [['setSecs', 'secs'], ['setAnalog', 'analog']].forEach(([id, k]) => $(id).addEventListener('click', () => { S.set[k] = !S.set[k]; save(); paintSettings(); renderPane(S.tab); }));
-  $('setTest').addEventListener('click', () => {
-    const a = S.alarms.find(x => x.on) || S.alarms[0];
-    playSound(a ? a.sound : 'twinbell', 4000).then(ok => toast(ok ? 'Playing ' + L.soundName(a ? a.sound : 'twinbell') + '.' : 'Your phone didn’t play it. Check the volume and try again.'));
+  // one listener for the sheet
+  $('setBody').addEventListener('click', e => {
+    // Design: Vintage, Standard, Layers or Tron, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
+    const d = e.target.closest('[data-design]');
+    if (d) {
+      if (d.dataset.design === S.set.design) return;
+      S.set.design = d.dataset.design; save();
+      if (window.clockDesign) clockDesign.set(S.set.design);
+      paintSettings(); requestAnimationFrame(() => slideTabs(true));   // Futura and the system font are different widths
+      return;
+    }
+    const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
+    if (b.id === 'setHome') openCities('home');
+    else if (b.id === 'set24') { S.set.h24 = !h24(); S.set.h24Picked = true; save(); paintSettings(); renderPane(S.tab); }   // picked: kept in either language
+    else if (b.id === 'setSecs' || b.id === 'setAnalog') { const k = b.id === 'setSecs' ? 'secs' : 'analog'; S.set[k] = !S.set[k]; save(); paintSettings(); renderPane(S.tab); }
+    else if (b.id === 'setTest') {
+      const a = S.alarms.find(x => x.on) || S.alarms[0];
+      playSound(a ? a.sound : 'twinbell', 4000).then(ok => toast(ok ? 'Playing ' + L.soundName(a ? a.sound : 'twinbell') + '.' : 'Your phone didn’t play it. Check the volume and try again.'));
+    }
   });
 
   // ---------------------------------------------------------------------
