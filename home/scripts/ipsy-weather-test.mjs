@@ -89,7 +89,7 @@ const dressAs = async (p, cache) => p.evaluate(([c, NOW]) => { if (c == null) lo
   await p.evaluate(() => { document.documentElement.dataset.look = 'vintage'; });
   await dressAs(p, wx('rainy', 40));
   const picker = await p.evaluate(() => { const d = document.createElement('div'); document.body.appendChild(d); AllisonOS.ipsy.picker(d, () => {}); const all = [...d.querySelectorAll('.ipsy-whobtn .ipsy-char')]; return { all: all.length, dressed: all.filter(s => s.dataset.wear).length }; });
-  if (picker.all !== 7 || picker.dressed) pr.push('the picker: ' + JSON.stringify(picker));
+  if (picker.all !== 5 || picker.dressed) pr.push('the picker: ' + JSON.stringify(picker));
   pr.push(...errs); report('Tron: Ares keeps his suit, with an umbrella in the rain; the picker\'s helpers as they are', pr); await ctx.close();
 }
 

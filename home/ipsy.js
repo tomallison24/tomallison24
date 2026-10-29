@@ -31,8 +31,8 @@
 // The conversation is kept exactly as Claude returned it (thinking and web results included) and
 // only ever added to: the API checks that earlier turns weren't changed.
 //
-// Ipsy is the person's own helper: one of seven characters (Mia, the family's Australian Shepherd, a
-// fox, an owl, a robot, an octopus, a hedgehog, an otter), picked and named the first time the chat
+// Ipsy is the person's own helper: one of five characters (Mia, the family's Australian Shepherd, a
+// fox, an owl, a hedgehog, an AI made of light), picked and named the first time the chat
 // opens (aos.helper; also in aOS, Account). It acts out each job: listening (the box has focus),
 // thinking (waiting for Claude), reading, searching with its glasses on, writing, showing (by the
 // tool's name: jobOf), talking (the answer appearing) and a hop when a change is saved. Reduce
@@ -81,7 +81,7 @@
   const DEG = Math.PI / 180;
   // ---------------------------------------------------------------------------
   // The helpers: everyone picks their own (Mia, the family's Australian Shepherd, or a fox, an owl, a
-  // robot, an octopus, a hedgehog or an otter) and names it. All of them share one rig: rubber-hose
+  // hedgehog or the AI) and names it. All of them share one rig: rubber-hose
   // arms, a face, and the props for each job, so each acts out what Ipsy is doing:
   //   idle (bobs, blinks, waves now and then), listen (hand to its ear), think (hand on its chin, thought
   //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
@@ -96,6 +96,19 @@
     return 'M' + pts.join('L') + 'L100 140Z';
   })();
   const STROKE = (c, w, d) => '<path fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" d="' + d + '"/>';
+  // the AI's hologram: what it builds, one at a time, centred on 100,22
+  const HOLO = (() => {
+    const gear = [];
+    for (let i = 0; i < 16; i++) { const r = i % 4 < 2 ? 11 : 8, t = (i * 22.5 - 11.25) * DEG; gear.push(f1(100 + r * Math.cos(t)) + ' ' + f1(22 + r * Math.sin(t))); }
+    return ['M100 11l10 6v12l-10 6-10-6V17zM90 17l10 6 10-6M100 23v12',                         // a cube
+      'M100 10L88 32h24zM100 10l4 22',                                                           // a pyramid
+      'M89 22a11 11 0 1 0 22 0a11 11 0 1 0-22 0M89 22h22M100 11c-6 6-6 16 0 22c6-6 6-16 0-22',   // a globe
+      'M' + gear.join('L') + 'zM96 22a4 4 0 1 0 8 0a4 4 0 1 0-8 0',                               // a gear
+      'M89 33l13-13M102 20a7 7 0 0 1 8-9l-4 4 1 3 3 1 4-4a7 7 0 0 1-9 8',                          // a wrench
+      'M100 10a8 8 0 0 0-5 14v4h10v-4a8 8 0 0 0-5-14zM96 32h8M100 28v-6',                          // a light bulb
+      'M94 14l-8 8 8 8M106 14l8 8-8 8M103 12l-6 20',                                              // </>
+    ].map((d, i) => '<path class="h-holi" style="--i:' + i + '" d="' + d + '"/>').join('');
+  })();
   // kind: what it is, for screen readers and for Claude (the picker shows them unnamed)
   const HELPERS = {
     mia: { label: 'Australian Shepherd', kind: 'Mia, the family’s Australian Shepherd', sh: 52, pupil: true, cheeks: false,
@@ -118,24 +131,29 @@
       body: '<path d="' + EGG + '" fill="#1F6F6B"/><ellipse cx="100" cy="146" rx="30" ry="20" fill="#F4E3BE"/>' + STROKE('#B98A4A', 2.4, 'M86 140l5 4 5-4M100 140l5 4 5-4M93 150l5 4 5-4M107 150l5 4')
         + '<circle cx="86" cy="104" r="15" fill="#F4E3BE"/><circle cx="114" cy="104" r="15" fill="#F4E3BE"/>',
       front: '<path d="M94 115l6 9 6-9z" fill="#E3A72F"/>' },
-    robot: { label: 'Robot', kind: 'a retro robot', sh: 54, vars: '--limb:#2B2522;--limbw:6;--foot:#2B2522',
-      back: STROKE('#2B2522', 3, 'M100 58V40') + '<circle class="h-bulb" cx="100" cy="36" r="7"/><circle cx="50" cy="104" r="6" fill="#E3A72F"/><circle cx="150" cy="104" r="6" fill="#E3A72F"/>',
-      body: '<rect x="52" y="58" width="96" height="106" rx="22" fill="#4FB3AB"/><rect x="64" y="80" width="72" height="56" rx="14" fill="#FBF5E9"/><circle cx="84" cy="150" r="4.5" fill="#D8572A"/><circle cx="100" cy="150" r="4.5" fill="#E3A72F"/><circle cx="116" cy="150" r="4.5" fill="#7E8C34"/>',
-      front: '' },
-    octopus: { label: 'Octopus', kind: 'an octopus', sh: 50, feet: false, vars: '--limb:#E8806A;--limbw:11;--paw:#E8806A;--pawedge:#D2654F',
-      back: STROKE('#E8806A', 11, 'M70 140c-10 14-8 28 6 28M88 146c-4 12 0 22 10 22M112 146c4 12 0 22-10 22M130 140c10 14 8 28-6 28'),
-      body: '<path d="M100 50C136 50 154 76 154 108C154 134 138 148 100 148C62 148 46 134 46 108C46 76 64 50 100 50Z" fill="#E8806A"/><circle cx="126" cy="70" r="6" fill="#F4A894"/><circle cx="138" cy="86" r="4" fill="#F4A894"/><circle cx="70" cy="74" r="4.5" fill="#F4A894"/>',
-      front: '' },
     hedgehog: { label: 'Hedgehog', kind: 'a hedgehog', sh: 56, vars: '--limb:#E8C58F;--limbw:9;--paw:#7A4E2D;--pawedge:#7A4E2D;--foot:#7A4E2D',
       back: '<path d="' + SPIKES + '" fill="#7A4E2D"/><circle cx="136" cy="54" r="10" fill="#D8572A"/>' + STROKE('#7E8C34', 3, 'M136 44q4-6 9-5'),
       body: '<circle cx="100" cy="118" r="48" fill="#E8C58F"/><circle cx="72" cy="80" r="8" fill="#E8C58F"/><circle cx="128" cy="80" r="8" fill="#E8C58F"/>',
       front: '<circle class="h-ink" cx="100" cy="116" r="5"/>' },
-    otter: { label: 'Otter', kind: 'an otter', sh: 52, vars: '--limb:#8B5A3C;--limbw:10;--paw:#3B2A22;--pawedge:#3B2A22;--foot:#3B2A22',
-      back: '<g class="h-wag" style="transform-origin:130px 156px"><path d="M128 154c20 2 36 8 44 18c-16 2-32-2-46-10z" fill="#6E4630"/></g><circle cx="64" cy="72" r="10" fill="#8B5A3C"/><circle cx="136" cy="72" r="10" fill="#8B5A3C"/><circle cx="64" cy="72" r="5" fill="#3B2A22"/><circle cx="136" cy="72" r="5" fill="#3B2A22"/>',
-      body: '<path d="' + EGG + '" fill="#8B5A3C"/><ellipse cx="100" cy="112" rx="40" ry="30" fill="#E2C29E"/><ellipse cx="100" cy="152" rx="24" ry="13" fill="#E2C29E"/>',
-      front: '<path d="M94 112h12l-6 6z" fill="#2B2522" stroke="#2B2522" stroke-width="3" stroke-linejoin="round"/>' + STROKE('#2B2522', 1.6, 'M80 118l-14-2M80 122l-13 3M120 118l14-2M120 122l13 3').replace('/>', ' opacity=".6"/>') },
+    // the AI: made of light and code. A screen for a face, wireframe shapes in orbit, and over its head a hologram
+    // that builds one shape or tool after another (a cube, a pyramid, a globe, a gear, a wrench, a bulb, </>);
+    // it hovers (no feet), and its book, notepad and magnifying glass are light too (the CSS)
+    ai: { label: 'AI', kind: 'an AI made of light, building shapes and tools out of code', sh: 54, feet: false, cheeks: false,
+      vars: '--limb:#8B7CF6;--limbw:6;--paw:#5CE1E6;--pawedge:#3B2FA8;--eye:#5CE1E6;--brow:#8B7CF6;--broww:3',
+      back: '<g class="h-orbit" style="transform-origin:100px 112px"><circle cx="100" cy="112" r="66" fill="none" stroke="#8B7CF6" stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="3 7"/>'
+        + '<g fill="none" stroke="#5CE1E6" stroke-width="2.2" stroke-linejoin="round"><path d="M166 104l7 13h-14z"/><rect x="60" y="162" width="13" height="13" rx="1.5"/><circle cx="67" cy="55" r="6.5"/></g></g>'
+        + '<ellipse class="h-thrust" cx="100" cy="176" rx="22" ry="4.5" style="transform-origin:100px 176px"/>'
+        + '<g class="h-holo"><path class="h-beam" d="M100 50L78 2H122Z"/>' + HOLO + '</g>'
+        + STROKE('#8B7CF6', 3, 'M100 58V50') + '<path d="M100 43l5 5-5 5-5-5z" fill="#5CE1E6"/>',
+      body: '<path d="' + EGG + '" fill="#23264F"/><path d="M60 98C62 76 76 62 96 58" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="5" stroke-linecap="round"/>'
+        + STROKE('#5CE1E6', 2, 'M62 144h12l6 6h8M138 144h-12l-6 6h-8M84 164v-6M116 164v-6').replace('/>', ' opacity=".55"/>')
+        + '<path class="h-core" style="transform-origin:100px 152px" d="M100 143l8 4.5v9l-8 4.5-8-4.5v-9z"/>'
+        + '<rect x="64" y="80" width="72" height="56" rx="22" fill="#0B0D1E" stroke="#8B7CF6" stroke-width="2"/>',
+      front: '<rect class="h-aiscan" x="68" y="84" width="64" height="3" rx="1.5"/>' },
   };
   const WHO = Object.keys(HELPERS);
+  // the robot, the octopus and the otter are retired: whoever picked one has the AI now, with the name they gave it
+  const RETIRED = { robot: 'ai', octopus: 'ai', otter: 'ai' };
   // Tron's rider (Tron: Ares, as the Light Cycle's driver in Tesla's cars): in the Tron look, everyone's helper suits up as
   // this - black suit and helmet lit with red, the identity disc behind - whichever helper they picked (its name stays theirs).
   // Not in the picker. Its jobs are the others': a lit data pad to read, a light that sweeps the visor to search, a stylus of
@@ -165,10 +183,8 @@
     mia: { top: 56, coat: '#B23A32', scarf: ['#E3A72F', '#FFF7EC'] },
     fox: { top: 56, coat: '#2F4A6D', scarf: ['#1F6F6B', '#FFF7EC'] },
     owl: { top: 56, coat: '#C98A2B', scarf: ['#D8572A', '#FFF7EC'] },
-    robot: { top: 58, coat: '#D8572A', scarf: ['#2F4A6D', '#FBF5E9'], shape: '<rect x="52" y="58" width="96" height="106" rx="22"/>' },
-    octopus: { top: 50, coat: '#2F4A6D', scarf: ['#E3A72F', '#FFF7EC'], sleeves: false, shape: '<path d="M100 50C136 50 154 76 154 108C154 134 138 148 100 148C62 148 46 134 46 108C46 76 64 50 100 50Z"/>' },
     hedgehog: { top: 62, coat: '#4E7A4A', scarf: ['#D8572A', '#FFF7EC'], shape: '<circle cx="100" cy="118" r="48"/>' },
-    otter: { top: 56, coat: '#2F4A6D', scarf: ['#E3A72F', '#FFF7EC'] },
+    ai: { top: 56, coat: '#3B2FA8', scarf: ['#5CE1E6', '#23264F'] },
     rider: { only: ['umbrella'] },
   };
   const UMBRELLA = ['#E3A72F', '#FFF7EC'];
@@ -213,12 +229,12 @@
     }
     if (has('coat')) {   // the lower body, cut to its outline: buttoned down the middle, two pockets; sleeves too
       const id = 'ipsyFit' + (++fitN), shape = f.shape || '<path d="' + EGG + '"/>';
-      o.body += '<clipPath id="' + id + '">' + shape + '</clipPath><g class="h-coat" clip-path="url(#' + id + ')"><rect x="0" y="' + (who === 'octopus' ? 134 : 140) + '" width="200" height="66" fill="' + f.coat + '"/>'
+      o.body += '<clipPath id="' + id + '">' + shape + '</clipPath><g class="h-coat" clip-path="url(#' + id + ')"><rect x="0" y="140" width="200" height="66" fill="' + f.coat + '"/>'
         + '<path class="h-cseam" d="M100 140V172M64 156h16M120 156h16"/><circle class="h-cbtn" cx="106" cy="150" r="2.6"/><circle class="h-cbtn" cx="106" cy="160" r="2.6"/></g>';
       if (f.sleeves !== false) o.vars += ';--limb:' + f.coat;
     }
     if (has('scarf')) {   // round its neck, a striped end hanging down
-      const N = who === 'octopus' ? 132 : 136;
+      const N = 136;
       o.body += '<g class="h-scarf"><path fill="' + s1 + '" d="M56 ' + (N - 6) + 'Q100 ' + (N + 8) + ' 144 ' + (N - 6) + 'L146 ' + (N + 4) + 'Q100 ' + (N + 20) + ' 54 ' + (N + 4) + 'Z"/>'
         + '<path fill="none" stroke="' + s2 + '" stroke-width="2.6" stroke-dasharray="7 6" d="M58 ' + (N - 1) + 'Q100 ' + (N + 14) + ' 144 ' + (N - 1) + '"/>'
         + '<path fill="' + s1 + '" d="M116 ' + (N + 6) + 'L129 ' + (N + 5) + 'L133 ' + (N + 32) + 'L119 ' + (N + 34) + 'Z"/>'
@@ -284,7 +300,12 @@
   // and it follows you to your other devices with your settings: aOS/prefs-sync.js). None yet: the helpers take
   // turns peeking out of the corner, and the chat starts by asking you to pick one.
   const HELPER_KEY = 'aos.helper';
-  const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && own(HELPERS, h.who) ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
+  const helper = () => {
+    try {
+      const h = JSON.parse(ls.get(HELPER_KEY, 'null')), who = h && (own(RETIRED, h.who) ? RETIRED[h.who] : h.who);
+      return own(HELPERS, who) && who !== 'rider' ? { who, name: String(h.name || '').slice(0, 16) } : null;
+    } catch { return null; }
+  };
   // in Tron your helper is Ares (Tron: Ares's rider, as in Tesla's Tron mode), whatever its name in the other looks
   const helperName = () => { if (LOOK() === 'grid') return 'Ares'; const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
   // the chat's title: its name, or with none, what it is (Mia is Mia)
@@ -363,14 +384,6 @@
   // Keyframes: [offset, how far along (0..1), the pose]. cross(slot, d) runs it; the animations come back,
   // so a tap can finish them (it's home at once).
   // ---------------------------------------------------------------------------
-  const spurts = (dir, from, to, n) => {   // the octopus: squash, shoot forward, settle, n times
-    const out = [];
-    for (let k = 0; k < n; k++) {
-      const a = from + (to - from) * k / n, s = (to - from) / n, x0 = dir > 0 ? k / n : 1 - k / n, x1 = dir > 0 ? (k + 1) / n : 1 - (k + 1) / n;
-      out.push([a + s * 0.25, x0, 'scale(1.14,.84)'], [a + s * 0.6, x1, 'translateY(-10px) rotate(' + 14 * dir + 'deg) scale(.86,1.16)'], [a + s, x1, 'none']);
-    }
-    return out;
-  };
   const MOVES = {
     // zoomies: races out bouncing, spins on the spot, races back
     mia: { speed: 1, frames: [[0, 0, 'none'], ...[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((x, i) => [0.06 + i * 0.06, x, i % 2 ? 'rotate(6deg)' : 'translateY(-14px) rotate(6deg)']), [0.42, 1, 'none'],
@@ -384,17 +397,14 @@
     owl: { speed: 1.05, frames: [[0, 0, 'none'], [0.1, 0.1, 'translateY(-26px) rotate(10deg)'], [0.2, 0.3, 'translateY(-10px) rotate(12deg)'], [0.3, 0.55, 'translateY(-30px) rotate(12deg)'],
       [0.4, 0.8, 'translateY(-12px) rotate(10deg)'], [0.48, 1, 'translateY(-34px) rotate(0deg)'], [0.55, 1, 'translateY(-38px) rotate(-180deg)'], [0.62, 0.9, 'translateY(-30px) rotate(-360deg)'],
       [0.72, 0.6, 'translateY(-12px) rotate(-372deg)'], [0.82, 0.35, 'translateY(-28px) rotate(-370deg)'], [0.92, 0.1, 'translateY(-10px) rotate(-366deg)'], [1, 0, 'rotate(-360deg)']] },
-    // moonwalks out in shades, strikes a pose, walks back
-    robot: { speed: 1.2, frames: [[0, 0, 'none'], [0.05, 0, 'rotate(-7deg)'], [0.42, 1, 'rotate(-7deg)'], [0.46, 1, 'translateY(-4px)'], [0.56, 1, 'translateY(-4px)'], [0.6, 1, 'rotate(5deg)'], [0.96, 0, 'rotate(5deg)'], [1, 0, 'none']] },
-    // jets out in squishy spurts, and back
-    octopus: { speed: 1.1, frames: [[0, 0, 'none'], ...spurts(1, 0, 0.5, 4), ...spurts(-1, 0.5, 1, 4)] },
     // curls up and rolls out, pops up with a ta-da, rolls back (turns: from how far it goes)
     hedgehog: { speed: 1, frames: d => { const t = Math.max(1, Math.round(d / (0.3 * 56) / (2 * Math.PI))) * 360; return [[0, 0, 'scale(.8) rotate(0deg)'], [0.4, 1, 'scale(.8) rotate(' + t + 'deg)'],
       [0.45, 1, 'translateY(-22px) rotate(' + t + 'deg)'], [0.5, 1, 'rotate(' + t + 'deg)'], [0.6, 1, 'rotate(' + t + 'deg)'], [0.63, 1, 'scale(.8) rotate(' + t + 'deg)'], [0.97, 0, 'scale(.8) rotate(0deg)'], [1, 0, 'none']]; } },
-    // a run-up, then a belly slide out; stands, and slides back
-    otter: { speed: 1.1, frames: [[0, 0, 'none'], [0.05, 0.06, 'translateY(-8px) rotate(8deg)'], [0.1, 0.12, 'rotate(6deg)'], [0.15, 0.2, 'translateY(-14px) rotate(50deg)'], [0.2, 0.3, 'translateY(12px) rotate(90deg)', 'cubic-bezier(.1,.6,.3,1)'],
-      [0.42, 1, 'translateY(12px) rotate(90deg)'], [0.47, 1, 'translateY(-12px) rotate(0deg)'], [0.52, 1, 'none'], [0.57, 0.94, 'translateY(-14px) rotate(-50deg)'], [0.62, 0.84, 'translateY(12px) rotate(-90deg)', 'cubic-bezier(.1,.6,.3,1)'],
-      [0.9, 0, 'translateY(12px) rotate(-90deg)'], [0.95, 0, 'translateY(-10px) rotate(0deg)'], [1, 0, 'none']] },
+    // the AI: powers up, zips out as a streak of light, spins round at the far end, and zips back
+    ai: { speed: 0.9, frames: [[0, 0, 'none'], [0.08, 0, 'translateY(-10px) scale(.9,1.12)'], [0.12, 0, 'translateY(-10px) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'],
+      [0.32, 1, 'translateY(-10px) skewX(-18deg) scale(1.2,.9)'], [0.38, 1, 'translateY(-10px)'], [0.5, 1, 'translateY(-26px) rotate(360deg) scale(1.1)'], [0.58, 1, 'translateY(-10px) rotate(360deg)'],
+      [0.64, 1, 'translateY(-10px) rotate(360deg) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'], [0.86, 0, 'translateY(-10px) rotate(360deg) skewX(18deg) scale(1.2,.9)'],
+      [0.92, 0, 'translateY(-10px) rotate(360deg)'], [1, 0, 'rotate(360deg)']] },
   };
   // the rider: mounts, rides its Light Cycle out (leaning in), turns at the end, rides back
   MOVES.rider = { speed: 0.9, frames: [[0, 0, 'none'], [0.06, 0, 'translateY(-6px)'], [0.44, 1, 'rotate(-5deg)', 'cubic-bezier(.55,0,.25,1)'], [0.5, 1, 'scaleX(-1) rotate(-5deg)'],
@@ -472,7 +482,7 @@
 .h-lim{fill:none;stroke:var(--limb);stroke-width:var(--limbw);stroke-linecap:round}
 .h-hand{fill:var(--paw);stroke:var(--pawedge);stroke-width:2.5}
 .h-foot{fill:var(--foot)}
-.h-eye{fill:var(--eye,var(--line))} .h-glint{fill:#fff} .h-pupil{fill:#1A1410} .h-ink{fill:var(--line)} .h-bulb{fill:#D8572A}
+.h-eye{fill:var(--eye,var(--line))} .h-glint{fill:#fff} .h-pupil{fill:#1A1410} .h-ink{fill:var(--line)}
 .h-brow{fill:none;stroke:var(--brow,var(--line));stroke-width:var(--broww,3.4);stroke-linecap:round;transition:transform .35s ease}
 .h-cheek{fill:#D8572A;opacity:.55}
 .h-smile{fill:none;stroke:var(--line);stroke-width:3.4;stroke-linecap:round}
@@ -507,7 +517,7 @@
 .h-visor{display:none}
 .ipsy-grid .h-visor{display:inline}
 .ipsy-grid .h-lids{opacity:0}
-[data-mood="scan"] .h-visor,[data-mood="cross"] [data-who="robot"] .h-visor{display:none}
+[data-mood="scan"] .h-visor{display:none}
 .ipsy-grid[data-mood="scan"] .h-lids,.ipsy-grid [data-mood="scan"] .h-lids{opacity:1}
 .h-vband{fill:#08090B;stroke:var(--tr-line,#FF2A2A);stroke-width:2.4}
 .h-vlight{fill:none;stroke:var(--tr-line,#FF2A2A);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:14 30;animation:ipsyScan 2.4s ease-in-out infinite alternate;filter:drop-shadow(0 0 3px var(--tr-line,#FF2A2A))}
@@ -536,6 +546,38 @@
 [data-mood="cross"] [data-who="rider"] .h-foot{display:none}
 [data-mood="cross"] [data-who="rider"] .h-armL{transform:rotate(-75deg)}
 [data-mood="cross"] [data-who="rider"] .h-armR{transform:rotate(-40deg)}
+/* the AI: lit eyes and mouth on its screen, shapes in orbit, a hologram building one thing after another (faster while it
+   thinks), a core that pulses; it scans its screen instead of putting glasses on, and its props are made of light */
+[data-who="ai"] .h-smile{stroke:#5CE1E6} [data-who="ai"] .h-mouth{fill:#5CE1E6} [data-who="ai"] .h-glint{opacity:.8}
+[data-who="ai"] .h-eye{filter:drop-shadow(0 0 2.5px #5CE1E6)}
+[data-who="ai"] .h-shadow{fill:#5CE1E6;opacity:.16}
+.h-orbit{animation:ipsySpin 24s linear infinite}
+.h-thrust{fill:#5CE1E6;opacity:.5;animation:ipsyThrust 1.2s ease-in-out infinite alternate}
+.h-core{fill:#5CE1E6;animation:ipsyCore 2.4s ease-in-out infinite}
+.h-beam{fill:#5CE1E6;opacity:.12}
+.h-holi{fill:none;stroke:#5CE1E6;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform-origin:100px 22px;filter:drop-shadow(0 0 2px #5CE1E6);
+  animation:ipsyHolo var(--hd,9.1s) linear infinite;animation-delay:calc(var(--i) * var(--hd,9.1s) / 7 - var(--hd,9.1s))}
+.h-beam+.h-holi{opacity:1;transform:scale(1.3)}   /* with Reduce Motion: the cube */
+.ipsy-char:is([data-wear~="umbrella"],[data-wear~="beanie"],[data-wear~="sunhat"]) .h-holo{display:none}
+.h-aiscan{fill:#5CE1E6;opacity:0;filter:drop-shadow(0 0 3px #5CE1E6)}
+[data-who="ai"] .h-specs{display:none}
+[data-mood="scan"] [data-who="ai"] .h-aiscan{opacity:.85;animation:ipsyAiScan 1.1s ease-in-out infinite alternate}
+[data-mood="think"] [data-who="ai"],[data-mood="cross"] [data-who="ai"]{--hd:2.8s}
+[data-mood="think"] [data-who="ai"] .h-core,[data-mood="done"] [data-who="ai"] .h-core{animation-duration:.6s}
+[data-mood="done"] [data-who="ai"] .h-orbit{animation-duration:2s}
+[data-who="ai"] .h-prop{filter:drop-shadow(0 0 2px #5CE1E6)}
+[data-mood="read"] [data-who="ai"] .h-book,[data-mood="scan"] [data-who="ai"] .h-mag,[data-mood="write"] [data-who="ai"] :is(.h-notepad,.h-pen){animation:ipsyMake .7s ease-out both}
+[data-who="ai"] .h-cover{fill:#3B2FA8} [data-who="ai"] .h-page{fill:rgba(92,225,230,.2);stroke:#5CE1E6} [data-who="ai"] .h-pl{stroke:#5CE1E6;opacity:.85}
+[data-who="ai"] .h-pad{fill:rgba(92,225,230,.18);stroke:#5CE1E6} [data-who="ai"] .h-padtop{fill:#8B7CF6} [data-who="ai"] .h-wl{stroke:#5CE1E6}
+[data-who="ai"] .h-pencil{fill:#5CE1E6;stroke:#3B2FA8} [data-who="ai"] .h-tip{fill:#3B2FA8}
+[data-who="ai"] .h-lens{fill:rgba(92,225,230,.25);stroke:#5CE1E6} [data-who="ai"] .h-handle{stroke:#8B7CF6}
+[data-who="ai"] .h-bubble{fill:rgba(92,225,230,.18);stroke:#5CE1E6} [data-who="ai"] .h-star{fill:#5CE1E6} [data-who="ai"] .h-wave{stroke:#5CE1E6}
+@keyframes ipsySpin{to{transform:rotate(360deg)}}
+@keyframes ipsyThrust{from{transform:scaleX(.75);opacity:.3}to{transform:scaleX(1);opacity:.6}}
+@keyframes ipsyCore{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes ipsyHolo{0%{opacity:0;transform:scale(.3) rotate(-30deg)}3%{opacity:1;transform:scale(1.4)}5%,11%{opacity:1;transform:scale(1.3)}12%{opacity:.3}12.5%{opacity:1}14.3%,100%{opacity:0;transform:scale(.6)}}
+@keyframes ipsyAiScan{from{transform:translateY(0)}to{transform:translateY(46px)}}
+@keyframes ipsyMake{0%{opacity:0}25%{opacity:.7}35%{opacity:.15}55%{opacity:.9}65%{opacity:.4}100%{opacity:1}}
 .h-peek{animation:ipsyPeek .5s cubic-bezier(.2,1.3,.35,1) both}
 /* idle: bobs, blinks, waves now and then; a tail wags */
 .h-bob{animation:ipsyBob 4.8s ease-in-out infinite}
@@ -549,7 +591,7 @@
 [data-mood="listen"] .h-waves{opacity:1}
 [data-mood="listen"] .h-wave{animation:ipsyPulse 1.4s ease-out infinite}
 [data-mood="listen"] .h-wave+.h-wave{animation-delay:.35s}
-/* thinking: hand on its chin, looks up, thought bubbles (the robot's bulb flashes) */
+/* thinking: hand on its chin, looks up, thought bubbles */
 [data-mood="think"] .h-armR{transform:rotate(91deg)}
 [data-mood="think"] .h-eyes{transform:translate(4px,-5px)}
 [data-mood="think"] .h-browL{transform:translateY(-3px) rotate(-8deg)}
@@ -558,7 +600,6 @@
 [data-mood="think"] .h-bubble{animation:ipsyBubble 1.8s ease-in-out infinite}
 [data-mood="think"] .h-bubble:nth-child(2){animation-delay:.3s}
 [data-mood="think"] .h-bubble:nth-child(3){animation-delay:.6s}
-[data-mood="think"] .h-bulb{animation:ipsyGlow .5s steps(2) infinite}
 /* reading: a book, eyes along the lines, a page turning */
 [data-mood="read"] .h-armL{transform:rotate(-60deg)}
 [data-mood="read"] .h-armR{transform:rotate(60deg)}
@@ -602,29 +643,23 @@
 [data-mood="done"] .h-yay{opacity:1}
 [data-mood="done"] .h-yay .h-star{animation:ipsyTwinkle .9s ease-in-out infinite}
 [data-mood="done"] .h-wag{animation-duration:.6s}
-/* crossing aOS Home's bar (cross()): no bob; the owl flaps, the robot moonwalks and poses, the hedgehog's ta-da */
+/* crossing aOS Home's bar (cross()): no bob; the owl flaps, the hedgehog's ta-da, the AI's arms out ahead */
 [data-mood="cross"] .h-bob,[data-mood="cross"] .h-shadow{animation:none}
 [data-mood="cross"] [data-who="owl"] .h-armL{animation:ipsyFlapL .22s ease-in-out infinite alternate}
 [data-mood="cross"] [data-who="owl"] .h-armR{animation:ipsyFlapR .22s ease-in-out infinite alternate}
-[data-mood="cross"] [data-who="mia"] .h-armL,[data-mood="cross"] [data-who="otter"] .h-armL{transform:rotate(-40deg)}
-[data-mood="cross"] [data-who="mia"] .h-armR,[data-mood="cross"] [data-who="otter"] .h-armR{transform:rotate(40deg)}
-[data-mood="cross"] [data-who="robot"] .h-specs{opacity:1;transform:none}
-[data-mood="cross"] [data-who="robot"] .h-spec{fill:#2B2522}
-[data-mood="cross"] [data-who="robot"] .h-foot{animation:ipsyMoon .7s ease-in-out infinite}
-[data-mood="cross"] [data-who="robot"] .h-foot+.h-foot{animation-delay:.35s}
-[data-mood="cross"] [data-who="robot"] .h-armL{animation:ipsyBotL var(--cross,4s) ease-in-out}
-[data-mood="cross"] [data-who="robot"] .h-armR{animation:ipsyBotR var(--cross,4s) ease-in-out}
+[data-mood="cross"] [data-who="mia"] .h-armL{transform:rotate(-40deg)}
+[data-mood="cross"] [data-who="mia"] .h-armR{transform:rotate(40deg)}
 [data-mood="cross"] [data-who="hedgehog"] .h-armL{animation:ipsyHogL var(--cross,4s)}
 [data-mood="cross"] [data-who="hedgehog"] .h-armR{animation:ipsyHogR var(--cross,4s)}
-[data-mood="cross"] [data-who="octopus"] .h-armL{transform:rotate(60deg)}
-[data-mood="cross"] [data-who="octopus"] .h-armR{transform:rotate(-60deg)}
+[data-mood="cross"] [data-who="ai"] .h-armL{transform:rotate(-80deg)}
+[data-mood="cross"] [data-who="ai"] .h-armR{transform:rotate(-100deg)}
+[data-mood="cross"] [data-who="ai"] .h-orbit{animation-duration:1.4s}
 [data-mood="cross"] [data-who="fox"] .h-armL{transform:rotate(-70deg)}
 [data-mood="cross"] [data-who="fox"] .h-armR{transform:rotate(-30deg)}
 @keyframes ipsyBob{50%{transform:translateY(-4px)}}
 @keyframes ipsyShade{50%{transform:scaleX(.9);opacity:.08}}
 @keyframes ipsyBlink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.1)}}
 @keyframes ipsyWag{0%,100%{transform:rotate(0)}50%{transform:rotate(8deg)}}
-@keyframes ipsyGlow{50%{fill:#E3A72F}}
 @keyframes ipsyWave{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(-125deg)}78%{transform:rotate(-100deg)}81%{transform:rotate(-125deg)}84%{transform:rotate(-100deg)}90%{transform:rotate(0)}}
 @keyframes ipsyPulse{0%{opacity:0;transform:translateX(0)}30%{opacity:1}100%{opacity:0;transform:translateX(-8px)}}
 @keyframes ipsyBubble{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(-4px);opacity:1}}
@@ -642,16 +677,13 @@
 @keyframes ipsyPeek{from{opacity:0;transform:translateY(30%) scale(.8)}}
 @keyframes ipsyFlapL{from{transform:rotate(90deg)}to{transform:rotate(160deg)}}
 @keyframes ipsyFlapR{from{transform:rotate(-90deg)}to{transform:rotate(-160deg)}}
-@keyframes ipsyMoon{0%{transform:translate(4px,0)}40%{transform:translate(-8px,0)}60%{transform:translate(-8px,-6px)}100%{transform:translate(4px,0)}}
-@keyframes ipsyBotL{0%,42%,58%,100%{transform:rotate(-20deg)}46%,54%{transform:rotate(126deg)}}
-@keyframes ipsyBotR{0%,42%,58%,100%{transform:rotate(20deg)}46%,54%{transform:rotate(-70deg)}}
 @keyframes ipsyHogL{0%,42%{transform:rotate(-60deg)}46%,58%{transform:rotate(126deg)}64%,97%{transform:rotate(-60deg)}100%{transform:rotate(0)}}
 @keyframes ipsyHogR{0%,42%{transform:rotate(60deg)}46%,58%{transform:rotate(-126deg)}64%,97%{transform:rotate(60deg)}100%{transform:rotate(0)}}
 /* the picker: every helper, unnamed, then a name */
 .ipsy-pick{display:grid;gap:10px;padding:12px;border-radius:18px;background:var(--glass,rgba(255,255,255,.6));border:1px solid var(--hair,rgba(16,24,26,.08))}
 .ipsy-vintage .ipsy-pick{background:var(--mc-card-2,#F0E5D0);border:0}
 .ipsy-pick>p{margin:0;font-size:14.5px;line-height:1.4}
-.ipsy-who{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ipsy-who{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
 .ipsy-whobtn{border:0;border-radius:16px;padding:2px;background:var(--glass-2,rgba(255,255,255,.7));cursor:pointer;aspect-ratio:1;min-width:0;-webkit-tap-highlight-color:transparent}
 .ipsy-vintage .ipsy-whobtn{background:var(--mc-card,#FBF5E9)}
 .ipsy-whobtn[aria-checked="true"]{box-shadow:inset 0 0 0 2.5px var(--accent,#3B7366)}

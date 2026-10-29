@@ -132,8 +132,8 @@
   .story.ipsy.half .ipsy-say, .story.ipsy.wide .ipsy-say { display: none; }
   .hero.ipsy .art .ipsy-hero { position: absolute; right: 4px; top: calc(env(safe-area-inset-top) + 74px); width: 200px; height: 200px; }
   .hero.ipsy .ipsy-say { left: 22px; top: calc(env(safe-area-inset-top) + 120px); }
-  .ipsy-forms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
-  .ipsy-forms figure { margin: 0; padding: 8px 6px 10px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); text-align: center; }
+  .ipsy-forms { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 6px 0 14px; }   /* five: three, then two in the middle */
+  .ipsy-forms figure { flex: 0 0 calc((100% - 20px) / 3); box-sizing: border-box; min-width: 0; margin: 0; padding: 8px 6px 10px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); text-align: center; }
   .ipsy-forms .ipsy-mini { width: 64px; height: 64px; margin: 0 auto; }
   .ipsy-forms b { display: block; font-size: 13px; } .ipsy-forms i { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); line-height: 1.3; }
   @media (prefers-reduced-motion: reduce) { .ipsy-say span { animation: none; } }

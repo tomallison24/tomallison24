@@ -670,8 +670,8 @@
   function askIpsy(t) { if (!ipsy || !t) return; clearFind(); ipsy.prompt(t); }
 
   // Now and then your helper crosses the bar, in its own way (home/ipsy.js cross: Mia's zoomies, the fox's
-  // pounce, the owl's loop, the robot's moonwalk, the octopus's spurts, the hedgehog's roll, the otter's belly
-  // slide), out to the far end and back. Only on Home with the bar empty and untouched, the chat shut and no
+  // pounce, the owl's loop, the hedgehog's roll, the AI zipping by as a streak of light), out to the far end
+  // and back. Only on Home with the bar empty and untouched, the chat shut and no
   // finger down; never with Reduce Motion. The first soon after aOS opens, then a minute or two apart. Any
   // tap (the helper itself, the bar) sends it straight home.
   const slot = $('ipsySlot'), rollBar = $('askIpsy');

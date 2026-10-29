@@ -107,8 +107,8 @@
     ['done', 'Every change I make has an Undo.'], ['show', 'Find me on aOS Home, and in six apps!'],
   ];
   // the helpers to pick from (home/ipsy.js), each with how it crosses the Ipsy bar on Home
-  const IPSY_WHO = [['mia', 'Mia', 'The family’s own. Zoomies!'], ['fox', 'Fox', 'Creeps, then pounces'], ['owl', 'Owl', 'Loops the loop'], ['robot', 'Robot', 'Moonwalks'],
-    ['octopus', 'Octopus', 'Jets in spurts'], ['hedgehog', 'Hedgehog', 'Rolls up in a ball'], ['otter', 'Otter', 'Belly-slides']];
+  const IPSY_WHO = [['mia', 'Mia', 'The family’s own. Zoomies!'], ['fox', 'Fox', 'Creeps, then pounces'], ['owl', 'Owl', 'Loops the loop'],
+    ['hedgehog', 'Hedgehog', 'Rolls up in a ball'], ['ai', 'AI', 'Builds shapes and tools. Zips by as light']];
   const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
       <p>A helper you can chat with, in ${IPSY_APPS.map(id => esc(D.NAMES[id] || id)).join(', ').replace(/, ([^,]*)$/, ' and $1')}. You pick what it looks like and give it a name.</p>
       <h3>Ask in your own words</h3><p>“Is anything late?” (Orders) “When should we leave for the airport?” (Travel) “Swap Tuesday for something quick.” (Meals) “Find us a free evening next week.” (Calendar) “Sort my grocery list by aisle.” (Notes) “What happened in the game last night?” (News)</p>
