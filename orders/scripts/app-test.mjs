@@ -268,7 +268,9 @@ for (const scheme of ['light', 'dark']) {
 
   await step(scheme + ': turning on Food orders reads what was passed over', async () => {
     await page.click('#setBtn');
-    assert.deepEqual(await texts(page, '#stKinds .swrow .grow'), ['PackagesAnything that ships to you', 'Store pickupsOrder ahead, collect in store', 'Food ordersDelivery apps, restaurant pickup', 'Subscriptions and app receiptsMonthly renewals, App Store', 'Tickets and other receiptsEvents, library, parking']);
+    assert.deepEqual(await texts(page, '#stKinds .st-text'), ['PackagesAnything that ships to you.', 'Store pickupsOrder ahead, collect in store.', 'Food ordersDelivery apps, restaurant pickup.', 'Subscriptions and app receiptsMonthly renewals, App Store.', 'Tickets and other receiptsEvents, library, parking.']);
+    assert.deepEqual(await page.$eval('#stKinds [data-kind="package"]', b => [b.getAttribute('role'), b.getAttribute('aria-checked'), b.disabled]), ['switch', 'true', true], 'Packages: a switch that\'s on and can\'t be turned off');
+    assert.doesNotMatch(await page.textContent('#stKinds'), /Always on/);
     fetched.length = 0;
     await page.click('#stKinds [data-kind="food"]');
     await page.waitForFunction(() => window.__orders.orders.some(o => o.kind === 'food'), null, { timeout: 8000 });
@@ -459,9 +461,10 @@ for (const scheme of ['light', 'dark']) {
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'list2-' + scheme + '.png') });
   await step(scheme + ': settings open and show Gmail', async () => {
     await page.click('#setBtn');
-    assert.match(await page.textContent('#stGmail'), /Look for new orders now/);
+    assert.match(await page.textContent('#stGmail'), /Check now/);
+    assert.match(await page.textContent('#stGmail'), /Disconnect Gmail/);
     assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false', 'Ipsy\'s own To check pass is a switch, off here');
-    assert.deepEqual(await texts(page, '#setSheet .sheetbody > .label'), ['Design', 'Gmail', 'Ipsy', 'What counts as an order', 'Hidden orders', 'Backup'], 'Design is the first section; no Sheet section (aOS links it)');
+    assert.deepEqual(await texts(page, '#stBody .st-lbl'), ['Design', 'What counts as an order', 'Hidden orders', 'Connected accounts', 'Ipsy', 'Your data'], 'Design is the first section; no Sheet section (aOS links it)');
     assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
     if (SHOTS) await page.waitForTimeout(700);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });

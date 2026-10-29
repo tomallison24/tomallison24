@@ -61,7 +61,7 @@ async function open(role, { standalone = true, push = true, acct = true, hash = 
   await p.waitForSelector('.tab:not([hidden]) [data-acct]');   // aOS2 opens on Home
   if (acct) {   // Account, then its Notifications fold (every section there is folded until tapped)
     await p.click('.tab:not([hidden]) [data-acct]'); await p.waitForSelector('[aria-controls="fNotify"]', { timeout: 15000 });
-    await p.click('[aria-controls="fNotify"]'); await p.waitForSelector('#nBox p, #nBox .swrow', { timeout: 15000 });
+    await p.click('[aria-controls="fNotify"]'); await p.waitForSelector('#nBox .st-row', { timeout: 15000 });
   }
   return { ctx, p, calls, errs };
 }

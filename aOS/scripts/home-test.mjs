@@ -365,7 +365,7 @@ for (const [w, h, look] of [[390, 844, 'vintage'], [375, 667, 'glass']]) {
   await pg.goto(BASE + '/aOS/'); await pg.waitForTimeout(900);
   check(await pg.evaluate(() => aosHomeTab.layout()) === 'classic' && await pg.isVisible('#favs') && await pg.locator('#harc').isHidden(), `Classic until you pick Thumb arc ${tag}`);
   // picked in Account > Appearance
-  await pg.locator('.tab:not([hidden]) [data-acct]').click(); await pg.click('[aria-controls="fLook"]'); await pg.click('[data-hl="arc"]');
+  await pg.locator('.tab:not([hidden]) [data-acct]').click(); await pg.click('[aria-controls="fLook"]'); await pg.click('#homeLayout [data-value="arc"]');
   check(await pg.evaluate(() => localStorage.getItem('aos.home.layout') === 'arc' && document.documentElement.dataset.home === 'arc'), `Account > Appearance > Home layout: Thumb arc ${tag}`);
   await pg.evaluate(() => document.querySelector('.page.on .close, .page .close').click()); await pg.waitForTimeout(600);
   const arc = await pg.evaluate(() => ({ inner: [...document.querySelectorAll('#harc .fav.in')].map(a => a.dataset.open), outer: [...document.querySelectorAll('#harc .fav[data-fav]')].map(a => a.dataset.open),

@@ -146,7 +146,7 @@
   function finished(p, device, land) { p.landRounds = p.landRounds || {}; const l = p.landRounds[land] = p.landRounds[land] || {}; l[device] = (l[device] || 0) + 1; }
   const roundsIn = (p, land) => sumDevices((p.landRounds || {})[land]);
 
-  // Each day's answers per skill: log[day][skill][device] = [right, total], for the Parent corner.
+  // Each day's answers per skill: log[day][skill][device] = [right, total], for the grown-ups' Settings.
   function logAnswer(p, device, day, skill, right) {
     const d = p.log[day] = p.log[day] || {}, s = d[skill] = d[skill] || {}, c = s[device] = s[device] || [0, 0];
     if (right) c[0]++; c[1]++;
