@@ -218,7 +218,7 @@ await test('Settings: link your own iPhone', async () => {
   await open(page);
   await page.click('#setBtn');
   await page.waitForSelector('[data-plink="sensor.test_iphone_steps"]');
-  assert.match(await page.textContent('#setMore'), /Test iPhone/);
+  assert.match(await page.textContent('#setBody'), /Test iPhone/);
   await page.click('[data-plink="sensor.test_iphone_steps"]');
   await page.waitForTimeout(300);
   const link = calls.find(c => c.url.endsWith('/fitness/api/link'));
@@ -320,6 +320,8 @@ await test('Settings > Sign out and erase clears this phone', async () => {
   const { ctx, page } = await phone({ seed });
   await open(page);
   await page.click('#setBtn'); await page.click('#setErase');
+  assert.match(await page.textContent('#setErase'), /Tap again to sign out and erase/, 'it asks again');
+  await page.click('#setErase');
   await page.waitForSelector('#aos-off', { timeout: 8000 });
   assert.match(await page.textContent('#aos-off'), /Fitness has erased what it kept on this phone/);
   assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), []);

@@ -110,6 +110,8 @@ async function newPage(scheme, extra = {}, sheet = null) {
     route.fulfill({ status: 200, contentType: 'application/rss+xml', headers: { 'access-control-allow-origin': '*' }, body: rss(n === 'alpha' ? 'Alpha Show' : 'Beta Show', n) });
   });
   await ctx.route(/^https:\/\/media\.example\.com\//, route => route.fulfill({ status: 200, contentType: 'audio/wav', headers: { 'access-control-allow-origin': '*' }, body: WAV }));
+  // Apple's directory, which the page asks itself when the route isn't there: answered here, empty, so no test reaches Apple
+  await ctx.route(/^https:\/\/(itunes\.apple\.com|rss\.applemarketingtools\.com)\//, route => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ results: [], feed: { results: [] } }) }));
   // the sky held at day, so the colours don't depend on the hour; a key given as null is left out
   extra = Object.assign({ 'aos.seen': JSON.stringify({ [APP_ID]: '999' }), 'aos.sky': 'day', [KEY]: seed() }, extra);
   await ctx.addInitScript(extra => {
@@ -127,28 +129,44 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
 let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
 const synced = (p, timeout = 8000) => p.waitForFunction(() => window.__podcasts && window.__podcasts.syncState() === 'ok', null, { timeout });
-const openSettings = async page => { await page.click('[data-tab="lib"]'); await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])'); await page.waitForTimeout(500); };
+const openSettings = async page => { await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])'); await page.waitForTimeout(500); };
 // The family's Google Sheet has no controls in the app any more (aOS links it): none of them, anywhere.
 const SHEET_UI = ['#setSheetBtn', '#sheetSub', '#syncSheet', '#syLbl', '#syStatus', '#syNow', '#syUrl', '#sySecret', '#syForm', '#syShare', '#syOff', '#syConnect'];
 const noSheetUi = async page => {
   for (const gone of SHEET_UI) assert.equal(await page.$(gone), null, gone + ': no Sheet controls in the app');
   const set = await page.textContent('#setSheet');
   assert.doesNotMatch(set, /Backup Log|Sync now|Sign in to sync/, 'Settings has no Sheet row');
-  assert.match(set, /Backup\s*Export shows/, 'Backup (Import / Export) stays');
+  assert.match(set, /Your data\s*Back up everything/, 'Your data (Back up / Import) stays');
 };
 const syncedAt = page => page.evaluate(k => [+localStorage.getItem(k + '-sync-at') || 0, localStorage.getItem(k + '-synced')], KEY);
 const lib = page => page.evaluate(() => { const S = window.__podcasts.S; return { follows: S.follows.map(f => f.id), saved: S.saved.map(e => e.k), hist: S.hist.map(e => e.k), prog: S.prog, graves: S.graves }; });
 const EMPTY = JSON.stringify({ follows: [], prog: {}, saved: [], queue: [], hist: [], now: null, set: { back: 15, fwd: 30, speed: 1, auto: true, cc: 'us' }, lastRefresh: NOW, lastClean: NOW });
 
-await test('opens with the seeded library: Home, Library (shows, Saved, History) and Settings, no script errors', async () => {
-  const P = await newPage('light');
+await test('opens on Library, its one page (Listen Now and the tab bar are gone): Shows, New, Saved, History and Settings, no script errors', async () => {
+  const P = await newPage('light', { [KEY + '-tab']: 'home', [KEY]: seed().replace('"lastRefresh":' + NOW, '"lastRefresh":0') });   // a phone that last had Listen Now open; lastRefresh 0: the feeds load
   const p = P.page;
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(900);
-  assert.match(await p.textContent('#homeView .title'), /Listen Now/);
-  await shot(p, '01-home-light');
-  await p.click('[data-tab="lib"]'); await p.waitForTimeout(400);
+  assert.equal(await p.$('#homeView'), null, 'no Listen Now');
+  assert.equal(await p.$('.tabs'), null, 'no tab bar');
+  assert.equal(await p.evaluate(() => !document.getElementById('libView').hidden), true, 'Library is open');
+  assert.match(await p.textContent('#libView .title'), /Library/);
+  assert.deepEqual(await p.$$eval('#libChips .chip', e => e.map(x => x.dataset.act)), ['lib:shows', 'lib:new', 'lib:saved', 'lib:hist']);
   assert.equal(await p.$$eval('#libBody .stile', e => e.length), 2, 'two followed shows');
+  assert.equal(await p.evaluate(() => document.getElementById('tagbar').hidden), true, 'no tag pill before any show has a tag');
+  assert.equal(await p.$('#libBody .tagchips'), null, 'and no tag chips in the page');
   await shot(p, '02-library-light');
+  await p.click('#libChips [data-act="lib:new"]'); await p.waitForSelector('#libBody .rgroup .ep');
+  assert.deepEqual(await p.$$eval('#libBody .chips .chip', e => e.map(x => x.dataset.act)), ['new:all', 'new:unplayed'], 'New: All / Unplayed');
+  assert.ok(await p.$$eval('#libBody .ep', e => e.length) >= 4, 'the newest episodes of both shows');
+  await shot(p, '01-new-light');
+  // Search: the round button opens it, and its ✕ (or the button again) goes back to Library
+  await p.click('#searchTab'); await p.waitForTimeout(600);
+  assert.equal(await p.evaluate(() => !document.getElementById('searchView').hidden), true);
+  assert.match(await p.textContent('#searchBody'), /No chart right now/, 'Top shows from the stand-in for Apple (the page asks Apple itself with no route), not the real one');
+  await p.click('#searchBack'); await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => !document.getElementById('libView').hidden), true, 'back to Library');
+  await p.click('#searchTab'); await p.waitForTimeout(300); await p.click('#searchTab'); await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => !document.getElementById('libView').hidden), true, 'the button again closes Search');
   await p.click('#libChips [data-act="lib:saved"]'); await p.waitForTimeout(300);
   assert.equal(await p.$$eval('#libBody .ep', e => e.length), 1, 'one saved episode');
   await p.click('#libChips [data-act="lib:hist"]'); await p.waitForTimeout(300);
@@ -220,7 +238,7 @@ await test('the family’s Google Sheet: your phones are kept the same (an unfol
   await a.goto(BASE + '/' + FOLDER + '/'); await a.waitForFunction(() => window.__podcasts); await synced(a);
   await a.evaluate(() => window.__podcasts.setSyncDelay(300));
   // unfollow Beta on phone A
-  await a.click('[data-tab="lib"]'); await a.waitForSelector('#libBody .stile');
+  await a.waitForSelector('#libBody .stile');
   await a.click('#libBody .stile[data-show="beta"]'); await a.waitForSelector('#showView:not([hidden])');
   const n0 = A.posts.length;
   await a.click('#showMore'); await a.click('#actRows .rowbtn.danger');
@@ -238,10 +256,11 @@ await test('the family’s Google Sheet: your phones are kept the same (an unfol
   assert.deepEqual(got.saved, ['beta|beta-3'], 'his saved episode');
   assert.deepEqual(got.hist, ['alpha|alpha-2', 'beta|beta-1'], 'his History, newest first');
   assert.equal(got.prog['alpha|alpha-2'].t, 300, 'where he got to'); assert.equal(got.prog['beta|beta-1'].p, true, 'and what he played');
-  await b.click('[data-tab="lib"]'); await b.waitForSelector('#libBody .stile[data-show="alpha"]');
+  await b.waitForSelector('#libBody .stile[data-show="alpha"]');
   await b.waitForFunction(() => /Alpha Show/.test(document.querySelector('#libBody .stile[data-show="alpha"]').textContent));
-  await b.click('[data-tab="home"]'); await b.waitForTimeout(300);
-  assert.ok((await b.$$eval('#homeBody .upcard [data-ep]', els => els.map(x => x.dataset.ep))).includes('alpha|alpha-2'), 'Up Next on phone B: the episode he was part way through on phone A');
+  await b.click('#libChips [data-act="lib:new"]'); await b.waitForSelector('#libBody .playpill[data-play="alpha|alpha-2"]');
+  assert.match(await b.textContent('#libBody .playpill[data-play="alpha|alpha-2"]'), /left/, 'New on phone B: the episode he was part way through on phone A, with what’s left');
+  await b.click('#libChips [data-act="lib:shows"]');
   // phone B follows a show (a shared link opens it) and saves nothing; phone A gets it
   await b.evaluate(() => window.__podcasts.setSyncDelay(300));
   await b.goto(BASE + '/' + FOLDER + '/?feed=' + encodeURIComponent(feedUrl('beta'))); await b.waitForFunction(() => window.__podcasts);
@@ -271,7 +290,7 @@ await test('the family’s Google Sheet: the progress ticks of a playing episode
   const P = await newPage('light', { 'aos.session': session('tok-tom') }, sheet), p = P.page;
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await synced(p);
   await p.evaluate(() => window.__podcasts.setSyncDelay(300));
-  await p.click('.upcard .playpill'); await p.waitForFunction(() => !document.getElementById('audio').paused);
+  await p.click('#libChips [data-act="lib:hist"]'); await p.click('#libBody .playpill[data-play="alpha|alpha-2"]'); await p.waitForFunction(() => !document.getElementById('audio').paused);
   await p.waitForTimeout(1200);   // playing it moves it to the top of History: that syncs
   const playing = P.posts.length;
   assert.ok(P.posts.at(-1).body.hist.some(h => h.id === 'alpha|alpha-2' && Date.now() - h.pl < 60e3), 'played just now');
@@ -310,7 +329,7 @@ await test('the family’s Google Sheet: the phone keeps 90 days of History; old
   await p.evaluate(() => window.__podcasts.sync()); await synced(p);
   assert.deepEqual(P.posts.at(-1).body.hist.map(h => h.id), ['alpha|alpha-1']);
   // Library > History > Show older: a year at a time from the Sheet
-  await p.click('[data-tab="lib"]'); await p.click('#libChips [data-act="lib:hist"]'); await p.waitForTimeout(300);
+  await p.click('#libChips [data-act="lib:hist"]'); await p.waitForTimeout(300);
   assert.equal(await p.$$eval('#libBody .ep', e => e.length), 1);
   await p.click('[data-act="hist-older"]');
   await p.waitForFunction(() => document.querySelectorAll('#libBody .ep').length === 3);
@@ -364,7 +383,7 @@ await test('the owner’s phone hands the Sheet link and phrase it kept over to 
   await np.waitForFunction(() => window.__podcasts.syncState() === 'error');
   await np.evaluate(() => window.__podcasts.sync()); await np.waitForTimeout(300);
   assert.ok(await np.evaluate(() => document.getElementById('toast').hidden || !/Sheet/.test(document.getElementById('toastMsg').textContent)), 'no Sheet yet: no toast');
-  assert.equal(await np.$$eval('#libBody .stile, #homeBody .upcard', e => e.length > 0), true, 'the app works');
+  assert.equal(await np.$$eval('#libBody .stile', e => e.length > 0), true, 'the app works');
   await N.ctx.close();
   // a real error: one toast a session, however many syncs go wrong
   const W = await newPage('light', { 'aos.session': session('tok-tom') }, { post: () => ({ ok: false, app: 'allison-podcasts-sync', aos: true, error: 'wrong-secret' }) }), wp = W.page;
@@ -397,8 +416,8 @@ await test('signed out, the refresh on open and the Top shows chart ask nobody t
   assert.ok(calls.some(c => c.startsWith('/' + FOLDER + '/api/top')), 'the chart was asked for: ' + JSON.stringify(calls));
   assert.equal(await p.$('#aos-signin'), null, 'no sign-in sheet for the chart');
   assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
-  // a tap: Refresh asks for Face ID
-  await p.click('[data-tab="home"]'); await p.waitForTimeout(300);
+  // a tap: Refresh (in Library now) asks for Face ID
+  await p.click('#searchBack'); await p.waitForTimeout(300);
   await p.click('#refreshBtn');
   await p.waitForSelector('#aos-signin', { timeout: 5000 });
   assert.match(await p.textContent('#aos-signin'), /Continue with Face ID/, 'a tap raises the sign-in sheet');
@@ -413,7 +432,7 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
     await rp.route(/^https:\/\/media\.example\.com\//, route => route.fulfill({ status: 200, contentType: 'audio/wav', headers: { 'access-control-allow-origin': '*' }, body: WAV }));
     const reqs = [];
     rp.on('request', r => { const u = new URL(r.url()); if (u.pathname.includes('/api/') && !u.pathname.startsWith('/aOS/api/')) reqs.push(u.pathname); });   // aOS's own state call (welcome.js) is not the app's
-    await rp.goto(BASE + '/' + FOLDER + '/'); await rp.waitForFunction(() => window.__podcasts); await rp.waitForSelector('#homeBody .rgroup'); await rp.waitForTimeout(600);
+    await rp.goto(BASE + '/' + FOLDER + '/'); await rp.waitForFunction(() => window.__podcasts); await rp.click('#libChips [data-act="lib:new"]'); await rp.waitForSelector('#libBody .rgroup'); await rp.waitForTimeout(600);
     assert.ok(reqs.length > 0 && reqs.every(x => x.startsWith('/podcasts/api/')), 'feed requests go to /podcasts/api/: ' + JSON.stringify(reqs));
     const q = (sel, props, pseudo) => rp.$eval(sel, (e, [props, pseudo]) => { const c = getComputedStyle(e, pseudo || null); return props.map(p => c[p]); }, [props, pseudo]);
     const cream = scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', ground = scheme === 'light' ? 'rgb(241, 223, 187)' : 'rgb(74, 57, 30)';
@@ -430,15 +449,15 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
     assert.equal((await q('.ambient i:nth-child(3)', ['backgroundColor']))[0], 'rgb(216, 87, 42)', 'a burnt-orange pill');
     assert.equal((await q('.title', ['fontSize']))[0], '44px');
     assert.equal((await q('.title', ['backgroundImage'], '::after'))[0].startsWith('url('), true, 'the three little bars under the title');
-    const [bg, shadow, backdrop, radius] = await q('#homeBody .rgroup', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
+    const [bg, shadow, backdrop, radius] = await q('#libBody .rgroup', ['backgroundColor', 'boxShadow', 'backdropFilter', 'borderRadius']);
     assert.equal(bg, cream, 'the list is a flat card'); assert.equal(shadow, 'none'); assert.ok(backdrop === 'none' || backdrop === '', backdrop); assert.equal(radius, '20px');
-    assert.equal((await q('.tabs .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under the chosen tab');
-    assert.equal((await q('#homeBody .chips .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under All / Unplayed');
-    assert.equal((await q('.tabs', ['backgroundColor']))[0], cream, 'the dock is a flat cream pill');
+    assert.equal((await q('#libChips .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under the chosen chip');
+    assert.equal((await q('#libBody .chips .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under All / Unplayed');
+    assert.equal((await q('.fab', ['backgroundColor']))[0], cream, 'the Search button is a flat cream circle');
     assert.equal((await q('.playpill', ['backgroundColor']))[0], 'rgba(0, 0, 0, 0)', 'the play buttons are outlined, not filled');
-    await shot(rp, '20-retro-home-' + scheme);
+    await shot(rp, '20-retro-new-' + scheme);
     // the player: play an episode (the stubbed media is 20 seconds of silence)
-    await rp.click('.upcard .playpill'); await rp.waitForFunction(() => !document.getElementById('audio').paused);
+    await rp.click('#libBody .playpill[data-play="alpha|alpha-2"]'); await rp.waitForFunction(() => !document.getElementById('audio').paused);
     assert.equal((await q('#miniPlay', ['backgroundColor']))[0], orange, 'the mini player’s button is solid orange');
     assert.equal((await q('.mbar', ['backgroundColor']))[0], cream);
     await rp.click('#miniOpen'); await rp.waitForSelector('#np:not([hidden])'); await rp.waitForTimeout(900);
@@ -457,9 +476,9 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
     assert.equal((await q('#actSheet .sheet', ['backgroundColor']))[0], cream, 'the choices sheet is a flat panel');
     await rp.click('#actSheet .sheethead [data-close]'); await rp.click('#np .sheethead [data-close]'); await rp.waitForTimeout(400);
     // Settings: a mustard thumb, an orange Done
-    await rp.click('[data-tab="lib"]'); await rp.click('#setBtn'); await rp.waitForSelector('#setSheet:not([hidden])'); await rp.waitForTimeout(600);
+    await rp.click('#setBtn'); await rp.waitForSelector('#setSheet:not([hidden])'); await rp.waitForTimeout(600);
     assert.equal((await q('#setSheet .okbtn', ['backgroundColor']))[0], orange, 'Done is solid orange');
-    assert.equal((await q('#setBack .slthumb', ['backgroundColor']))[0], MUSTARD, 'a mustard thumb under the chosen option');
+    assert.equal((await q('#setBack [aria-checked="true"]', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(255, 248, 236)' : 'rgb(74, 62, 54)', 'the chosen option is marked in Vintage’s colours');
     assert.equal((await q('#setSheet .sheet', ['backgroundColor']))[0], cream, 'Settings is a flat panel');
     assert.equal(await rp.getAttribute('#setDesign [data-design="vintage"]', 'aria-checked'), 'true', 'Settings > Design shows Vintage');
     await shot(rp, '22-retro-settings-' + scheme);
@@ -471,19 +490,19 @@ await test('Vintage, the default design: the Retro look, light and dark: Futura,
 await test('Standard (Sea glass): the Vintage styles off, no sky, the Sea glass ground, icon, status bar and bar colour', async () => {
   for (const scheme of ['light', 'dark']) {
     const G = await newPage(scheme, { 'design.podcasts': 'glass', [KEY]: seed().replace('"lastRefresh":' + NOW, '"lastRefresh":0') }), gp = G.page;
-    await gp.goto(BASE + '/' + FOLDER + '/'); await gp.waitForFunction(() => window.__podcasts); await gp.waitForSelector('#homeBody .rgroup'); await gp.waitForTimeout(600);
+    await gp.goto(BASE + '/' + FOLDER + '/'); await gp.waitForFunction(() => window.__podcasts); await gp.click('#libChips [data-act="lib:new"]'); await gp.waitForSelector('#libBody .rgroup'); await gp.waitForTimeout(600);
     const q = (sel, props) => gp.$eval(sel, (e, props) => { const c = getComputedStyle(e); return props.map(p => c[p]); }, props);
     assert.ok(await gp.evaluate(() => document.documentElement.dataset.look === 'glass' && document.getElementById('vintage').media === 'not all' && !document.documentElement.hasAttribute('data-sky')), 'data-look glass, the Vintage block off, no sky');
     assert.equal((await q('body', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(238, 242, 240)' : 'rgb(13, 18, 19)', scheme + ': the Sea glass ground');
     assert.doesNotMatch((await q('body', ['fontFamily']))[0], /Futura/);
-    assert.notEqual((await q('#homeBody .rgroup', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', 'not a cream card');
-    assert.notEqual((await q('.tabs .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'not a mustard thumb');
+    assert.notEqual((await q('#libBody .rgroup', ['backgroundColor']))[0], scheme === 'light' ? 'rgb(251, 245, 233)' : 'rgb(50, 42, 37)', 'not a cream card');
+    assert.notEqual((await q('#libChips .slthumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'not a mustard thumb');
     assert.notEqual((await q('.ambient i:nth-child(1)', ['filter']))[0], 'none', 'the blurred aurora, not the atomic shapes');
     assert.match(await gp.getAttribute('link[rel="apple-touch-icon"]', 'href'), /^icon-glass-180\.png/, 'the Sea glass icon');
     assert.equal(await gp.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]', 'content'), 'black-translucent');
     assert.equal(await gp.getAttribute('meta[name="theme-color"][media*="' + scheme + '"]', 'content'), scheme === 'light' ? '#EEF2F0' : '#0D1213');
     await shot(gp, '30-glass-home-' + scheme);
-    await gp.click('.upcard .playpill'); await gp.waitForFunction(() => !document.getElementById('audio').paused);
+    await gp.click('#libBody .playpill[data-play="alpha|alpha-2"]'); await gp.waitForFunction(() => !document.getElementById('audio').paused);
     await gp.click('#miniOpen'); await gp.waitForSelector('#np:not([hidden])'); await gp.waitForTimeout(900);
     assert.notEqual((await q('#npBg', ['display']))[0], 'none', 'the blurred artwork glow behind Now Playing');
     await shot(gp, '31-glass-nowplaying-' + scheme);
@@ -499,14 +518,14 @@ await test('Standard (Sea glass): the Vintage styles off, no sky, the Sea glass 
 await test('Settings > Design: the first section; Standard and back at once (the thumbs re-measured), kept across a reload', async () => {
   const P = await newPage('light'), p = P.page;
   const look = () => p.evaluate(() => document.documentElement.dataset.look);
-  // the tab thumb covers the chosen tab exactly (Futura and the system font are different widths)
-  const fits = () => p.evaluate(() => { const t = document.querySelector('.tabs .slthumb'), c = document.querySelector('.tab[aria-selected="true"]'); return Math.abs(t.offsetWidth - c.offsetWidth) < 1 && Math.abs(parseFloat(getComputedStyle(t).width) - c.offsetWidth) < 1; });
+  // Library's chip thumb covers the chosen chip exactly (Futura and the system font are different widths)
+  const fits = () => p.evaluate(() => { const t = document.querySelector('#libChips .slthumb'), c = document.querySelector('#libChips .chip[aria-pressed="true"]'); return Math.abs(t.offsetWidth - c.offsetWidth) < 1 && Math.abs(parseFloat(getComputedStyle(t).width) - c.offsetWidth) < 1; });
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);
   assert.equal(await look(), 'vintage');
   await openSettings(p);
-  assert.deepEqual(await p.$$eval('#setSheet .sheetbody > *', els => els.slice(0, 3).map(e => e.id || e.className)), ['label', 'setDesign', 'label'], 'Design comes first: its label and the rows, then the next setting');
-  assert.equal(await p.textContent('#setSheet .sheetbody > .label'), 'Design');
-  assert.equal(await p.$('#setSheet .hint'), null, 'no explanations in Settings');
+  assert.deepEqual(await p.$$eval('#setBody > .st-sec', els => els.slice(0, 2).map(e => [e.querySelector('.st-lbl').textContent, !!e.querySelector('#setDesign')])), [['Design', true], ['Playback', false]], 'Design comes first: its label and the rows, then the next setting');
+  assert.equal(await p.textContent('#setBody .st-sec:first-child .st-lbl'), 'Design');
+  assert.equal(await p.$('#setSheet .hint, #setSheet .st-hint'), null, 'no explanations in Settings');
   assert.equal(await p.getAttribute('#setDesign [data-design="vintage"]', 'aria-checked'), 'true');
   await p.click('#setDesign [data-design="glass"]'); await p.waitForTimeout(300);
   assert.equal(await look(), 'glass', 'Standard at once');
@@ -514,20 +533,23 @@ await test('Settings > Design: the first section; Standard and back at once (the
   assert.equal(await p.isVisible('#setSheet'), true, 'Settings stays open');
   assert.equal(await p.evaluate(() => localStorage.getItem('design.podcasts')), 'glass');
   await p.click('#setSheet .sheethead [data-close]'); await p.waitForTimeout(500);
-  assert.ok(await fits(), 'the tab thumb fits the chosen tab in the system font');
+  assert.ok(await fits(), 'the chip thumb fits the chosen chip in the system font');
   await p.reload(); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);
   assert.equal(await look(), 'glass', 'Standard is kept');
   await openSettings(p);
   // a re-render of the options leaves the rows working
-  await p.click('#setBack [data-v="30"]'); await p.waitForTimeout(200);
+  await p.click('#setBack [data-value="30"]'); await p.waitForTimeout(200);
+  await p.selectOption('#setFwd', '45'); await p.waitForTimeout(200);
+  await p.selectOption('#setCc', 'gb'); await p.waitForTimeout(200);
   await p.click('#setDesign [data-design="vintage"]'); await p.waitForTimeout(300);
   assert.equal(await look(), 'vintage', 'Vintage at once');
   await p.click('#setSheet .sheethead [data-close]'); await p.waitForTimeout(500);
-  assert.ok(await fits(), 'the tab thumb fits the chosen tab in Futura');
+  assert.ok(await fits(), 'the chip thumb fits the chosen chip in Futura');
   await p.reload(); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);
   assert.equal(await look(), 'vintage', 'Vintage is kept');
   assert.equal(await p.evaluate(() => localStorage.getItem('design.podcasts')), 'vintage');
   assert.equal(await p.evaluate(k => JSON.parse(localStorage.getItem(k)).set.back, KEY), 30, 'the other settings work as before');
+  assert.deepEqual(await p.evaluate(k => { const s = JSON.parse(localStorage.getItem(k)).set; return [s.fwd, s.cc, s.ccChosen]; }, KEY), [45, 'gb', true], 'Skip forward and Top shows from are kept');
   await P.ctx.close();
 });
 
@@ -566,13 +588,15 @@ await test('the old Podcasts Vintage address: its data (localStorage and both da
   await p.reload(); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);
   await p.click('#libBody .stile[data-show="alpha"]'); await p.waitForSelector('#showView:not([hidden])'); await p.waitForTimeout(400);
   assert.match(await p.textContent('#showBody'), /An episode from Podcasts Vintage/, 'its stored episodes show in the app');
-  await p.click('#showBack'); await p.click('[data-tab="home"]'); await p.waitForTimeout(300);
+  await p.click('#showBack'); await p.waitForTimeout(300);
   await p.click('#refreshBtn'); await p.waitForTimeout(1500);
   assert.ok(reqs.length > 0 && reqs.every(x => x.startsWith('/podcasts/api/')), 'feed requests go to /podcasts/api/ from the old address too: ' + JSON.stringify(reqs));
   // once only: a later change to the old keys is not copied again
+  const tabBefore = await p.evaluate(k => localStorage.getItem(k + '-tab'), KEY);
   await p.evaluate(k => localStorage.setItem(k + '-tab', 'search'), OLD_KEY);
   await p.reload(); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(500);
-  assert.equal(await p.evaluate(k => localStorage.getItem(k + '-tab'), KEY), 'home', 'moved once only');
+  assert.notEqual(tabBefore, 'search');
+  assert.equal(await p.evaluate(k => localStorage.getItem(k + '-tab'), KEY), tabBefore, 'moved once only');
   assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
   await P.ctx.close();
 });
@@ -581,9 +605,97 @@ await test('a phone with both: Podcasts’ own data and database are kept, the o
   const P = await newPage('light', { 'aos.seen': JSON.stringify({ podcasts: '999', podcastsvintage: '999' }), [KEY + '-tab']: 'home', [OLD_KEY]: seed().replace('Alpha Show', 'Old Show'), [OLD_KEY + '-tab']: 'lib' }), p = P.page;
   await p.goto(BASE + '/podcastsvintage/sw.js'); await seedOldDbs(p, true);
   await p.goto(BASE + '/podcastsvintage/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(900);
-  assert.equal(await p.evaluate(() => !document.getElementById('homeView').hidden), true, 'Podcasts’ own tab');
+  assert.equal(await p.evaluate(k => localStorage.getItem(k + '-tab'), KEY), 'home', 'Podcasts’ own tab kept, not the old app’s');
+  assert.equal(await p.evaluate(() => !document.getElementById('libView').hidden), true, 'and it opens on Library, its one page');
   assert.equal(await p.evaluate(k => JSON.parse(localStorage.getItem(k)).follows[0].title, KEY), 'Alpha Show', 'Podcasts’ own shows');
   assert.deepEqual((await dbRows(p, 'allison-podcasts', 'shows')).map(s => s.eps[0].t), ['An episode from Podcasts'], 'Podcasts’ own database');
+  await P.ctx.close();
+});
+
+await test('tags: Ipsy tags the shows (POST tags, signed in), Library filters by them, you change them on the show’s page, and they sync', async () => {
+  const sheet = fakeSheet(GS, SHEET_SECRET), asked = [];
+  const P = await newPage('light', { 'aos.session': session('tok-tom') }, sheet), p = P.page;
+  // the family's route: feeds as text, and the tags
+  await p.route('**/' + FOLDER + '/api/**', route => {
+    const req = route.request(), u = new URL(req.url());
+    if (u.pathname.endsWith('/tags')) {
+      const body = JSON.parse(req.postData());
+      asked.push({ who: PEOPLE[(req.headers().authorization || '').replace('Bearer ', '')], header: req.headers()['x-podcasts'], body });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tags: { alpha: ['News', 'Talk'], beta: ['Comedy'] } }) });
+    }
+    if (u.pathname.endsWith('/feed')) { const n = u.searchParams.get('url').match(/\/(\w+)\.xml/)[1]; return route.fulfill({ status: 200, contentType: 'text/plain', body: rss(n === 'alpha' ? 'Alpha Show' : 'Beta Show', n) }); }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) });
+  });
+  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts);
+  await p.waitForSelector('#tagbar:not([hidden])', { timeout: 10000 });
+  assert.equal(asked.length, 1, 'one call for both shows');
+  assert.equal(asked[0].who.id, 'tom', 'signed in'); assert.equal(asked[0].header, '1');
+  assert.deepEqual(asked[0].body.shows.map(x => [x.id, x.title, x.genre]).sort(), [['alpha', 'Alpha Show', 'News'], ['beta', 'Beta Show', 'Comedy']]);
+  assert.match(asked[0].body.shows.find(x => x.id === 'alpha').desc, /About Alpha Show/, 'with the start of its description');
+  assert.match(await p.textContent('#toastMsg'), /tagged 2 shows/);
+  // the tags are in the pill at the bottom, as Home's view picker; its menu opens upwards
+  assert.equal(await p.$('#libBody .tagchips'), null, 'not a row of chips in the page');
+  assert.equal(await p.textContent('#tagName'), 'All shows');
+  const bar = await p.$eval('#tagbar', e => { const r = e.getBoundingClientRect(); return { mid: r.left + r.width / 2, bottom: innerHeight - r.bottom }; });
+  assert.ok(Math.abs(bar.mid - 195) < 2 && bar.bottom < 40, 'centred over the home indicator: ' + JSON.stringify(bar));
+  await p.click('#tagBtn'); await p.waitForSelector('#tagMenu:not([hidden])');
+  assert.equal(await p.getAttribute('#tagBtn', 'aria-expanded'), 'true');
+  assert.deepEqual(await p.$$eval('#tagMenu [data-tag]', e => e.map(x => [x.dataset.tag, x.querySelector('.n').textContent])), [['', '2'], ['Talk', '1'], ['News', '1'], ['Comedy', '1']], 'All shows, then the tags in use, in the list’s order, with how many');
+  const menu = await p.$eval('#tagMenu', e => e.getBoundingClientRect().bottom), btnTop = await p.$eval('#tagBtn', e => e.getBoundingClientRect().top);
+  assert.ok(menu <= btnTop, 'the menu opens upwards');
+  await shot(p, '05-tags-light');
+  await p.click('#tagMenu [data-tag="Comedy"]'); await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => document.getElementById('tagMenu').hidden), true, 'picking closes the menu');
+  assert.equal(await p.textContent('#tagName'), 'Comedy');
+  assert.deepEqual(await p.$$eval('#libBody .stile', e => e.map(x => x.dataset.show)), ['beta'], 'Comedy: Beta Show only');
+  await p.click('#libChips [data-act="lib:new"]'); await p.waitForTimeout(200);
+  assert.equal(await p.evaluate(() => document.getElementById('tagbar').hidden), true, 'only on Shows');
+  await p.click('#libChips [data-act="lib:shows"]'); await p.waitForTimeout(200);
+  await p.click('#tagBtn'); await p.click('#tagMenu [data-tag=""]'); await p.waitForTimeout(300);
+  assert.equal(await p.$$eval('#libBody .stile', e => e.length), 2);
+  // you change Alpha's tags on its page: they're yours, and never picked again
+  await p.click('#libBody .stile[data-show="alpha"]'); await p.waitForSelector('#showView:not([hidden]) .tagline');
+  assert.match(await p.textContent('#showBody .tagline'), /Talk · News/);
+  await p.click('#showBody .tagline'); await p.waitForSelector('#actSheet:not([hidden])');
+  await p.click('#actRows .rowbtn:has-text("Talk")'); await p.waitForTimeout(200);
+  assert.equal(await p.evaluate(() => !document.getElementById('actSheet').hidden), true, 'the sheet stays open while you pick');
+  await p.click('#actRows .rowbtn:has-text("Education")'); await p.waitForTimeout(200);
+  assert.deepEqual(await p.$$eval('#actRows .rowbtn', e => e.filter(x => x.querySelector('.tick')).map(x => x.textContent.trim())), ['News', 'Education']);
+  await p.evaluate(() => document.querySelector('#actSheet .scrim').click());
+  await p.waitForTimeout(300);
+  const alpha = await p.evaluate(() => window.__podcasts.S.follows.find(f => f.id === 'alpha'));
+  assert.deepEqual([alpha.tags, alpha.tagBy], [['News', 'Education'], 'you']);
+  // the Sheet has them
+  await p.evaluate(() => window.__podcasts.sync()); await synced(p);
+  const row = (sheet.tab('_shows') || []).find(r => /alpha/.test(r[0]));
+  assert.ok(row && /"tags":\["News","Education"\]/.test(row.join('')) && /"tagBy":"you"/.test(row.join('')), 'tags synced to the family’s Sheet');
+  assert.equal(asked.length, 1, 'not asked again');
+  // Settings > AI: off, nothing asks Claude, and the show's sheet has no Let Ipsy Pick; on again, Ipsy tags the rest
+  await p.click('#showBack'); await p.waitForTimeout(300);
+  await openSettings(p);
+  assert.equal(await p.getAttribute('#setAi', 'role'), 'switch');
+  assert.equal(await p.getAttribute('#setAi', 'aria-checked'), 'true', 'on to start');
+  assert.ok(await p.$('#setAi > .st-sw'), 'the shared switch, as in every app');
+  await p.$eval('#setAi', e => e.scrollIntoView({ block: 'center' })); await p.waitForTimeout(300);
+  await shot(p, '07-settings-ai-light');
+  await p.click('#setAi'); await p.waitForTimeout(200);
+  assert.equal(await p.getAttribute('#setAi', 'aria-checked'), 'false');
+  assert.equal(await p.evaluate(() => window.__podcasts.S.set.ai), false);
+  await p.click('#setSheet .sheethead [data-close]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const f = window.__podcasts.S.follows.find(f => f.id === 'beta'); delete f.tags; delete f.tagBy; window.__podcasts.save(); });
+  await p.reload(); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(3500);
+  assert.equal(asked.length, 1, 'AI off: Beta Show, with no tags now, isn’t sent');
+  await p.click('#libBody .stile[data-show="beta"]'); await p.waitForSelector('#showView:not([hidden]) .tagline');
+  await p.click('#showBody .tagline'); await p.waitForSelector('#actSheet:not([hidden])');
+  assert.equal(await p.$('#actRows .rowbtn:has-text("Let Ipsy Pick")'), null, 'AI off: no Let Ipsy Pick');
+  await p.evaluate(() => document.querySelector('#actSheet .scrim').click()); await p.waitForTimeout(300);
+  await p.click('#showBack'); await p.waitForTimeout(300);
+  await openSettings(p); await p.click('#setAi'); await p.waitForTimeout(200);
+  assert.equal(await p.getAttribute('#setAi', 'aria-checked'), 'true');
+  await p.waitForFunction(n => window.__podcasts.S.follows.find(f => f.id === 'beta').tags, null, { timeout: 8000 });
+  assert.equal(asked.length, 2, 'on again: Ipsy tags it');
+  assert.deepEqual(asked[1].body.shows.map(x => x.id), ['beta'], 'only the show with no tags');
+  assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
   await P.ctx.close();
 });
 

@@ -169,9 +169,6 @@ svg.b{stroke-width:2.2}
 .frow input[type="time"]{padding-right:13px;background-image:none}
 .frow input.txt{flex:1;border:0;background:none;outline:none;font-size:16px;min-width:0;padding:0;color:var(--text);width:100%}
 .frow input.txt::placeholder{color:var(--faint)}
-.frow .unit{display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:var(--fill)}
-.frow .unit button{min-width:44px;height:34px;padding:0 10px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted)}
-.frow .unit button[aria-pressed="true"]{background:var(--seg-thumb);color:var(--text);box-shadow:inset 0 0 0 1px var(--gb-edge)}
 .stackform{display:flex;flex-direction:column;gap:14px}
 .stackform[hidden]{display:none}
 .formbtns{display:flex;gap:8px}
@@ -198,9 +195,6 @@ svg.b{stroke-width:2.2}
 .rowbtn .ic svg{width:22px;height:22px}
 .rowbtn .sub{display:block;font-weight:400;color:var(--muted);font-size:13px}
 .rowbtn.danger,.rowbtn.danger .ic{color:var(--danger-text)}
-.acct{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.acct p{margin:0;font-size:14px;color:var(--muted)}
-.acct strong{display:block;font-size:16px;color:var(--text);margin-bottom:2px}
 
 /* ---- the dock: Ipsy on the left, + plans dinners ---- */
 .dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;padding:0 14px;z-index:5;pointer-events:none;transition:opacity .2s}
@@ -232,7 +226,6 @@ html.locked .dock{opacity:0;pointer-events:none}
 .sheetbody{overflow-y:auto;overscroll-behavior:contain;padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
 .sheetbody > *{flex-shrink:0}
-#setSheet .sheetbody > .hint{margin:0 12px}
 .sheet .rgroup{border-radius:26px}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet{background:var(--bar-solid)}}
 @media (prefers-reduced-transparency:reduce){.sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
@@ -377,14 +370,13 @@ ul.plain small{color:var(--muted)}
 .opts.rate .opt svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 .btns.two{display:flex;gap:8px}
 .btns.two .btn{flex:1}
-/* Settings: the family's rules */
-.frow .flabel{flex:1 0 auto;white-space:nowrap}
-.frow .flabel small{display:block;font-size:12px;color:var(--faint);margin-left:0}
-.frow > label small{display:block;margin-left:0}
-.step{display:inline-flex;align-items:center;gap:10px}
+/* Settings: the vegetables stepper; the chips (what the family avoids, what Ipsy has learned) in a group */
+.step{display:inline-flex;align-items:center;gap:10px;flex:none}
 .step .iconbtn{width:40px;height:40px;font-size:20px;font-weight:600}
 .step output{min-width:18px;text-align:center;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
-.frow .unit button{padding:0 9px;font-size:13px}
+#setBody .st-raw[data-chips]{padding:12px 12px}
+#setBody .st-raw[data-chips] > .st-title{margin:0 4px 8px}
+#setBody .st-raw[data-chips]:has(.opts:empty){display:none}
 
 /* the Ipsy tab: cream for Ipsy, teal for you; mustard choices; the plan's tags in the Retro colours */
 .bub{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
@@ -700,13 +692,13 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     </div>
   </div>
 
-  <!-- Settings: the design, your account, the family's rules, what Ipsy has learned -->
+  <!-- Settings: Design, the family's rules, what it never has, what Ipsy has learned, your account -->
   <div class="sheetwrap" id="setSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setLbl">
       <div class="grab" aria-hidden="true"></div>
       <div class="sheethead"><h2 id="setLbl">Settings</h2><div class="acts"><button class="iconbtn okbtn" id="sSave" type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div></div>
-      <div class="sheetbody" id="setBody"></div>
+      <div class="sheetbody"><div id="setBody"></div></div>   <!-- the sections, written by renderSettings (../home/settings.js) -->
     </div>
   </div>
 
@@ -714,6 +706,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: the family's plan -->
 <script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
 <script src="../home/aisles.js"></script>   <!-- the grocery sections, as in Notes' grocery lists -->

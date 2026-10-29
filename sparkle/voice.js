@@ -14,7 +14,7 @@
 //   unlock()                      call from a tap: an iPhone only lets a page speak after one.
 //   sfx(name)                     a little sound made in code (no files): right, again, coin, sparkle,
 //                                 fanfare, whoosh, pop, plank, drum.
-//   clips: letter sounds a grown-up recorded (Parent corner), as data: URLs, kept on this phone
+//   clips: letter sounds a grown-up recorded (Settings), as data: URLs, kept on this phone
 //     (localStorage sparkle.clips) and in the family account (app.js syncs them):
 //     has(l), set(l, url), all(), load(obj), record() -> { stop(): Promise<url> }, play(l)
 //

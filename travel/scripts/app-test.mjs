@@ -352,7 +352,7 @@ for (const scheme of ['light', 'dark']) {
     await page.click('[data-tab="trips"]');
     await page.click('#setBtn');
     await page.waitForFunction(() => /Working/.test(document.getElementById('stLive').textContent));
-    assert.match(await page.textContent('#stGmail'), /Look for new bookings now/);
+    assert.match(await page.textContent('#stGmail'), /Check now/);
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });
   await step(scheme + ': no script errors and nothing blocked by the page policy', async () => {
@@ -669,7 +669,7 @@ await step('Settings > Design switches both ways at once and is kept', async () 
   assert.equal(await look(), 'vintage', 'Vintage by default');
   assert.match(await page.getAttribute('link[rel="apple-touch-icon"]', 'href'), /^icon-180\.png/, 'with the Vintage icon');
   await page.click('#setBtn'); await page.waitForTimeout(400);
-  assert.equal(await page.$eval('#setSheet .sheetbody', b => b.firstElementChild.textContent), 'Design', 'Design is the first section');
+  assert.equal(await page.$eval('#stBody .st-sec:first-child .st-lbl', b => b.textContent), 'Design', 'Design is the first section');
   assert.ok(await page.isVisible('#stDesign [data-design="glass"]'));
   assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
   await page.click('#stDesign [data-design="glass"]'); await page.waitForTimeout(250);
@@ -720,7 +720,7 @@ await step('the old Travel Vintage address: its bookings, Gmail sign-in, Sheet b
   assert.equal(await page.evaluate(() => localStorage.getItem('allison-travel-v1-sync')), null, 'and the phone doesn\'t reconnect to the Sheet with it: aOS keeps the Sheet now');
   await page.click('#setBtn');
   await page.waitForFunction(() => /Working/.test(document.getElementById('stLive').textContent), null, { timeout: 5000 });
-  assert.match(await page.textContent('#stGmail'), /Look for new bookings now/, 'still signed in to Gmail');
+  assert.match(await page.textContent('#stGmail'), /Check now/, 'still signed in to Gmail');
   assert.ok(apiCalls.some(p => p.startsWith('/travel/api/')) && !apiCalls.some(p => p.startsWith('/travelvintage/')), 'it asks Travel\'s route, never one at the old address: ' + apiCalls.join(' '));
   // once only: a later change to the old keys is not copied again
   await page.evaluate(() => localStorage.setItem('allison-travelv-v1', JSON.stringify({ bookings: [], trips: [] })));

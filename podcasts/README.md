@@ -3,19 +3,26 @@
 Podcasts as a home-screen web app, laid out like the iPhone's Podcasts app,
 in a mid-century Vintage design or the same frosted glass as Mail, Notes and News.
 
-- **Home**: **Up Next** (what's playing, your queue, episodes you're part way
-  through, then the newest unplayed episode of each show you follow) and
-  **New Episodes** from your shows, with All / Unplayed / Video.
-- **Library**: your **Shows** as a grid of artwork, **Saved** episodes and
-  **History**. The gear opens Settings.
-- **Search** (the round button next to the tabs, as on iOS 26): Apple's
+- **Library**, the app's one page (Listen Now and the tab bar are gone): your
+  **Shows** as a grid of artwork, picked by **tag** (below); **New**, the
+  newest episodes of your shows, with All / Unplayed / Video; **Saved**
+  episodes; and **History**. The round arrows check for new episodes; the gear
+  opens Settings.
+- **Tags**: each show you follow gets one or two from a fixed list (Music,
+  Talk, News, Comedy, True Crime, Sport, Education, Kids, Business, Health,
+  Society, Other), picked by Ipsy ("Tags", below). On Shows, a pill at the
+  bottom, as Home's view picker, says which (**All shows** to start); tap it
+  for a menu, opening upwards, of the tags in use, with how many. A show's page
+  shows its tags; tap them (or **⋯ → Tags**) to change them, or **Let Ipsy
+  Pick** again. **Settings → AI** turns Ipsy's tagging off.
+- **Search** (the round button at the bottom right, as on iOS 26; it, or its ✕, goes back to Library): Apple's
   **Top shows** chart for your country (the US unless changed in Settings), search by name, or paste a show's
   RSS feed link. Private and premium feeds (Patreon, Supercast and the like)
   work too.
 - **A show**: artwork, Follow, the description, and its episodes, with
   Unplayed, Video / Audio (when a show has both) and Newest / Oldest first.
   The **⋯** button: Mark All as Played, Share Show (a link that opens it in
-  this app), Copy Feed Link, Check for New Episodes, Unfollow. Swipe in from
+  this app), Copy Feed Link, Check for New Episodes, Tags, Unfollow. Swipe in from
   the left edge to go back.
 - **An episode**: tap it for its notes. Times in the notes (`12:34`) play
   from there. **⋯**: Play Next, Play Later, Save, Mark as Played, Share.
@@ -32,7 +39,7 @@ in a mid-century Vintage design or the same frosted glass as Mail, Notes and New
 - **Picks up where you left off**, episode by episode. The last 15 seconds
   count as played. When an episode ends, the next one in Up Next plays
   (Settings can switch that off).
-- **Settings**: the design (Vintage or Standard, below), skip back
+- **Settings**: the design (Vintage or Standard, below), AI (Ipsy's tags, on or off), skip back
   (10/15/30 s) and forward (15/30/45/60 s), what happens when an episode ends, the country for Top shows, and **Import /
   Export** your shows as OPML (the file other podcast apps use). The family's
   Google Sheet (below) has no settings here: signed in, your shows, Saved,
@@ -107,6 +114,23 @@ answered 429") however little the family searches. So:
 Without them Search works as before, with the kept copies and the phone's own
 try.
 
+## Tags
+
+`TAGS` in `app.js` and in `functions/podcasts/api/[[route]].js` (keep the two the same). A few
+seconds after the app opens, a refresh or a follow, signed in, the phone sends the shows that have no
+tags yet (25 at a time: id, title, author, Apple's genre and the start of the description) to
+`POST /podcasts/api/tags`, which asks Claude Haiku 5.5 (`ANTHROPIC_API_KEY`, the same key as Meals and
+News) to pick one or two from the list, and keeps only tags from the list, for the shows it was asked
+about. At most 30 calls a person a day (`podcasts:tags:<id>:<day>` in the accounts' KV); over that,
+signed out or with no key, the app stops asking until it's opened again. A show Claude couldn't place is
+**Other**. **Settings → AI** (`S.set.ai`, on to start, kept on the phone) off: nothing in Podcasts asks Claude,
+the tags you have stay, and **Let Ipsy Pick** goes; on again, Ipsy tags the shows that have none.
+
+A show's tags are `tags` on its entry in `S.follows`, with `tagBy`: `ai`, or `you` once you change them
+(yours are never picked again; **Let Ipsy Pick** clears them, and asks again). They sync with the show
+(`shows` in the family's Sheet, kept in its hidden `_shows` tab; the readable Shows tab doesn't list
+them).
+
 ## The family's Google Sheet
 
 One Google Sheet for the whole family is the record of everyone's Podcasts
@@ -130,7 +154,7 @@ shows none.
 (`kind:id → when`, in `S.graves`) so your other phones delete it too, and the
 newest change wins.
 - `shows`: what you follow (the show's id: a hash of its feed). Its title,
-  author, artwork, genre, feed and when you followed it; not its episode list.
+  author, artwork, genre, feed, tags and when you followed it; not its episode list.
 - `saved`: your saved episodes (the episode's key, `show id|guid`), with when.
 - `hist`: History, each with when you played it (`pl`) and that day. Dated.
 - `prog`: where you got to, and what's played. Dated, by when you last
@@ -271,7 +295,8 @@ node podcasts/scripts/sheet-test.mjs   # google-sheet-sync.gs on an in-memory Sh
                                        # same show followed by two), your phones kept the same, VERSION 1 rows
                                        # becoming the owner's, the 90 days and older on asking, the Who column
 node podcasts/scripts/api-test.mjs     # functions/podcasts/api with Apple, Podcast Index and Cloudflare's cache stubbed:
-                                       # Apple's 429 answered from Podcast Index, the kept copies, the busy message
+                                       # Apple's 429 answered from Podcast Index, the kept copies, the busy message;
+                                       # and POST tags with Anthropic and KV stubbed: signed in, the list only, the daily count
 node podcasts/scripts/app-test.mjs     # the app in Chromium at iPhone size (needs Playwright): the library; the
                                        # family's Sheet end to end on the real script, with **/sheet/api/podcasts
                                        # answered here and who's asking from the page's aos.session (signed out,

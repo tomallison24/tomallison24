@@ -322,8 +322,8 @@ await test('Settings > Design: Vintage, then Standard and back, at once, kept ac
   assert.equal(await look(), 'vintage');
   await s.page.click('#setBtn');
   await s.page.waitForSelector('#set-sheet.open:not([hidden])');
-  assert.equal((await s.page.locator('#set-body .sect h3').first().innerText()).trim().toLowerCase(), 'design', 'Design is the first section');
-  assert.match(await s.page.locator('#set-body .sheet-note').innerText(), /Changes how News looks on this phone\./);
+  assert.equal((await s.page.locator('#set-body .st-sec:first-child .st-lbl').innerText()).trim().toLowerCase(), 'design', 'Design is the first section');
+  assert.equal(await s.page.locator('#set-body .st-hint, #set-body .sheet-note').count(), 0, 'no note under Design');
   assert.equal(await checked('vintage'), 'true'); assert.equal(await checked('glass'), 'false');
   await shot(s.page, 'settings-vintage');
   await s.page.click('#set-body [data-design="glass"]');

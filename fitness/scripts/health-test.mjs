@@ -272,7 +272,7 @@ await test('a tile opens its sheet: 7, 30 or 90 days, each reading charted with 
   // Settings: a Move goal beside the step goal; the Move ring follows it
   await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
   assert.equal(await page.$eval('#stMove', s => s.value), '500');
-  assert.equal(await page.$eval('label[for="stMove"]', l => l.textContent), 'Move goal');
+  assert.equal(await page.$eval('#stMove', s => s.closest('label').querySelector('.st-title').textContent), 'Move goal');
   await page.selectOption('#stMove', '1000');
   assert.equal(await page.evaluate(() => localStorage.getItem('allison-fitness-v1-move-goal')), '1000');
   await page.selectOption('#stGoal', '8000');
@@ -377,7 +377,7 @@ await test('vitals alerts: your usual for each vital sent after a Health fetch (
   assert.equal(posts().length, 1);
   // Settings > Health > Vitals alerts: on, one sentence; off reaches the server
   await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
-  const sw = await page.$eval('#stVitals', b => [b.getAttribute('role'), b.getAttribute('aria-checked'), b.querySelector('.grow').firstChild.textContent, b.querySelector('.sub').textContent, b.closest('.field').querySelector('.label').textContent]);
+  const sw = await page.$eval('#stVitals', b => [b.getAttribute('role'), b.getAttribute('aria-checked'), b.querySelector('.st-title').textContent, b.querySelector('.st-sub').textContent, b.closest('.st-sec').querySelector('.st-lbl').textContent]);
   assert.deepEqual(sw, ['switch', 'true', 'Vitals alerts', 'Alerts you when a vital is off your usual.', 'Health']);
   assert.ok(await page.evaluate(() => { const v = document.getElementById('stVitals'), i = document.getElementById('stIpsy'); return !!(v && i && (v.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING)); }), 'just before Ipsy');
   await page.click('#stVitals');

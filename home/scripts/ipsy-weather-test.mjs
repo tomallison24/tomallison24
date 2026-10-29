@@ -116,14 +116,14 @@ const dressAs = async (p, cache) => p.evaluate(([c, NOW]) => { if (c == null) lo
   // Account > Your helper: Dress for the weather, Off and On again
   const wear = () => p.evaluate(() => document.querySelector('#ipsySlot .ipsy-char').dataset.wear || '');
   await p.evaluate(() => aosAccount.open('helper')); await p.waitForTimeout(600);
-  const off = p.locator('[data-hwx="off"]');
-  if (!await off.isVisible().catch(() => false)) pr.push('no Dress for the weather in Account > Your helper');
+  const sw = p.locator('#helperWx');
+  if (!await sw.isVisible().catch(() => false)) pr.push('no Dress for the weather switch in Account > Your helper');
   else {
-    if (await p.locator('[data-hwx="on"]').getAttribute('aria-pressed') !== 'true') pr.push('Dress for the weather did not start On');
-    await off.click(); await p.waitForTimeout(200);
-    if (await wear() !== '' || await p.evaluate(() => localStorage.getItem('aos.helper.weather')) !== 'off' || await off.getAttribute('aria-pressed') !== 'true') pr.push('Off: still dressed, or not kept: ' + await wear());
-    await p.locator('[data-hwx="on"]').click(); await p.waitForTimeout(200);
-    if (await wear() !== 'umbrella coat scarf') pr.push('On again: ' + await wear());
+    if (await sw.getAttribute('aria-checked') !== 'true') pr.push('Dress for the weather did not start on');
+    await sw.click(); await p.waitForTimeout(200);
+    if (await wear() !== '' || await p.evaluate(() => localStorage.getItem('aos.helper.weather')) !== 'off' || await sw.getAttribute('aria-checked') !== 'false') pr.push('Off: still dressed, or not kept: ' + await wear());
+    await sw.click(); await p.waitForTimeout(200);
+    if (await wear() !== 'umbrella coat scarf' || await sw.getAttribute('aria-checked') !== 'true') pr.push('On again: ' + await wear());
   }
   pr.push(...errs); report('aOS Home: the helper in the Ipsy bar wears a coat, a scarf and an umbrella in cold rain; Account turns it off and on', pr); await ctx.close();
 }

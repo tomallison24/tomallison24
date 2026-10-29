@@ -1482,6 +1482,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // -- the AI and the flight board --
+  // Ipsy's own check had a switch of its own (K.ipsyAuto); it's this one now. Turned off there, it stays off here, once.
+  if (ls.get(K.ipsyAuto, '') === '0') ls.set(K.aiOn, '0');
+  ls.del(K.ipsyAuto);
   const aiOn = () => ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null, aiModels = null;
   // Which models answer: what the function says it is set to use, and, for Check, what the last answer said it came from (kept
@@ -1492,7 +1495,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!aiModels) return '';
     const last = ls.json(K.aiLast, {});
     const bit = (label, cfg, served) => label + ' ' + modelName(cfg) + (served ? (modelName(served) === modelName(cfg) ? ' (the last answer came from it)' : ' (but the last answer came from ' + modelName(served) + ')') : '');
-    return '\nModels: ' + bit('Check', aiModels.check, last.check) + (aiModels.ipsy ? '; Ipsy ' + modelName(aiModels.ipsy) : '') + '.';
+    return 'Models: ' + bit('Check', aiModels.check, last.check) + (aiModels.ipsy ? '; Ipsy ' + modelName(aiModels.ipsy) : '') + '.';
   }
   const FIND_A_MONTH = 30;                                // board lookups per phone; the free allowance is small
   function aiUse() { const o = ls.json(K.ai, {}), m = todayStr().slice(0, 7); return o.m === m ? { tried: {}, ai: 0, find: 0, ...o } : { m, ai: 0, find: 0, tried: o.tried || {} }; }
@@ -1530,7 +1533,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return any;
   }
   // queue: [{bid, text, subject, date, msgId}] - the emails of bookings that still lack something. A press of Have Ipsy
-  // check gets here, and Ipsy's own check (ipsyAutoCheck, unless it's turned off). Returns {asked, filled, nothing, done,
+  // check gets here, and Ipsy's own check (ipsyAutoCheck). Returns {asked, filled, nothing, done,
   // changes, stop}: calls made, details filled in, bookings whose email does not state what is missing, the bookings
   // now missing nothing (complete: out of To check, in Upcoming),
   // looked at, what changed ({id, before, after} for Undo), and why it stopped early ('' if it didn't). quiet: no Face ID
@@ -1783,14 +1786,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // Ipsy checks by itself: after Travel reads Gmail, opens or you change a booking (smartPass, once the calendar and the
   // flight board have had their go), every upcoming booking still missing something that came from an email is
-  // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. On unless Settings > Smart help
-  // turns it off. A booking it completes goes to Upcoming; one still missing something waits in To check; Undo in Ipsy's chat.
+  // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. On with Settings > Smart help >
+  // Ipsy fills in what's missing (the one switch for Ipsy's checks, this phone's own). A booking it completes goes to Upcoming; one still missing something waits in To check; Undo in Ipsy's chat.
   let autoBusy = false, signinSaid = false;
   async function ipsyAutoCheck() { updating('check', true); try { await ipsyAutoCheckNow(); } finally { updating('check', false); } }
   async function ipsyAutoCheckNow() {
-    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken()) return;
-    const mode = ls.get(K.ipsyAuto, '');
-    if (mode === '0') return;
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken() || window.__travelNoAuto) return;   // __travelNoAuto: tests only
     const tried = new Set(ls.json(K.ipsyTried, [])), tag = b => b.id + ':' + b.source.msgId;
     const todo = bookings.filter(b => !b.private && myMail(b) && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
       && !(startOf(b) && isPast(b)) && P.missingFields(b).length && !tried.has(tag(b))).slice(0, 10);
@@ -2042,34 +2043,34 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('lgHint').hidden = !i;
     closeSheet('setSheet'); openSheet('logSheet');
   }
+  // Settings, as in every app (../home/settings.js): Design · Trips · Connected accounts · Ipsy · Your data
   function renderSettings() {
-    const own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
-    const me = ls.get(K.me, '');
-    let rows = '';
-    if (own || viaMail || ever) {
-      rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new bookings now<span class="sub">'
-        + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) : 'Not checked yet') + '</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stLog"><span class="ic">' + I.mail + '</span><span>What Travel read<span class="sub">' + esc(scanSummary()) + '</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Bookings you edited, checked or deleted stay as they are</span></span></button>';
-      if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub">' + esc(me || 'Signed in') + '</span></span></button>';
-    } else {
-      rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only</span></span></button>';
-    }
-    $('stGmail').innerHTML = rows;
-    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser.' : '';
-    $('stGmailHint').hidden = !viaMail;
-    $('stCalSub').textContent = calAvail === false ? 'Not available on this copy of the site.' : (calOn() ? 'On. ' : 'Off. ') + 'Shares bookings with the Family calendar, both ways.';
-    $('stAiSub').textContent = aiAvail === false ? 'Not set up on this copy of the site.' : aiOn() ? 'On. Ipsy fills in a trip’s missing details from its email.' + modelsLine() : 'Off. Ipsy fills in a trip’s missing details from its email.';
-    const auto = ls.get(K.ipsyAuto, '');
-    $('stIpsyAutoOpt').hidden = aiAvail === false || !aiOn();
-    $('stIpsyAutoSub').textContent = (auto === '0' ? 'Off. ' : 'On. ') + 'Ipsy fills in what new bookings are missing, and moves them to Upcoming. This phone only.';
+    const S = AllisonOS.settings, own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
+    const me = ls.get(K.me, ''), last = +ls.get(K.lastScan, 0), n = lookupsThisMonth();
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
-    $('stIpsyGmailOpt').hidden = !PV;
-    if (PV) $('stIpsyGmailSub').textContent = (PV.gmail('travel') ? 'On. ' : 'Off. ') + 'Lets Ipsy search and read your email in chats.';
-    const n = lookupsThisMonth();
-    $('stLive').textContent = liveAvail === true ? 'Working. ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.'
-      : liveAvail === false ? 'Not available on this copy of the site.'
-      : 'Checking…';
+    const ml = aiOn() && aiAvail !== false ? modelsLine() : '';
+    const gmail = own || viaMail || ever ? [
+      S.info({ id: 'stGmailWho', title: 'Gmail', sub: (me || (viaMail ? 'Mail’s sign-in' : 'Signed in')) + ', read-only.' }),
+      S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
+      S.nav({ id: 'stLog', title: 'What Travel read', sub: scanSummary() }),
+      S.action({ id: 'stRescan', icon: 'refresh', title: 'Read the last year again', sub: 'Bookings you edited, checked or deleted stay as they are.' }),
+      own || ever ? S.danger({ id: 'stOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
+    ] : [S.action({ id: 'stIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Travel can’t change or send anything.' })];
+    $('stBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'stDesign' })) : '')
+      + S.section('Trips', [
+        S.toggle({ id: 'stCalOpt', title: 'Family calendar', sub: calAvail === false ? 'Not available on this copy of the site.' : 'Shares bookings with the Family calendar, both ways.', on: calOn() && calAvail !== false, disabled: calAvail === false }),
+        S.info({ id: 'stLive', title: 'Live flight status', sub: liveAvail === true ? 'Working: ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.' : liveAvail === false ? 'Not available on this copy of the site.' : 'Checking…' }),
+      ])
+      + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
+      + S.section('Ipsy', [
+        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false }),
+        PV ? S.toggle({ id: 'stIpsyGmailOpt', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('travel') }) : '',
+      ], { hint: ml, hintId: 'stModels' })
+      + S.section('Your data', [
+        S.action({ id: 'stExport', icon: 'upload', title: 'Back up everything', sub: 'One file with every booking.' }),
+        S.action({ id: 'stImport', icon: 'download', title: 'Import a backup', sub: 'Adds what isn’t here already.' }),
+      ]);
+    if (window.aosDesign) aosDesign.bind($('stDesign'));
   }
   function openSettings() {
     renderSettings(); openSheet('setSheet');
@@ -2086,24 +2087,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
-  // Design: Vintage or Standard, at once, the first section of Settings (../home/design.js)
-  if (window.aosDesign) {
-    $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign'));
-    document.querySelectorAll('#setSheet [data-design-row]').forEach(e => { e.hidden = false; });
-  }
-  $('stCalOpt').onclick = () => { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); };
-  $('stAiOpt').onclick = () => { ls.set(K.aiOn, aiOn() ? '0' : '1'); renderSettings(); render(); };
-  $('stIpsyAutoOpt').onclick = () => {
-    const on = ls.get(K.ipsyAuto, '') === '0';
-    ls.set(K.ipsyAuto, on ? '1' : '0'); renderSettings();
-    if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); ipsyAutoCheck(); }
-  };
-  $('stIpsyGmailOpt').onclick = () => { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('travel', !PV.gmail('travel')); renderSettings(); };
-  $('stGmail').addEventListener('click', e => {
-    if (e.target.closest('#stIn')) signIn({ choose: true });
-    else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
-    else if (e.target.closest('#stLog')) openLog();
-    else if (e.target.closest('#stRescan')) {
+  $('stBody').addEventListener('click', e => {
+    const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
+    const id = b.id;
+    if (id === 'stCalOpt') { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); }
+    else if (id === 'stAiOpt') { const on = !aiOn(); ls.set(K.aiOn, on ? '1' : '0'); renderSettings(); render(); if (on) { ls.del(K.ipsyTried); ipsyAutoCheck(); } }
+    else if (id === 'stIpsyGmailOpt') { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('travel', !PV.gmail('travel')); renderSettings(); }
+    else if (id === 'stIn') signIn({ choose: true });
+    else if (id === 'stScan') { closeSheet('setSheet'); scan({ loud: true }); }
+    else if (id === 'stLog') openLog();
+    else if (id === 'stRescan') {
       // Start over: bookings read from email (and not edited or checked by
       // you) are made again as their emails are read again, so an improved reader replaces its
       // old mistakes. Anything not found again goes, on both phones.
@@ -2112,14 +2105,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       reviveFrom(bookings.filter(b => b.source && b.source.msgId && seen.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked));
       closeSheet('setSheet'); scan({ loud: true });
     }
-    else if (e.target.closest('#stOut')) signOut();
+    else if (id === 'stOut') { if (AllisonOS.settings.armed(b, 'Tap again to disconnect')) signOut(); }
+    else if (id === 'stExport') exportBackup();
+    else if (id === 'stImport') $('stFile').click();
   });
-  $('stExport').onclick = async () => {
+  async function exportBackup() {
     const file = new File([JSON.stringify({ app: 'allison-travel', v: 1, kind: 'backup', saved: new Date().toISOString(), bookings, trips }, null, 2)], 'travel-backup-' + todayStr() + '.json', { type: 'application/json' });
     const r = await shareOut(file, 'Travel backup');
     toast({ shared: 'Backup saved', downloaded: 'Backup saved to Downloads', cancelled: 'Backup canceled' }[r] || 'Couldn’t save the backup');
-  };
-  $('stImport').onclick = () => $('stFile').click();
+  }
   $('stFile').addEventListener('change', async e => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;

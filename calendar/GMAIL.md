@@ -1,6 +1,6 @@
 # Gmail search in Calendar
 
-Open Calendar Settings > Gmail for Ipsy > Connect Gmail. Choose the Google account to search, then ask Ipsy to find an appointment, invitation or other email. Calendar has its own sign-in, separate from Mail and Orders.
+Open Calendar Settings > Connected accounts > Connect Gmail. Choose the Google account to search, then ask Ipsy to find an appointment, invitation or other email. Calendar has its own sign-in, separate from Mail and Orders.
 
 Access is read-only. Ipsy asks separately before sharing email details with Claude; calendar changes still require their own confirmation. Attachments are skipped and email links are not opened. Search supports Gmail query syntax and pagination; Spam and Trash are excluded unless requested.
 

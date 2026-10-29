@@ -60,10 +60,10 @@ to the family account, it syncs with **the family's Google Sheet**, through aOS
   On iPhone a Home Screen app keeps separate storage from Safari, so a link
   opened in Safari offers to copy it for pasting into the Home Screen app.
 - **Settings** (the gear at the top of Notes and of Reminders): **Design**
-  first (below), then **Backup and sync** (the backup file; the Sheet syncs by
-  itself, below).
+  first (below), then **Notifications** and **Your data** (the backup file; the Sheet syncs by
+  itself, below). It closes with the Done tick.
 - **Backup**: Settings → **Back up everything** makes one `.json` file with everything.
-  **Import** restores it, or opens a shared file. Restoring asks first ("Add
+  **Import a backup** restores it, or opens a shared file. Restoring asks first ("Add
   3 notes, 2 reminders and 1 list from this file?"), and only restore files
   you made yourself. A banner appears when the last backup is more than 7
   days old.
@@ -71,7 +71,8 @@ to the family account, it syncs with **the family's Google Sheet**, through aOS
   Family calendar where the site is on Cloudflare (through the Calendar app's
   function, see `calendar/README.md`), so the phone's calendar does the
   alerting; elsewhere it is saved as a calendar file to open.
-- **Notifications**: the bell at the top of Reminders. Once on, a reminder
+- **Notifications**: the bell at the top of Reminders opens Settings at its
+  Notifications section. Once on, a reminder
   alerts the phone at its **Alert** time even with Notes closed, and so does a
   note's nudge. Each phone picks which lists alert it. See *Notifications*
   below; it needs the family sign-in, the family's Google Sheet and a small
@@ -236,7 +237,7 @@ that reminder or note.
 - **Per reminder**: in a reminder's details, **Alert** is *At time*, 5, 15 or
   30 minutes, 1 or 2 hours, 1 or 2 days or 1 week before, or *None*. A
   reminder with a date but no time alerts *On the day* (or 1, 2 or 7 days
-  before) at 9:00 AM; the bell's sheet changes that time. New and existing
+  before) at 9:00 AM; Settings → Notifications (the bell) changes that time. New and existing
   reminders alert *At time* until you choose otherwise. In the list, a bell
   instead of a clock marks the reminders that will alert this phone.
 - **Per phone** (the bell): which lists alert this phone, whether note nudges
@@ -299,8 +300,8 @@ Until then, turning notifications on says the phrase doesn't match.
 1. Open Notes **from its Home Screen icon** (iPhone only allows
    notifications for Home Screen apps, on iOS 16.4 or later), signed in to the
    family (it asks, with Face ID).
-2. **Reminders → bell**. Paste the server address, tap **Turn on
-   notifications**, then **Allow**.
+2. **Reminders → bell** (Settings → Notifications). Paste the server address, turn on
+   **Notifications on this phone**, then **Allow**.
 3. Tap **Send a test**.
 4. On each family phone, the same: signed in, the bell, the server address.
 

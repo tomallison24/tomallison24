@@ -37,7 +37,7 @@
   replaced when the string changes, for the same reason as on the dashboard:
   a repaint must not restart the animations.
 
-  Two designs, picked in Settings > Design (the Places sheet; ../home/design.js,
+  Two designs, picked in Settings > Design (the sheet the place name opens; ../home/design.js,
   as in Clock): Vintage (mid-century modern, the default: the <style
   id="vintage"> block, with a sky of flat shapes app.js draws from the
   forecast) and Standard (Sea glass: that block switched off, the card's
@@ -204,7 +204,7 @@
   .row-c { display: flex; justify-content: center; margin-top: 12px; }
   .locating { margin: 0; padding: 120px 0 0; text-align: center; font-size: 18px; color: var(--muted); }
   .skeleton { position: relative; }
-  /* The Places sheet's rows */
+  /* Settings' Your places rows */
   .prow { display: flex; align-items: center; }
   .prow + .prow { border-top: 0.5px solid rgba(255,255,255,0.10); }
   .list .prow button { border-top: 0; }
@@ -403,12 +403,6 @@
     flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px calc(env(safe-area-inset-bottom) + 16px);
     -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px);
   }
-  .search {
-    display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 0 16px; color: var(--muted); background: var(--lgs-field);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim), 0 1px 3px var(--lgs-lift); transition: box-shadow .2s;
-  }
-  .search:focus-within { box-shadow: inset 0 0 0 1.5px rgba(169,211,199,0.70), inset 0 1px 1px var(--lgs-rim), 0 0 0 4px rgba(169,211,199,0.18); }
-  .search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 16px; padding: 12px 0; }
   .list {
     margin-top: 10px; border-radius: 26px; overflow: hidden; background: var(--tile);
     box-shadow: inset 0 0 0 0.5px var(--tile-edge);
@@ -418,14 +412,10 @@
   .list button + button { border-top: 0.5px solid rgba(255,255,255,0.10); }
   .list button small { display: block; color: var(--muted); font-size: 15px; margin-top: 1px; }
   .list button:active { background: var(--lgs-field); }
-  .label { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin: 18px 8px 8px; }
-  .seg { display: flex; border-radius: 999px; padding: 3px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 2px var(--lgs-lift); }
-  .seg button { flex: 1; padding: 11px 0; border-radius: 999px; font-size: 16px; font-weight: 600; color: var(--muted); transition: color .25s; }
-  .seg button[aria-pressed="true"] { background: #3A3A3F; color: var(--text); }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet { background: var(--lgs-solid); } }
   @media (prefers-reduced-transparency: reduce) { .sheet { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
 
-  /* The units switch's sliding glass thumb: the options stay clear, and one
+  /* The view switch's sliding glass thumb: the options stay clear, and one
      thumb under them glides to the chosen one, stretching as it goes, as
      iOS 26's do (home/slide.js). */
   .slides { position: relative; isolation: isolate; }
@@ -437,11 +427,12 @@
     transition: opacity .25s ease, scale .25s cubic-bezier(.22,1,.36,1), background-color .3s;
   }
   .slthumb.off { opacity: 0; scale: .7; }
-  .seg.slides button[aria-pressed="true"] { background: none; }
   .note { font-size: 14px; color: var(--muted); margin: 14px 8px 0; line-height: 1.4; }
-  /* Settings > Design, the first section of the Places sheet: the rows are ../home/design.js's */
-  #designLabel { margin-top: 6px; }
-  #designBox:not([hidden]) + .search { margin-top: 18px; }
+  /* Settings (../home/settings.js draws the sections and rows): Done, the tick in the CTA colour; the search's
+     answers and your places are rows of the Your places group, not cards of their own */
+  .sheet h2 button.ok { color: var(--cta-ink); background: var(--cta); }
+  .st-raw > .list { margin: 0; border-radius: 0; background: none; box-shadow: none; }
+  .st-raw:has(> .list:empty) { display: none; }
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -642,18 +633,11 @@ svg.i{filter:none}
 .grab{background:var(--grab)}
 .sheet h2{font-weight:600;letter-spacing:-.01em}
 .sheet h2 button{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--text)}
-.search{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
-.search:focus-within{box-shadow:inset 0 0 0 2px var(--accent)}
 .list{background:var(--mc-card-2);box-shadow:none;border-radius:20px}
 .list button + button,.prow + .prow{border-top:1.5px solid var(--hair-2)}
 .list button:active{background:var(--fill)}
 .prow.on .pmain{background:color-mix(in srgb,var(--mc-mustard) 26%,transparent)}
 .pr-t{font-weight:500}
-.label{font-size:12px;font-weight:600;letter-spacing:.2em;color:var(--muted)}
-.seg{background:var(--mc-card-2);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
-.seg button{color:var(--muted)}
-.seg button[aria-pressed="true"]{color:var(--mc-on-mustard)}
-.seg.slides button[aria-pressed="true"]{background:none}
 
 /* the hour and day sheets */
 .hd-hero{background:var(--disc);color:var(--wv-disc-ink);box-shadow:none;border-radius:20px}
@@ -824,20 +808,10 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
   <div class="scrim" data-close></div>
   <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="grab"></div>
-    <h2><span id="sheetTitle">Places</span><button data-close aria-label="Close"></button></h2>
+    <h2><span id="sheetTitle">Settings</span><button class="ok" data-close aria-label="Done"></button></h2>
     <div class="sheet-body">
-      <!-- Settings > Design: Vintage or Standard, just on this phone (app.js fills it from ../home/design.js) -->
-      <div class="label" id="designLabel" hidden>Design</div>
-      <div class="list" id="designBox" hidden></div>
-      <label class="search"><span id="searchIcon"></span><input id="q" type="search" placeholder="Add a city" autocomplete="off" enterkeyhint="search"></label>
-      <div class="list" id="results"></div>
-      <div class="label">Your places</div>
-      <div class="list" id="placesList"></div>
-      <div class="label">Units</div>
-      <div class="seg" id="units">
-        <button data-u="us" aria-pressed="true">°F · mph · in</button>
-        <button data-u="metric" aria-pressed="false">°C · km/h · mm</button>
-      </div>    </div>
+      <div id="setBody"></div>   <!-- the sections, written by app.js (../home/settings.js) -->
+    </div>
   </section>
 </div>
 
@@ -861,6 +835,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 
 <script src="../home/account.js"></script>   <!-- family accounts: your next trip's destination comes from your Travel layer, signed in -->
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>   <!-- Settings, the same in every app -->
 <script src="data.js"></script>
 <script src="ipsy-tools.js"></script>   <!-- Ipsy in aOS: the forecast, read here (offered by app.js) -->
 <script src="app.js"></script>

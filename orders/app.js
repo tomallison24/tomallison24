@@ -82,8 +82,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const I = {
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
     ext: '<svg viewBox="0 0 24 24"><path d="M13.6 4h6.4v6.4"/><path d="M20 4l-9 9"/><path d="M17.6 13.6v3.6a2.8 2.8 0 0 1-2.8 2.8H6.8A2.8 2.8 0 0 1 4 17.2V9.2a2.8 2.8 0 0 1 2.8-2.8h3.6"/></svg>',
-    refresh: '<svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg>',
-    out: '<svg viewBox="0 0 24 24"><path d="M9.6 20H6.8A2.8 2.8 0 0 1 4 17.2V6.8A2.8 2.8 0 0 1 6.8 4h2.8"/><path d="M15.4 16.6l4.1-4.1a.7.7 0 0 0 0-1l-4.1-4.1M19.6 12H9.4"/></svg>',
     edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19.2 8.8a2.4 2.4 0 0 0 0-3.4l-.6-.6a2.4 2.4 0 0 0-3.4 0L4 16z"/><path d="M13.6 6.4l4 4"/></svg>',
     check: '<svg viewBox="0 0 24 24"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     spark: '<svg viewBox="0 0 24 24"><path d="M11 3.6l1.9 5.1 5.1 1.9-5.1 1.9L11 17.6l-1.9-5.1L4 10.6l5.1-1.9z"/><path d="M18.4 15.2l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg>',
@@ -1302,27 +1300,33 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Settings
   // ---------------------------------------------------------------------
+  // As in every app (../home/settings.js): Design · What counts as an order · Hidden orders ·
+  // Connected accounts · Ipsy · Your data
   function renderSettings() {
-    const own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
-    const me = ls.get(K.me, '');
-    $('stKinds').innerHTML = KIND_ROWS.map(([k, t, sub]) => k === 'package'
-      ? '<div class="swrow"><span class="grow">' + esc(t) + '<span class="sub">' + esc(sub) + '</span></span><span class="fixed">Always on</span></div>'
-      : '<button class="swrow" type="button" role="switch" aria-checked="' + (kinds[k] !== false) + '" data-kind="' + k + '"><span class="grow">' + esc(t) + '<span class="sub">' + esc(sub) + '</span></span><span class="switch" aria-hidden="true"></span></button>').join('');
-    let rows = '';
-    if (own || viaMail || ever) {
-      rows += '<button class="rowbtn" type="button" id="stScan"><span class="ic">' + I.mail + '</span><span>Look for new orders now<span class="sub">'
-        + esc(+ls.get(K.lastScan, 0) ? 'Last checked ' + ago(+ls.get(K.lastScan, 0)) : 'Not checked yet') + '</span></span></button>';
-      rows += '<button class="rowbtn" type="button" id="stRescan"><span class="ic">' + I.refresh + '</span><span>Read the last year again<span class="sub">Orders you edited, checked or deleted stay as they are</span></span></button>';
-      if (own || ever) rows += '<button class="rowbtn" type="button" id="stOut"><span class="ic">' + I.out + '</span><span>Sign out of Gmail<span class="sub"' + (me ? ' translate="no"' : '') + '>' + esc(me || 'Signed in') + '</span></span></button>';
-    } else {
-      rows += '<button class="rowbtn" type="button" id="stIn"><span class="ic">' + I.mail + '</span><span>Connect Gmail<span class="sub">Read-only</span></span></button>';
-    }
-    $('stGmail').innerHTML = rows;
+    const S = AllisonOS.settings, own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
+    const me = ls.get(K.me, ''), last = +ls.get(K.lastScan, 0);
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
-    $('stIpsy').innerHTML = '<button class="swrow" type="button" role="switch" id="stIpsyAuto" aria-checked="' + (ls.get(K.ipsyAuto, '') === '1') + '"><span class="grow">Ipsy keeps orders up to date<span class="sub">Ipsy rereads new order emails and To check, and fixes them.</span></span><span class="switch" aria-hidden="true"></span></button>'
-      + (PV ? '<button class="swrow" type="button" role="switch" id="stIpsyGmail" aria-checked="' + PV.gmail('orders') + '"><span class="grow">Ipsy can search Gmail<span class="sub">Lets Ipsy search and read your email in chats.</span></span><span class="switch" aria-hidden="true"></span></button>' : '');
-    $('stGmailHint').textContent = viaMail ? 'Using Mail’s sign-in from this browser.' : '';
-    $('stGmailHint').hidden = !viaMail;
+    // Packages are always read: a switch that's on and can't be turned off
+    const kindRows = KIND_ROWS.map(([k, t, sub]) => S.toggle({ title: t, sub: sub + '.', on: k === 'package' || kinds[k] !== false, disabled: k === 'package', data: { kind: k } }));
+    const gmail = own || viaMail || ever ? [
+      S.info({ id: 'stGmailWho', html: true, title: 'Gmail', sub: (me ? '<span translate="no">' + esc(me) + '</span>' : viaMail ? 'Mail’s sign-in' : 'Signed in') + ', read-only.' }),
+      S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
+      S.action({ id: 'stRescan', icon: 'refresh', title: 'Read the last year again', sub: 'Orders you edited, checked or deleted stay as they are.' }),
+      own || ever ? S.danger({ id: 'stOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
+    ] : [S.action({ id: 'stIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Orders can’t change or send anything.' })];
+    $('stBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'stDesign' })) : '')
+      + S.section('What counts as an order', kindRows, { id: 'stKinds' })
+      + S.section('Hidden orders', S.nav({ id: 'stHidden', icon: 'eye', title: 'Show hidden orders', sub: 'Gifts and anything you hid, after Face ID.' }))
+      + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
+      + S.section('Ipsy', [
+        S.toggle({ id: 'stIpsyAuto', title: 'Ipsy keeps orders up to date', sub: 'Ipsy rereads new order emails and To check, and fixes them.', on: ls.get(K.ipsyAuto, '') === '1' }),
+        PV ? S.toggle({ id: 'stIpsyGmail', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('orders') }) : '',
+      ], { id: 'stIpsy' })
+      + S.section('Your data', [
+        S.action({ id: 'stExport', icon: 'upload', title: 'Back up everything', sub: 'One file with every order.' }),
+        S.action({ id: 'stImport', icon: 'download', title: 'Import a backup', sub: 'Adds what isn’t here already.' }),
+      ]);
+    if (window.aosDesign) aosDesign.bind($('stDesign'));
   }
   function openSettings() { renderSettings(); openSheet('setSheet'); }
   // Hidden orders, behind Face ID (the family account's passkey) when this phone has signed in to aOS.
@@ -1334,41 +1338,40 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     render();
   }
   // Always Face ID, signed in before or not: a passkey that isn't yours (or none) leaves them hidden.
-  $('stHidden').onclick = async () => {
+  async function showHidden() {
     const A = window.AllisonOS && AllisonOS.account;
     try { if (!A) throw new Error('no-account'); await A.signIn(); }
     catch { toast('Face ID didn’t go through, so hidden orders stay hidden.'); return; }
     st.unlocked = true; st.tab = 'hidden'; st.q = ''; $('q').value = '';
     closeSheet('setSheet'); render(); animateIn($('list'));
-  };
-  // Design: Vintage or Standard, at once, just on this phone (../home/design.js)
-  if (window.aosDesign) { $('stDesign').innerHTML = aosDesign.picker(); aosDesign.bind($('stDesign')); }
-  else $('stDesign').previousElementSibling.hidden = $('stDesign').hidden = true;
+  }
   $('setBtn').onclick = openSettings;
-  $('stIpsy').addEventListener('click', e => {
-    if (e.target.closest('#stIpsyGmail')) { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('orders', !PV.gmail('orders')); renderSettings(); return; }
-    if (!e.target.closest('#stIpsyAuto')) return;
-    const on = ls.get(K.ipsyAuto, '') !== '1';
-    ls.set(K.ipsyAuto, on ? '1' : '0'); if (on) ls.set(K.aiOk, '1');
-    renderSettings();
-    if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); autoCheck(); }
-  });
-  $('stKinds').addEventListener('click', e => {
-    const b = e.target.closest('[data-kind]'); if (!b) return;
-    const k = b.dataset.kind, on = !(kinds[k] !== false);
+  // Turned on: read again the mail that was passed over while it was off.
+  function setKind(k) {
+    const on = !(kinds[k] !== false);
     kinds[k] = on; persist(); renderSettings(); render();
     if (!on) return;
-    // Turned on: read again the mail that was passed over while it was off.
     let n = 0;
     Object.keys(skipped).forEach(id => { if (skipped[id] === k) { delete skipped[id]; seen.delete(id); n++; } });
     saveSeen();
     if (n && getToken()) { closeSheet('setSheet'); scan({ loud: true }); toast('Looking for ' + plural(n, 'email') + ' that were skipped.'); }
     else if (!getToken() && hasGmail()) toast('Connect Gmail again to look for them.');
-  });
-  $('stGmail').addEventListener('click', e => {
-    if (e.target.closest('#stIn')) signIn({ choose: true });
-    else if (e.target.closest('#stScan')) { closeSheet('setSheet'); scan({ loud: true }); }
-    else if (e.target.closest('#stRescan')) {
+  }
+  $('stBody').addEventListener('click', e => {
+    const b = e.target.closest('button.st-row'); if (!b || b.disabled) return;
+    const id = b.id;
+    if (b.dataset.kind) setKind(b.dataset.kind);
+    else if (id === 'stHidden') showHidden();
+    else if (id === 'stIpsyGmail') { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('orders', !PV.gmail('orders')); renderSettings(); }
+    else if (id === 'stIpsyAuto') {
+      const on = ls.get(K.ipsyAuto, '') !== '1';
+      ls.set(K.ipsyAuto, on ? '1' : '0'); if (on) ls.set(K.aiOk, '1');
+      renderSettings();
+      if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); autoCheck(); }
+    }
+    else if (id === 'stIn') signIn({ choose: true });
+    else if (id === 'stScan') { closeSheet('setSheet'); scan({ loud: true }); }
+    else if (id === 'stRescan') {
       // Start over: orders read from email (and not edited or checked by
       // you) are cleared and read again, so an improved reader replaces its
       // old mistakes. Anything not found again stays gone, on both phones.
@@ -1378,14 +1381,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       save();
       seen = new Set(); skipped = {}; saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true });
     }
-    else if (e.target.closest('#stOut')) signOut();
+    else if (id === 'stOut') { if (AllisonOS.settings.armed(b, 'Tap again to disconnect')) signOut(); }
+    else if (id === 'stExport') exportBackup();
+    else if (id === 'stImport') $('stFile').click();
   });
-  $('stExport').onclick = async () => {
+  async function exportBackup() {
     const file = new File([JSON.stringify({ app: 'allison-orders', v: 1, kind: 'backup', saved: new Date().toISOString(), orders }, null, 2)], 'orders-backup-' + todayStr() + '.json', { type: 'application/json' });
     const r = await shareOut(file, 'Orders backup');
     toast({ shared: 'Backup saved', downloaded: 'Backup saved to Downloads', cancelled: 'Backup canceled' }[r] || 'Couldn’t save the backup');
-  };
-  $('stImport').onclick = () => $('stFile').click();
+  }
   $('stFile').addEventListener('change', async e => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;

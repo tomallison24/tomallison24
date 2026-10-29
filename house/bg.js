@@ -1,6 +1,6 @@
 // BACKGROUNDS: what moves behind the glass. Glass only reads with something
 // behind it to bend; these are slow, minimal and nearly colourless, so the
-// page stays calm. One is shown at a time, chosen in Settings → Customization
+// page stays calm. One is shown at a time, chosen in Settings → Background
 // and kept on this phone (house.bg); Bubbles until another is picked.
 //   Bubbles        a few soft glass orbs drifting, bouncing off the screen's edges
 //   Constellation  faint points drifting, joined by hairlines when near
@@ -21,7 +21,7 @@
 // All of this is the Standard (Sea glass) design's. In the Vintage design (the
 // default, ../home/design.js) the page is the shared Vintage sky
 // (../home/sky.js: cream or walnut, washed with mustard by day and teal at
-// night), nothing moves behind it, and Settings hides Customization; what is
+// night), nothing moves behind it, and Settings hides Background; what is
 // picked here is kept for Standard.
 'use strict';
 const BG_IDEAS = [
@@ -210,7 +210,7 @@ BG.scheme.addEventListener('change', BG.repaint);
 addEventListener('aos:theme', BG.repaint);   // Light, Dark or Automatic chosen in the app
 addEventListener('aos:design', () => { BG.start(BG.id); BG.repaint(); });   // Vintage or Standard (Settings > Design): the sky, or the background picked here
 
-// Settings → Customization → Background: a popup with the colours and the
+// Settings → Background: a popup with the colours and the
 // movements; a tap puts it behind the whole app at once.
 const BG_FAM = family({
   id: 'custom', name: 'Customization', noSection: true,
@@ -235,11 +235,5 @@ const BG_FAM = family({
     render();
   },
 });
-// Its row in Settings: the palette, the current pick, a chevron; it opens
-// the popup (in place of the settings sheet).
-(() => {
-  const b = $('custBg'); if (!b) return;
-  $('custBgIc').innerHTML = svg('palette', 18); $('custBgChev').innerHTML = svg('chevR', 16);
-  $('custBgV').textContent = BG_FAM.label();
-  b.addEventListener('click', () => openDev(BG_FAM, 'bg'));
-})();
+// Its row in Settings (app.js, renderSettings) opens the popup, in place of the settings sheet; it shows the pick.
+{ const v = $('custBgV'); if (v) v.textContent = BG_FAM.label(); }

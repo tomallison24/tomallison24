@@ -286,17 +286,16 @@ board, and last the AI:
   board for that airport in a window around the time. Only a single match is
   used.
 - *AI: Have Ipsy check, or Ipsy by itself.* A trip card (an upcoming trip with a booking that
-  still lacks something) has a **Have Ipsy check** button (it was Check with AI). **Ipsy checks
-  by itself** (Settings, Smart help; on unless you turn it off, the owner's call: it used to ask
-  first): after each read of Gmail, when Travel opens and after you change a
+  still lacks something) has a **Have Ipsy check** button (it was Check with AI). With the same
+  switch, **Ipsy fills in what's missing** (Settings, Smart help: one switch, this phone's own, on unless
+  you turn it off; it used to be two, and a phone that had turned Ipsy's own check off has it off), Ipsy
+  also checks by itself: after each read of Gmail, when Travel opens and after you change a
   booking (once the calendar and the flight board have had their go), every upcoming booking
   still missing something is checked, once per email, at most 10 at a time, quietly (with the
-  family session it has, never a Face ID prompt; signed out, it stops and says so once). The switch is
-  each phone's own (not synced): off on one phone leaves it on on the others. A booking
+  family session it has, never a Face ID prompt; signed out, it stops and says so once). A booking
   it completes (nothing missing any more) leaves To check for Upcoming; one still missing
   something is marked **Check** and waits in To check. Undo for either is in Ipsy's chat, and
-  Ipsy says in its corner what it did. With the switch off, only the button sends
-  anything. A press
+  Ipsy says in its corner what it did. With the switch off, nothing is sent. A press
   reads the emails behind that trip's incomplete bookings from Gmail, and for each
   asks only about what is missing (a date is asked for only if the email has
   one), with no limit of its own (the cost is a fraction of a cent a check). It then also asks the flight

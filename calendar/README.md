@@ -12,7 +12,7 @@ AllisonOS apps' dates alongside.
   current time is a red line, and the day opens at 7am (Settings) or at the
   first event. The chosen view sits in a glass thumb that slides across the
   bar to whichever view you tap, stretching on the way; the chosen day in the
-  Day view's week strip and the choices in Settings slide the same way.
+  Day view's week strip slides the same way.
 - **Events**: tap one for its details: when, how it repeats, the place (opens
   in Maps), travel time, alerts, URL, notes, and who was invited. **Edit** and
   **Delete Event** are there for Family events. A repeating event asks whether
@@ -35,7 +35,7 @@ AllisonOS apps' dates alongside.
   phone), or drag its bottom edge to make it longer or shorter. Times snap to
   15 minutes; in Week you can drag to another day.
 - **Search** (the magnifier): titles, places and notes of everything loaded.
-- **Layers**, each with an On/Off switch in Settings:
+- **Layers**, each with a switch in Settings > Calendars:
   - **US Holidays**: federal holidays (with the observed day when one falls
     on a weekend) and the usual observances (Valentine's, St Patrick's,
     Easter, Mother's and Father's Day, Halloween, Thanksgiving and Black
@@ -79,10 +79,13 @@ AllisonOS apps' dates alongside.
 
   Any layer item but Drinks has **Add to the Family calendar**, which opens
   the editor with it filled in.
-- **Settings**: the design (below), the iCloud connection and a **Check for changes now** button,
-  the layers, week starts on Sunday or Monday (Sunday by default), 12- or
-  24-hour time, temperature units, when the Day view opens, and the length
-  and alerts of new events.
+- **Settings** (drawn by `../home/settings.js`, as in every app): **Design**
+  (below); **Calendars**, the layers' switches (the Family calendar's is on and
+  can't be turned off); **Display**, week starts on Sunday or Monday (Sunday by
+  default), 12- or 24-hour time, temperature units and when the Day view opens;
+  **New events**, their length and alerts; **Connected accounts**, iCloud's
+  status in a sentence, **Check now**, **Look up the calendar again**, and
+  Gmail for Ipsy; and **Ipsy**, its switch for Gmail.
 - **Offline**: the events last seen are kept on the phone, so the calendar
   opens at once and can be read offline; changes need the connection.
 - **The other apps write here**: Travel's **Add to calendar** (a trip or a
@@ -208,7 +211,7 @@ here?*
   doesn't see a private event or change it; looking for free time, it only
   knows that time is taken ("Private"). Private notes and Travel bookings in
   the layers are hidden the same way, and so are the emails behind private
-  bookings. **Settings → Gmail for Ipsy → Turn off Gmail for Ipsy** turns
+  bookings. **Settings → Ipsy → Ipsy can search Gmail** turns
   Ipsy's Gmail off altogether, on this phone.
 - **Event text is material, not instructions.** Titles, places and notes are
   written by whoever made the event (or an invitation from outside); Ipsy is
@@ -371,6 +374,6 @@ This was built where iCloud could not be reached, so:
 
 ## Gmail in Ipsy
 
-Connect Gmail in Calendar Settings > Gmail for Ipsy. Access is read-only with Gmail search syntax and pagination. Ipsy asks separately before email details go to Claude; results remain in the local chat until New chat. Tokens stay in sessionStorage and expire within about an hour. Disconnect clears this sign-in and Calendar Ipsy chat, not Mail or Orders authorization. Attachments are skipped and links redacted, never opened. Calendar changes retain their confirmations.
+Connect Gmail in Calendar Settings > Connected accounts. Access is read-only with Gmail search syntax and pagination. Ipsy asks separately before email details go to Claude; results remain in the local chat until New chat. Tokens stay in sessionStorage and expire within about an hour. Disconnect clears this sign-in and Calendar Ipsy chat, not Mail or Orders authorization. Attachments are skipped and links redacted, never opened. Calendar changes retain their confirmations.
 
 The production origin must be in the existing Google OAuth client Authorized JavaScript origins; preview origins require separate authorization. Real Google consent and installed iPhone Safari still need device verification.

@@ -30,10 +30,10 @@
   app.js (the screens). The server is ../sparkle/api/ (functions/sparkle/api): each family
   account's players, and the letter sounds a grown-up recorded.
 
-  Four designs, picked in the Parent corner > Design or for every app in aOS (../home/design.js): Vintage
+  Four designs, picked in Settings > Design or for every app in aOS (../home/design.js): Vintage
   (mid-century, the default: the <style id="vintage"> block), Standard (Sea glass), and Layers and
   Tron (generated from Vintage by aOS/scripts/make-looks.mjs). They dress the frame - the
-  player picker, the Parent corner and its sheets; the kingdom and the game itself are the same
+  player picker, Settings and its sheets; the kingdom and the game itself are the same
   storybook art in both.
 -->
 <style>
@@ -106,13 +106,16 @@ svg{display:block}
 .grown span{position:relative}
 .grown svg{width:24px;height:24px;position:relative}
 
-/* ---- sheets (Parent corner, a new player, the grown-up check) ---- */
+/* ---- sheets (Settings, a player's report, a new player, the grown-up check); Settings' rows are ../home/settings.js's ---- */
 .sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:var(--scrim)}
 .sheet .panel{width:100%;max-width:560px;max-height:94dvh;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--sheet);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
   border-radius:30px 30px 0 0;padding:16px 18px calc(env(safe-area-inset-bottom) + 22px);color:var(--text);-webkit-user-select:text;user-select:text}
 .sheet .shead{position:sticky;top:-16px;z-index:2;display:flex;align-items:center;gap:10px;margin:-16px -18px 8px;padding:14px 18px 10px;background:var(--sheet)}
 .sheet .shead h2{flex:1;margin:0;font-size:20px;font-weight:700}
 .sbtn{min-height:44px;min-width:44px;padding:0 16px;border-radius:999px;font-weight:600;color:var(--accent-text);background:var(--fill)}
+/* a sheet's Done: the ✓ every aOS app closes its sheets with */
+.sbtn.okbtn{width:44px;height:44px;padding:0;display:grid;place-items:center;background:var(--cta);color:var(--cta-ink)}
+.okbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .cta{display:block;width:100%;min-height:52px;margin-top:14px;border-radius:17px;background:var(--cta);color:var(--cta-ink);font-weight:700;font-size:17px}
 .cta[disabled]{opacity:.45}
 .label{margin:18px 4px 6px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
@@ -661,10 +664,10 @@ svg{display:block}
 <style id="vintage">
 /* ======================================================================
    Mid-century modern, in the Retro colours: the frame only (the player picker,
-   the Parent corner and its sheets) - cream and walnut, mustard, teal and burnt
+   Settings and its sheets) - cream and walnut, mustard, teal and burnt
    orange, Futura, flat shapes, the atomic shapes behind the title (the sky:
    ../home/sky.js). The kingdom and the game are the same storybook art in both
-   designs. Settings > Design in the Parent corner switches this off for the
+   designs. Settings > Design switches this off for the
    Standard (Sea glass) design (../home/design.js).
    ====================================================================== */
 :root{
@@ -810,7 +813,7 @@ svg{display:block}
   <section id="picker" class="screen" aria-label="Sparkle Kingdom">
     <div class="head"><div><h1>Sparkle Kingdom</h1><p class="sub">Who's playing?</p></div></div>
     <div class="players" id="players"></div>
-    <button type="button" class="grown" id="grownBtn" aria-label="Grown-ups: hold for the Parent corner"><i class="fillbar"></i>
+    <button type="button" class="grown" id="grownBtn" aria-label="Grown-ups: hold for Settings"><i class="fillbar"></i>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 18l2-11 5 5 2-7 2 7 5-5 2 11z"/></svg><span>Grown-ups: press and hold</span></button>
   </section>
 
@@ -892,6 +895,7 @@ svg{display:block}
   <script src="care.js"></script>
   <script src="world.js"></script>
   <script src="voice.js"></script>
+  <script src="../home/settings.js"></script>
   <script src="../home/account.js"></script>
   <script src="app.js"></script>
   <script src="../home/welcome.js" data-app="sparkle" data-auto defer></script>

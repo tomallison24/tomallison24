@@ -286,8 +286,8 @@
   .acct > .fbody .group { margin-top: 0; }
   .acct > .tools + .tools, .acct > .fbody + .tools { border-top: 0; }
   .acct > .me { display: flex; }
-  .acct h3 { margin: 0 0 4px; font-size: 17px; }
-  .acct p { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
+  .acct h3:not(.st-lbl) { margin: 0 0 4px; font-size: 17px; }
+  .acct p:not(.st-hint) { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
   .acct input { display: block; width: 100%; height: 46px; margin-top: 10px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--dot); color: var(--text); font-family: inherit; font-size: 17px; outline: none; }
   .acct textarea { display: block; width: 100%; margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 14px; background: var(--dot); color: var(--text); font-family: inherit; font-size: 17px; line-height: 1.35; resize: none; outline: none; }
   .acct input:focus, .acct textarea:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
@@ -587,10 +587,10 @@
   #htoast.on { opacity: 1; transform: translate(-50%, 0); }
   @media (prefers-reduced-motion: reduce) { #appwin, #appshade { transition: none; } body.editing .ic { animation: none; } }
 
-html:not([data-look="grid"]) .tronnote{display:none}   /* Tron is dark only: said under Light or dark */
-html:not([data-look="vintage"]) .vintnote{display:none}   /* Vintage's Sunrise intro: its setting, in Vintage only */
-html:not([data-look="glass"]) .glassnote{display:none}   /* Sea glass's Tide intro: its setting, in Sea glass only */
-html:not([data-look="layers"]) .layersnote{display:none}   /* Layers' Skylight intro: its setting, in Layers only */
+html:not([data-look="grid"]) :is(.tronnote,#tronIntroSec){display:none}   /* Tron is dark only: said under Light or dark; Tron's intro, in Tron only */
+html:not([data-look="vintage"]) #vintageIntroSec{display:none}   /* Vintage's Sunrise intro: its setting, in Vintage only */
+html:not([data-look="glass"]) #glassIntroSec{display:none}   /* Sea glass's Tide intro: its setting, in Sea glass only */
+html:not([data-look="layers"]) #layersIntroSec{display:none}   /* Layers' Skylight intro: its setting, in Layers only */
 /* Tron: the Weather widget as a car-screen card (dark, a red edge, the identity disc), not a block of colour */
 html[data-look="grid"] .wid.wx{background:#121215;color:#F1F3F5;box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.42),0 0 14px rgba(255,42,42,.12)}
 html[data-look="grid"] .wid.wx small{color:#A3A8B0}
@@ -1044,6 +1044,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="../home/welcome.js" data-app="aos" data-auto></script>
 <script src="../home/redact.js"></script>   <!-- personal details stay on the phone: what goes to Claude has placeholders (before ipsy.js) -->
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, drawn on the Meet Ipsy card and page -->
+<script src="../home/settings.js"></script>   <!-- the rows in Account, the same as in every app's Settings -->
 <script src="app.js"></script>
 <script src="../calendar/ical.js"></script>   <!-- Calendar's .ics reader, for what's next on Home -->
 <script src="../weather/data.js"></script>   <!-- Weather's forecast code, so Home's Weather widget is fresh when aOS opens -->
