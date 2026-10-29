@@ -94,8 +94,7 @@ bottom left too.**
   (rule 4).
 - **Enforced:** CI: `done` (Settings's ✓ Done in the corner), `title`.
   Other sheets: Review.
-- **Known gaps** (Settings): News, Weather, Notes and Places close with a word
-  or ✕, not the ✓; Sparkle's is the word Done.
+- **Known gaps** (Settings): none; every app's Settings closes with the ✓.
 
 ![The head of Settings in each look](docs/design/sheet-head.png)
 
@@ -128,12 +127,14 @@ the same kinds of row and the same words.**
     here too (Notes' bell opens this section).
   - Rows: the kinds in rule 5. At most one line under a section (`hint`).
 - **Enforced:** CI: `shared`, `title`, `design-first`, `order`.
-- **Known gaps:** not on the shared component yet: Mail, Calendar, Clock, News,
-  Weather, Notes, Podcasts, Places, Orders, Home, Sparkle (being converted).
-  Its button isn't labelled Settings: Meals ("Family rules, design and your
-  account"), Weather (its Settings is the Places sheet), Home ("Home Assistant
-  settings"), Sparkle (Grown-ups). Podcasts keeps Settings on its Library tab
-  and Mail only once you're signed in: both should be on the first screen.
+- **Known gaps:** every app is on the shared component (since aOS2.2), but:
+  its button isn't labelled Settings in Meals ("Family rules, design and your
+  account"), Weather (the city name and "⚙ Settings" under the forecast; the
+  check wants the gear's label), Home ("Home Assistant settings") and Sparkle
+  (Grown-ups, behind its grown-up check). Clock draws its own Design rows, as
+  its looks live in `clock/design.js`. Home's connect form and sub-views (PIN,
+  Share, Devices with access) are still its own markup. Mail shows its gear
+  only once you're signed in to Gmail.
 
 ![Travel's Settings, the example to copy](docs/design/settings.png)
 
@@ -171,12 +172,14 @@ that asks twice, an info row for how things stand.**
 - **Enforced:** CI: `switch-css` (no private copy of the switch's CSS),
   `no-dialogs`, `shared` (every switch in Settings is the shared one).
   Choosing the right kind: Review.
-- **Known gaps:** a switch of its own: aOS, Mail, Calendar, Clock, Notes,
-  Podcasts, Orders, Sparkle, Money (its recategorize sheet, `money/app.js`),
-  and Travel (leftover `.switch` CSS, unused). Home's device controls keep the
-  Signal dashboard's switches (`CLAUDE.md`), so it is exempt. `confirm()`: aOS
-  (six, `aOS/app.js`), Calendar (`ipsy-gmail.js`, Disconnect Gmail), Notes
-  (restoring a file), Sparkle (removing a player).
+- **Known gaps:** every Settings switch is the shared one; a switch of its own
+  is left outside Settings, in Mail (auto-tags), Calendar and Notes (their
+  editors' Private and Just me), Clock (alarms, the sleep schedule), Orders
+  (an order's Private and Hide), Money (its recategorize sheet), Podcasts and
+  Travel (leftover `.switch` CSS). Home's device controls keep the Signal
+  dashboard's switches (`CLAUDE.md`), so it is exempt. `confirm()`: aOS (six,
+  `aOS/app.js`: signing out and erasing, sending a notification, removing
+  someone), Notes (restoring a file), Sparkle (removing a player).
 
 ![The switch, on and off, in each look](docs/design/switch.png)
 
@@ -216,10 +219,9 @@ with a lowercase a.**
     `home/names.js` puts in the name the person gave it.
 - **Enforced:** CI: `on-off`, `one-sentence`, `aos-case`. The same words:
   Review.
-- **Known gaps:** old words still in use: Orders ("Sign out of Gmail", "Look
-  for new orders now"), Travel ("Look for new…" outside Settings), Calendar
-  ("Check for changes now"), Notes ("Import a file"), Podcasts ("Export
-  shows").
+- **Known gaps:** none in Settings today. Outside it, Orders' and Travel's
+  Gmail button is labelled "Look for new orders (bookings) in Gmail", which is
+  fine: it's a button, not a row.
 
 ![The shared words](docs/design/words.png)
 
@@ -331,8 +333,7 @@ read, and colour is never the only signal.**
   `role="switch"` with `aria-checked`; choices `role="radio"`.
 - **Enforced:** CI: `names` (every button on the main screen and in Settings
   has a name). 44 points: Review.
-- **Known gaps:** Calendar's calendar switches in Settings have no names;
-  Weather's "Add a city" field has no label. The shared choice control's
+- **Known gaps:** the shared choice control's
   options are 34 tall inside a taller row (`home/settings.js`): fine to tap,
   but under 44.
 

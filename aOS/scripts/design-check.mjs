@@ -153,14 +153,14 @@ function serve() {
 
 // Reaching Settings, where the button labelled Settings isn't on the first screen:
 //   seed      what the phone keeps first (Mail's Settings is there once you're signed in to Gmail)
-//   before    what a person does first (Podcasts' Settings is on the Library tab)
+//   before    what a person does first (none today: Podcasts is one page now)
 //   other     how to open it where it isn't behind a button labelled Settings yet (the title check still
 //             fails for these: the button should say Settings). Sparkle's is behind the grown-up check:
 //             hold Grown-ups, then answer the sum.
 const GMAIL = JSON.stringify({ t: 'CHECK', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.modify' });
 const OPEN = {
   mail: { seed: { 'mail.token': GMAIL, 'mail.token.ever': '1', 'mail.hint': 'me@example.com', 'mail.swept': String(Date.now()), 'aos.signin.asked': '1' } },
-  podcasts: { before: p => p.click('[data-tab="lib"]') },
+  podcasts: {},   // one page now (Library), its Settings on it
   meals: { other: '#setBtn' },
   house: { other: '#gear' },
   weather: { other: '[data-action="location"]' },
