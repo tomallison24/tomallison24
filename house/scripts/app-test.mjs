@@ -242,12 +242,12 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal((await page.textContent('#sheetTitle')).trim(), 'Settings');
     assert.equal(await page.getAttribute('#sheetClose', 'aria-label'), 'Done');
     assert.ok(await page.$('#sheetClose.okbtn'), 'the Done tick is the main button');
-    assert.ok(await page.$('#sheetWrap .label'), 'labelled sections');
-    assert.equal((await page.textContent('#sheetWrap .sheet-body .label')).trim(), 'Design', 'Design is the first section');
+    assert.ok(await page.$('#sheetWrap .st-lbl'), 'labelled sections');
+    assert.equal((await page.textContent('#sheetWrap .sheet-body .st-lbl')).trim(), 'Design', 'Design is the first section');
     assert.ok(await page.isVisible('#designBox [data-design="vintage"]') && await page.isVisible('#designBox [data-design="glass"]'), 'its two rows');
     assert.equal(await page.getAttribute(`#designBox [data-design="${design}"]`, 'aria-checked'), 'true', 'the design in use is ticked');
     assert.equal(await page.locator('#designBlock .help').count(), 0, 'no note under Design');
-    assert.equal(await page.isVisible('#custBlock'), design === 'glass', 'Customization (the background) is Standard\'s only');
+    assert.equal(await page.isVisible('#custBlock'), design === 'glass', 'Background is Standard\'s only');
     await page.click('#sheetClose'); await page.waitForTimeout(500);
     assert.ok(!(await page.evaluate(() => document.getElementById('sheetWrap').classList.contains('open'))), 'Done closes it');
   });
@@ -269,7 +269,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await look(page), 'glass');
     assert.equal(await page.getAttribute('#designBox [data-design="glass"]', 'aria-checked'), 'true');
     assert.ok(await page.evaluate(() => document.getElementById('sheetWrap').classList.contains('open')), 'Settings stays open');
-    assert.ok(await page.isVisible('#custBlock'), 'Customization appears');
+    assert.ok(await page.isVisible('#custBlock'), 'Background appears');
     assert.equal(await heatTint(page), HEAT.glass, 'the cards are drawn again in Sea glass');
     assert.match(await page.evaluate(() => document.documentElement.style.getPropertyValue('--bg')), /^#/, 'the background colour is painted');
     assert.equal(await page.$eval('.bgfx canvas', c => c.hidden), false, 'and the movement drawn');
@@ -288,7 +288,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--bg')), '');
     assert.equal(await page.evaluate(() => document.documentElement.dataset.sky), 'day');
     assert.equal(await page.$eval('.bgfx canvas', c => c.hidden), true);
-    assert.ok(!(await page.isVisible('#custBlock')), 'Customization hides');
+    assert.ok(!(await page.isVisible('#custBlock')), 'Background hides');
     await page.reload(); await page.waitForSelector('#viewBtn'); await page.waitForTimeout(800);
     assert.equal(await look(page), 'vintage');
     assert.equal(await page.evaluate(() => localStorage.getItem('design.house')), 'vintage');
