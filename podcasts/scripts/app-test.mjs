@@ -110,6 +110,8 @@ async function newPage(scheme, extra = {}, sheet = null) {
     route.fulfill({ status: 200, contentType: 'application/rss+xml', headers: { 'access-control-allow-origin': '*' }, body: rss(n === 'alpha' ? 'Alpha Show' : 'Beta Show', n) });
   });
   await ctx.route(/^https:\/\/media\.example\.com\//, route => route.fulfill({ status: 200, contentType: 'audio/wav', headers: { 'access-control-allow-origin': '*' }, body: WAV }));
+  // Apple's directory, which the page asks itself when the route isn't there: answered here, empty, so no test reaches Apple
+  await ctx.route(/^https:\/\/(itunes\.apple\.com|rss\.applemarketingtools\.com)\//, route => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ results: [], feed: { results: [] } }) }));
   // the sky held at day, so the colours don't depend on the hour; a key given as null is left out
   extra = Object.assign({ 'aos.seen': JSON.stringify({ [APP_ID]: '999' }), 'aos.sky': 'day', [KEY]: seed() }, extra);
   await ctx.addInitScript(extra => {
@@ -157,8 +159,9 @@ await test('opens on Library, its one page (Listen Now and the tab bar are gone)
   assert.ok(await p.$$eval('#libBody .ep', e => e.length) >= 4, 'the newest episodes of both shows');
   await shot(p, '01-new-light');
   // Search: the round button opens it, and its ✕ (or the button again) goes back to Library
-  await p.click('#searchTab'); await p.waitForTimeout(300);
+  await p.click('#searchTab'); await p.waitForTimeout(600);
   assert.equal(await p.evaluate(() => !document.getElementById('searchView').hidden), true);
+  assert.match(await p.textContent('#searchBody'), /No chart right now/, 'Top shows from the stand-in for Apple (the page asks Apple itself with no route), not the real one');
   await p.click('#searchBack'); await p.waitForTimeout(300);
   assert.equal(await p.evaluate(() => !document.getElementById('libView').hidden), true, 'back to Library');
   await p.click('#searchTab'); await p.waitForTimeout(300); await p.click('#searchTab'); await p.waitForTimeout(300);
