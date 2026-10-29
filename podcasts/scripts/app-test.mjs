@@ -699,6 +699,72 @@ await test('tags: Ipsy tags the shows (POST tags, signed in), Library filters by
   await P.ctx.close();
 });
 
+await test('a page from another release (an offline copy) with this script: the app opens again, once, for the pair, and never stops with an empty Library', async () => {
+  // the release stamps go together: PAGE in app.js, the page's aos-build and its app.js?v=, sw.js's CACHE and SHELL
+  const read = f => fs.readFileSync(path.join(ROOT, FOLDER, f), 'utf8');
+  const page = /const PAGE = '([^']+)'/.exec(read('app.js'))[1];
+  assert.equal(/<meta name="aos-build" content="([^"]+)"/.exec(read('index.html'))[1], page, 'the page’s aos-build');
+  assert.equal(/<script src="app\.js\?v=([^"]+)"/.exec(read('index.html'))[1], page, 'the page’s app.js?v=');
+  assert.equal(/const CACHE = '([^']+)'/.exec(read('sw.js'))[1], page, 'sw.js’s CACHE');
+  assert.ok(read('sw.js').includes("'app.js?v=" + page + "'"), 'sw.js’s SHELL keeps this release’s script');
+  const html = read('index.html'), stale = html.replace(/(<meta name="aos-build" content=")[^"]+/, '$1podcasts-v0');
+  // the offline copy once, then the network's: the second open has the pair and the Library
+  const P = await newPage('light'), p = P.page;
+  let served = 0;
+  await p.route(u => new URL(u).pathname === '/' + FOLDER + '/', route => route.fulfill({ status: 200, contentType: 'text/html', body: served++ ? html : stale }));
+  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts); await p.waitForTimeout(600);
+  assert.equal(served, 2, 'opened again once');
+  assert.equal(await p.$$eval('#libBody .stile', e => e.length), 2, 'the Library, from the pair');
+  await P.ctx.close();
+  // still the old page after that (offline): a line saying so, not an empty Library or a stopped script
+  const Q = await newPage('light'), q = Q.page;
+  await q.route(u => new URL(u).pathname === '/' + FOLDER + '/', route => route.fulfill({ status: 200, contentType: 'text/html', body: stale }));
+  await q.goto(BASE + '/' + FOLDER + '/'); await q.waitForTimeout(1500);
+  assert.match(await q.textContent('body > p:last-of-type'), /Podcasts was updated\. Close it and open it again when you’re online\. Your shows are safe\./);
+  assert.equal(await q.evaluate(() => !!window.__podcasts), false, 'it doesn’t run against the wrong page');
+  await Q.ctx.close();
+});
+
+await test('Top shows when Apple won’t look up their feeds: the chart still shows, and a show’s feed is asked for when it’s tapped', async () => {
+  const P = await newPage('light', { 'aos.session': session('tok-tom'), [KEY]: seed().replace(/"follows":\[.*?\],"prog"/, '"follows":[],"prog"') }), p = P.page;
+  const asked = [];
+  await p.route('**/' + FOLDER + '/api/**', route => {
+    const u = new URL(route.request().url()); asked.push(u.pathname.split('/').pop() + u.search);
+    if (u.pathname.endsWith('/top')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [{ title: 'Alpha Show', author: 'An Author', art: '', genre: 'News', feed: '', apple: '123' }, { title: 'Beta Show', author: 'An Author', art: '', genre: 'Comedy', feed: '', apple: '456' }] }) });
+    if (u.pathname.endsWith('/lookup')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [{ title: 'Alpha Show', author: 'An Author', feed: feedUrl('alpha'), art: '', genre: 'News' }] }) });
+    if (u.pathname.endsWith('/feed')) { const n = u.searchParams.get('url').match(/\/(\w+)\.xml/)[1]; return route.fulfill({ status: 200, contentType: 'text/plain', body: rss(n === 'alpha' ? 'Alpha Show' : 'Beta Show', n) }); }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) });
+  });
+  await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts);
+  await p.click('#searchTab'); await p.waitForSelector('#searchBody .srow');
+  assert.match(await p.textContent('#searchBody .sechead'), /Top shows in the US/);
+  assert.equal(await p.$$eval('#searchBody .sopen:disabled', e => e.length), 0, 'every show can be opened, though none came with its feed');
+  assert.doesNotMatch(await p.textContent('#searchBody'), /Only on Apple Podcasts/);
+  assert.ok(!asked.some(a => a.startsWith('lookup')), 'nothing looked up before a tap');
+  await p.click('#searchBody .sopen[data-res="0"]'); await p.waitForSelector('#showView:not([hidden]) .hero');
+  assert.ok(asked.includes('lookup?id=123'), 'its feed, asked for on the tap: ' + JSON.stringify(asked));
+  await p.waitForFunction(() => /Alpha Show episode 1/.test(document.getElementById('showBody').textContent));
+  await p.click('#showBack'); await p.waitForTimeout(200);
+  // the chart that wasn't whole isn't kept on the phone, so the next open asks again
+  assert.equal(await p.evaluate(k => localStorage.getItem(k + '-top'), KEY), null);
+  await P.ctx.close();
+  // Podcast Index's trending shows, when Apple has no chart: called Trending
+  const T = await newPage('light', { 'aos.session': session('tok-tom') }), t = T.page;
+  await t.route('**/' + FOLDER + '/api/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: new URL(route.request().url()).pathname.endsWith('/top') ? [{ title: 'Index Show', author: 'B', feed: 'https://feeds.example.com/b.xml', art: '', genre: 'Comedy', trend: true }] : [] }) }));
+  await t.goto(BASE + '/' + FOLDER + '/'); await t.waitForFunction(() => window.__podcasts);
+  await t.click('#searchTab'); await t.waitForSelector('#searchBody .srow');
+  assert.equal(await t.textContent('#searchBody .sechead'), 'Trending podcasts');
+  await T.ctx.close();
+  // and when it can't be loaded, the server's reason
+  const E = await newPage('light', { 'aos.session': session('tok-tom') }), ep = E.page;
+  await ep.route(/^https:\/\/(itunes\.apple\.com|rss\.applemarketingtools\.com)\//, route => route.abort());   // as on a phone: Apple's chart doesn't let a page read it
+  await ep.route('**/' + FOLDER + '/api/**', route => route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'Apple’s chart isn’t available right now' }) }));
+  await ep.goto(BASE + '/' + FOLDER + '/'); await ep.waitForFunction(() => window.__podcasts);
+  await ep.click('#searchTab'); await ep.waitForSelector('#searchBody .notice');
+  assert.match(await ep.textContent('#searchBody .notice'), /The chart couldn’t be loaded \(Apple’s chart isn’t available right now\)\./);
+  await E.ctx.close();
+});
+
 await test('no errors and no Content Security Policy violations', async () => {
   assert.deepEqual(errors, []);
 });
