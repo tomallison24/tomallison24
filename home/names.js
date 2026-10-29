@@ -12,7 +12,8 @@
   if (window.aosNames) return;
   const root = document.documentElement;
   const HELPER = 'aos.helper', IPSY = /\bIpsy\b/g, HAS = /\bIpsy\b/;
-  const KINDS = { fox: 'the fox', owl: 'the owl', robot: 'the robot', octopus: 'the octopus', hedgehog: 'the hedgehog', otter: 'the otter' };
+  // (the robot, the octopus and the otter are retired: whoever picked one has Nova now, as in home/ipsy.js)
+  const KINDS = { fox: 'the fox', owl: 'the owl', hedgehog: 'the hedgehog', nova: 'Nova', robot: 'Nova', octopus: 'Nova', otter: 'Nova' };
   const nameNow = () => {   // '' while it's Ipsy (not picked, or a name that is Ipsy)
     if (root.getAttribute('data-look') === 'grid') return 'Ares';
     try {

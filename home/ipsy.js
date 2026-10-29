@@ -31,8 +31,8 @@
 // The conversation is kept exactly as Claude returned it (thinking and web results included) and
 // only ever added to: the API checks that earlier turns weren't changed.
 //
-// Ipsy is the person's own helper: one of seven characters (Mia, the family's Australian Shepherd, a
-// fox, an owl, a robot, an octopus, a hedgehog, an otter), picked and named the first time the chat
+// Ipsy is the person's own helper: one of five characters (Mia, the family's Australian Shepherd, a
+// fox, an owl, a hedgehog, Nova: flying code), picked and named the first time the chat
 // opens (aos.helper; also in aOS, Account). It acts out each job: listening (the box has focus),
 // thinking (waiting for Claude), reading, searching with its glasses on, writing, showing (by the
 // tool's name: jobOf), talking (the answer appearing) and a hop when a change is saved. Reduce
@@ -81,7 +81,7 @@
   const DEG = Math.PI / 180;
   // ---------------------------------------------------------------------------
   // The helpers: everyone picks their own (Mia, the family's Australian Shepherd, or a fox, an owl, a
-  // robot, an octopus, a hedgehog or an otter) and names it. All of them share one rig: rubber-hose
+  // hedgehog, or Nova) and names it. All of them share one rig: rubber-hose
   // arms, a face, and the props for each job, so each acts out what Ipsy is doing:
   //   idle (bobs, blinks, waves now and then), listen (hand to its ear), think (hand on its chin, thought
   //   bubbles), read (a book: get_*, read_*…), scan (glasses and a magnifying glass: find_*, search_*),
@@ -96,9 +96,9 @@
     return 'M' + pts.join('L') + 'L100 140Z';
   })();
   const STROKE = (c, w, d) => '<path fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" d="' + d + '"/>';
-  // kind: what it is, for screen readers and for Claude (the picker shows them unnamed)
+  // kind: what it is, for screen readers and for Claude (the picker shows them unnamed); named: its own name, unnamed (Mia, Nova)
   const HELPERS = {
-    mia: { label: 'Australian Shepherd', kind: 'Mia, the family’s Australian Shepherd', sh: 52, pupil: true, cheeks: false,
+    mia: { label: 'Australian Shepherd', named: 'Mia', kind: 'Mia, the family’s Australian Shepherd', sh: 52, pupil: true, cheeks: false,
       vars: '--limb:#24211E;--limbw:10;--paw:#FFFDF7;--pawedge:#24211E;--foot:#FFFDF7;--eye:#7A4523;--brow:#C27A3E;--broww:6.5;--specl:#E3A72F',
       back: '<path d="M64 62C42 64 32 92 36 120C38 136 50 140 58 128C62 108 66 86 76 68Z" fill="#24211E"/><path d="M136 62C158 64 168 92 164 120C162 136 150 140 142 128C138 108 134 86 124 68Z" fill="#24211E"/>'
         + STROKE('#24211E', 2, 'M37 96c-6 2-10 0-12-4M36 112c-6 4-11 3-14 0M38 132c-4 4-10 6-14 4M163 96c6 2 10 0 12-4M164 112c6 4 11 3 14 0M162 132c4 4 10 6 14 4'),
@@ -118,24 +118,16 @@
       body: '<path d="' + EGG + '" fill="#1F6F6B"/><ellipse cx="100" cy="146" rx="30" ry="20" fill="#F4E3BE"/>' + STROKE('#B98A4A', 2.4, 'M86 140l5 4 5-4M100 140l5 4 5-4M93 150l5 4 5-4M107 150l5 4')
         + '<circle cx="86" cy="104" r="15" fill="#F4E3BE"/><circle cx="114" cy="104" r="15" fill="#F4E3BE"/>',
       front: '<path d="M94 115l6 9 6-9z" fill="#E3A72F"/>' },
-    robot: { label: 'Robot', kind: 'a retro robot', sh: 54, vars: '--limb:#2B2522;--limbw:6;--foot:#2B2522',
-      back: STROKE('#2B2522', 3, 'M100 58V40') + '<circle class="h-bulb" cx="100" cy="36" r="7"/><circle cx="50" cy="104" r="6" fill="#E3A72F"/><circle cx="150" cy="104" r="6" fill="#E3A72F"/>',
-      body: '<rect x="52" y="58" width="96" height="106" rx="22" fill="#4FB3AB"/><rect x="64" y="80" width="72" height="56" rx="14" fill="#FBF5E9"/><circle cx="84" cy="150" r="4.5" fill="#D8572A"/><circle cx="100" cy="150" r="4.5" fill="#E3A72F"/><circle cx="116" cy="150" r="4.5" fill="#7E8C34"/>',
-      front: '' },
-    octopus: { label: 'Octopus', kind: 'an octopus', sh: 50, feet: false, vars: '--limb:#E8806A;--limbw:11;--paw:#E8806A;--pawedge:#D2654F',
-      back: STROKE('#E8806A', 11, 'M70 140c-10 14-8 28 6 28M88 146c-4 12 0 22 10 22M112 146c4 12 0 22-10 22M130 140c10 14 8 28-6 28'),
-      body: '<path d="M100 50C136 50 154 76 154 108C154 134 138 148 100 148C62 148 46 134 46 108C46 76 64 50 100 50Z" fill="#E8806A"/><circle cx="126" cy="70" r="6" fill="#F4A894"/><circle cx="138" cy="86" r="4" fill="#F4A894"/><circle cx="70" cy="74" r="4.5" fill="#F4A894"/>',
-      front: '' },
     hedgehog: { label: 'Hedgehog', kind: 'a hedgehog', sh: 56, vars: '--limb:#E8C58F;--limbw:9;--paw:#7A4E2D;--pawedge:#7A4E2D;--foot:#7A4E2D',
       back: '<path d="' + SPIKES + '" fill="#7A4E2D"/><circle cx="136" cy="54" r="10" fill="#D8572A"/>' + STROKE('#7E8C34', 3, 'M136 44q4-6 9-5'),
       body: '<circle cx="100" cy="118" r="48" fill="#E8C58F"/><circle cx="72" cy="80" r="8" fill="#E8C58F"/><circle cx="128" cy="80" r="8" fill="#E8C58F"/>',
       front: '<circle class="h-ink" cx="100" cy="116" r="5"/>' },
-    otter: { label: 'Otter', kind: 'an otter', sh: 52, vars: '--limb:#8B5A3C;--limbw:10;--paw:#3B2A22;--pawedge:#3B2A22;--foot:#3B2A22',
-      back: '<g class="h-wag" style="transform-origin:130px 156px"><path d="M128 154c20 2 36 8 44 18c-16 2-32-2-46-10z" fill="#6E4630"/></g><circle cx="64" cy="72" r="10" fill="#8B5A3C"/><circle cx="136" cy="72" r="10" fill="#8B5A3C"/><circle cx="64" cy="72" r="5" fill="#3B2A22"/><circle cx="136" cy="72" r="5" fill="#3B2A22"/>',
-      body: '<path d="' + EGG + '" fill="#8B5A3C"/><ellipse cx="100" cy="112" rx="40" ry="30" fill="#E2C29E"/><ellipse cx="100" cy="152" rx="24" ry="13" fill="#E2C29E"/>',
-      front: '<path d="M94 112h12l-6 6z" fill="#2B2522" stroke="#2B2522" stroke-width="3" stroke-linejoin="round"/>' + STROKE('#2B2522', 1.6, 'M80 118l-14-2M80 122l-13 3M120 118l14-2M120 122l13 3').replace('/>', ' opacity=".6"/>') },
+    // Nova: no body and no face, just code (novaSvg, below), flying round and now and then coming together into a shape
+    nova: { label: 'AI', named: 'Nova', kind: 'Nova, an AI made of flying code that comes together into shapes and tools' },
   };
   const WHO = Object.keys(HELPERS);
+  // the robot, the octopus and the otter are retired: whoever picked one has Nova now, with the name they gave it
+  const RETIRED = { robot: 'nova', octopus: 'nova', otter: 'nova' };
   // Tron's rider (Tron: Ares, as the Light Cycle's driver in Tesla's cars): in the Tron look, everyone's helper suits up as
   // this - black suit and helmet lit with red, the identity disc behind - whichever helper they picked (its name stays theirs).
   // Not in the picker. Its jobs are the others': a lit data pad to read, a light that sweeps the visor to search, a stylus of
@@ -165,10 +157,7 @@
     mia: { top: 56, coat: '#B23A32', scarf: ['#E3A72F', '#FFF7EC'] },
     fox: { top: 56, coat: '#2F4A6D', scarf: ['#1F6F6B', '#FFF7EC'] },
     owl: { top: 56, coat: '#C98A2B', scarf: ['#D8572A', '#FFF7EC'] },
-    robot: { top: 58, coat: '#D8572A', scarf: ['#2F4A6D', '#FBF5E9'], shape: '<rect x="52" y="58" width="96" height="106" rx="22"/>' },
-    octopus: { top: 50, coat: '#2F4A6D', scarf: ['#E3A72F', '#FFF7EC'], sleeves: false, shape: '<path d="M100 50C136 50 154 76 154 108C154 134 138 148 100 148C62 148 46 134 46 108C46 76 64 50 100 50Z"/>' },
     hedgehog: { top: 62, coat: '#4E7A4A', scarf: ['#D8572A', '#FFF7EC'], shape: '<circle cx="100" cy="118" r="48"/>' },
-    otter: { top: 56, coat: '#2F4A6D', scarf: ['#E3A72F', '#FFF7EC'] },
     rider: { only: ['umbrella'] },
   };
   const UMBRELLA = ['#E3A72F', '#FFF7EC'];
@@ -213,12 +202,12 @@
     }
     if (has('coat')) {   // the lower body, cut to its outline: buttoned down the middle, two pockets; sleeves too
       const id = 'ipsyFit' + (++fitN), shape = f.shape || '<path d="' + EGG + '"/>';
-      o.body += '<clipPath id="' + id + '">' + shape + '</clipPath><g class="h-coat" clip-path="url(#' + id + ')"><rect x="0" y="' + (who === 'octopus' ? 134 : 140) + '" width="200" height="66" fill="' + f.coat + '"/>'
+      o.body += '<clipPath id="' + id + '">' + shape + '</clipPath><g class="h-coat" clip-path="url(#' + id + ')"><rect x="0" y="140" width="200" height="66" fill="' + f.coat + '"/>'
         + '<path class="h-cseam" d="M100 140V172M64 156h16M120 156h16"/><circle class="h-cbtn" cx="106" cy="150" r="2.6"/><circle class="h-cbtn" cx="106" cy="160" r="2.6"/></g>';
       if (f.sleeves !== false) o.vars += ';--limb:' + f.coat;
     }
     if (has('scarf')) {   // round its neck, a striped end hanging down
-      const N = who === 'octopus' ? 132 : 136;
+      const N = 136;
       o.body += '<g class="h-scarf"><path fill="' + s1 + '" d="M56 ' + (N - 6) + 'Q100 ' + (N + 8) + ' 144 ' + (N - 6) + 'L146 ' + (N + 4) + 'Q100 ' + (N + 20) + ' 54 ' + (N + 4) + 'Z"/>'
         + '<path fill="none" stroke="' + s2 + '" stroke-width="2.6" stroke-dasharray="7 6" d="M58 ' + (N - 1) + 'Q100 ' + (N + 14) + ' 144 ' + (N - 1) + '"/>'
         + '<path fill="' + s1 + '" d="M116 ' + (N + 6) + 'L129 ' + (N + 5) + 'L133 ' + (N + 32) + 'L119 ' + (N + 34) + 'Z"/>'
@@ -241,7 +230,124 @@
   }
   const MOODS = ['idle', 'listen', 'think', 'read', 'scan', 'write', 'show', 'talk', 'done'];
 
+  // ---------------------------------------------------------------------------
+  // Nova: code flying round (bits of it, in three colours; novaGo moves them). Idle,
+  // the bits wander and every few seconds come together into a shape (a cube, a star, a heart, a globe, a gear,
+  // </>, a bolt) and fly apart again. Each job is a shape too: sound waves to listen, a whirl to think, a book to
+  // read, a magnifying glass sweeping to search, a pencil to write, an arrow to show, a speech bubble to talk
+  // (its code flickering) and a tick when a change is saved; a ball of it to cross aOS Home's bar. Neighbours
+  // in one shape are neighbours in the next, so it flows from one to another. Reduce Motion: the shape, still.
+  // No clothes: it doesn't dress for the weather.
+  // ---------------------------------------------------------------------------
+  const NOVA_N = 36, GLYPHS = ['{', '}', '<', '>', '/', '0', '1', ';', '=', '(', ')', '[', ']', '#', '*', '+', '$', '&', '%', 'λ', '01', '=>', 'fn', '{}'];
+  const ring = (cx, cy, rx, ry, a0 = 0, a1 = 360, n = 32) => Array.from({ length: n + 1 }, (_, i) => { const t = (a0 + (a1 - a0) * i / n) * DEG; return [cx + rx * Math.cos(t), cy + ry * Math.sin(t)]; });
+  function sample(lines) {   // NOVA_N points, evenly along the lines
+    const segs = []; let L = 0;
+    for (const l of lines) for (let i = 1; i < l.length; i++) { const [ax, ay] = l[i - 1], [bx, by] = l[i], d = Math.hypot(bx - ax, by - ay); segs.push([ax, ay, bx, by, d]); L += d; }
+    const out = []; let si = 0, acc = 0;
+    for (let k = 0; k < NOVA_N; k++) {
+      const want = (k + 0.5) * L / NOVA_N;
+      while (si < segs.length - 1 && acc + segs[si][4] < want) { acc += segs[si][4]; si++; }
+      const [ax, ay, bx, by, d] = segs[si], f = d ? (want - acc) / d : 0;
+      out.push([100 + 1.18 * (ax + (bx - ax) * f - 100), 112 + 1.18 * (ay + (by - ay) * f - 112)]);   // a little bigger: as big as the others
+    }
+    return out;
+  }
+  const NOVA = (() => {
+    const hex = a => [100 + 44 * Math.cos(a * DEG), 112 + 44 * Math.sin(a * DEG)], C = [100, 112];
+    const pt = (a, r) => [100 + r * Math.cos(a * DEG), 112 + r * Math.sin(a * DEG)];
+    const d = [Math.SQRT1_2, -Math.SQRT1_2], n = [Math.SQRT1_2, Math.SQRT1_2], tip = [64, 156], end = [138, 82];
+    const at = (p, a, b) => [p[0] + d[0] * a + n[0] * b, p[1] + d[1] * a + n[1] * b];
+    return {
+      cube: sample([[-90, -30, 30, 90, 150, 210, 270].map(hex), [hex(-150), C, hex(-30)], [C, hex(90)]]),
+      star: sample([Array.from({ length: 11 }, (_, i) => pt(-90 + i * 36, i % 2 ? 19 : 48))]),
+      heart: sample([Array.from({ length: 49 }, (_, i) => { const t = i / 48 * 2 * Math.PI; return [100 + 46 * Math.sin(t) ** 3, 108 - 2.9 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]; })]),
+      globe: sample([ring(100, 112, 42, 42), ring(100, 112, 16, 42), [[58, 112], [142, 112]]]),
+      gear: sample([Array.from({ length: 33 }, (_, i) => pt(i * 11.25 - 5.6, i % 4 < 2 ? 46 : 35)), ring(100, 112, 11, 11, 0, 360, 12)]),
+      code: sample([[[80, 86], [56, 112], [80, 138]], [[120, 86], [144, 112], [120, 138]], [[108, 80], [92, 144]]]),
+      bolt: sample([[[112, 60], [76, 118], [100, 118], [88, 166], [126, 100], [102, 100], [112, 60]]]),
+      waves: sample([ring(70, 112, 18, 18, -55, 55, 12), ring(70, 112, 36, 36, -55, 55, 16), ring(70, 112, 54, 54, -55, 55, 20)]),
+      book: sample([[[100, 90], [58, 80], [54, 140], [100, 148], [146, 140], [142, 80], [100, 90], [100, 148]]]),
+      mag: sample([ring(90, 102, 28, 28), [[110, 122], [140, 154]]]),
+      pencil: sample([[tip, at(tip, 22, 10), at(end, 0, 10), at(end, 0, -10), at(tip, 22, -10), tip], [at(tip, 22, 10), at(tip, 22, -10)]]),
+      arrow: sample([[[62, 160], [138, 84]], [[104, 84], [138, 84], [138, 118]]]),
+      bubble: sample([[...ring(68, 86, 14, 14, 180, 270, 6), ...ring(132, 86, 14, 14, 270, 360, 6), ...ring(132, 126, 14, 14, 0, 90, 6), [96, 140], [76, 162], [82, 140], ...ring(68, 126, 14, 14, 90, 180, 6), [54, 86]]]),
+      check: sample([[[58, 112], [88, 144], [144, 80]]]),
+      orb: sample([ring(100, 112, 22, 22), ring(100, 112, 10, 10)]),
+    };
+  })();
+  const NOVA_IDLE = ['cube', 'star', 'heart', 'globe', 'gear', 'code', 'bolt'];
+  const NOVA_JOB = { listen: 'waves', read: 'book', scan: 'mag', write: 'pencil', show: 'arrow', talk: 'bubble', done: 'check', cross: 'orb' };
+  const glyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+  const tr = (x, y) => 'translate(' + f1(x) + 'px,' + f1(y) + 'px)';
+  function novaSvg() {
+    queueMicrotask(novaWake);   // once it's on the page
+    return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="nova"><g class="h-pose"><g class="h-hop"><g class="h-bob"><g class="h-lean"><g class="h-code">'
+      + NOVA.cube.map(([x, y], i) => '<g class="h-bit" style="transform:' + tr(x, y) + '"><text class="n' + (i % 3) + '" style="animation-delay:-' + (i * 0.37 % 2.6).toFixed(2) + 's">' + esc(glyph()) + '</text></g>').join('')
+      + '</g></g></g></g></g></svg>';
+  }
+  // The bits move by the page's own animations (Web Animations), set going when the mood changes (data-mood on its
+  // host, watched): nothing runs frame by frame on the phone. Idle is one long loop for each bit: it wanders, then
+  // three shapes in turn, each held a moment; a job is a flight to its shape (the whirl: then round and round).
+  const novaHosts = document.getElementsByClassName('h-code'), novaLive = new Set();
+  function novaSweep() {   // a Nova taken off the page (redrawn, another helper peeking) stops moving
+    for (const g of novaLive) if (!g.isConnected) { novaLive.delete(g); g._nova.token++; g._nova.bits.forEach(b => b.getAnimations().forEach(a => a.cancel())); }
+  }
+  function novaWake() {
+    novaSweep();
+    for (const g of novaHosts) {
+      if (g.dataset.on) continue;
+      if (g.closest('.h-peek')) { g.dataset.on = 'peek'; continue; }   // peeking out of the corner (none picked yet): the cube, still
+      const host = g.closest('[data-mood]') || g.closest('.ipsy-host') || g.parentNode;
+      g.dataset.on = '1'; g._nova = { host, mood: '', token: 0, bits: [...g.children] }; novaLive.add(g);
+      if (!host._novaMo) {   // one watcher for each host, whichever Nova it holds now
+        host._novaMo = new MutationObserver(() => { const c = host.querySelector('.h-code'); if (c && c._nova) novaGo(c); });
+        host._novaMo.observe(host, { attributes: true, attributeFilter: ['data-mood'] });
+      }
+      novaGo(g);
+    }
+  }
+  const SPRING = 'cubic-bezier(.34,1.45,.5,1)';
+  function novaGo(g) {
+    const st = g._nova, mood = st.host.dataset.mood || 'idle';
+    if (!g.isConnected || mood === st.mood) return;
+    const first = !st.mood; st.mood = mood; const token = ++st.token, R = Math.random, calm = still();
+    // where each bit is now: just drawn, where it was drawn (the cube); else read from the page, all at once (one
+    // look at the page, not one for each bit)
+    const at = st.bits.map((b, i) => { if (first) return tr(...NOVA.cube[i]); const m = new DOMMatrixReadOnly(getComputedStyle(b).transform.replace('none', '')); return tr(m.e, m.f); });
+    const wander = () => { const a = R() * 6.28, r = 10 + 50 * Math.sqrt(R()); return [100 + r * Math.cos(a), 112 + 0.9 * r * Math.sin(a)]; };
+    const picks = NOVA_IDLE.slice().sort(() => R() - 0.5).slice(0, 3);
+    const name = NOVA_JOB[mood] || (mood === 'think' ? (calm ? 'globe' : '') : calm || mood !== 'idle' ? 'cube' : '');
+    st.bits.forEach((b, i) => {
+      const cur = at[i];
+      if (!first) { b.style.transform = cur; b.getAnimations().forEach(a => a.cancel()); }
+      if (R() < 0.35) b.firstChild.textContent = glyph();
+      if (name) {   // a shape: fly there, a few bits at a time
+        const [x, y] = NOVA[name][i];
+        if (calm) { b.style.transform = tr(x, y); return; }
+        b.animate([{ transform: cur }, { transform: tr(x, y) }], { duration: 750 + 300 * R(), delay: i * 12, easing: SPRING, fill: 'forwards' });
+      } else if (mood === 'think') {   // a whirl: out to its ring, then round and round
+        const r = 16 + 40 * R(), a0 = R() * 360, dir = R() < 0.5 ? -1 : 1, ring = Array.from({ length: 13 }, (_, k) => { const t = (a0 + dir * k * 30) * DEG; return { transform: tr(100 + r * Math.cos(t), 112 + 0.75 * r * Math.sin(t)) }; });
+        b.animate([{ transform: cur }, ring[0]], { duration: 600, easing: 'ease-out', fill: 'forwards' }).finished.then(() => {
+          if (st.token === token) b.animate(ring, { duration: (1.6 + 1.6 * R()) * 1000, iterations: Infinity });
+        }, () => {});
+      } else {   // idle: wander, a shape, wander, a shape, wander, a shape, and round again
+        const keys = [[cur, 0, 'ease-in-out']]; let t = 0;
+        const go = (tf, dt, ease) => { t += dt; keys.push([tf, t, ease]); };
+        for (const sh of picks) {
+          for (let k = 0; k < 3; k++) go(tr(...wander()), 1.2 + 0.6 * R(), 'ease-in-out');
+          const [x, y] = NOVA[sh][i], lag = 0.25 * R();
+          go(tr(...wander()), lag, SPRING);   // a moment's more wandering, then in
+          go(tr(x, y), 1, 'ease-in-out'); go(tr(x, y), 2.4 - lag, 'ease-in-out');
+        }
+        go(cur, 1.2, 'ease-in-out');
+        b.animate(keys.map(([tf, at, easing]) => ({ transform: tf, offset: at / t, easing })), { duration: t * 1000, iterations: Infinity });
+      }
+    });
+  }
+
   function charSvg(who, wear) {
+    if (who === 'nova') return novaSvg();
     const c = HELPERS[who] || HELPERS.mia, o = outfit(who, wear), lx = c.sh, sy = 120, rx = 200 - lx, hb = lx + 17.5;
     // where the hands end up for each job (the arm's rest, turned: see the CSS)
     const mg = [f1(rx + 24.4), f1(sy + 13.5)], pn = [f1(rx - 22.5), f1(sy + 16.4)], pt = [f1(rx + 21), f1(sy - 18.3)];
@@ -284,11 +390,16 @@
   // and it follows you to your other devices with your settings: aOS/prefs-sync.js). None yet: the helpers take
   // turns peeking out of the corner, and the chat starts by asking you to pick one.
   const HELPER_KEY = 'aos.helper';
-  const helper = () => { try { const h = JSON.parse(ls.get(HELPER_KEY, 'null')); return h && own(HELPERS, h.who) ? { who: h.who, name: String(h.name || '').slice(0, 16) } : null; } catch { return null; } };
+  const helper = () => {
+    try {
+      const h = JSON.parse(ls.get(HELPER_KEY, 'null')), who = h && (own(RETIRED, h.who) ? RETIRED[h.who] : h.who);
+      return own(HELPERS, who) && who !== 'rider' ? { who, name: String(h.name || '').slice(0, 16) } : null;
+    } catch { return null; }
+  };
   // in Tron your helper is Ares (Tron: Ares's rider, as in Tesla's Tron mode), whatever its name in the other looks
   const helperName = () => { if (LOOK() === 'grid') return 'Ares'; const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
-  // the chat's title: its name, or with none, what it is (Mia is Mia)
-  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (h.who === 'mia' ? 'Mia' : HELPERS[h.who].label); };
+  // the chat's title: its name, or with none, what it is (Mia is Mia, Nova is Nova)
+  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (HELPERS[h.who].named || HELPERS[h.who].label); };
   function setHelper(who, name) {
     if (!own(HELPERS, who)) return;
     ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
@@ -312,7 +423,7 @@
   function drawChar(c, who) {
     if (!c.fixed) who = looksAs(who);
     if (c.who === who && c.wear === WEAR) return;
-    c.who = who; c.wear = WEAR; c.host.innerHTML = charSvg(who, WEAR); c.svg = c.host.firstChild;
+    c.who = who; c.wear = WEAR; c.host.innerHTML = charSvg(who, WEAR); c.svg = c.host.firstChild; novaSweep();
     if (c.peeking) c.svg.classList.add('h-peek');
   }
   function refit() {   // a new forecast, back on the page, or the hour turned: dressed again if the weather changed
@@ -363,14 +474,6 @@
   // Keyframes: [offset, how far along (0..1), the pose]. cross(slot, d) runs it; the animations come back,
   // so a tap can finish them (it's home at once).
   // ---------------------------------------------------------------------------
-  const spurts = (dir, from, to, n) => {   // the octopus: squash, shoot forward, settle, n times
-    const out = [];
-    for (let k = 0; k < n; k++) {
-      const a = from + (to - from) * k / n, s = (to - from) / n, x0 = dir > 0 ? k / n : 1 - k / n, x1 = dir > 0 ? (k + 1) / n : 1 - (k + 1) / n;
-      out.push([a + s * 0.25, x0, 'scale(1.14,.84)'], [a + s * 0.6, x1, 'translateY(-10px) rotate(' + 14 * dir + 'deg) scale(.86,1.16)'], [a + s, x1, 'none']);
-    }
-    return out;
-  };
   const MOVES = {
     // zoomies: races out bouncing, spins on the spot, races back
     mia: { speed: 1, frames: [[0, 0, 'none'], ...[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((x, i) => [0.06 + i * 0.06, x, i % 2 ? 'rotate(6deg)' : 'translateY(-14px) rotate(6deg)']), [0.42, 1, 'none'],
@@ -384,17 +487,14 @@
     owl: { speed: 1.05, frames: [[0, 0, 'none'], [0.1, 0.1, 'translateY(-26px) rotate(10deg)'], [0.2, 0.3, 'translateY(-10px) rotate(12deg)'], [0.3, 0.55, 'translateY(-30px) rotate(12deg)'],
       [0.4, 0.8, 'translateY(-12px) rotate(10deg)'], [0.48, 1, 'translateY(-34px) rotate(0deg)'], [0.55, 1, 'translateY(-38px) rotate(-180deg)'], [0.62, 0.9, 'translateY(-30px) rotate(-360deg)'],
       [0.72, 0.6, 'translateY(-12px) rotate(-372deg)'], [0.82, 0.35, 'translateY(-28px) rotate(-370deg)'], [0.92, 0.1, 'translateY(-10px) rotate(-366deg)'], [1, 0, 'rotate(-360deg)']] },
-    // moonwalks out in shades, strikes a pose, walks back
-    robot: { speed: 1.2, frames: [[0, 0, 'none'], [0.05, 0, 'rotate(-7deg)'], [0.42, 1, 'rotate(-7deg)'], [0.46, 1, 'translateY(-4px)'], [0.56, 1, 'translateY(-4px)'], [0.6, 1, 'rotate(5deg)'], [0.96, 0, 'rotate(5deg)'], [1, 0, 'none']] },
-    // jets out in squishy spurts, and back
-    octopus: { speed: 1.1, frames: [[0, 0, 'none'], ...spurts(1, 0, 0.5, 4), ...spurts(-1, 0.5, 1, 4)] },
     // curls up and rolls out, pops up with a ta-da, rolls back (turns: from how far it goes)
     hedgehog: { speed: 1, frames: d => { const t = Math.max(1, Math.round(d / (0.3 * 56) / (2 * Math.PI))) * 360; return [[0, 0, 'scale(.8) rotate(0deg)'], [0.4, 1, 'scale(.8) rotate(' + t + 'deg)'],
       [0.45, 1, 'translateY(-22px) rotate(' + t + 'deg)'], [0.5, 1, 'rotate(' + t + 'deg)'], [0.6, 1, 'rotate(' + t + 'deg)'], [0.63, 1, 'scale(.8) rotate(' + t + 'deg)'], [0.97, 0, 'scale(.8) rotate(0deg)'], [1, 0, 'none']]; } },
-    // a run-up, then a belly slide out; stands, and slides back
-    otter: { speed: 1.1, frames: [[0, 0, 'none'], [0.05, 0.06, 'translateY(-8px) rotate(8deg)'], [0.1, 0.12, 'rotate(6deg)'], [0.15, 0.2, 'translateY(-14px) rotate(50deg)'], [0.2, 0.3, 'translateY(12px) rotate(90deg)', 'cubic-bezier(.1,.6,.3,1)'],
-      [0.42, 1, 'translateY(12px) rotate(90deg)'], [0.47, 1, 'translateY(-12px) rotate(0deg)'], [0.52, 1, 'none'], [0.57, 0.94, 'translateY(-14px) rotate(-50deg)'], [0.62, 0.84, 'translateY(12px) rotate(-90deg)', 'cubic-bezier(.1,.6,.3,1)'],
-      [0.9, 0, 'translateY(12px) rotate(-90deg)'], [0.95, 0, 'translateY(-10px) rotate(0deg)'], [1, 0, 'none']] },
+    // Nova: a ball of code that zips out, spins round at the far end, and zips back
+    nova: { speed: 0.9, frames: [[0, 0, 'none'], [0.08, 0, 'translateY(-10px) scale(.9,1.12)'], [0.12, 0, 'translateY(-10px) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'],
+      [0.32, 1, 'translateY(-10px) skewX(-18deg) scale(1.2,.9)'], [0.38, 1, 'translateY(-10px)'], [0.5, 1, 'translateY(-26px) rotate(360deg) scale(1.1)'], [0.58, 1, 'translateY(-10px) rotate(360deg)'],
+      [0.64, 1, 'translateY(-10px) rotate(360deg) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'], [0.86, 0, 'translateY(-10px) rotate(360deg) skewX(18deg) scale(1.2,.9)'],
+      [0.92, 0, 'translateY(-10px) rotate(360deg)'], [1, 0, 'rotate(360deg)']] },
   };
   // the rider: mounts, rides its Light Cycle out (leaning in), turns at the end, rides back
   MOVES.rider = { speed: 0.9, frames: [[0, 0, 'none'], [0.06, 0, 'translateY(-6px)'], [0.44, 1, 'rotate(-5deg)', 'cubic-bezier(.55,0,.25,1)'], [0.5, 1, 'scaleX(-1) rotate(-5deg)'],
@@ -463,7 +563,7 @@
 .ipsy-btn:active .ipsy-host{transform:scale(.92)}
 :where(.ipsy-host){position:relative;display:block}
 .ipsy-char{width:100%;height:100%;display:block;overflow:visible;--line:#2B2522;--limb:var(--line);--limbw:6;--paw:#FFFDF7;--pawedge:var(--line);--foot:var(--line)}
-.ipsy-char g,.ipsy-char path,.ipsy-char ellipse,.ipsy-char circle,.ipsy-char rect{transform-box:view-box}
+.ipsy-char g,.ipsy-char path,.ipsy-char ellipse,.ipsy-char circle,.ipsy-char rect,.ipsy-char text{transform-box:view-box}
 .ipsy-glass .ipsy-char{filter:drop-shadow(0 6px 12px rgba(129,147,188,.35))}
 .ipsy-grid .ipsy-char{filter:drop-shadow(0 0 2.5px var(--tr-line,#FF2A2A))}   /* a rim of light, so a dark helper (Mia) shows on black */
 .ipsy-layers .ipsy-char{filter:drop-shadow(0 8px 14px rgba(16,24,40,.22))}   /* lifted off the glass, as Layers lifts what you can tap */
@@ -472,7 +572,7 @@
 .h-lim{fill:none;stroke:var(--limb);stroke-width:var(--limbw);stroke-linecap:round}
 .h-hand{fill:var(--paw);stroke:var(--pawedge);stroke-width:2.5}
 .h-foot{fill:var(--foot)}
-.h-eye{fill:var(--eye,var(--line))} .h-glint{fill:#fff} .h-pupil{fill:#1A1410} .h-ink{fill:var(--line)} .h-bulb{fill:#D8572A}
+.h-eye{fill:var(--eye,var(--line))} .h-glint{fill:#fff} .h-pupil{fill:#1A1410} .h-ink{fill:var(--line)}
 .h-brow{fill:none;stroke:var(--brow,var(--line));stroke-width:var(--broww,3.4);stroke-linecap:round;transition:transform .35s ease}
 .h-cheek{fill:#D8572A;opacity:.55}
 .h-smile{fill:none;stroke:var(--line);stroke-width:3.4;stroke-linecap:round}
@@ -507,7 +607,7 @@
 .h-visor{display:none}
 .ipsy-grid .h-visor{display:inline}
 .ipsy-grid .h-lids{opacity:0}
-[data-mood="scan"] .h-visor,[data-mood="cross"] [data-who="robot"] .h-visor{display:none}
+[data-mood="scan"] .h-visor{display:none}
 .ipsy-grid[data-mood="scan"] .h-lids,.ipsy-grid [data-mood="scan"] .h-lids{opacity:1}
 .h-vband{fill:#08090B;stroke:var(--tr-line,#FF2A2A);stroke-width:2.4}
 .h-vlight{fill:none;stroke:var(--tr-line,#FF2A2A);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:14 30;animation:ipsyScan 2.4s ease-in-out infinite alternate;filter:drop-shadow(0 0 3px var(--tr-line,#FF2A2A))}
@@ -536,6 +636,22 @@
 [data-mood="cross"] [data-who="rider"] .h-foot{display:none}
 [data-mood="cross"] [data-who="rider"] .h-armL{transform:rotate(-75deg)}
 [data-mood="cross"] [data-who="rider"] .h-armR{transform:rotate(-40deg)}
+/* Nova: its code (novaGo moves each bit; here, each bit floats, and the whole of it sweeps, scribbles, points or pops) */
+.h-code text{font:800 17px ui-monospace,SFMono-Regular,Menlo,monospace;text-anchor:middle;dominant-baseline:central;animation:ipsyFloat 2.6s ease-in-out infinite}
+.h-code{transform-origin:100px 112px}
+[data-mood="scan"] .h-code{animation:ipsyNScan 1.4s ease-in-out infinite alternate}
+[data-mood="write"] .h-code{animation:ipsyScribble .5s linear infinite}
+[data-mood="show"] .h-code{animation:ipsyNPoint .9s ease-in-out infinite}
+[data-mood="done"] .h-code{animation:ipsyNPop .5s ease-in-out infinite alternate}
+[data-mood="talk"] .h-code text{animation:ipsyFloat 2.6s ease-in-out infinite,ipsyNFlick .9s steps(2) infinite}
+@keyframes ipsyFloat{50%{transform:translate(1.4px,-1.6px)}}
+@keyframes ipsyNScan{from{transform:translateX(-12px)}to{transform:translateX(12px)}}
+@keyframes ipsyNPoint{50%{transform:translate(4px,-4px)}}
+@keyframes ipsyNPop{to{transform:scale(1.07)}}
+@keyframes ipsyNFlick{50%{opacity:.45}}
+.h-code .n0{fill:#0B8E9A} .h-code .n1{fill:#5B48E0} .h-code .n2{fill:#CC3A84}
+:root[data-theme="dark"] .h-code .n0{fill:#4FE3E0} :root[data-theme="dark"] .h-code .n1{fill:#A397FF} :root[data-theme="dark"] .h-code .n2{fill:#FF7AB8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .h-code .n0{fill:#4FE3E0} :root:not([data-theme="light"]) .h-code .n1{fill:#A397FF} :root:not([data-theme="light"]) .h-code .n2{fill:#FF7AB8}}
 .h-peek{animation:ipsyPeek .5s cubic-bezier(.2,1.3,.35,1) both}
 /* idle: bobs, blinks, waves now and then; a tail wags */
 .h-bob{animation:ipsyBob 4.8s ease-in-out infinite}
@@ -549,7 +665,7 @@
 [data-mood="listen"] .h-waves{opacity:1}
 [data-mood="listen"] .h-wave{animation:ipsyPulse 1.4s ease-out infinite}
 [data-mood="listen"] .h-wave+.h-wave{animation-delay:.35s}
-/* thinking: hand on its chin, looks up, thought bubbles (the robot's bulb flashes) */
+/* thinking: hand on its chin, looks up, thought bubbles */
 [data-mood="think"] .h-armR{transform:rotate(91deg)}
 [data-mood="think"] .h-eyes{transform:translate(4px,-5px)}
 [data-mood="think"] .h-browL{transform:translateY(-3px) rotate(-8deg)}
@@ -558,7 +674,6 @@
 [data-mood="think"] .h-bubble{animation:ipsyBubble 1.8s ease-in-out infinite}
 [data-mood="think"] .h-bubble:nth-child(2){animation-delay:.3s}
 [data-mood="think"] .h-bubble:nth-child(3){animation-delay:.6s}
-[data-mood="think"] .h-bulb{animation:ipsyGlow .5s steps(2) infinite}
 /* reading: a book, eyes along the lines, a page turning */
 [data-mood="read"] .h-armL{transform:rotate(-60deg)}
 [data-mood="read"] .h-armR{transform:rotate(60deg)}
@@ -602,29 +717,20 @@
 [data-mood="done"] .h-yay{opacity:1}
 [data-mood="done"] .h-yay .h-star{animation:ipsyTwinkle .9s ease-in-out infinite}
 [data-mood="done"] .h-wag{animation-duration:.6s}
-/* crossing aOS Home's bar (cross()): no bob; the owl flaps, the robot moonwalks and poses, the hedgehog's ta-da */
+/* crossing aOS Home's bar (cross()): no bob; the owl flaps, the hedgehog's ta-da */
 [data-mood="cross"] .h-bob,[data-mood="cross"] .h-shadow{animation:none}
 [data-mood="cross"] [data-who="owl"] .h-armL{animation:ipsyFlapL .22s ease-in-out infinite alternate}
 [data-mood="cross"] [data-who="owl"] .h-armR{animation:ipsyFlapR .22s ease-in-out infinite alternate}
-[data-mood="cross"] [data-who="mia"] .h-armL,[data-mood="cross"] [data-who="otter"] .h-armL{transform:rotate(-40deg)}
-[data-mood="cross"] [data-who="mia"] .h-armR,[data-mood="cross"] [data-who="otter"] .h-armR{transform:rotate(40deg)}
-[data-mood="cross"] [data-who="robot"] .h-specs{opacity:1;transform:none}
-[data-mood="cross"] [data-who="robot"] .h-spec{fill:#2B2522}
-[data-mood="cross"] [data-who="robot"] .h-foot{animation:ipsyMoon .7s ease-in-out infinite}
-[data-mood="cross"] [data-who="robot"] .h-foot+.h-foot{animation-delay:.35s}
-[data-mood="cross"] [data-who="robot"] .h-armL{animation:ipsyBotL var(--cross,4s) ease-in-out}
-[data-mood="cross"] [data-who="robot"] .h-armR{animation:ipsyBotR var(--cross,4s) ease-in-out}
+[data-mood="cross"] [data-who="mia"] .h-armL{transform:rotate(-40deg)}
+[data-mood="cross"] [data-who="mia"] .h-armR{transform:rotate(40deg)}
 [data-mood="cross"] [data-who="hedgehog"] .h-armL{animation:ipsyHogL var(--cross,4s)}
 [data-mood="cross"] [data-who="hedgehog"] .h-armR{animation:ipsyHogR var(--cross,4s)}
-[data-mood="cross"] [data-who="octopus"] .h-armL{transform:rotate(60deg)}
-[data-mood="cross"] [data-who="octopus"] .h-armR{transform:rotate(-60deg)}
 [data-mood="cross"] [data-who="fox"] .h-armL{transform:rotate(-70deg)}
 [data-mood="cross"] [data-who="fox"] .h-armR{transform:rotate(-30deg)}
 @keyframes ipsyBob{50%{transform:translateY(-4px)}}
 @keyframes ipsyShade{50%{transform:scaleX(.9);opacity:.08}}
 @keyframes ipsyBlink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.1)}}
 @keyframes ipsyWag{0%,100%{transform:rotate(0)}50%{transform:rotate(8deg)}}
-@keyframes ipsyGlow{50%{fill:#E3A72F}}
 @keyframes ipsyWave{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(-125deg)}78%{transform:rotate(-100deg)}81%{transform:rotate(-125deg)}84%{transform:rotate(-100deg)}90%{transform:rotate(0)}}
 @keyframes ipsyPulse{0%{opacity:0;transform:translateX(0)}30%{opacity:1}100%{opacity:0;transform:translateX(-8px)}}
 @keyframes ipsyBubble{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(-4px);opacity:1}}
@@ -642,16 +748,13 @@
 @keyframes ipsyPeek{from{opacity:0;transform:translateY(30%) scale(.8)}}
 @keyframes ipsyFlapL{from{transform:rotate(90deg)}to{transform:rotate(160deg)}}
 @keyframes ipsyFlapR{from{transform:rotate(-90deg)}to{transform:rotate(-160deg)}}
-@keyframes ipsyMoon{0%{transform:translate(4px,0)}40%{transform:translate(-8px,0)}60%{transform:translate(-8px,-6px)}100%{transform:translate(4px,0)}}
-@keyframes ipsyBotL{0%,42%,58%,100%{transform:rotate(-20deg)}46%,54%{transform:rotate(126deg)}}
-@keyframes ipsyBotR{0%,42%,58%,100%{transform:rotate(20deg)}46%,54%{transform:rotate(-70deg)}}
 @keyframes ipsyHogL{0%,42%{transform:rotate(-60deg)}46%,58%{transform:rotate(126deg)}64%,97%{transform:rotate(-60deg)}100%{transform:rotate(0)}}
 @keyframes ipsyHogR{0%,42%{transform:rotate(60deg)}46%,58%{transform:rotate(-126deg)}64%,97%{transform:rotate(60deg)}100%{transform:rotate(0)}}
 /* the picker: every helper, unnamed, then a name */
 .ipsy-pick{display:grid;gap:10px;padding:12px;border-radius:18px;background:var(--glass,rgba(255,255,255,.6));border:1px solid var(--hair,rgba(16,24,26,.08))}
 .ipsy-vintage .ipsy-pick{background:var(--mc-card-2,#F0E5D0);border:0}
 .ipsy-pick>p{margin:0;font-size:14.5px;line-height:1.4}
-.ipsy-who{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ipsy-who{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
 .ipsy-whobtn{border:0;border-radius:16px;padding:2px;background:var(--glass-2,rgba(255,255,255,.7));cursor:pointer;aspect-ratio:1;min-width:0;-webkit-tap-highlight-color:transparent}
 .ipsy-vintage .ipsy-whobtn{background:var(--mc-card,#FBF5E9)}
 .ipsy-whobtn[aria-checked="true"]{box-shadow:inset 0 0 0 2.5px var(--accent,#3B7366)}
@@ -1383,6 +1486,6 @@
   };
 
   // helper(): { who, name } or null; helpers: [{ id, kind }]; picker(host): pick and name it (aOS Account); cross(slot, d): across aOS Home's bar
-  AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label })), name: helperName,
+  AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label, named: HELPERS[id].named || '' })), name: helperName,
     look: LOOK, settings: () => Object.keys(SETTINGS), wearing: () => WEAR, refit, dressing, dress: on => { ls.set(WEAR_KEY, on ? 'on' : 'off'); refit(); } };   // look(): 'vintage' | 'glass' | 'layers' | 'grid'; wearing(): 'umbrella coat scarf'…
 })();
