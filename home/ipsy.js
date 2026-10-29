@@ -157,6 +157,8 @@
   // a freeze, a sun hat and sunglasses on a warm sunny day. By the feels-like temperature, now: wearing() gives the
   // words ('umbrella coat scarf'), on the drawing as data-wear. No forecast (Weather never opened on this phone, or
   // its last one is over 12 hours old): dressed as usual. Ares keeps his suit; he takes an umbrella in the rain.
+  // Off (aOS > Account > Your helper, or ask Ipsy: aos.helper.weather 'off', follows you to your other devices):
+  // dressed as usual, whatever the weather.
   // top: the top of the head (where a hat sits); shape: the body's outline (the coat is cut to it); coat, scarf
   // [colour, stripe] and umbrella [side panels, middle panel]: each helper's own colours.
   const FIT = {
@@ -184,8 +186,9 @@
     if (h) { c = h.c; t = Number.isFinite(h.fF) ? h.fF : Number.isFinite(h.pF) ? h.pF : t; }   // an older forecast: its hour for now
     return { c: String(c || ''), t };
   }
+  const WEAR_KEY = 'aos.helper.weather', dressing = () => ls.get(WEAR_KEY, 'on') !== 'off';
   function wearing() {
-    const w = weatherNow(); if (!w) return '';
+    const w = dressing() && weatherNow(); if (!w) return '';
     const hr = new Date().getHours(), day = hr >= 7 && hr < 19, wet = /rain|pouring|lightning|hail/.test(w.c), snow = /snow/.test(w.c), t = w.t;
     const on = [];
     if (wet) on.push('umbrella');
@@ -317,7 +320,7 @@
     WEAR = w; const h = helper();
     cells.forEach(c => { if (!c.host.isConnected) { cells.delete(c); return; } drawChar(c, c.fixed ? c.who : h ? h.who : c.peek); });
   }
-  addEventListener('storage', e => { if (/^wx\.(cache|here|places)$/.test(e.key || '')) refit(); });   // Weather (or aOS Home) got a forecast
+  addEventListener('storage', e => { if (/^(wx\.(cache|here|places)|aos\.helper\.weather)$/.test(e.key || '')) refit(); });   // Weather (or aOS Home) got a forecast; turned on or off elsewhere
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refit(); });
   setInterval(() => { if (document.visibilityState === 'visible') refit(); }, 5 * 60e3);
   function addCell(host, o = {}) {   // a helper drawn in host (o.who: always that one)
@@ -859,6 +862,8 @@
       get: () => (helper() || {}).who || '', put: v => setHelper(v, (helper() || {}).name || '') }) },
     'helper.name': { app: '*', live: true, keepCase: true, about: 'Your helper\'s name (Ipsy until it has one, up to 16 letters)', values: ['a name, up to 16 letters'], ok: v => v.length >= 1 && v.length <= 16, to: v => v, from: v => v,
       get: () => (helper() || {}).name || '', put: v => setHelper((helper() || {}).who || 'mia', v) },
+    'helper.dress_for_weather': { app: '*', live: true, about: 'Your helper dresses for the weather (an umbrella in the rain, a coat when it\'s cold, a sun hat when it\'s warm and sunny)', ...onoff({
+      get: dressing, put: v => { ls.set(WEAR_KEY, v ? 'on' : 'off'); refit(); } }) },
     ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
   };
   // where a setting is: each app's Settings (the button that opens it), and aOS's Account sections
@@ -1380,5 +1385,5 @@
 
   // helper(): { who, name } or null; helpers: [{ id, kind }]; picker(host): pick and name it (aOS Account); cross(slot, d): across aOS Home's bar
   AOS.ipsy = { mount, character, privacy, wear, helper, setHelper, picker, cross, jobOf, helpers: WHO.map(id => ({ id, kind: HELPERS[id].kind, label: HELPERS[id].label })), name: helperName,
-    look: LOOK, settings: () => Object.keys(SETTINGS), wearing: () => WEAR, refit };   // look(): 'vintage' | 'glass' | 'layers' | 'grid'; wearing(): 'umbrella coat scarf'…
+    look: LOOK, settings: () => Object.keys(SETTINGS), wearing: () => WEAR, refit, dressing, dress: on => { ls.set(WEAR_KEY, on ? 'on' : 'off'); refit(); } };   // look(): 'vintage' | 'glass' | 'layers' | 'grid'; wearing(): 'umbrella coat scarf'…
 })();

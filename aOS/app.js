@@ -325,6 +325,7 @@
   const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
   const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || h.who === 'mia' ? (h.name.trim() || 'Mia') + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
+  const helperDresses = () => { const I = AllisonOS.ipsy; return I && I.dressing ? I.dressing() : true; };
   function acctPage(at) {
     const r0 = live[0];
     const el = page(`<h1 class="ptitle">Account</h1>
@@ -336,7 +337,7 @@
           <p class="lnote">Home layout</p>
           <div class="seg" id="homeLayout">${HOME_LAYOUTS.map(([v, n]) => `<button type="button" data-hl="${v}" aria-pressed="${v === homeLayout()}">${n}</button>`).join('')}</div>
           <p class="note">Thumb arc puts Home, Mail, Weather and Calendar and your four favorites in the corner your thumb rests on, and every app on one screen.</p>`, 'lookSub')}
-        ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
+        ${fold('fHelper', 'Your helper', esc(helperLine()), `<div id="helperPick"></div><p class="lnote">Dress for the weather</p><div class="seg" id="helperWx" role="group" aria-label="Dress for the weather">${[['on', 'On'], ['off', 'Off']].map(([v, n]) => `<button type="button" data-hwx="${v}" aria-pressed="${(v === 'on') === helperDresses()}">${n}</button>`).join('')}</div><p class="note">An umbrella in the rain, a scarf or a coat when it’s cold, a sun hat when it’s warm and sunny, from Weather’s forecast.</p><p class="lnote">Your helper is yours alone, in every app, and follows you to your other devices.</p>`, 'helperSub', 'helper')}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
           <ul data-ipsy="as-is">${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
@@ -345,6 +346,7 @@
     el.addEventListener('click', ev => {
       const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
       const t = ev.target.closest('[data-t]'); if (t) { W.theme.set(t.dataset.t); el.querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b === t))); }
+      const hwx = ev.target.closest('[data-hwx]'); if (hwx && AllisonOS.ipsy && AllisonOS.ipsy.dress) { AllisonOS.ipsy.dress(hwx.dataset.hwx === 'on'); el.querySelectorAll('[data-hwx]').forEach(b => b.setAttribute('aria-pressed', String(b === hwx))); }
       const hl = ev.target.closest('[data-hl]'); if (hl && window.aosHomeTab) { aosHomeTab.layout(hl.dataset.hl); el.querySelectorAll('[data-hl]').forEach(b => b.setAttribute('aria-pressed', String(b === hl))); }
       const ti = ev.target.closest('[data-ti]'); if (ti) { try { localStorage.setItem('aos.tron.intro', ti.dataset.ti); } catch {} el.querySelectorAll('[data-ti]').forEach(b => b.setAttribute('aria-pressed', String(b === ti))); }
       if (ev.target.closest('[data-tiplay]') && window.aosTronIntro) aosTronIntro.show({ force: true });

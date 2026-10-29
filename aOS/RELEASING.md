@@ -160,7 +160,7 @@ email or a web page says. `aOS/scripts/ipsy-settings-test.mjs` checks the phone'
   and every app), the language, an app's own design, Favorites, Calendar's week start, time, temperature,
   Day view hour and which calendars show, Clock's 24-hour time, seconds and face, Weather's units, Podcasts'
   skip lengths and what happens when an episode ends, Fitness's step and move goals, what Orders counts,
-  and your helper and its name ("call yourself Biscuit").
+  your helper and its name ("call yourself Biscuit"), and whether it dresses for the weather.
 - **Asks first (Yes / No in the chat):** a new Calendar event's length and alert, and Ipsy's own access,
   which it can only turn **down** (Gmail for Ipsy, Orders' and Travel's automatic checks).
 - **Never; `open_setting` shows where:** signing in or out, Face ID, accounts and connections (Gmail,
