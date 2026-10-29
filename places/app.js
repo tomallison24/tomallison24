@@ -682,9 +682,14 @@
   addEventListener('aos:account', e => { if (e.detail) handOver().finally(() => sync()); else { syncState = 'signin'; renderSync(); } });
 
   // ---------- Settings: the design ----------
-  // Vintage or Standard, at once and just on this phone (../home/design.js): not part of any save.
+  // As in every app (../home/settings.js): Design only. The design is picked at once and just on this phone
+  // (../home/design.js): not part of any save.
   $('setBtn').hidden = !window.aosDesign;
-  $('setBtn').onclick = () => { $('setDesign').innerHTML = window.aosDesign ? aosDesign.picker() : ''; openSheet('setSheet'); };
+  $('setBtn').onclick = () => {
+    const S = AllisonOS.settings;
+    $('setBody').innerHTML = window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'setDesign' })) : '';
+    openSheet('setSheet');
+  };
   if (window.aosDesign) aosDesign.bind($('setBody'));
   // On a change, what the script drew follows: the business dots' colours and their cards' pan, and
   // the tabs' thumb (Futura and the system font are different widths).
