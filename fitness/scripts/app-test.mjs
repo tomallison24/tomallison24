@@ -753,8 +753,8 @@ await test('Settings > Design: Vintage, then Standard and back, at once, kept ac
   assert.equal(await look(), 'vintage');
   await p.click('#setBtn');
   await p.waitForSelector('#setSheet:not([hidden])');
-  assert.equal(await p.textContent('#setBody .label'), 'Design', 'Design is the first section');
-  assert.equal(await p.$$eval('#setBody .hint', e => e.length), 0, 'no explanations in Settings');
+  assert.equal(await p.textContent('#setBody .st-lbl'), 'Design', 'Design is the first section');
+  assert.equal(await p.$$eval('#setBody .hint, #setBody .st-hint', e => e.length), 0, 'no explanations in Settings');
   assert.equal(await p.getAttribute('#setBody [data-design="vintage"]', 'aria-checked'), 'true');
   assert.equal(await p.getAttribute('#setBody [data-design="glass"]', 'aria-checked'), 'false');
   await shot(p, '18-settings-vintage');

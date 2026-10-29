@@ -379,7 +379,7 @@ await step('off by default: no Ipsy button; Settings > Ipsy turns it on (and the
   await page.waitForSelector('#stIpsy');
   assert.equal(await page.getAttribute('#stIpsy', 'aria-checked'), 'false');
   const t = await page.textContent('#stIpsy');
-  assert.match(t, /Ask Ipsy about your patterns/); assert.equal(await page.textContent('#stIpsy .sub'), 'Ipsy finds patterns in your workouts, sleep and meds.', 'one short sentence on what it does');
+  assert.match(t, /Ask Ipsy about your patterns/); assert.equal(await page.textContent('#stIpsy .st-sub'), 'Ipsy finds patterns in your workouts, sleep and meds.', 'one short sentence on what it does');
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-off.png') });
   await page.click('#stIpsy');
   assert.equal(await page.getAttribute('#stIpsy', 'aria-checked'), 'true');
@@ -405,7 +405,7 @@ await step('signed out: no Ipsy button, even turned on', async () => {
   const { ctx, page, problems } = await phone({ session: null, ipsy: true });
   assert.equal(await btnShown(page), false);
   await page.click('#setBtn'); await page.waitForSelector('#stIpsy');
-  assert.equal(await page.textContent('#stIpsy .sub'), 'Ipsy finds patterns in your workouts, sleep and meds.', 'the same one sentence, signed out');
+  assert.equal(await page.textContent('#stIpsy .st-sub'), 'Ipsy finds patterns in your workouts, sleep and meds.', 'the same one sentence, signed out');
   assert.deepEqual(problems, []);
   await ctx.close();
 });
