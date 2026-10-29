@@ -1472,7 +1472,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return oneSentence(errText({ code: st.apiError }).replace(/\.$/, '') + (st.calendars && st.calendars.length ? ': calendars there are ' + st.calendars.join(', ') : ''));
   }
   function renderSettings() {
-    const S = AllisonOS.settings;
+    const S = AllisonOS.settings, G = window.AllisonOS.calendarGmail;
     const mailNote = !settings.layers.mail ? LAYER.mail.sub : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, to show it here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : LAYER.mail.sub);
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? LAYER.weather.sub : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
@@ -1505,7 +1505,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.info({ id: 'stICloud', title: 'iCloud', sub: icloudLine() }),
         S.action({ id: 'stRefresh', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
         st.api === 'error' || st.api === 'ok' ? S.action({ id: 'stForget', icon: 'link', title: 'Look up the calendar again', sub: 'If the Family calendar was renamed or moved.' }) : '',
-      ]);
+        ...(G ? G.accounts(S) : []),   // Gmail for Ipsy (ipsy-gmail.js)
+      ])
+      + (G ? S.section('Ipsy', G.ipsy(S)) : '');
   }
   if (window.aosDesign) aosDesign.bind($('stBody'));   // Design: at once (../home/design.js)
   // one listener for the sheet's taps, one for its selects
@@ -1518,6 +1520,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       saveSettings(); render(); renderSettings(); return;
     }
     const b = e.target.closest('button'); if (!b || b.disabled) return;
+    const G = window.AllisonOS.calendarGmail, g = G && b.dataset.gmail && G.click(b, S);
+    if (g) { if (g !== 'armed') renderSettings(); return; }
     if (b.dataset.layer) {
       const k = b.dataset.layer; settings.layers[k] = !settings.layers[k]; saveSettings();
       if (LAYER_APPS.includes(k) && settings.layers[k]) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => renderSettings());
@@ -1538,6 +1542,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     saveSettings();
   });
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); };
+  // Gmail for Ipsy's rows (ipsy-gmail.js, loaded by ipsy-tools.js) are drawn as soon as they're there
+  addEventListener('calendar:gmail', renderSettings);
+  if (window.AllisonOS.calendarGmail) renderSettings();
   // A new design: the Family calendar's and Notes' colours follow it; Futura and the system font are
   // different widths, so the view bar's sliding thumb is measured again.
   addEventListener('aos:design', () => {
