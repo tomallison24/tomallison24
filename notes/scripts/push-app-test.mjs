@@ -125,7 +125,10 @@ await upcoming();
 ok('bell in the Reminders header, no dot while off', await page.isVisible('#remBellBtn') && await page.isHidden('#remBellDot'));
 ok('reminder rows show the clock while notifications are off', await page.locator('.todo').first().locator('.tchip.bare svg circle').count() === 1);
 await page.click('#remBellBtn');
-ok('the sheet says what it does in a line, and asks for the server address', (await page.textContent('#puSw .sub')) === 'Alerts this phone when a reminder or nudge is due.' && await page.getAttribute('#puSw', 'aria-checked') === 'false' && await page.isVisible('#puServer'));
+ok('the bell opens Settings at its Notifications section', await page.isVisible('#backupSheet') && await page.evaluate(() => { const s = document.getElementById('stNotify'), b = s.closest('.sheetbody'); const at = s.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop;   // scrolled to it, or as far as the sheet goes
+  return s.querySelector('.st-lbl').textContent === 'Notifications' && b.scrollTop > 0 && b.scrollTop >= Math.min(at - 40, b.scrollHeight - b.clientHeight) - 1; }));
+ok('there is no separate notifications sheet', await page.$('#pushSheet') === null);
+ok('the section says what it does in a line, and asks for the server address', (await page.textContent('#puSw .st-sub')) === 'Alerts this phone when a reminder or nudge is due.' && await page.getAttribute('#puSw', 'aria-checked') === 'false' && await page.isVisible('#puServer'));
 await page.fill('#puServer', '');
 await page.click('#puSw');
 ok('no address: says what to enter, sends nothing', (await page.textContent('#puStatus')).includes('workers.dev') && !calls.some(c => c.to === 'push'));
@@ -136,7 +139,7 @@ await page.waitForTimeout(800);
 const sub1 = calls.find(c => c.path === '/subscribe');
 ok('turning on: subscribes with the family session (no Sheet link or phrase), time zone and choices', sub1 && sub1.body.session === 'tok-tom' && !('sheet' in sub1.body)
   && sub1.body.prefs.tz === 'America/New_York' && sub1.body.prefs.morning === '09:00' && sub1.body.prefs.nudges === true && sub1.body.subscription.endpoint.startsWith('https://web.push.apple.com/'), JSON.stringify(sub1 && sub1.body.prefs));
-ok('the sheet now shows the lists, nudges and the morning time', await page.isVisible('#puOnBox') && await page.locator('#puLists [data-pl]').count() === 2 && await page.isVisible('#remBellDot'));
+ok('the section now shows the lists, nudges and the morning time', await page.isVisible('#puLists') && await page.isVisible('#puNudges') && await page.isVisible('#puMorning') && await page.isHidden('#puServer') && await page.locator('#puLists [data-pl]').count() === 2 && await page.isVisible('#remBellDot'));
 await page.click('#puLists [data-pl="l3"]');
 await page.waitForTimeout(1100);
 const sub2 = calls.filter(c => c.path === '/subscribe').at(-1);
@@ -148,7 +151,7 @@ if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '2-on.png') });
 await page.click('#puTest');
 await page.waitForTimeout(400);
 ok('Send a test asks the server for this phone only', calls.at(-1).path === '/test' && calls.at(-1).body.endpoint.startsWith('https://web.push.apple.com/'));
-await page.click('#pushSheet .okbtn[data-close]');
+await page.click('#backupSheet .okbtn[data-close]');
 await page.waitForTimeout(400);
 
 // ---- the rows and the Alert choice ----
