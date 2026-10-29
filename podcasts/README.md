@@ -4,15 +4,17 @@ Podcasts as a home-screen web app, laid out like the iPhone's Podcasts app,
 in a mid-century Vintage design or the same frosted glass as Mail, Notes and News.
 
 - **Library**, the app's one page (Listen Now and the tab bar are gone): your
-  **Shows** as a grid of artwork, filtered by **tag** (below); **New**, the
+  **Shows** as a grid of artwork, picked by **tag** (below); **New**, the
   newest episodes of your shows, with All / Unplayed / Video; **Saved**
   episodes; and **History**. The round arrows check for new episodes; the gear
   opens Settings.
 - **Tags**: each show you follow gets one or two from a fixed list (Music,
   Talk, News, Comedy, True Crime, Sport, Education, Kids, Business, Health,
-  Society, Other), picked by Ipsy ("Tags", below). Shows has a chip for each
-  tag in use. A show's page shows its tags; tap them (or **⋯ → Tags**) to
-  change them, or **Let Ipsy Pick** again.
+  Society, Other), picked by Ipsy ("Tags", below). On Shows, a pill at the
+  bottom, as Home's view picker, says which (**All shows** to start); tap it
+  for a menu, opening upwards, of the tags in use, with how many. A show's page
+  shows its tags; tap them (or **⋯ → Tags**) to change them, or **Let Ipsy
+  Pick** again. **Settings → AI** turns Ipsy's tagging off.
 - **Search** (the round button at the bottom right, as on iOS 26; it, or its ✕, goes back to Library): Apple's
   **Top shows** chart for your country (the US unless changed in Settings), search by name, or paste a show's
   RSS feed link. Private and premium feeds (Patreon, Supercast and the like)
@@ -37,7 +39,7 @@ in a mid-century Vintage design or the same frosted glass as Mail, Notes and New
 - **Picks up where you left off**, episode by episode. The last 15 seconds
   count as played. When an episode ends, the next one in Up Next plays
   (Settings can switch that off).
-- **Settings**: the design (Vintage or Standard, below), skip back
+- **Settings**: the design (Vintage or Standard, below), AI (Ipsy's tags, on or off), skip back
   (10/15/30 s) and forward (15/30/45/60 s), what happens when an episode ends, the country for Top shows, and **Import /
   Export** your shows as OPML (the file other podcast apps use). The family's
   Google Sheet (below) has no settings here: signed in, your shows, Saved,
@@ -121,7 +123,8 @@ tags yet (25 at a time: id, title, author, Apple's genre and the start of the de
 News) to pick one or two from the list, and keeps only tags from the list, for the shows it was asked
 about. At most 30 calls a person a day (`podcasts:tags:<id>:<day>` in the accounts' KV); over that,
 signed out or with no key, the app stops asking until it's opened again. A show Claude couldn't place is
-**Other**.
+**Other**. **Settings → AI** (`S.set.ai`, on to start, kept on the phone) off: nothing in Podcasts asks Claude,
+the tags you have stay, and **Let Ipsy Pick** goes; on again, Ipsy tags the shows that have none.
 
 A show's tags are `tags` on its entry in `S.follows`, with `tagBy`: `ai`, or `you` once you change them
 (yours are never picked again; **Let Ipsy Pick** clears them, and asks again). They sync with the show
