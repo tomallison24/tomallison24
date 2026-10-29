@@ -15,10 +15,10 @@
 //   AllisonOS.account.call(path, body)   the accounts API itself (aOS uses it)
 //   AllisonOS.account.user() / .signOut() / .prompt()
 //
-// Claude, app by app, on this phone (aOS Account > Claude, or the app's Settings > AI helper):
+// Claude, app by app, on this phone (aOS Account > AI helper, or the app's Settings > AI helper; the same rows, S.claude):
 //   AllisonOS.claude.on(app)          -> false once Claude is turned off for that app here
 //   AllisonOS.claude.set(app, on)        turns it on or off (localStorage aos.claude.<app>; never synced)
-//   AllisonOS.claude.apps                [[id, name, what it uses Claude for]], in aOS Account's order
+//   AllisonOS.claude.apps                [[id, name, what it uses Claude for]], in aOS Account's order (Use Claude in <name>)
 // While it's off, every call from this phone to that app's Claude routes (CLAUDE below: Ipsy's chat
 // and the work it does by itself) is answered here, before it leaves, with { error: 'ai-off' } (503):
 // nothing from that app reaches Claude. Everything else in the app works as before.
@@ -44,7 +44,7 @@
   A.claude = {
     on,
     set(app, v) { try { if (v) localStorage.removeItem(key(app)); else localStorage.setItem(key(app), 'off'); } catch {} dispatchEvent(new CustomEvent('aos:claude', { detail: { app, on: !!v } })); return !!v; },
-    apps: [['aos', 'Ipsy on aOS Home', 'Chats with Ipsy across your apps.'], ['calendar', 'Calendar', 'Chats with Ipsy.'], ['fitness', 'Fitness', 'Chats with Ipsy about your patterns.'],
+    apps: [['aos', 'aOS Home', 'Chats with Ipsy across your apps.'], ['calendar', 'Calendar', 'Chats with Ipsy.'], ['fitness', 'Fitness', 'Chats with Ipsy about your patterns.'],
       ['meals', 'Meals', 'Chats with Ipsy, and writing the week’s plan.'], ['money', 'Money', 'Chats with Ipsy, the daily check and ideas for your categories.'],
       ['news', 'News', 'Chats with Ipsy, story summaries and questions about a story.'], ['notes', 'Notes', 'Chats with Ipsy.'],
       ['orders', 'Orders', 'Chats with Ipsy, and fixing orders read wrong from their emails.'], ['podcasts', 'Podcasts', 'Tags for your shows.'],

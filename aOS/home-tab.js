@@ -723,7 +723,7 @@
   const runIn = key => async (input, ctx) => {
     const i = key.indexOf(SEP), id = key.slice(0, i), tool = key.slice(i + SEP.length);
     if (!IPSY_APPS.includes(id)) return { error: true, content: 'There is no such app for Ipsy in aOS.' };
-    if (!claudeOn(id)) return { error: true, content: `The person has turned Claude off for ${name(id)} on this phone (aOS, Account, Claude), so Ipsy can't read or change anything in ${name(id)}. Don't try again; you can tell them it can be turned back on there.` };
+    if (!claudeOn(id)) return { error: true, content: `The person has turned Claude off for ${name(id)} on this phone (Settings, AI helper in that app, or aOS, Account, AI helper), so Ipsy can't read or change anything in ${name(id)}. Don't try again; you can tell them it can be turned back on there.` };
     working.add(id);
     try {
       const m = await ipsyOf(id);

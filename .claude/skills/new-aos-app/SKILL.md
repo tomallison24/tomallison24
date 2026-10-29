@@ -150,7 +150,7 @@ per person is deleted in `functions/aOS/api` `remove`.
   don't restyle it in the app. Device controls in Home keep the Signal dashboard's own switches.
 - **Claude, app by app, on this phone**: an app that asks Claude (through its own server route) lists
   those routes in `CLAUDE` in `../home/account.js` and its name and what it uses Claude for in
-  `AllisonOS.claude.apps` (aOS Account > Claude shows that list), and its Settings > AI helper section
+  `AllisonOS.claude.apps` (aOS Account > AI helper shows that list), and its Settings > AI helper section
   starts with `S.claude('<id>')`, Use Claude in …. Turned off, `account.js` answers those routes on the
   phone with `{ error: 'ai-off' }` (503) and nothing leaves: the app says so in its own words (as
   for `no-ai`) and stops what it was doing with Claude, and everything else works as before.

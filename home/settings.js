@@ -205,10 +205,10 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
     // anything else that lives in a group (the Design picker, a list of chips): given as it is
     raw: (html, o = {}) => `<div class="st-row st-raw"${attrs(o)}>${html}</div>`,
     // Claude for this app on this phone (AllisonOS.claude, ../home/account.js): the first row of the app's AI helper
-    // section. It turns itself (below), so the page doesn't handle it.
+    // section, and the same row in aOS Account > AI helper's list. It turns itself (below), so the page doesn't handle it.
     claude(app) {
       const C = A.claude, e = C && C.apps.find(x => x[0] === app); if (!e) return '';
-      return S.toggle({ id: 'stClaude', title: 'Use Claude in ' + e[1], sub: 'Turned off, nothing in ' + e[1] + ' goes to Claude from this phone.', on: C.on(app), data: { claude: app } });
+      return S.toggle({ id: 'claude-' + app, title: 'Use Claude in ' + e[1], sub: e[2], on: C.on(app), data: { claude: app } });
     },
     // a switch turned: its new state
     flip(btn) { const on = btn.getAttribute('aria-checked') !== 'true'; btn.setAttribute('aria-checked', String(on)); return on; },

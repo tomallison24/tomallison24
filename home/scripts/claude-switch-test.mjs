@@ -1,9 +1,9 @@
-// Claude, app by app, on this phone (home/account.js AllisonOS.claude, home/settings.js S.claude, aOS Account > Claude):
+// Claude, app by app, on this phone (home/account.js AllisonOS.claude, home/settings.js S.claude, aOS Account > AI helper):
 //   - turned off for an app, a call to any of its Claude routes is answered on the phone ({ error: 'ai-off' }, 503) and
 //     never reaches the server; its other routes, and another app's Claude routes, still go;
 //   - Ipsy in that app says Claude is turned off and sends nothing; turned on again, it asks as before;
 //   - an app's Settings > AI helper starts with Use Claude in <app>, which turns it (and tells the page, aos:claude);
-//   - aOS Account > Claude lists every app with a switch, says which are off, and keeps the choice on this phone only;
+//   - aOS Account > AI helper lists every app with a switch, says which are off, and keeps the choice on this phone only;
 //   - Orders, opened with Claude off, shows its row off and doesn't offer to check orders by itself.
 //   node home/scripts/claude-switch-test.mjs [repo root]
 import { createRequire } from 'module';
@@ -89,7 +89,7 @@ const post = (p, url) => p.evaluate(async u => { const r = await fetch(u, { meth
   const { ctx, p, errs, hits } = await phone({ 'aos.claude.notes': 'off' }); const pr = [];
   await p.goto(BASE + '/claude.html');
   const row = p.locator('#sheet .st-switch[data-claude="notes"]');
-  if ((await row.textContent()).replace(/\s+/g, ' ').trim() !== 'Use Claude in NotesTurned off, nothing in Notes goes to Claude from this phone.') pr.push('the row says: ' + await row.textContent());
+  if ((await row.textContent()).replace(/\s+/g, ' ').trim() !== 'Use Claude in NotesChats with Ipsy.') pr.push('the row says: ' + await row.textContent());
   if (await row.getAttribute('aria-checked') !== 'false') pr.push('the row is not off');
   await p.evaluate(() => chat.prompt('What’s on my list?'));
   await p.waitForFunction(() => /Claude is turned off for Notes on this phone\. Settings, AI helper turns it back on\./.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 5000 })
@@ -108,18 +108,21 @@ const post = (p, url) => p.evaluate(async u => { const r = await fetch(u, { meth
   report('Ipsy in an app Claude is off for says so and sends nothing; Settings > AI helper, Use Claude in Notes, turns it back on', pr); await ctx.close();
 }
 
-// 3. aOS Account > Claude: every app, which are off, kept on this phone only
+// 3. aOS Account > AI helper: every app, which are off, kept on this phone only
 {
   const { ctx, p, errs } = await phone({ 'aos.claude.money': 'off' }); const pr = [];
   await p.goto(BASE + '/aOS/'); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
-  await p.click('#today [data-acct]'); await p.click('[aria-controls="fClaude"]'); await p.waitForSelector('#fClaude .st-switch');
-  const rows = await p.locator('#fClaude .st-switch').evaluateAll(es => es.map(e => e.dataset.claude + ':' + e.getAttribute('aria-checked')));
+  await p.click('#today [data-acct]'); await p.click('[aria-controls="fHelper"]'); await p.waitForSelector('#fHelper .st-switch[data-claude]');
+  const rows = await p.locator('#fHelper .st-switch[data-claude]').evaluateAll(es => es.map(e => e.dataset.claude + ':' + e.getAttribute('aria-checked')));
+  const titles = await p.locator('#fHelper .st-switch[data-claude] .st-title').allTextContents();
+  if (titles[0] !== 'Use Claude in aOS Home' || titles[7] !== 'Use Claude in Orders') pr.push('the rows aren\'t the apps\' own (Use Claude in …): ' + titles);
+  if (await p.locator('[aria-controls="fHelper"] b').textContent() !== 'AI helper') pr.push('the heading is not AI helper');
   if (rows.join() !== 'aos:true,calendar:true,fitness:true,meals:true,money:false,news:true,notes:true,orders:true,podcasts:true,travel:true') pr.push('the list: ' + rows);
-  if (await p.locator('#claudeSub').textContent() !== 'Not used by Money') pr.push('the line under Claude: ' + await p.locator('#claudeSub').textContent());
-  await p.click('#fClaude [data-claude="orders"]');
-  await p.waitForFunction(() => document.getElementById('claudeSub').textContent === 'Not used by Money and Orders', null, { timeout: 2000 }).catch(async () => pr.push('after Orders: ' + await p.locator('#claudeSub').textContent()));
-  await p.click('#fClaude [data-claude="money"]');
-  await p.waitForFunction(() => document.getElementById('claudeSub').textContent === 'Not used by Orders', null, { timeout: 2000 }).catch(async () => pr.push('after Money: ' + await p.locator('#claudeSub').textContent()));
+  if (!(await p.locator('#claudeSub').textContent()).startsWith('Not used by Money. Turned off, nothing')) pr.push('the line under Claude: ' + await p.locator('#claudeSub').textContent());
+  await p.click('#fHelper [data-claude="orders"]');
+  await p.waitForFunction(() => document.getElementById('claudeSub').textContent.startsWith('Not used by Money and Orders. '), null, { timeout: 2000 }).catch(async () => pr.push('after Orders: ' + await p.locator('#claudeSub').textContent()));
+  await p.click('#fHelper [data-claude="money"]');
+  await p.waitForFunction(() => document.getElementById('claudeSub').textContent.startsWith('Not used by Orders. '), null, { timeout: 2000 }).catch(async () => pr.push('after Money: ' + await p.locator('#claudeSub').textContent()));
   const kept = await p.evaluate(() => ({ orders: localStorage.getItem('aos.claude.orders'), money: localStorage.getItem('aos.claude.money') }));
   if (kept.orders !== 'off' || kept.money !== null) pr.push('kept: ' + JSON.stringify(kept));
   const r = await post(p, '../orders/api/read');
@@ -127,7 +130,7 @@ const post = (p, url) => p.evaluate(async u => { const r = await fetch(u, { meth
   const sync = fs.readFileSync(path.join(ROOT, 'functions/aOS/api/[[route]].js'), 'utf8').match(/export const PREF_ITEM = (\/.*\/);/);
   if (!sync || new RegExp(sync[1].slice(1, -1)).test('aos.claude.orders')) pr.push('aos.claude.* would follow you to your other devices (PREF_ITEM)');
   pr.push(...errs);
-  report('aOS Account > Claude: every app with a switch, the line says which are off, kept on this phone only', pr); await ctx.close();
+  report('aOS Account > AI helper: every app\'s own row (Use Claude in …), the line says which are off, kept on this phone only', pr); await ctx.close();
 }
 
 // 4. Orders, opened with Claude off: Settings > AI helper starts with its row, off
