@@ -18,6 +18,7 @@
   const slide = (window.AllisonOS && window.AllisonOS.slide) || (() => {});
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const I = {
+    tag:'<svg viewBox="0 0 24 24"><path d="M3.6 12.5V5a1.4 1.4 0 0 1 1.4-1.4h7.5l7.9 7.9a1.4 1.4 0 0 1 0 2l-6.5 6.5a1.4 1.4 0 0 1-2 0z"/><circle cx="8.3" cy="8.3" r="1.5"/></svg>',
     play:'<svg viewBox="0 0 24 24" class="f"><path d="M7.4 4.8v14.4a1.1 1.1 0 0 0 1.7.9l11.2-7.2a1.1 1.1 0 0 0 0-1.8L9.1 3.9a1.1 1.1 0 0 0-1.7.9z"/></svg>',
     pause:'<svg viewBox="0 0 24 24" class="f"><rect x="5.8" y="4.4" width="4.4" height="15.2" rx="1.4"/><rect x="13.8" y="4.4" width="4.4" height="15.2" rx="1.4"/></svg>',
     bm:'<svg viewBox="0 0 24 24"><path d="M6.4 4.8a2 2 0 0 1 2-2h7.2a2 2 0 0 1 2 2v15.3a.6.6 0 0 1-1 .5L12 16.9l-4.6 3.7a.6.6 0 0 1-1-.5z"/></svg>',
@@ -223,12 +224,15 @@
     return (d.body.textContent || '').replace(/\s+/g, ' ').trim();
   }
 
+  // The Library's tags ("TAGS", further down): the same list as functions/podcasts/api's.
+  const TAGS = ['Music', 'Talk', 'News', 'Comedy', 'True Crime', 'Sport', 'Education', 'Kids', 'Business', 'Health', 'Society', 'Other'];
+
   // =====================================================================
   // WHAT SYNCS WITH THE FAMILY'S GOOGLE SHEET (the syncing itself is near the end)
   // Four kinds, each item with an id and `updated` (stamped on any change), and
   // a grave (S.graves, kind:id -> when) for anything deleted, so your other
   // phones delete it too (as in Fitness):
-  //   shows  what you follow (S.follows; id: the show's id)
+  //   shows  what you follow (S.follows; id: the show's id), with its tags
   //   saved  your saved episodes (S.saved; id: the episode's key k; at: when saved)
   //   hist   History (S.hist; id: k; pl: when you played it)
   //   prog   where you got to, and what's played (S.prog; id: k)
@@ -267,11 +271,13 @@
   const SYNC = {
     shows: {
       items: () => S.follows.map(f => [f.id, f]),
-      out: (id, f) => ({id, feed: f.feed, title: f.title || '', author: f.author || '', art: f.art || '', genre: f.genre || '', at: f.at || 0}),
+      out: (id, f) => Object.assign({id, feed: f.feed, title: f.title || '', author: f.author || '', art: f.art || '', genre: f.genre || '', at: f.at || 0},
+        Array.isArray(f.tags) ? {tags: f.tags, tagBy: f.tagBy === 'you' ? 'you' : 'ai'} : {}),
       ok: r => !!webUrl(r.feed),
       // when its newest episode came out, and an error loading it, are this phone's own
-      in: (r, l) => ({id: r.id, feed: webUrl(r.feed), title: str(r.title), author: str(r.author), art: media(r.art), genre: str(r.genre), at: +r.at || 0,
-        latest: (l && l.latest) || 0, err: (l && l.err) || '', updated: +r.updated || 0}),
+      in: (r, l) => Object.assign({id: r.id, feed: webUrl(r.feed), title: str(r.title), author: str(r.author), art: media(r.art), genre: str(r.genre), at: +r.at || 0,
+        latest: (l && l.latest) || 0, err: (l && l.err) || '', updated: +r.updated || 0},
+        Array.isArray(r.tags) ? {tags: TAGS.filter(t => r.tags.includes(t)), tagBy: r.tagBy === 'you' ? 'you' : 'ai'} : {}),
       set: list => { S.follows = list.sort(byNewest(f => f.at)).map(x => x[1]); }
     },
     saved: {
@@ -487,6 +493,7 @@
     $('refreshBtn').classList.remove('busy');
     syncPill('done', fresh ? fresh + (fresh === 1 ? ' new episode' : ' new episodes') : failed ? failed + (failed === 1 ? ' show couldn’t be checked' : ' shows couldn’t be checked') : 'Up to date');
     render();
+    tagSoon();
   }
   let pillTimer = 0;
   function syncPill(state, text){
@@ -524,6 +531,61 @@
   }, true);
 
   // =====================================================================
+  // TAGS: each show you follow gets one or two from TAGS (above), picked by Ipsy (Claude, through POST tags) from
+  // its title, author, genre and description, for the Library's tag chips.
+  // You can change them on the show's page; yours are never picked again.
+  // They sync with the shows (tags, and tagBy: 'ai' or 'you').
+  // =====================================================================
+  const TAG_MAX = 25;
+  let tagBusy = false, tagOff = false, tagTimer = 0;
+  const tagSoon = () => { clearTimeout(tagTimer); tagTimer = setTimeout(autoTag, 2500); };
+  async function autoTag(){
+    if (tagBusy || tagOff || apiGone || !signedIn() || navigator.onLine === false) return;
+    const todo = S.follows.filter(f => !Array.isArray(f.tags) && (f.title || shows.has(f.id))).slice(0, TAG_MAX);
+    if (!todo.length) return;
+    tagBusy = true;
+    let got = null;
+    try {
+      const body = JSON.stringify({shows: todo.map(f => { const sh = shows.get(f.id);
+        return {id: f.id, title: f.title || (sh && sh.title) || '', author: f.author || (sh && sh.author) || '', genre: f.genre || (sh && sh.genre) || '', desc: sh && sh.desc ? plain(sh.desc).slice(0, 400) : ''}; })});
+      const r = await AllisonOS.account.fetch('../podcasts/api/tags', {method:'POST', headers:{'X-Podcasts':'1', 'Content-Type':'application/json'}, body, cache:'no-store', credentials:'same-origin'}, {quiet: true});
+      if (r.ok) got = (await r.json()).tags || {};
+      else if ([401, 404, 405, 429, 503].includes(r.status)) tagOff = true;   // signed out, no server, today's limit, no key: not again this session
+    } catch(e) {}
+    tagBusy = false;
+    if (!got) return;
+    let n = 0;
+    todo.forEach(({id}) => {
+      const f = followOf(id);
+      if (!f || Array.isArray(f.tags)) return;   // unfollowed, or tagged by you, meanwhile
+      const t = TAGS.filter(x => [].concat(got[id] || []).includes(x)).slice(0, 2);
+      f.tags = t.length ? t : ['Other']; f.tagBy = 'ai'; n++;
+    });
+    if (!n) return;
+    save(); render();
+    toast('Ipsy tagged ' + n + (n === 1 ? ' show' : ' shows'));
+    if (todo.length === TAG_MAX) tagSoon();
+  }
+  // A show's tags, chosen in a small sheet that stays open while you pick; or Ipsy picks again.
+  function tagMenu(id){
+    const f = followOf(id);
+    if (!f) return;
+    const has = new Set(f.tags || []);
+    const rows = TAGS.map(t => ({label: t, on: has.has(t), stay: true, run: () => {
+      const g = followOf(id); if (!g) return;
+      const now = new Set(g.tags || []); if (now.has(t)) now.delete(t); else now.add(t);
+      g.tags = TAGS.filter(x => now.has(x)); g.tagBy = 'you';
+      save(); render(); tagMenu(id);
+    }}));
+    if (signedIn()) rows.push({label: 'Let Ipsy Pick', sub: 'From the show’s description', icon: I.tag, run: () => {
+      const g = followOf(id); if (!g) return;
+      delete g.tags; delete g.tagBy; tagOff = false;
+      save(); render(); autoTag();
+    }});
+    choose('Tags', rows);
+  }
+
+  // =====================================================================
   // FOLLOWING, SAVED, UP NEXT, PLAYED
   // =====================================================================
   function follow(meta){
@@ -539,6 +601,7 @@
     if (sh) adopt(sh);
     else loadShow(feed, id, meta).then(render, e => { const f = followOf(id); if (f) { f.err = e.message; save(); } render(); });
     render();
+    tagSoon();
   }
   function unfollow(id){
     const i = S.follows.findIndex(f => f.id === id);
@@ -572,21 +635,6 @@
   }
   const resumeAt = e => { const p = S.prog[e.k]; return p && !p.p && p.t > 2 ? Math.max(0, p.t - 2) : 0; };
 
-  // Up Next, as on the iPhone: what's playing, your queue, what you're part
-  // way through, then the newest unplayed episode of each show you follow.
-  function upNext(){
-    const out = [], seen = new Set();
-    const add = e => { if (e && !seen.has(e.k) && !isPlayed(e.k)) { seen.add(e.k); out.push(e); } };
-    if (cur) add(getEp(cur.k) || cur);
-    S.queue.forEach(x => add(getEp(x.k) || x));
-    Object.entries(S.prog).filter(([, p]) => p && !p.p && p.t > 0).sort((a, b) => (b[1].at || 0) - (a[1].at || 0)).slice(0, 12)
-      .forEach(([k, p]) => add(getEp(k) || p.e));
-    const since = Date.now() - 45 * DAY;
-    S.follows.map(f => shows.get(f.id)).filter(Boolean)
-      .map(sh => sh.eps.find(e => e.x !== 'trailer')).filter(e => e && e.d > since && !S.prog[e.k])
-      .sort((a, b) => b.d - a.d).forEach(add);
-    return out.slice(0, 16);
-  }
   function newEpisodes(){
     const all = [];
     S.follows.forEach(f => { const sh = shows.get(f.id); if (sh) all.push(...sh.eps.slice(0, 40)); });
@@ -596,9 +644,10 @@
   // =====================================================================
   // RENDERING
   // =====================================================================
-  const st = {tab:'home', lib:'shows', newFilter:'all', newLimit:30, q:'', results:null, searching:false, searchErr:'',
+  // Library is the app's page (Listen Now went: its New Episodes are Library's New); Search is the round button.
+  const st = {tab:'lib', lib:'shows', tag:'', newFilter:'all', newLimit:30, q:'', results:null, searching:false, searchErr:'',
     top:null, topErr:'', topCc:'', show:null, showMeta:null, showErr:'', showFilter:'all', showSort:'new', showLimit:40, descOpen:false, scroll:{}};
-  try { const t = localStorage.getItem(KEY + '-tab'); if (t === 'lib' || t === 'search') st.tab = t; const l = localStorage.getItem(KEY + '-lib'); if (l === 'saved' || l === 'hist') st.lib = l; } catch(e) {}
+  try { const t = localStorage.getItem(KEY + '-tab'); if (t === 'search') st.tab = t; const l = localStorage.getItem(KEY + '-lib'); if (l === 'new' || l === 'saved' || l === 'hist') st.lib = l; } catch(e) {}
 
   function pill(e, big){
     const p = S.prog[e.k], isCur = cur && cur.k === e.k, on = isCur && !player.paused;
@@ -625,47 +674,49 @@
       + '<button class="icbtn" type="button" data-save="' + esc(e.k) + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Remove from Saved' : 'Save episode') + '">' + (saved ? I.bmOn : I.bm) + '</button>'
       + '<button class="icbtn" type="button" data-more="' + esc(e.k) + '" aria-label="More for this episode">' + I.more + '</button></div></article>';
   }
-  const upCard = (e, i) => '<article class="upcard glass" style="--i:' + i + '"><button class="uptop" type="button" data-ep="' + esc(e.k) + '">' + art(e.sa, 64)
-    + '<span class="uptx" translate="no"><span class="upm">' + esc(e.st) + '</span><span class="upt">' + esc(e.t) + '</span></span></button>'
-    + '<div class="upbar">' + pill(e) + '<span class="upd">' + esc(day(e.d)) + '</span></div></article>';
   const chip = (act, label, on, n) => '<button class="chip glass" type="button" data-act="' + act + '" aria-pressed="' + !!on + '">' + label + (n != null ? ' <span class="n">' + n + '</span>' : '') + '</button>';
   const emptyCard = (title, text, btn) => '<div class="empty glass">' + I.headph + '<strong>' + title + '</strong>' + (text ? '<span>' + text + '</span>' : '') + (btn || '') + '</div>';
   // A row of filter chips where one is chosen: its thumb (a new show's jumps).
   const slideChips = (el, key, opt) => { const c = el.querySelector('.chips'); if (c) slide(c, c.querySelector('.chip[aria-pressed="true"]:not([data-act="sort"])'), key, opt); };
   function animateIn(el){ el.classList.add('enter'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('enter'), 900); }
 
-  function renderHome(){
-    $('homeSub').textContent = S.follows.length && S.lastRefresh ? 'Checked ' + ago(S.lastRefresh) : '';
-    $('refreshBtn').hidden = !S.follows.length;
-    const up = upNext();
-    let h = '';
-    if (up.length) h += '<section><p class="sechead">Up Next</p><div class="shelf">' + up.map(upCard).join('') + '</div></section>';
-    if (!S.follows.length) {
-      h += emptyCard('Find something to listen to', 'Follow a show to see its new episodes.',
-        '<button class="btn" type="button" data-act="go-search">' + I.search + 'Search podcasts</button>');
-    } else {
-      const all = newEpisodes(), hasVideo = all.some(e => e.v);
-      const list = all.filter(e => st.newFilter === 'unplayed' ? !isPlayed(e.k) : st.newFilter === 'video' ? e.v : true);
-      h += '<section><p class="sechead">New Episodes</p><div class="chips">' + chip('new:all', 'All', st.newFilter === 'all') + chip('new:unplayed', 'Unplayed', st.newFilter === 'unplayed')
-        + (hasVideo ? chip('new:video', I.video + 'Video', st.newFilter === 'video') : '') + '</div>';
-      if (!all.length && !refreshing && S.follows.every(f => f.err)) h += '<div class="notice glass"><span>' + esc(S.follows[0].err) + '</span><button class="linkbtn" type="button" data-act="refresh">Try again</button></div>';
-      else if (!all.length) h += '<div class="skel"></div><div class="skel"></div>';
-      else if (!list.length) h += '<div class="empty glass"><span>Nothing here.</span></div>';
-      else {
-        h += '<div class="rgroup glass">' + list.slice(0, st.newLimit).map((e, i) => epRow(e, true, i)).join('') + '</div>';
-        if (list.length > st.newLimit) h += '<button class="morebtn" type="button" data-act="new-more">Show more</button>';
-      }
-      h += '</section>';
+  // New: the newest episodes of every show you follow, with All / Unplayed / Video.
+  function newList(){
+    const all = newEpisodes(), hasVideo = all.some(e => e.v);
+    const list = all.filter(e => st.newFilter === 'unplayed' ? !isPlayed(e.k) : st.newFilter === 'video' ? e.v : true);
+    let h = '<div class="chips">' + chip('new:all', 'All', st.newFilter === 'all') + chip('new:unplayed', 'Unplayed', st.newFilter === 'unplayed')
+      + (hasVideo ? chip('new:video', I.video + 'Video', st.newFilter === 'video') : '') + '</div>';
+    if (!all.length && !refreshing && S.follows.every(f => f.err)) h += '<div class="notice glass"><span>' + esc(S.follows[0].err) + '</span><button class="linkbtn" type="button" data-act="refresh">Try again</button></div>';
+    else if (!all.length) h += '<div class="skel"></div><div class="skel"></div>';
+    else if (!list.length) h += '<div class="empty glass"><span>Nothing here.</span></div>';
+    else {
+      h += '<div class="rgroup glass">' + list.slice(0, st.newLimit).map((e, i) => epRow(e, true, i)).join('') + '</div>';
+      if (list.length > st.newLimit) h += '<button class="morebtn" type="button" data-act="new-more">Show more</button>';
     }
-    $('homeBody').innerHTML = h;
-    slideChips($('homeBody'), 'new');
+    return h;
+  }
+  // Shows, as a grid of artwork, with a chip for each tag in use (TAGS, above).
+  function showGrid(){
+    const used = TAGS.filter(t => S.follows.some(f => (f.tags || []).includes(t)));
+    if (st.tag && !used.includes(st.tag)) st.tag = '';
+    const list = [...S.follows].filter(f => !st.tag || (f.tags || []).includes(st.tag))
+      .sort((a, b) => (b.latest || 0) - (a.latest || 0) || (b.at || 0) - (a.at || 0));
+    return (used.length ? '<div class="chips tagchips">' + chip('tag:', 'All', !st.tag)
+        + used.map(t => chip('tag:' + t, esc(t), st.tag === t, S.follows.filter(f => (f.tags || []).includes(t)).length)).join('') + '</div>' : '')
+      + '<div class="sgrid">' + list.map((f, i) => {
+        const sh = shows.get(f.id), title = f.title || (sh && sh.title) || 'Loading…';
+        return '<button class="stile" type="button" data-show="' + esc(f.id) + '" style="--i:' + i + '">' + art(f.art || (sh && (sh.itArt || sh.art)), 0, 'fill')
+          + '<span class="sn"' + (f.title || sh ? ' translate="no"' : '') + '>' + esc(title) + '</span>'
+          + (f.err && !sh ? '<span class="sm err">Couldn’t load</span>' : '<span class="sm">' + esc([f.latest ? day(f.latest) : '', (f.tags || []).join(', ')].filter(Boolean).join(' · ')) + '</span>') + '</button>';
+      }).join('') + '</div>';
   }
 
   function renderLib(){
-    const tabs = [['shows', 'Shows', S.follows.length], ['saved', 'Saved', S.saved.length], ['hist', 'History', null]];
+    const tabs = [['shows', 'Shows', S.follows.length], ['new', 'New', null], ['saved', 'Saved', S.saved.length], ['hist', 'History', null]];
     $('libChips').innerHTML = tabs.map(([id, label, n]) => chip('lib:' + id, label, st.lib === id, n || null)).join('');
     slideChips($('libView'), 'lib');
-    $('libSub').textContent = '';
+    $('libSub').textContent = st.lib === 'new' && S.follows.length && S.lastRefresh ? 'Checked ' + ago(S.lastRefresh) : '';
+    $('refreshBtn').hidden = !S.follows.length;
     let h = '';
     if (st.lib === 'saved') {
       const eps = S.saved.map(x => getEp(x.k) || x);
@@ -678,18 +729,11 @@
       h = eps.length ? '<div class="rgroup glass">' + eps.map((e, i) => epRow(e, true, i)).join('') + '</div>' + more + '<button class="morebtn" type="button" data-act="hist-clear">Clear history</button>'
         : emptyCard('Nothing played yet', '') + more;
     } else if (!S.follows.length) {
-      h = emptyCard('No shows yet', '',
+      h = emptyCard(st.lib === 'new' ? 'Find something to listen to' : 'No shows yet', st.lib === 'new' ? 'Follow a show to see its new episodes.' : '',
         '<button class="btn" type="button" data-act="go-search">' + I.search + 'Search podcasts</button>');
-    } else {
-      const list = [...S.follows].sort((a, b) => (b.latest || 0) - (a.latest || 0) || (b.at || 0) - (a.at || 0));
-      h = '<div class="sgrid">' + list.map((f, i) => {
-        const sh = shows.get(f.id), title = f.title || (sh && sh.title) || 'Loading…';
-        return '<button class="stile" type="button" data-show="' + esc(f.id) + '" style="--i:' + i + '">' + art(f.art || (sh && (sh.itArt || sh.art)), 0, 'fill')
-          + '<span class="sn"' + (f.title || sh ? ' translate="no"' : '') + '>' + esc(title) + '</span>'
-          + (f.err && !sh ? '<span class="sm err">Couldn’t load</span>' : '<span class="sm">' + esc(f.latest ? day(f.latest) : '') + '</span>') + '</button>';
-      }).join('') + '</div>';
-    }
+    } else h = st.lib === 'new' ? newList() : showGrid();
     $('libBody').innerHTML = h;
+    slideChips($('libBody'), st.lib === 'new' ? 'new' : 'tag');
   }
 
   const looksLikeFeed = q => /^(https?:\/\/|feed:\/\/|www\.)\S+$/i.test(q) || /^[\w-]+(\.[\w-]+)+\/\S*$/.test(q);
@@ -766,6 +810,7 @@
     let h = '<div class="hero">' + art(pic, Math.min(220, Math.round(innerWidth * .56)))
       + '<h2' + (title ? ' translate="no"' : '') + '>' + esc(title || 'Loading…') + '</h2>' + (author ? '<span class="by" translate="no">' + esc(author) + '</span>' : '')
       + (meta ? '<span class="hm">' + esc(meta) + '</span>' : '')
+      + (f ? '<button class="linkbtn tagline" type="button" data-act="tags">' + I.tag + esc((f.tags || []).join(' · ') || 'Add tags') + '</button>' : '')
       + '<button class="pillbtn follow' + (f ? '' : ' bluec') + '" type="button" data-act="follow-show"' + (sh || m.feed ? '' : ' disabled') + '>' + (f ? I.check + 'Following' : I.plus + 'Follow') + '</button></div>';
     if (sh && sh.desc) h += '<p class="desc' + (st.descOpen ? ' open' : '') + '" data-act="desc" translate="no">' + esc(plain(sh.desc)) + '</p>';
     if (!sh) {
@@ -789,7 +834,6 @@
 
   function render(){
     if (st.show) renderShow();
-    else if (st.tab === 'home') renderHome();
     else if (st.tab === 'lib') renderLib();
     else renderSearch();
     renderMini();
@@ -805,21 +849,17 @@
   }
 
   // =====================================================================
-  // VIEWS: the three tabs, and a show pushed on top of one
+  // VIEWS: Library, Search, and a show pushed on top of one
   // =====================================================================
   function showViews(){
-    $('homeView').hidden = st.show || st.tab !== 'home';
     $('libView').hidden = st.show || st.tab !== 'lib';
     $('searchView').hidden = st.show || st.tab !== 'search';
     $('showView').hidden = !st.show;
-    document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === st.tab)));
     $('searchTab').setAttribute('aria-pressed', String(st.tab === 'search'));
-    slideTabs();
+    $('searchTab').setAttribute('aria-label', st.tab === 'search' ? 'Close search' : 'Search');
   }
-  // The tab bar's thumb; it goes while Search (its own button) is chosen.
-  const slideTabs = jump => { const t = document.querySelector('.tabs'); slide(t, t.querySelector('.tab[aria-selected="true"]'), 'tabs', {jump}); };
   const reslide = () => {
-    slideTabs(true); slideChips($('libView'), 'lib', {jump:true}); slideChips($('homeBody'), 'new', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true}); slideOpts(true);
+    slideChips($('libView'), 'lib', {jump:true}); slideChips($('libBody'), st.lib === 'new' ? 'new' : 'tag', {jump:true}); slideChips($('showBody'), 'sf', {group: st.show, jump:true}); slideOpts(true);
   };
   window.addEventListener('resize', reslide);
   window.addEventListener('aos:design', () => requestAnimationFrame(reslide));   // Futura and the system font are different widths
@@ -830,7 +870,7 @@
     st.tab = t;
     try { localStorage.setItem(KEY + '-tab', t); } catch(e) {}
     showViews(); render();
-    animateIn($(t === 'home' ? 'homeBody' : t === 'lib' ? 'libBody' : 'searchBody'));
+    animateIn($(t === 'lib' ? 'libBody' : 'searchBody'));
     requestAnimationFrame(() => window.scrollTo(0, st.scroll[t] || 0));
     if (t === 'search') loadTop();
   }
@@ -870,8 +910,9 @@
     addEventListener('touchstart', e => { const t = e.touches[0]; sx = st.show && e.touches.length === 1 && t.clientX < 28 && document.querySelectorAll('.sheetwrap:not([hidden])').length === 0 ? t.clientX : null; sy = t.clientY; }, {passive:true});
     addEventListener('touchend', e => { if (sx == null) return; const t = e.changedTouches[0]; if (t.clientX - sx > 80 && Math.abs(t.clientY - sy) < 60) closeShow(); sx = null; }, {passive:true});
   })();
-  document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
-  $('searchTab').onclick = () => { setTab('search'); };
+  // the round button opens Search, and closes it again (as does Search's back arrow)
+  $('searchTab').onclick = () => { setTab(st.tab === 'search' && !st.show ? 'lib' : 'search'); };
+  $('searchBack').onclick = () => setTab('lib');
 
   $('q').addEventListener('input', () => { st.q = $('q').value; st.results = null; st.searchErr = ''; clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 380); renderSearch(); });
   $('qForm').addEventListener('submit', e => { e.preventDefault(); clearTimeout(searchTimer); $('q').blur(); runSearch(); });
@@ -953,7 +994,7 @@
       + (r.on ? '<span class="tick">' + I.check + '</span>' : '') + '</button>').join('');
     openSheet('actSheet');
   }
-  $('actRows').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; const r = choices[+b.dataset.i]; closeSheet('actSheet'); if (r) r.run(); });
+  $('actRows').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; const r = choices[+b.dataset.i]; if (r && r.stay) { r.run(); return; } closeSheet('actSheet'); if (r) r.run(); });
 
   async function share(title, text, url){
     if (navigator.share) { try { await navigator.share({title, text, url}); return; } catch(e) { if (e.name === 'AbortError') return; } }
@@ -991,6 +1032,7 @@
       try { await loadShow(feed, id, st.showMeta); toast('Up to date'); } catch(e) { toast(e.message || 'Couldn’t update'); }
       if (st.show === id) renderShow();
     }});
+    if (f) rows.push({label:'Tags', sub:(f.tags || []).join(', ') || 'None yet', icon:I.tag, run:() => tagMenu(id)});
     if (f) rows.push({label:'Unfollow', icon:I.unfollow, danger:true, run:() => unfollow(id)});
     choose((sh && sh.title) || (f && f.title) || 'Show', rows, !!((sh && sh.title) || (f && f.title)));
   };
@@ -1100,8 +1142,10 @@
   });
   function act(a){
     if (a === 'go-search') setTab('search');
-    else if (a.startsWith('new:')) { st.newFilter = a.slice(4); st.newLimit = 30; renderHome(); }
-    else if (a === 'new-more') { st.newLimit += 30; renderHome(); }
+    else if (a.startsWith('new:')) { st.newFilter = a.slice(4); st.newLimit = 30; renderLib(); }
+    else if (a === 'new-more') { st.newLimit += 30; renderLib(); }
+    else if (a.startsWith('tag:')) { st.tag = a.slice(4); renderLib(); animateIn($('libBody')); }
+    else if (a === 'tags') tagMenu(st.show);
     else if (a.startsWith('lib:')) { st.lib = a.slice(4); try { localStorage.setItem(KEY + '-lib', st.lib); } catch(e) {} renderLib(); animateIn($('libBody')); }
     else if (a === 'hist-clear') { const h = S.hist; S.hist = []; save(); renderLib(); toast('History cleared', () => { S.hist = h; save(); renderLib(); }); }
     else if (a === 'hist-older') loadOlder();
@@ -1607,12 +1651,13 @@
     if (S.now) cur = S.now;
     await Promise.all(S.follows.map(f => ensureShow(f.id)));
     showViews(); render();
-    animateIn($(st.tab === 'home' ? 'homeBody' : st.tab === 'lib' ? 'libBody' : 'searchBody'));
+    animateIn($(st.tab === 'lib' ? 'libBody' : 'searchBody'));
     if (st.tab === 'search') loadTop();
     // A shared show: ?feed=<feed link>
     const shared = new URLSearchParams(location.search).get('feed');
     if (shared && webUrl(shared)) { history.replaceState(null, '', location.pathname); openShow({feed: shared}); }
     if (Date.now() - S.lastRefresh > 20 * MIN) setTimeout(() => refreshAll(false), 700);
+    else tagSoon();
     // Once a day: forget stored shows nothing uses any more.
     if (Date.now() - S.lastClean > DAY) setTimeout(() => {
       const keep = new Set([...S.follows.map(f => f.id), ...[S.now, ...S.queue, ...S.saved, ...S.hist].filter(Boolean).map(e => e.sid)]);

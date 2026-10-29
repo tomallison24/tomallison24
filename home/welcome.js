@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of seven helpers to pick from'],
-      notes: ['Podcasts\' Search no longer stops at "The server answered 429" when Apple\'s directory is busy: searches and Top shows are remembered for a while, a busy moment tries Apple from your phone, and Podcast Index answers instead once its key is set up; otherwise it says to try again in a minute or paste the show\'s RSS link.',
+      notes: ['Podcasts is one page now, Library: Listen Now is gone, and its new episodes are Library\'s New. Ipsy tags each show you follow (Music, Talk, News, Comedy and more), Library\'s Shows can be filtered by tag, and you change a show\'s tags on its page (they follow you to your other phones).',
+        'Podcasts\' Search no longer stops at "The server answered 429" when Apple\'s directory is busy: searches and Top shows are remembered for a while, a busy moment tries Apple from your phone, and Podcast Index answers instead once its key is set up; otherwise it says to try again in a minute or paste the show\'s RSS link.',
         'Travel reads Gmail 90 emails at a time, newest first, so your upcoming trips come in first; a longer read (the first one goes back a year) carries on after a minute\'s break, the most Gmail lets an app read without slowing it down. And Ipsy fills in what new bookings are missing by itself (Settings > Smart help turns it off): a booking it completes goes straight to Upcoming instead of waiting in To check, with Undo in Ipsy\'s chat',
         'Your helper dresses for the weather where you are (from Weather\'s forecast on your phone): an umbrella in the rain, a scarf when it\'s chilly, a coat when it\'s cold, a woolly hat in snow, and a sun hat and sunglasses on a warm sunny day. In Tron, Ares keeps his suit and takes an umbrella. Turn it off in Account, Your helper (or ask Ipsy).',
         'aOS Home in Layers is its own: the weather and what\'s next on the sky, then every app on one screen, four across, as raised round buttons with a line drawing tinted by its group. The top row is yours, and nothing moves unless you move it: Edit, then tap two apps to swap them (kept on your other devices too). Thumb arc is still there in Account > Appearance > Home layout',
@@ -792,8 +793,13 @@
       "cards": [
         {
           "i": "play",
-          "t": "Up Next",
-          "d": "Listen Now shows what's playing, your queue, episodes you're part way through, and new episodes from your shows."
+          "t": "Your library",
+          "d": "Your shows, their new episodes, what you saved and your history, all on one page."
+        },
+        {
+          "i": "tag",
+          "t": "Tagged for you",
+          "d": "Ipsy tags each show you follow, like Music, Talk or News, so you can filter your shows. Change the tags on a show's page."
         },
         {
           "i": "search",
@@ -2060,15 +2066,15 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '.tabs .tab[data-tab="rem"]', t: 'Smart grocery lists', d: 'Grocery items sort into store sections in aisle order, and it learns where you like things to go.' },
     { sel: '#fab', t: 'Write it down', d: 'Tap the pencil for a new note. Notes and lists can be shared with the family.', g: 'tap' },
   ] };
-  const UP_NEXT = { key: 'pod-up', into: '#homeBody', html: `<section><p class="sechead">Up Next</p><div class="shelf"><article class="upcard glass" style="--i:0">
+  const UP_NEXT = { key: 'pod-up', into: '#libBody', hide: '#libBody .empty', html: `<section><p class="sechead">Up Next</p><div class="shelf"><article class="upcard glass" style="--i:0">
         <button class="uptop" type="button" tabindex="-1"><span class="art" style="--s:64px"></span><span class="uptx"><span class="upm">Your favorite show</span><span class="upt">The newest episode</span></span></button>
         <div class="upbar"><button class="playpill" type="button" tabindex="-1"><span class="pbar"><i style="width:40%"></i></span><span>18 min left</span></button><span class="upd">Today</span></div></article></div></section>` };
   SPOTS.podcasts = { stops: [
-    { sel: '#homeBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Up Next', d: 'Listen Now shows what’s playing, your queue, episodes you’re part way through, and new episodes from your shows.' },
-    { sel: '#homeBody [data-aos-demo="pod-up"] .playpill', demo: UP_NEXT, pad: 6, t: 'Resume where you left off', d: 'Each episode resumes right where you stopped, and the next one in Up Next plays when it ends.', g: 'tap' },
-    { sel: '#homeBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Listen your way', d: 'Play at 0.5× to 3×, skip back or forward, set a sleep timer, and AirPlay to a speaker or TV.', g: 'tap' },
+    { sel: '#libChips', t: 'Your library', d: 'Your shows, their new episodes, what you saved and your history, all on one page.', g: 'tap' },
+    { sel: ['#libBody .tagchips', '#libChips'], t: 'Tagged for you', d: 'Ipsy tags each show you follow, like Music, Talk or News, so you can filter your shows. Change the tags on a show’s page.', g: 'tap' },
+    { sel: '#libBody [data-aos-demo="pod-up"] .playpill', demo: UP_NEXT, pad: 6, t: 'Resume where you left off', d: 'Each episode resumes right where you stopped, and the next one in Up Next plays when it ends.', g: 'tap' },
+    { sel: '#libBody [data-aos-demo="pod-up"] .upcard', demo: UP_NEXT, pad: 4, t: 'Listen your way', d: 'Play at 0.5× to 3×, skip back or forward, set a sleep timer, and AirPlay to a speaker or TV.', g: 'tap' },
     { sel: '#searchTab', t: 'Find new shows', d: 'Browse Apple’s Top shows, search by name, or paste a show’s feed link. Private and premium feeds work too.', g: 'tap' },
-    { sel: '.tabs .tab[data-tab="lib"]', t: 'Your library', d: 'Every show you follow, with new episodes downloaded and ready.', g: 'tap' },
   ] };
   SPOTS.travel = { stops: [
     { sel: '#scanBtn', t: 'Fills itself from Gmail', d: 'Connect Gmail and your flight, hotel and rental car confirmations become trips on their own.', g: 'tap' },
@@ -2155,7 +2161,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and the Parent corner. Pick one in the Parent corner > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
-  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: ['#setBtn', '.tabs .tab[data-tab="lib"]'], travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
+  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
   for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
   let spotEnd = null;
   const onScreen = e => {
