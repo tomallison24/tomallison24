@@ -1485,7 +1485,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Ipsy's own check had a switch of its own (K.ipsyAuto); it's this one now. Turned off there, it stays off here, once.
   if (ls.get(K.ipsyAuto, '') === '0') ls.set(K.aiOn, '0');
   ls.del(K.ipsyAuto);
-  // Claude turned off for Travel on this phone (Settings > Ipsy, Use Claude in Travel; ../home/account.js): Ipsy doesn't fill in anything either
+  // Claude turned off for Travel on this phone (Settings > AI helper, Use Claude in Travel; ../home/account.js): Ipsy doesn't fill in anything either
   const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('travel');
   const aiOn = () => claudeOn() && ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null, aiModels = null;
@@ -2064,7 +2064,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.info({ id: 'stLive', title: 'Live flight status', sub: liveAvail === true ? 'Working: ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.' : liveAvail === false ? 'Not available on this copy of the site.' : 'Checking…' }),
       ])
       + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
-      + S.section('Ipsy', [
+      + S.section('AI helper', [
         S.claude('travel'),
         S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false || !claudeOn() }),
         PV ? S.toggle({ id: 'stIpsyGmailOpt', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('travel') }) : '',

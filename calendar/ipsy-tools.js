@@ -27,7 +27,7 @@
 //   private note or booking) are hidden: left out of everything Ipsy reads, and Family ones can't be
 //   changed. free_time still counts a private event's time as busy, as "Private", and nothing more.
 // - Gmail: emails behind private Travel bookings are left out (Travel's layer names them), and Gmail can
-//   be turned off for Ipsy altogether (Settings > Ipsy > Ipsy can search Gmail).
+//   be turned off for Ipsy altogether (Settings > AI helper > Ipsy can search Gmail).
 window.CalendarIpsy = function (app) {
   const I = app.I, TZ = app.TZ, st = app.st;
   const MIN = 60e3, D = 864e5;

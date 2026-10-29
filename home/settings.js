@@ -7,8 +7,8 @@
 // and builds its sheet's body from sections of rows (strings of HTML, put in with innerHTML):
 //
 //   const S = AllisonOS.settings;
-//   body.innerHTML = S.section('Ipsy', [
-//       S.claude('travel'),   // Use Claude in Travel, on this phone: first in every Ipsy section
+//   body.innerHTML = S.section('AI helper', [
+//       S.claude('travel'),   // Use Claude in Travel, on this phone: first in every AI helper section
 //       S.toggle({ id: 'stAi', title: 'Ipsy fills in what’s missing', sub: 'Completes new bookings from their emails.', on: true }),
 //       S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: 'Last checked 5 minutes ago.' }),
 //     ], { hint: 'Models: Check Haiku 5.5.' });
@@ -16,7 +16,7 @@
 // Every row takes { id, title, sub, disabled, data: { key: value } } (data-* attributes); titles and subs are
 // plain text (escaped here), or html: true to pass them as they are. A switch is aria-checked; S.flip(button)
 // turns it and says what it is now. A danger row asks again: S.armed(button) is true on the second tap.
-// The words: Design · the app's own · Connected accounts · Ipsy · Notifications · Your data · Family account,
+// The words: Design · the app's own · Connected accounts · AI helper · Notifications · Your data · Family account,
 // in that order; one sentence under a row at most, ending with a full stop; never "On." or "Off." in the words.
 (() => {
   'use strict';
@@ -29,7 +29,7 @@
    the same way.
 
    A sheet's body is sections, in this order, each one only where the app has it:
-     Design · the app's own · Connected accounts · Ipsy · Notifications · Your data · Family account
+     Design · the app's own · Connected accounts · AI helper · Notifications · Your data · Family account
    A section is a label, a group of rows, and at most one line under it. A row is one of:
      switch (st-switch)   on or off: the name, a sentence under it saying what it does, the switch
      choice (st-choice)   two or three options: a segmented control under the name
@@ -204,7 +204,7 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
     input: o => `<label class="st-row st-input">${text(o)}<input class="st-field" type="${esc(o.type || 'text')}" value="${esc(o.value || '')}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${attrs(o)} ${o.attrs || ''}></label>`,
     // anything else that lives in a group (the Design picker, a list of chips): given as it is
     raw: (html, o = {}) => `<div class="st-row st-raw"${attrs(o)}>${html}</div>`,
-    // Claude for this app on this phone (AllisonOS.claude, ../home/account.js): the first row of the app's Ipsy
+    // Claude for this app on this phone (AllisonOS.claude, ../home/account.js): the first row of the app's AI helper
     // section. It turns itself (below), so the page doesn't handle it.
     claude(app) {
       const C = A.claude, e = C && C.apps.find(x => x[0] === app); if (!e) return '';

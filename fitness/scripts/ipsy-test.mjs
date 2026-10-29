@@ -371,7 +371,7 @@ async function phone({ width = 390, design = 'glass', scheme = 'light', session 
 }
 const btnShown = page => page.evaluate(() => { const b = document.querySelector('.ipsy-btn'); return !!(b && b.offsetParent && !b.closest('[hidden]')); });
 
-await step('off by default: no Ipsy button; Settings > Ipsy turns it on (and the button stays after a reload), and off again (its chat goes too)', async () => {
+await step('off by default: no Ipsy button; Settings > AI helper turns it on (and the button stays after a reload), and off again (its chat goes too)', async () => {
   const { ctx, page, problems } = await phone();
   assert.equal(await btnShown(page), false, 'no button');
   assert.equal(await page.$('.ipsy-btn'), null, 'not even mounted');

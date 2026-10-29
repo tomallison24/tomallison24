@@ -47,7 +47,7 @@ with the details filled in.
   named and dated by them. Its emails are hidden too (the email, its thread,
   and any email that names its confirmation or flight number), in Calendar's
   Ipsy as well, and its Family calendar event is marked private. It still syncs
-  and shows as usual, and the family still sees it. **Settings → Ipsy can search Gmail** turns Ipsy's Gmail
+  and shows as usual, and the family still sees it. **Settings → AI helper can search Gmail** turns Ipsy's Gmail
   off altogether, on this phone.
 - **Just me** (on a booking of yours, or **Just me trip** on a trip's page) is
   something else: only you see it. It stays on your phone and in the family's

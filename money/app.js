@@ -580,9 +580,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const emailText = b => { const t = b.html ? P.htmlText(b.html) : P.decode(b.text || ''); const k = t.search(/If you have any questions|This email was sent to|You can update your\s+notification/i); return (k > 0 ? t.slice(0, k) : t).slice(0, 1500); };
   // Once a day, on the reader's phone: this month's transactions not checked yet, 20 to a call (POST check).
   const checkOn = () => ls.get(K.checkOff, '') !== '1';
-  // Claude turned off for Money on this phone (Settings > Ipsy, Use Claude in Money; ../home/account.js): no check, no ideas
+  // Claude turned off for Money on this phone (Settings > AI helper, Use Claude in Money; ../home/account.js): no check, no ideas
   const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('money');
-  const CLAUDE_OFF = 'Claude is turned off for Money on this phone (Settings, Ipsy).';
+  const CLAUDE_OFF = 'Claude is turned off for Money on this phone (Settings, AI helper).';
   async function dailyCheck(o) { updating('check', true); try { return await dailyCheckNow(o); } finally { updating('check', false); } }
   async function dailyCheckNow({ loud } = {}) {
     if (!claudeOn()) { if (loud) toast(CLAUDE_OFF); return; }
@@ -1044,7 +1044,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       { hint: 'In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.' });
     }
     const lc = D.lastCheck, ideas = sees && signed && s && s.can;
-    html += S.section('Ipsy', [
+    html += S.section('AI helper', [
       S.claude('money'),
       reader ? S.toggle({ id: 'checkOn', title: 'Check each day', sub: 'Ipsy checks each new transaction against its Monarch email; what passed is never checked again.', on: checkOn() }) : '',
       reader ? S.action({ id: 'checkNow', icon: 'refresh', title: 'Check now', sub: lc ? 'Last checked ' + ago(lc.at) + ': ' + plural(lc.n, 'transaction') + (lc.fixed ? ', ' + plural(lc.fixed, 'correction') : '') + (lc.flagged ? ', ' + lc.flagged + ' to look at' : '') + '.' : 'Not checked yet.' }) : '',

@@ -1663,7 +1663,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // only reads; Claude answers through ../fitness/api (ipsy), with no web search.
   function ipsyOn() { return ls.get(KEY + '-ipsy', '') === '1'; }
   function ipsySetting() {
-    return AllisonOS.settings.section('Ipsy', [AllisonOS.settings.claude('fitness'), AllisonOS.settings.toggle({ id: 'stIpsy', title: 'Ask Ipsy about your patterns', sub: 'Ipsy finds patterns in your workouts, sleep and meds.', on: ipsyOn() })]);
+    return AllisonOS.settings.section('AI helper', [AllisonOS.settings.claude('fitness'), AllisonOS.settings.toggle({ id: 'stIpsy', title: 'Ask Ipsy about your patterns', sub: 'Ipsy finds patterns in your workouts, sleep and meds.', on: ipsyOn() })]);
   }
   async function setIpsy(on) {
     const A = window.AllisonOS && AllisonOS.account;

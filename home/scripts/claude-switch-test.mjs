@@ -2,7 +2,7 @@
 //   - turned off for an app, a call to any of its Claude routes is answered on the phone ({ error: 'ai-off' }, 503) and
 //     never reaches the server; its other routes, and another app's Claude routes, still go;
 //   - Ipsy in that app says Claude is turned off and sends nothing; turned on again, it asks as before;
-//   - an app's Settings > Ipsy starts with Use Claude in <app>, which turns it (and tells the page, aos:claude);
+//   - an app's Settings > AI helper starts with Use Claude in <app>, which turns it (and tells the page, aos:claude);
 //   - aOS Account > Claude lists every app with a switch, says which are off, and keeps the choice on this phone only;
 //   - Orders, opened with Claude off, shows its row off and doesn't offer to check orders by itself.
 //   node home/scripts/claude-switch-test.mjs [repo root]
@@ -21,7 +21,7 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>Claude</title><body>
 <div id="sheet"></div>
 <script>
   window.chat = AllisonOS.ipsy.mount({ app: 'notes', name: 'Notes', endpoint: '/notes/api/ipsy', consent: 'Test.', tools: {} });
-  document.getElementById('sheet').innerHTML = AllisonOS.settings.section('Ipsy', AllisonOS.settings.claude('notes'));
+  document.getElementById('sheet').innerHTML = AllisonOS.settings.section('AI helper', AllisonOS.settings.claude('notes'));
   window.told = []; addEventListener('aos:claude', e => told.push(e.detail));
 </script>`;
 const server = http.createServer((req, res) => {
@@ -84,7 +84,7 @@ const post = (p, url) => p.evaluate(async u => { const r = await fetch(u, { meth
   report('turned off for an app, its Claude routes are answered on the phone and never reach the server; everything else goes', pr); await ctx.close();
 }
 
-// 2. Ipsy in that app: says so and sends nothing; Settings > Ipsy turns it back on, and it asks
+// 2. Ipsy in that app: says so and sends nothing; Settings > AI helper turns it back on, and it asks
 {
   const { ctx, p, errs, hits } = await phone({ 'aos.claude.notes': 'off' }); const pr = [];
   await p.goto(BASE + '/claude.html');
@@ -92,7 +92,7 @@ const post = (p, url) => p.evaluate(async u => { const r = await fetch(u, { meth
   if ((await row.textContent()).replace(/\s+/g, ' ').trim() !== 'Use Claude in NotesTurned off, nothing in Notes goes to Claude from this phone.') pr.push('the row says: ' + await row.textContent());
   if (await row.getAttribute('aria-checked') !== 'false') pr.push('the row is not off');
   await p.evaluate(() => chat.prompt('What’s on my list?'));
-  await p.waitForFunction(() => /Claude is turned off for Notes on this phone\. Settings, Ipsy turns it back on\./.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 5000 })
+  await p.waitForFunction(() => /Claude is turned off for Notes on this phone\. Settings, AI helper turns it back on\./.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 5000 })
     .catch(async () => pr.push('Ipsy did not say Claude is off: ' + await p.evaluate(() => document.querySelector('.ipsy-log').textContent)));
   if (hits.length) pr.push('something went to the server: ' + hits.join(' '));
   await row.dispatchEvent('click');   // (Ipsy's chat is open over the page)
@@ -105,7 +105,7 @@ const post = (p, url) => p.evaluate(async u => { const r = await fetch(u, { meth
   await row.dispatchEvent('click');   // (Ipsy's chat is open over the page)
   if (await p.evaluate(() => localStorage.getItem('aos.claude.notes')) !== 'off') pr.push('turned off again, not kept');
   pr.push(...errs);
-  report('Ipsy in an app Claude is off for says so and sends nothing; Settings > Ipsy, Use Claude in Notes, turns it back on', pr); await ctx.close();
+  report('Ipsy in an app Claude is off for says so and sends nothing; Settings > AI helper, Use Claude in Notes, turns it back on', pr); await ctx.close();
 }
 
 // 3. aOS Account > Claude: every app, which are off, kept on this phone only
@@ -130,15 +130,15 @@ const post = (p, url) => p.evaluate(async u => { const r = await fetch(u, { meth
   report('aOS Account > Claude: every app with a switch, the line says which are off, kept on this phone only', pr); await ctx.close();
 }
 
-// 4. Orders, opened with Claude off: Settings > Ipsy starts with its row, off
+// 4. Orders, opened with Claude off: Settings > AI helper starts with its row, off
 {
   const { ctx, p, errs } = await phone({ 'aos.claude.orders': 'off' }); const pr = [];
   await p.goto(BASE + '/orders/'); await p.waitForFunction(() => window.AllisonOS && AllisonOS.settings && document.getElementById('setBtn'));
   await p.click('#setBtn'); await p.waitForSelector('#stBody .st-switch');
   const first = await p.locator('#stIpsy .st-switch').first().evaluate(e => e.dataset.claude + ':' + e.getAttribute('aria-checked')).catch(() => 'none');
-  if (first !== 'orders:false') pr.push('Settings > Ipsy starts with: ' + first);
+  if (first !== 'orders:false') pr.push('Settings > AI helper starts with: ' + first);
   pr.push(...errs.filter(e => !/Failed to fetch|NetworkError/.test(e)));
-  report('Orders, Claude off: Settings > Ipsy starts with Use Claude in Orders, off', pr); await ctx.close();
+  report('Orders, Claude off: Settings > AI helper starts with Use Claude in Orders, off', pr); await ctx.close();
 }
 
 await browser.close(); server.close();

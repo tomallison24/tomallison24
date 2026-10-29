@@ -15,7 +15,7 @@
 //   AllisonOS.account.call(path, body)   the accounts API itself (aOS uses it)
 //   AllisonOS.account.user() / .signOut() / .prompt()
 //
-// Claude, app by app, on this phone (aOS Account > Claude, or the app's Settings > Ipsy):
+// Claude, app by app, on this phone (aOS Account > Claude, or the app's Settings > AI helper):
 //   AllisonOS.claude.on(app)          -> false once Claude is turned off for that app here
 //   AllisonOS.claude.set(app, on)        turns it on or off (localStorage aos.claude.<app>; never synced)
 //   AllisonOS.claude.apps                [[id, name, what it uses Claude for]], in aOS Account's order

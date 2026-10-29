@@ -464,7 +464,7 @@ for (const scheme of ['light', 'dark']) {
     assert.match(await page.textContent('#stGmail'), /Check now/);
     assert.match(await page.textContent('#stGmail'), /Disconnect Gmail/);
     assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false', 'Ipsy\'s own To check pass is a switch, off here');
-    assert.deepEqual(await texts(page, '#stBody .st-lbl'), ['Design', 'What counts as an order', 'Hidden orders', 'Connected accounts', 'Ipsy', 'Your data'], 'Design is the first section; no Sheet section (aOS links it)');
+    assert.deepEqual(await texts(page, '#stBody .st-lbl'), ['Design', 'What counts as an order', 'Hidden orders', 'Connected accounts', 'AI helper', 'Your data'], 'Design is the first section; no Sheet section (aOS links it)');
     assert.equal(await page.getAttribute('#stDesign [data-design="vintage"]', 'aria-checked'), 'true');
     if (SHOTS) await page.waitForTimeout(700);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'settings-' + scheme + '.png') });

@@ -1336,7 +1336,7 @@
       input.value = ''; input.style.height = '';
       // Claude turned off for this app on this phone (AllisonOS.claude, ../home/account.js): nothing is sent
       if (AOS.claude && !AOS.claude.on(o.app)) {
-        add({ t: 'me', text }); add({ t: 'err', text: 'Claude is turned off for ' + (o.app === 'aos' ? 'Ipsy on aOS Home' : o.name) + ' on this phone. ' + (o.app === 'aos' ? 'aOS, Account, Claude' : 'Settings, Ipsy') + ' turns it back on.' });
+        add({ t: 'me', text }); add({ t: 'err', text: 'Claude is turned off for ' + (o.app === 'aos' ? 'Ipsy on aOS Home' : o.name) + ' on this phone. ' + (o.app === 'aos' ? 'aOS, Account, Claude' : 'Settings, AI helper') + ' turns it back on.' });
         persist(); draw(); return;
       }
       busy = true; sendBtn.disabled = true;
@@ -1461,7 +1461,7 @@
       if (on) ls.del(k); else ls.set(k, 'off');
       return !!on;
     },
-    gmailOff: name => 'The person has turned off Gmail for Ipsy in ' + name + ' (Settings, Ipsy), so Ipsy can’t search or read email here. Don’t try again; you can tell them it can be turned back on there.',
+    gmailOff: name => 'The person has turned off Gmail for Ipsy in ' + name + ' (Settings, AI helper), so Ipsy can’t search or read email here. Don’t try again; you can tell them it can be turned back on there.',
     guard(keys) {
       const ids = new Set(), threads = new Set(), nums = new Set(), codes = new Set();
       (keys || []).forEach(k => {

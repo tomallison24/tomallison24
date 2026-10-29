@@ -22,7 +22,7 @@
 // is shown with the others only, named and dated by them, and can't be renamed. Their emails are
 // left out of what Ipsy finds or reads in Gmail (the email a booking came from, its thread, and any
 // email that names its confirmation or flight number). Gmail can also be turned off for Ipsy
-// altogether (Settings, Ipsy).
+// altogether (Settings, AI helper).
 window.TravelIpsy = function (app) {
   const P = app.P;
   const ymd = s => typeof s === 'string' && /^20\d\d-\d\d-\d\d$/.test(s) && !isNaN(Date.parse(s + 'T12:00:00Z'));
@@ -333,7 +333,7 @@ window.TravelIpsy = function (app) {
       const groups = trips(), up = groups.filter(g => !g.past), next = up[0], check = checkList().length, priv = privCount();
       return 'Travel has ' + plural(app.bookings.filter(seen).length, 'booking') + ' in ' + plural(groups.length, 'trip') + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + up.length + ' coming up'
         + (next ? ' (the next: ' + next.name + ', ' + range(next) + ')' : '') + (check ? ', ' + check + ' to check' : '') + '. '
-        + 'On screen: ' + app.screen() + '.' + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, Ipsy).' : app.getToken() ? '' : ' Gmail isn’t connected right now.');
+        + 'On screen: ' + app.screen() + '.' + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, AI helper).' : app.getToken() ? '' : ' Gmail isn’t connected right now.');
     },
     intro: 'Hi, I’m Ipsy! I can tell you about your trips, fix or add a booking, check any flight live (delays, gates, where it is), find a flight number, look through your Gmail, or look something up on the web.',
     placeholder: 'Ask Ipsy about your trips',

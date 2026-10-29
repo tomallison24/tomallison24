@@ -19,7 +19,7 @@
 // Private orders (the switch on an order's page) are hidden from Ipsy: they are left out of
 // everything it reads and it can't change them, and their emails are left out of what it finds or
 // reads in Gmail (the email an order came from, its thread, and any email that names its order or
-// tracking number). Gmail can also be turned off for Ipsy altogether (Settings, Ipsy).
+// tracking number). Gmail can also be turned off for Ipsy altogether (Settings, AI helper).
 window.OrdersIpsy = function (app) {
   const P = app.P;
   const copy = o => JSON.parse(JSON.stringify(o));
@@ -343,7 +343,7 @@ window.OrdersIpsy = function (app) {
       const rets = all.filter(o => o.ret && o.ret.status && o.ret.status !== 'refunded').length;
       return 'Orders has ' + all.length + ' orders' + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + open + ' on the way' + (rets ? ', ' + rets + ' return' + (rets === 1 ? '' : 's') + ' not yet refunded' : '') + (check ? ', ' + check + ' marked Check details' : '') + '. '
         + (o && !seen(o) ? 'On screen: a private order.' : o ? 'On screen: the order ' + o.id + ' from ' + (o.store || 'an unnamed store') + '.' : 'On screen: ' + app.screen() + '.')
-        + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, Ipsy).' : app.getToken() ? '' : ' Gmail isn’t connected right now.');
+        + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, AI helper).' : app.getToken() ? '' : ' Gmail isn’t connected right now.');
     },
     intro: 'Hi, I’m Ipsy! I can find an order, fix its details, keep track of a return, merge duplicates, clear out old ones, check your Gmail for anything missing, or look something up on the web.',
     placeholder: 'Ask Ipsy about your orders',
