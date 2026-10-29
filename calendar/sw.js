@@ -3,8 +3,8 @@
 // iCloud (through calendar/api/), Gmail and the weather are never cached here:
 // a cached answer would be a stale calendar. The events themselves are kept by
 // the app in localStorage for reading offline.
-const CACHE = 'calendar-v32';
-const SHELL = ['./', 'index.html', 'app.js', 'ical.js', 'manifest.webmanifest', 'icon.svg?v=2', 'icon-glass.svg?v=1', 'icon-180.png?v=3', 'icon-512.png?v=3', 'icon-glass-180.png?v=3', 'icon-glass-512.png?v=3', '../home/slide.js', '../home/settings.js', '../home/welcome.js', '../home/account.js', '../home/sheet.js', '../home/design.js', '../home/sky.js', '../home/redact.js', '../home/ipsy.js', 'ipsy-tools.js', 'ipsy-gmail.js', 'gmail-connect.html', '../home/names.js'];
+const CACHE = 'calendar-v33';
+const SHELL = ['./', 'index.html', 'app.js', 'ical.js', 'manifest.webmanifest', 'icon.svg?v=2', 'icon-glass.svg?v=1', 'icon-180.png?v=4', 'icon-512.png?v=4', 'icon-glass-180.png?v=4', 'icon-glass-512.png?v=4', '../home/slide.js', '../home/settings.js', '../home/welcome.js', '../home/account.js', '../home/sheet.js', '../home/design.js', '../home/sky.js', '../home/redact.js', '../home/ipsy.js', 'ipsy-tools.js', 'ipsy-gmail.js', 'gmail-connect.html', '../home/names.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

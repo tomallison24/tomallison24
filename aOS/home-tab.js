@@ -15,8 +15,8 @@
 //     rests on (the left one for the left hand), with what's next and every other app above them, so
 //     every app is on the first screen. Tried first in labs/layouts/.
 //   - In Layers (aOS/look.js), Classic is Layers' own grid: what's next and the weather on the sky, then every app
-//     on one screen, four across, as raised round buttons with a line drawing tinted by its group. The top row is
-//     yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
+//     on one screen, four across, as raised round buttons with a line drawing in the app's own colour on a pale tint
+//     of it. The top row is yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
 //     on the phone and on your other devices: aos.home.grid). Tried first as a test page (Calm aOS, Layers).
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
@@ -271,11 +271,11 @@
     if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
 
   // ---- Layers' grid ----
-  // Every app as a round button with its line drawing, tinted by its group (SPACES); the order is yours alone: the
+  // Every app as a round button with its line drawing, in the app's own colour on a pale tint of it (aOS/app.js, ROOM_HUE;
+  // --ink-<app> and --pale-<app> in aOS/index.html); the order is yours alone: the
   // top row starts as your pins (else Mail, Calendar, Weather and Home), then each group, and an app that's new
   // goes on the end. Edit, then tap one app and another, swaps them.
-  const GRID = 'aos.home.grid', GROUPS = ['family', 'every', 'out', 'you', 'games'];
-  const GROUP_OF = Object.fromEntries(SPACES.flatMap(([, ids], i) => ids.map(id => [id, GROUPS[i] || 'every'])));
+  const GRID = 'aos.home.grid';
   const GLYPH = {
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
@@ -309,7 +309,7 @@
       + (known('calendar') ? `<button type="button" data-open="calendar" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">${next
         ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Today</b><span>Nothing else on</span>'}</button>` : ''));
     setHTML($('hgrid'), order.map((id, i) => (i === 4 ? '<i class="grule" aria-hidden="true"></i>' : '')
-      + `<button type="button" class="gapp${ed && gsel === id ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--sp-${GROUP_OF[id] || 'every'})" aria-label="${label(id)}"${ed ? ` aria-pressed="${gsel === id}"` : ''}>`
+      + `<button type="button" class="gapp${ed && gsel === id ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--ink-${id}, var(--sp-every));--pale:var(--pale-${id}, var(--orb-on))" aria-label="${label(id)}"${ed ? ` aria-pressed="${gsel === id}"` : ''}>`
       + `<span class="orb">${glyph(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
   }
   function gridTap(id) {

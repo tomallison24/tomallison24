@@ -487,11 +487,13 @@
   .hgsky b { font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
   .hgsky span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; color: var(--muted); }
   html[data-home="grid"] #hmain > .hgrid.gridonly { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 6px; padding: 4px 0 8px; }
-  :root { --sp-family: #2B7262; --sp-every: #3B5896; --sp-out: #9A5A52; --sp-you: #806224; --sp-games: #6B5B95; --orb-hi: #FFFFFF; --orb: #FDFDFE; --orb-edge: rgba(16,24,40,.08); --orb-on: #FFFFFF; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sp-family: #7FC6B4; --sp-every: #A3B6E0; --sp-out: #E3A79F; --sp-you: #D9BE86; --sp-games: #BBAEE0; --orb-hi: #262C37; --orb: #1B2029; --orb-edge: rgba(255,255,255,.08); --orb-on: #10141A; } }
-  :root[data-theme="dark"] { --sp-family: #7FC6B4; --sp-every: #A3B6E0; --sp-out: #E3A79F; --sp-you: #D9BE86; --sp-games: #BBAEE0; --orb-hi: #262C37; --orb: #1B2029; --orb-edge: rgba(255,255,255,.08); --orb-on: #10141A; }
+    /* every app's own colour (aOS/app.js, ROOM_HUE), as its icon has it: the drawing in --ink-<app> on a pale tint, --pale-<app>; in dark, a
+     light shade on a deep one */
+  :root { --sp-every: #3B5896; --orb-mix: 55%; --orb-edge: rgba(16,24,40,.08); --orb-on: #FFFFFF; --ink-mail: #0F4E98; --pale-mail: #DAE7FF; --ink-calendar: #83433B; --pale-calendar: #FFDED5; --ink-weather: #007095; --pale-weather: #C7EEFC; --ink-house: #916600; --pale-house: #F8E3C1; --ink-meals: #A75600; --pale-meals: #FEDFCB; --ink-notes: #726F34; --pale-notes: #EDE7C9; --ink-orders: #5B3200; --pale-orders: #FCE1C8; --ink-news: #2D5070; --pale-news: #DBE8F5; --ink-clock: #4A498C; --pale-clock: #DFE5FE; --ink-podcasts: #5C76AD; --pale-podcasts: #DDE6FE; --ink-travel: #006360; --pale-travel: #C5F0EE; --ink-places: #517E21; --pale-places: #D5EFD0; --ink-fitness: #9D1E63; --pale-fitness: #FEDCE5; --ink-drinks: #AE6976; --pale-drinks: #FADEE3; --ink-money: #50092D; --pale-money: #FFDBE5; --ink-sparkle: #7655B4; --pale-sparkle: #EBE0FF; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sp-every: #A3B6E0; --orb-mix: 90%; --orb-edge: rgba(255,255,255,.08); --orb-on: #10141A; --ink-mail: #739DEF; --pale-mail: #1D2B47; --ink-calendar: #D58774; --pale-calendar: #41221A; --ink-weather: #8FE2FF; --pale-weather: #05313D; --ink-house: #FFD896; --pale-house: #3A2805; --ink-meals: #FEB580; --pale-meals: #40230D; --ink-notes: #EEDF99; --pale-notes: #312B0F; --ink-orders: #C99159; --pale-orders: #3C260E; --ink-news: #87A2BD; --pale-news: #222D37; --ink-clock: #8D9AD7; --pale-clock: #242A42; --ink-podcasts: #9EB5F8; --pale-podcasts: #222A44; --ink-travel: #42B2AE; --pale-travel: #003332; --ink-places: #94D586; --pale-places: #1C3217; --ink-fitness: #ED86A7; --pale-fitness: #411F2A; --ink-drinks: #FDC2CE; --pale-drinks: #3A2429; --ink-money: #D2839C; --pale-money: #40202A; --ink-sparkle: #B693EC; --pale-sparkle: #302442; } }
+  :root[data-theme="dark"] { --sp-every: #A3B6E0; --orb-mix: 90%; --orb-edge: rgba(255,255,255,.08); --orb-on: #10141A; --ink-mail: #739DEF; --pale-mail: #1D2B47; --ink-calendar: #D58774; --pale-calendar: #41221A; --ink-weather: #8FE2FF; --pale-weather: #05313D; --ink-house: #FFD896; --pale-house: #3A2805; --ink-meals: #FEB580; --pale-meals: #40230D; --ink-notes: #EEDF99; --pale-notes: #312B0F; --ink-orders: #C99159; --pale-orders: #3C260E; --ink-news: #87A2BD; --pale-news: #222D37; --ink-clock: #8D9AD7; --pale-clock: #242A42; --ink-podcasts: #9EB5F8; --pale-podcasts: #222A44; --ink-travel: #42B2AE; --pale-travel: #003332; --ink-places: #94D586; --pale-places: #1C3217; --ink-fitness: #ED86A7; --pale-fitness: #411F2A; --ink-drinks: #FDC2CE; --pale-drinks: #3A2429; --ink-money: #D2839C; --pale-money: #40202A; --ink-sparkle: #B693EC; --pale-sparkle: #302442; }
   .gapp { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 500; line-height: 1.15; text-align: center; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .gapp .orb { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; color: var(--tint); background: radial-gradient(circle at 50% 30%, var(--orb-hi), var(--orb) 70%);
+  .gapp .orb { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; color: var(--tint); background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--pale) var(--orb-mix), #FFFFFF), var(--pale) 70%);
     box-shadow: inset 0 0 0 1px var(--orb-edge), var(--ly-lift, 0 1px 2px rgba(16,24,40,.08), 0 10px 22px -12px rgba(16,24,40,.4)), inset 0 -3px 0 color-mix(in srgb, var(--tint) 24%, transparent); transition: transform .1s, box-shadow .1s; }
   .gapp .orb svg { width: 26px; height: 26px; }
   .gapp:active .orb { transform: translateY(2px) scale(.96); }
@@ -683,7 +685,7 @@ html[data-look="grid"] .wid.wx::after{display:none}
   .askipsy:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
   .askipsy::before { left: 2px; width: 60px; height: 60px; margin-top: -30px; background: var(--mc-teal); opacity: .16; }
   .wid::before { right: -30px; top: -30px; width: 96px; height: 96px; background: rgb(var(--c)); opacity: .22; }
-  .wid.wx { background: #1F6F6B; color: #FFF8EC; box-shadow: none; }
+  .wid.wx { background: #007095; color: #FFF8EC; box-shadow: none; }   /* Weather's own colour (aOS/app.js, ROOM_HUE) */
   .wid.wx::before { right: -26px; top: -26px; width: 96px; height: 96px; background: var(--mc-mustard); opacity: 1; }
   .wid.wx::after { content: ''; position: absolute; right: -12px; top: 76px; width: 60px; height: 18px; border-radius: 9px; background: var(--mc-orange); transform: rotate(-18deg); }
   .wid.wx small { color: #FFF8EC; }
@@ -807,7 +809,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 .s1 .art svg{color:rgba(19,26,35,.14)}
 .chip{background:#FBFDFF;color:#131A23}
 .ipsy-say{background:#FBFDFF;color:#131A23}
-.wid.wx{background:#306E61;color:#FBFDFF}
+.wid.wx{background:#0A7766;color:#FBFDFF}
 .wid.wx small{color:#FBFDFF}
 .hask{color:#131A23}
 #appback{box-shadow:inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(19,26,35,.12)}
@@ -863,7 +865,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 .s1 .art svg{color:rgba(23,27,32,.14)}
 .chip{background:#FCFDFF;color:#171B20}
 .ipsy-say{background:#FCFDFF;color:#171B20}
-.wid.wx{background:#973835;color:#FCFDFF}
+.wid.wx{background:#AD2429;color:#FCFDFF}
 .wid.wx small{color:#FCFDFF}
 .hask{color:#171B20}
 #appback{box-shadow:inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(23,27,32,.12)}

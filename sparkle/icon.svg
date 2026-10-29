@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: a cream unicorn's head (its eye and the stripes of its horn cut out of it) on dusty rose, with a mustard sun, a teal dot and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. -->
+  <!-- Mid-century modern, as a tinted tile: the unicorn's head in Sparkle's own colour (#7655B4) on a pale tint of it (#EBE0FF); every app has its own, a shade of its room's (Games: aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
   <defs>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <path d="M150 440C138 360 146 286 186 232C212 196 248 174 290 168L270 116L312 156C350 166 386 186 404 220C420 248 418 280 398 294C380 306 354 302 334 292C318 286 306 290 298 304C282 334 282 384 300 440Z" fill="#fff"/>
@@ -9,9 +9,8 @@
       <path d="M318 138L350 120M326 112L356 96" stroke="#000" stroke-width="9" stroke-linecap="round"/>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#C2577F"/>
-  <circle cx="420" cy="96" r="140" fill="#E3A72F"/>
-  <circle cx="92" cy="96" r="30" fill="#1F6F6B"/>
-  <rect x="330" y="420" width="150" height="50" rx="25" fill="#D8572A" transform="rotate(-18 405 445)"/>
-  <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#EBE0FF"/>
+  <circle cx="424" cy="88" r="44" fill="#E3A72F"/>
+  <rect x="46" y="432" width="88" height="24" rx="12" fill="#D8572A" transform="rotate(-18 90 444)"/>
+  <rect width="512" height="512" fill="#7655B4" mask="url(#cut)"/>
 </svg>

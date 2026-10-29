@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: a cream coin with a dollar sign cut out of it, on deep teal, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. -->
+  <!-- Mid-century modern, as a tinted tile: the coin in Money's own colour (#50092D) on a pale tint of it (#FFDBE5); every app has its own, a shade of its room's (You: aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
   <defs>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <circle cx="248" cy="276" r="150" fill="#fff"/>
       <path d="M300 222c-10-20-30-30-52-30-30 0-50 16-50 40 0 58 106 32 106 92 0 26-22 44-56 44-24 0-46-11-58-33M248 162v228" fill="none" stroke="#000" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#2F5D62"/>
-  <circle cx="412" cy="100" r="140" fill="#E3A72F"/>
-  <rect x="36" y="420" width="136" height="50" rx="25" fill="#D8572A" transform="rotate(-18 104 445)"/>
-  <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#FFDBE5"/>
+  <circle cx="424" cy="88" r="44" fill="#E3A72F"/>
+  <rect x="46" y="432" width="88" height="24" rx="12" fill="#D8572A" transform="rotate(-18 90 444)"/>
+  <rect width="512" height="512" fill="#50092D" mask="url(#cut)"/>
 </svg>

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Layers: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8CA8DB"/><stop offset="1" stop-color="#5B82CB"/></linearGradient>
+  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F1F6FB"/><stop offset="1" stop-color="#DBE8F5"/></linearGradient>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <rect x="108" y="108" width="296" height="296" rx="46" fill="#fff"/>
       <g fill="#000">
@@ -12,6 +12,5 @@
     </mask>
   </defs>
   <rect width="512" height="512" fill="url(#lyg)"/>
-  <circle cx="404" cy="108" r="150" fill="#FFFFFF" fill-opacity=".24"/>
-  <rect width="512" height="512" fill="#F9FBFE" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#2D5070" mask="url(#cut)"/>
 </svg>

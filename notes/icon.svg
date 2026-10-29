@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: the notes glyph in cream on #55606B, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. the standard app has its own sea glass icon. -->
+  <!-- Mid-century modern, as a tinted tile: its drawing in Notes's own colour (#726F34) on a pale tint of it (#EDE7C9); every app has its own, a shade of its room's (Family: aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
   <defs><mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <rect x="86" y="118" width="58" height="58" rx="18" fill="#fff"/>
       <path d="M101 148l12 12 17-25" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
     </mask></defs>
-  <rect width="512" height="512" fill="#55606B"/>
-  <circle cx="404" cy="108" r="150" fill="#E3A72F"/>
-  <rect x="32" y="418" width="136" height="50" rx="25" fill="#D8572A" transform="rotate(-18 100 443)"/>
+  <rect width="512" height="512" fill="#EDE7C9"/>
+  <circle cx="424" cy="88" r="44" fill="#E3A72F"/>
+  <rect x="46" y="432" width="88" height="24" rx="12" fill="#D8572A" transform="rotate(-18 90 444)"/>
   <g>
-    <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
-    <rect x="166" y="118" width="260" height="58" rx="29" fill="#FBF5E9"/>
-    <g fill="#FBF5E9" fill-opacity="0.78">
+    <rect width="512" height="512" fill="#726F34" mask="url(#cut)"/>
+    <rect x="166" y="118" width="260" height="58" rx="29" fill="#726F34"/>
+    <g fill="#726F34" fill-opacity="0.78">
       <rect x="86" y="214" width="340" height="32" rx="16"/><rect x="86" y="270" width="260" height="32" rx="16"/>
       <rect x="86" y="326" width="340" height="32" rx="16"/><rect x="86" y="382" width="170" height="32" rx="16"/>
     </g>

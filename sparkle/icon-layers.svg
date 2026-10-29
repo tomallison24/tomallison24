@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Layers: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D2908D"/><stop offset="1" stop-color="#BF615C"/></linearGradient>
+  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7F3FF"/><stop offset="1" stop-color="#EBE0FF"/></linearGradient>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <path d="M150 440C138 360 146 286 186 232C212 196 248 174 290 168L270 116L312 156C350 166 386 186 404 220C420 248 418 280 398 294C380 306 354 302 334 292C318 286 306 290 298 304C282 334 282 384 300 440Z" fill="#fff"/>
       <path d="M300 172L366 44L338 184Z" fill="#fff"/>
@@ -10,7 +10,5 @@
     </mask>
   </defs>
   <rect width="512" height="512" fill="url(#lyg)"/>
-  <circle cx="420" cy="96" r="140" fill="#FFFFFF" fill-opacity=".24"/>
-  <circle cx="92" cy="96" r="30" fill="#306E61"/>
-  <rect width="512" height="512" fill="#F9FBFE" mask="url(#cut)"/>
+  <rect width="512" height="512" fill="#7655B4" mask="url(#cut)"/>
 </svg>

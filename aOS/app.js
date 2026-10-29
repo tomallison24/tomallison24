@@ -14,12 +14,12 @@
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
-  const GLASS_HUE = { clock: '78,93,126', mail: '127,147,194', calendar: '192,138,132', news: '160,141,123', weather: '110,162,183', notes: '111,165,151', podcasts: '141,132,190', travel: '201,151,110', orders: '90,166,168', places: '143,165,112', fitness: '107,127,145', drinks: '169,117,144', meals: '181,112,90', house: '188,156,104', sparkle: '184,140,192', money: '82,138,116' };   // each icon's Sea glass tint
-  const VINTAGE_HUE = { notes: '85,96,107', podcasts: '122,74,140', places: '62,142,90', meals: '142,58,43', news: '126,140,52', fitness: '74,52,38', travel: '74,52,38', drinks: '126,140,52', weather: '126,140,52', calendar: '63,110,154', mail: '31,111,107', house: '227,167,47', orders: '216,87,42', sparkle: '194,87,127', money: '47,93,98' };   // each mid-century icon's colour
-  const LAYERS_HUE = { notes: '74,81,90', podcasts: '136,74,102', places: '27,142,123', meals: '135,63,60', news: '91,130,203', fitness: '38,45,54', travel: '38,45,54', drinks: '91,130,203', weather: '91,130,203', calendar: '81,106,152', mail: '48,110,97', house: '216,171,99', orders: '207,92,89', sparkle: '191,97,92', money: '55,93,85' };   // the same, in Layers (aOS/scripts/looks.mjs)
+  // every app's own colour, the same in Vintage, Sea glass and Layers: a shade of its room's (Family warm clay to amber, Every
+  // day blues, Out and about greens, You rose, Games violet), as its icon is drawn: a pale tint of it with the drawing in a
+  // deep shade of it (each app's icon.svg; aOS/index.html, --ink-<app>, for Layers' grid). Neighbours on Home differ clearly.
+  const ROOM_HUE = { calendar: '176,102,84', meals: '238,140,60', notes: '234,220,150', house: '240,182,72', orders: '122,71,2', weather: '100,195,226', news: '69,93,118', mail: '66,105,182', clock: '52,61,114', podcasts: '128,149,214', travel: '18,147,144', places: '117,181,103', fitness: '210,96,136', drinks: '220,162,174', money: '116,47,72', sparkle: '153,112,213' };
   const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33', money: '120,58,54' };   // and in Tron
-  // the glow behind an app: its icon's tint, for aOS's look
-  const HUE = new Proxy(GLASS_HUE, { get: (o, id) => ({ glass: o, layers: LAYERS_HUE, grid: GRID_HUE }[lookNow()] || VINTAGE_HUE)[id] || o[id] });
+  const HUE = new Proxy(ROOM_HUE, { get: (o, id) => (lookNow() === 'grid' && GRID_HUE[id]) || o[id] });
   const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games', money: 'Finance' };
   const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals', 'money'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';

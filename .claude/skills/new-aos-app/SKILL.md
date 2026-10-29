@@ -45,11 +45,16 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
   `scope` `"./"`, `display` `standalone`, colors `#0D1213`, a 180 and a
   512 (`any maskable`) icon.
 - `icon.svg`, rendered to `icon-180.png` and `icon-512.png` by
-  `scripts/make-icons.mjs` (copy Fitness's). The look: a full-bleed diagonal
-  gradient in a Sea glass tint no other app uses (muted, light top left to
-  deep bottom right: see the other apps' `icon.svg`), a soft glow top left,
-  one white glyph. Any detail in the glyph is cut out of it (an SVG mask), not
-  drawn in another color. Its middle tint is its `HUE` in `aOS/app.js`.
+  `scripts/make-icons.mjs` (copy Fitness's). Every app has **one colour of its
+  own, the same in every look** (Tron aside): a shade of its room's on aOS Home
+  (Family warm clay to amber, Every day blues, Out and about greens, You rose,
+  Games violet), clearly different from the apps beside it. The icon is a
+  tinted tile: a full-bleed pale tint of that colour, one glyph in a deep shade
+  of it (3:1 or more on the tint), and in Vintage the small mustard sun (`<circle
+  cx="424" cy="88" r="44">`) and burnt-orange pill as the mark (see the other
+  apps' `icon.svg`). Any detail in the glyph is cut out of it (an SVG mask),
+  not drawn in another color. The colour goes in `ROOM_HUE` in `aOS/app.js`
+  (an RGB triple) and as `--ink-<id>` / `--pale-<id>` in `aOS/index.html`.
 - `README.md`: what it does, the data and where it lives, how it syncs, tests.
 - `scripts/`: tests (`*-test.mjs`): Node for the logic, and a Playwright
   `app-test.mjs` at iPhone size (390 × 844) that seeds
@@ -67,7 +72,7 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `home/welcome.js` `OS_TOUR` | the sentence listing every app by name |
 | `home/welcome.js` `DARK_ONLY` | only if it is drawn for dark only |
 | `home/welcome.js` `RELEASES` | a line in the top entry, and the app's id in its `added` so aOS's Today leads with it (see `CLAUDE.md`, "The release log") |
-| `aOS/app.js` | `HUE` (its glow: its icon's middle tint, an RGB triple), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family |
+| `aOS/app.js` | `ROOM_HUE` (its own colour, an RGB triple: see the icon above), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family |
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
@@ -90,7 +95,8 @@ title, so the page's `body` or `#app.app` should be its ground, not a full-scree
   `aosDesign.bind(<container>)`; script that draws colours itself reads `aosDesign.get()` (or
   `data-look` on `<html>`) and redraws on the window's `aos:design` event.
 - Icons: `icon.svg` → `icon-*.png` is the Vintage one, `icon-glass.svg` → `icon-glass-*.png` the
-  Sea glass one (`scripts/make-icons.mjs` draws both); link the Vintage ones in the page and the
+  Sea glass one, the same tinted tile in the same colours on a glassy gradient, no mark
+  (`scripts/make-icons.mjs` draws both); link the Vintage ones in the page and the
   manifest (colours `#241E1A`); design.js swaps them. aOS shows the one for its own look.
 - Server calls go to `../<id>/api/`, not `api/`.
 - **Your helper's name**: in `<head>`, right after design.js, `<script src="../home/names.js"></script>`
