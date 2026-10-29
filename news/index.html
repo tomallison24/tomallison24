@@ -562,6 +562,9 @@
   }
   .lg .close-btn:active { transform: scale(0.92); }
   .lg .close-btn svg { width: 20px; height: 20px; }
+  /* Settings' Done: the tick, in the CTA colour, in every look */
+  .lg .close-btn.okbtn { background: var(--cta); color: var(--cta-ink); }
+  .lg .close-btn.okbtn svg { color: inherit; }
   /* The search box: a glass capsule, lit in the accent colour while typing. */
   .lg .search-wrap { margin: 0 12px 10px; }
   .lg .search-wrap svg { left: 13px; }
@@ -1209,15 +1212,15 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
   </section>
 </div>
 
-<!-- Settings: the design (Vintage or Standard), just on this phone. -->
+<!-- Settings, as in every app (../home/settings.js): the design, just on this phone. -->
 <div class="sheet-wrap lg" id="set-sheet" hidden>
   <div class="scrim" data-action="close-set"></div>
   <section class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="set-title" tabindex="-1">
     <div class="grabber" aria-hidden="true"></div>
     <header class="sheet-head">
       <h2 id="set-title">Settings</h2>
-      <button class="close-btn" data-action="close-set" aria-label="Close">
-        <svg class="i bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+      <button class="close-btn okbtn" data-action="close-set" aria-label="Done">
+        <svg class="i bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>
       </button>
     </header>
     <div class="sheet-body" id="set-body"></div>
@@ -1228,6 +1231,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 
 <!-- The switches' sliding glass thumb, shared by the AllisonOS apps. -->
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>   <!-- Settings, the same in every app -->
 <script src="../home/account.js"></script>   <!-- family accounts: summaries and questions are for signed-in family -->
 <script src="../home/redact.js"></script>   <!-- personal details stay on the phone: what goes to Claude has placeholders (before ipsy.js) -->
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, the helper you chat with (and ipsy-tools.js, its tools here) -->
