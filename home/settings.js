@@ -8,6 +8,7 @@
 //
 //   const S = AllisonOS.settings;
 //   body.innerHTML = S.section('Ipsy', [
+//       S.claude('travel'),   // Use Claude in Travel, on this phone: first in every Ipsy section
 //       S.toggle({ id: 'stAi', title: 'Ipsy fills in what’s missing', sub: 'Completes new bookings from their emails.', on: true }),
 //       S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: 'Last checked 5 minutes ago.' }),
 //     ], { hint: 'Models: Check Haiku 5.5.' });
@@ -203,6 +204,12 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
     input: o => `<label class="st-row st-input">${text(o)}<input class="st-field" type="${esc(o.type || 'text')}" value="${esc(o.value || '')}"${o.placeholder ? ` placeholder="${esc(o.placeholder)}"` : ''}${attrs(o)} ${o.attrs || ''}></label>`,
     // anything else that lives in a group (the Design picker, a list of chips): given as it is
     raw: (html, o = {}) => `<div class="st-row st-raw"${attrs(o)}>${html}</div>`,
+    // Claude for this app on this phone (AllisonOS.claude, ../home/account.js): the first row of the app's Ipsy
+    // section. It turns itself (below), so the page doesn't handle it.
+    claude(app) {
+      const C = A.claude, e = C && C.apps.find(x => x[0] === app); if (!e) return '';
+      return S.toggle({ id: 'stClaude', title: 'Use Claude in ' + e[1], sub: 'Turned off, nothing in ' + e[1] + ' goes to Claude from this phone.', on: C.on(app), data: { claude: app } });
+    },
     // a switch turned: its new state
     flip(btn) { const on = btn.getAttribute('aria-checked') !== 'true'; btn.setAttribute('aria-checked', String(on)); return on; },
     // a choice picked: marks it, and gives its value (or null if the tap wasn't on an option)
@@ -221,4 +228,9 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
   };
   function restore(btn) { const title = btn.querySelector('.st-title'); if (title && btn.dataset.was != null) { title.textContent = btn.dataset.was; delete btn.dataset.was; } }
   A.settings = S;
+  // a Claude switch (S.claude, aOS Account's list), wherever it is
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.st-switch[data-claude]');
+    if (b && !b.disabled && A.claude) A.claude.set(b.dataset.claude, S.flip(b));
+  });
 })();

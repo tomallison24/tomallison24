@@ -1485,7 +1485,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Ipsy's own check had a switch of its own (K.ipsyAuto); it's this one now. Turned off there, it stays off here, once.
   if (ls.get(K.ipsyAuto, '') === '0') ls.set(K.aiOn, '0');
   ls.del(K.ipsyAuto);
-  const aiOn = () => ls.get(K.aiOn, '1') !== '0';
+  // Claude turned off for Travel on this phone (Settings > Ipsy, Use Claude in Travel; ../home/account.js): Ipsy doesn't fill in anything either
+  const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('travel');
+  const aiOn = () => claudeOn() && ls.get(K.aiOn, '1') !== '0';
   let aiAvail = null, findAvail = null, aiModels = null;
   // Which models answer: what the function says it is set to use, and, for Check, what the last answer said it came from (kept
   // on this phone). Ipsy's answers go to the chat as they come, so only the model it is set to use is named.
@@ -2063,7 +2065,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       ])
       + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
       + S.section('Ipsy', [
-        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false }),
+        S.claude('travel'),
+        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false || !claudeOn() }),
         PV ? S.toggle({ id: 'stIpsyGmailOpt', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('travel') }) : '',
       ], { hint: ml, hintId: 'stModels' })
       + S.section('Your data', [
@@ -2087,6 +2090,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch { liveAvail = false; aiAvail = false; findAvail = false; }
   }
   $('setBtn').onclick = openSettings;
+  addEventListener('aos:claude', () => { renderSettings(); render(); });   // Use Claude in Travel turned (home/settings.js)
   $('stBody').addEventListener('click', e => {
     const b = e.target.closest('button[id]'); if (!b || b.disabled) return;
     const id = b.id;

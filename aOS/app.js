@@ -327,6 +327,11 @@
   const looksLine = () => `${aosLook.get() === 'grid' ? 'Dark' : THEME_NAME(W.theme.read())} · ${(LOOKS.find(([id]) => id === aosLook.get()) || LOOKS[0])[1]}`;
   // Your helper (home/ipsy.js): the one you picked and its name, or none yet
   const helperLine = () => { const I = AllisonOS.ipsy, h = I && I.helper && I.helper(); if (!h) return 'Not picked yet'; const k = I.helpers.find(x => x.id === h.who); return h.name.trim() || (k && k.named) ? (h.name.trim() || k.named) + ' · ' + (k ? k.label : '') : (k ? k.label : '') + ', no name yet'; };
+  // Claude, app by app, on this phone (AllisonOS.claude, ../home/account.js): which apps it's turned off for
+  const claudeLine = () => { const C = AllisonOS.claude; if (!C) return ''; const off = C.apps.filter(([id]) => !C.on(id)).map(([, n]) => n);
+    return !off.length ? 'Used by every app' : off.length === C.apps.length ? 'Not used by any app' : 'Not used by ' + (off.length > 1 ? off.slice(0, -1).join(', ') + ' and ' + off[off.length - 1] : off[0]); };
+  const claudeRows = () => { const C = AllisonOS.claude, S = AllisonOS.settings; return C ? S.section('Claude on this phone', C.apps.map(([id, n, what]) => S.toggle({ id: 'claude-' + id, title: n, sub: what, on: C.on(id), data: { claude: id } })),
+    { hint: 'Turned off, nothing in that app goes to Claude from this phone: Ipsy can’t be asked there, and does no work there by itself. Each phone has its own.' }) : ''; };
   const helperDresses = () => { const I = AllisonOS.ipsy; return I && I.dressing ? I.dressing() : true; };
   // Appearance, in the shared Settings rows (../home/settings.js): the Look list, Light or dark and Home layout, then the
   // intro of the look you're in (each look's own Intro section shows only in that look: index.html, .tronnote and the rest)
@@ -355,6 +360,7 @@
         ${fold('fLook', 'Appearance', looksLine(), appearance(), 'lookSub')}
         ${fold('fHelper', 'Your helper', esc(helperLine()), '<div id="helperPick"></div>' + S.section('', S.toggle({ id: 'helperWx', title: 'Dress for the weather', sub: 'An umbrella in the rain, a coat in the cold or a sun hat in the sun, from Weather’s forecast.', on: helperDresses() }),
           { hint: 'Your helper is yours alone, in every app, and follows you to your other devices.' }), 'helperSub', 'helper')}
+        ${AllisonOS.claude ? fold('fClaude', 'Claude', esc(claudeLine()), claudeRows(), 'claudeSub', 'claude') : ''}
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
           <ul data-ipsy="as-is">${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
@@ -367,6 +373,7 @@
       if (v != null && seg.id === 'theme') { W.theme.set(v); $('lookSub').textContent = looksLine(); }
       if (v != null && seg.id === 'homeLayout' && window.aosHomeTab) aosHomeTab.layout(v);
       if (v != null && INTRO_KEY[seg.id]) { try { localStorage.setItem(INTRO_KEY[seg.id], v); } catch {} }
+      if (ev.target.closest('#fClaude [data-claude]')) setTimeout(() => { $('claudeSub').textContent = claudeLine(); });   // turned by settings.js
       const hwx = ev.target.closest('#helperWx'); if (hwx && AllisonOS.ipsy && AllisonOS.ipsy.dress) AllisonOS.ipsy.dress(S.flip(hwx));
       if (ev.target.closest('[data-tiplay]') && window.aosTronIntro) aosTronIntro.show({ force: true });
       if (ev.target.closest('[data-viplay]') && window.aosVintageIntro) aosVintageIntro.show({ force: true });

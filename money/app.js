@@ -580,8 +580,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const emailText = b => { const t = b.html ? P.htmlText(b.html) : P.decode(b.text || ''); const k = t.search(/If you have any questions|This email was sent to|You can update your\s+notification/i); return (k > 0 ? t.slice(0, k) : t).slice(0, 1500); };
   // Once a day, on the reader's phone: this month's transactions not checked yet, 20 to a call (POST check).
   const checkOn = () => ls.get(K.checkOff, '') !== '1';
+  // Claude turned off for Money on this phone (Settings > Ipsy, Use Claude in Money; ../home/account.js): no check, no ideas
+  const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('money');
+  const CLAUDE_OFF = 'Claude is turned off for Money on this phone (Settings, Ipsy).';
   async function dailyCheck(o) { updating('check', true); try { return await dailyCheckNow(o); } finally { updating('check', false); } }
   async function dailyCheckNow({ loud } = {}) {
+    if (!claudeOn()) { if (loud) toast(CLAUDE_OFF); return; }
     if (st.checking || !signedIn() || !st.server || !st.server.reader || !getToken()) { if (loud) toast(!getToken() ? 'Connect Gmail first, so Ipsy can read the emails.' : 'Only the phone that reads Monarch’s emails can check them.'); return; }
     if (!loud && (!checkOn() || D.checkDay === today())) return;
     const todo = C.toCheck(D.tx, today());
@@ -667,6 +671,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Ipsy's ideas (functions/money/api, POST ideas): when asked, and once a month on its own.
   async function askIdeas({ loud } = {}) {
     if (st.ideasBusy) return;
+    if (!claudeOn()) { if (loud) toast(CLAUDE_OFF); return; }
     if (!signedIn() || !st.server || !st.server.can) { if (loud) toast('Sign in, and have Money shared with you, to ask Ipsy.'); return; }
     const input = C.ideasInput(view(), settings(), today());
     if (!input.categories.length) { if (loud) toast('Nothing spent in the last year to look at.'); return; }
@@ -1039,11 +1044,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       { hint: 'In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.' });
     }
     const lc = D.lastCheck, ideas = sees && signed && s && s.can;
-    if (reader || ideas) html += S.section('Ipsy', [
+    html += S.section('Ipsy', [
+      S.claude('money'),
       reader ? S.toggle({ id: 'checkOn', title: 'Check each day', sub: 'Ipsy checks each new transaction against its Monarch email; what passed is never checked again.', on: checkOn() }) : '',
       reader ? S.action({ id: 'checkNow', icon: 'refresh', title: 'Check now', sub: lc ? 'Last checked ' + ago(lc.at) + ': ' + plural(lc.n, 'transaction') + (lc.fixed ? ', ' + plural(lc.fixed, 'correction') : '') + (lc.flagged ? ', ' + lc.flagged + ' to look at' : '') + '.' : 'Not checked yet.' }) : '',
       ideas ? S.action({ id: 'ideasNow', icon: 'list', title: 'Ask Ipsy for ideas', sub: 'Categories to merge and merchants to move; it looks once a month too, and nothing changes until you accept.' }) : '',
-    ], { hint: 'Ipsy uses Claude Sonnet 5.5: a few cents a month for the daily check, under a cent for each look at your categories.' });
+    ], { hint: reader || ideas ? 'Ipsy uses Claude Sonnet 5.5: a few cents a month for the daily check, under a cent for each look at your categories.' : '' });
     html += S.section('Your data', [
       D.tx.length ? S.action({ id: 'exportBtn', icon: 'upload', title: 'Export as a spreadsheet', sub: 'A CSV file.' }) : '',
       S.danger({ id: 'wipeBtn', title: 'Delete all data', sub: reader ? 'From this phone, and from aOS for everyone it’s shared with.' : 'From this phone.' }),

@@ -148,6 +148,12 @@ per person is deleted in `functions/aOS/api` `remove`.
   Export as a spreadsheet, Delete all data, Sign in with Face ID / Signed in as …. Travel's
   `renderSettings` is the example to copy. Its look (and the Bead + Labeled switch) is the component's:
   don't restyle it in the app. Device controls in Home keep the Signal dashboard's own switches.
+- **Claude, app by app, on this phone**: an app that asks Claude (through its own server route) lists
+  those routes in `CLAUDE` in `../home/account.js` and its name and what it uses Claude for in
+  `AllisonOS.claude.apps` (aOS Account > Claude shows that list), and its Settings > Ipsy section
+  starts with `S.claude('<id>')`, Use Claude in …. Turned off, `account.js` answers those routes on the
+  phone with `{ error: 'ai-off' }` (503) and nothing leaves: the app says so in its own words (as
+  for `no-ai`) and stops what it was doing with Claude, and everything else works as before.
 - **Simple**: one main screen where possible; a sheet for each thing you open;
   the fewest controls that do the job. Tap targets 44 px. Real `<button>`s and
   labels; color never the only signal.

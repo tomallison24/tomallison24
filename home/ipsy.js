@@ -890,7 +890,7 @@
   }
   const ERRORS = {
     signin: 'Sign in with Face ID to chat with Ipsy.', 'accounts-off': 'Family sign-in isn’t switched on yet, so Ipsy can’t be used.',
-    'no-ai': 'Ipsy isn’t set up yet: the owner needs to add the AI key.', limit: 'That’s a lot of questions for one day. Ipsy will be back tomorrow.',
+    'no-ai': 'Ipsy isn’t set up yet: the owner needs to add the AI key.', 'ai-off': 'Claude is turned off here on this phone (aOS, Account, Claude).', limit: 'That’s a lot of questions for one day. Ipsy will be back tomorrow.',
     'ai-key': 'Anthropic didn’t accept the key. The owner can check it.', 'ai-busy': 'Claude is busy. Try again in a minute.',
     'ai-unreachable': 'Couldn’t reach Claude. Try again in a minute.', offline: 'No connection. Try again when you’re online.',
     'too-long': 'This chat is full. Tap New chat to keep going.', full: 'This chat is full. Tap New chat to keep going.',
@@ -1334,6 +1334,11 @@
       const text = input.value.trim();
       if (!text || busy || !ls.get(K.ok, '')) return;
       input.value = ''; input.style.height = '';
+      // Claude turned off for this app on this phone (AllisonOS.claude, ../home/account.js): nothing is sent
+      if (AOS.claude && !AOS.claude.on(o.app)) {
+        add({ t: 'me', text }); add({ t: 'err', text: 'Claude is turned off for ' + (o.app === 'aos' ? 'Ipsy on aOS Home' : o.name) + ' on this phone. ' + (o.app === 'aos' ? 'aOS, Account, Claude' : 'Settings, Ipsy') + ' turns it back on.' });
+        persist(); draw(); return;
+      }
       busy = true; sendBtn.disabled = true;
       const mark = messages.length;          // where this question starts, to go back to if it fails
       let ctx = ''; try { ctx = M.hide(o.context ? o.context() : ''); } catch {}

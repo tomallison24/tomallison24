@@ -1818,6 +1818,7 @@
       : 'Enter the notification server’s address, then turn the switch on.';
     const chips = lists.map(l => '<button class="opt" type="button" data-pl="'+esc(l.id)+'" style="'+lcStyle(l.color)+'" aria-pressed="'+!push.skip.includes(l.id)+'" translate="no"><span class="sw"></span>'+esc(l.name)+'</button>').join('');
     $('bkBody').innerHTML = (window.aosDesign ? T.section('Design', T.raw(aosDesign.picker(), {id:'bkDesign'})) : '')
+      + T.section('Ipsy', T.claude('notes'))
       + T.section('Notifications', on ? [
           T.toggle({id:'puSw', title:'Notifications on this phone', sub:'Alerts this phone when a reminder or nudge is due.', on:true, disabled:!can}),
           T.raw('<span class="st-title">Lists that alert this phone</span><div class="opts" role="group" aria-label="Lists that alert this phone">' + chips + '</div>', {id:'puLists'}),

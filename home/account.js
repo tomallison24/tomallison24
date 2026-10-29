@@ -14,6 +14,44 @@
 //   AllisonOS.account.signUp({ name, code | invite })
 //   AllisonOS.account.call(path, body)   the accounts API itself (aOS uses it)
 //   AllisonOS.account.user() / .signOut() / .prompt()
+//
+// Claude, app by app, on this phone (aOS Account > Claude, or the app's Settings > Ipsy):
+//   AllisonOS.claude.on(app)          -> false once Claude is turned off for that app here
+//   AllisonOS.claude.set(app, on)        turns it on or off (localStorage aos.claude.<app>; never synced)
+//   AllisonOS.claude.apps                [[id, name, what it uses Claude for]], in aOS Account's order
+// While it's off, every call from this phone to that app's Claude routes (CLAUDE below: Ipsy's chat
+// and the work it does by itself) is answered here, before it leaves, with { error: 'ai-off' } (503):
+// nothing from that app reaches Claude. Everything else in the app works as before.
+(() => {
+  'use strict';
+  const A = window.AllisonOS = window.AllisonOS || {};
+  if (A.claude) return;
+  const CLAUDE = { aos: ['ipsy'], calendar: ['ipsy'], fitness: ['ipsy'], meals: ['ipsy', 'plan'], money: ['ipsy', 'check', 'ideas'],
+    news: ['ipsy', 'summarize', 'ask'], notes: ['ipsy'], orders: ['ipsy', 'read'], podcasts: ['tags'], travel: ['ipsy', 'extract'] };
+  const key = app => 'aos.claude.' + app;
+  const on = app => { try { return localStorage.getItem(key(app)) !== 'off'; } catch { return true; } };
+  const net = window.fetch;
+  if (typeof net === 'function') window.fetch = function (input, init) {
+    try {
+      const u = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url, location.href);
+      const m = u.origin === location.origin && /\/([A-Za-z]+)\/api\/([a-z]+)\/?$/.exec(u.pathname), app = m && m[1].toLowerCase();
+      if (app && CLAUDE[app] && CLAUDE[app].includes(m[2]) && !on(app)) {
+        return Promise.resolve(new Response(JSON.stringify({ error: 'ai-off', app }), { status: 503, headers: { 'Content-Type': 'application/json' } }));
+      }
+    } catch {}
+    return net.apply(window, arguments);
+  };
+  A.claude = {
+    on,
+    set(app, v) { try { if (v) localStorage.removeItem(key(app)); else localStorage.setItem(key(app), 'off'); } catch {} dispatchEvent(new CustomEvent('aos:claude', { detail: { app, on: !!v } })); return !!v; },
+    apps: [['aos', 'Ipsy on aOS Home', 'Chats with Ipsy across your apps.'], ['calendar', 'Calendar', 'Chats with Ipsy.'], ['fitness', 'Fitness', 'Chats with Ipsy about your patterns.'],
+      ['meals', 'Meals', 'Chats with Ipsy, and writing the week’s plan.'], ['money', 'Money', 'Chats with Ipsy, the daily check and ideas for your categories.'],
+      ['news', 'News', 'Chats with Ipsy, story summaries and questions about a story.'], ['notes', 'Notes', 'Chats with Ipsy.'],
+      ['orders', 'Orders', 'Chats with Ipsy, and fixing orders read wrong from their emails.'], ['podcasts', 'Podcasts', 'Tags for your shows.'],
+      ['travel', 'Travel', 'Chats with Ipsy, and filling in new bookings from their emails.']],
+    routes: CLAUDE,
+  };
+})();
 (() => {
   'use strict';
   const A = window.AllisonOS = window.AllisonOS || {};
