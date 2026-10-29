@@ -402,5 +402,6 @@ Chromium, offline, opens Settings as a person would, and checks:
 | `motion` | 10: a Reduce Motion rule |
 
 aOS itself has no Settings sheet (its Account tab is the hub's own), so the
-Settings checks are n/a there. It isn't in CI yet: it joins `check-apps.mjs`
-and the workflows once every app passes.
+Settings checks are n/a there. CI runs it on every pull request that changes an
+app or shared code (`.github/workflows/apps-check.yml`, the `standalone` group), and
+it must pass.
