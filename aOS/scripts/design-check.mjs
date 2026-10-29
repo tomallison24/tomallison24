@@ -165,8 +165,6 @@ const GMAIL = JSON.stringify({ t: 'CHECK', exp: Date.now() + 3600e3, scope: 'htt
 const OPEN = {
   mail: { seed: { 'mail.token': GMAIL, 'mail.token.ever': '1', 'mail.hint': 'me@example.com', 'mail.swept': String(Date.now()), 'aos.signin.asked': '1' } },
   podcasts: {},   // one page now (Library), its Settings on it
-  meals: { other: '#setBtn' },
-  house: { other: '#gear' },
   weather: {
     async phone(ctx) {
       const { installWeather, PLACE } = await import(pathToFileURL(path.join(ROOT, 'weather/scripts/fake-weather.mjs')).href);

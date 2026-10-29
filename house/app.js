@@ -1430,8 +1430,49 @@ function syncSheet() {
 
 // Settings itself, as in every app (../home/settings.js): Design · Background · Connected accounts (Home
 // Assistant, once it is connected). Its sub-views (the PIN, Share, Join, Devices with access) and the connect
-// form are this app's own, below it; with one of those open, these sections are hidden.
+// form are drawn from the same rows (drawSubViews), below it; with one of those open, these sections are hidden.
 const ST = window.AllisonOS && AllisonOS.settings;
+// The sub-views and the connect form, drawn once: the code below fills them in and shows one at a time (showView).
+(function drawSubViews() {
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(k => `<button type="button" data-k="${k}">${k}</button>`).join('')
+    + '<button type="button" class="txt" data-k="cancel">Cancel</button><button type="button" data-k="0">0</button><button type="button" class="txt" data-k="del" aria-label="Delete"></button>';
+  // the connect form: the address and token, then Connect
+  $('haForm').innerHTML = '<div class="haguide" id="haGuide" hidden></div>'
+    + ST.section('Home Assistant', [
+      ST.input({ id: 'haUrl', type: 'url', title: 'Address', sub: 'Your <b>https</b> address (such as Nabu Casa), or a share link.', html: true,
+        placeholder: 'https://xxxxxxxx.ui.nabu.casa', attrs: 'inputmode="url" spellcheck="false" autocapitalize="off"' }),
+      ST.input({ id: 'haToken', type: 'password', title: 'Long-lived access token', html: true,
+        sub: 'In Home Assistant: <b>your name</b> → <b translate="no">Security</b> → <b translate="no">Long-lived access tokens</b>.',
+        placeholder: 'Paste the token', attrs: 'spellcheck="false" autocapitalize="off"' }),
+      ST.action({ id: 'haFam', icon: 'face', title: 'Use your family\'s address (Face ID)' }),
+      ST.action({ id: 'haHow', icon: 'play', title: 'Show me how' }),
+    ])
+    + '<div class="status hastatus" id="haStatus"></div>'
+    + ST.section('', [ST.action({ id: 'haConnect', icon: 'link', title: 'Connect' }), ST.action({ id: 'haCancel', title: 'Cancel' })]);
+  // the PIN: the keypad, and Forgot PIN? (red, two taps)
+  $('vPin').innerHTML = ST.section('', ST.raw(`<div class="pinv"><div class="pin-title" id="pinTitle"></div><div class="pin-sub" id="pinSub"></div>
+      <div class="dots" id="pinDots"><i></i><i></i><i></i><i></i></div><div class="pad" id="pinPad">${keys}</div></div>`))
+    + ST.section('', ST.danger({ id: 'pinForgot', title: 'Forgot PIN?' }), { id: 'pinForgotSec' });
+  // Share: the code and how long it lasts, then sending it
+  $('vShare').innerHTML = ST.section('', ST.raw('<div class="sharebox"><div class="sharecode" id="shCode"></div><div class="sharelft" id="shLeft"></div></div>'))
+    + ST.section('', [ST.action({ id: 'shSend', icon: 'send', title: 'Send link' }), ST.action({ id: 'shCopy', icon: 'link', title: 'Copy link' })],
+      { hint: 'Send the link, then tell them the code <b>separately</b>.', html: true })
+    + '<div class="status" id="shStatus"></div>'
+    + ST.section('', ST.action({ id: 'shDone', title: 'Done' }));
+  // Join: the code they were told, this device's name, then Join
+  $('vJoin').innerHTML = '<p class="help" id="jnFrom"></p>'
+    + ST.section('', [
+      ST.input({ id: 'jnCode', title: 'Code', placeholder: '10 letters and numbers', attrs: 'inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" maxlength="12" spellcheck="false"' }),
+      ST.input({ id: 'jnName', title: 'Name this device', attrs: 'maxlength="40" spellcheck="false"' }),
+    ])
+    + '<div class="status" id="jnStatus"></div>'
+    + ST.section('', [ST.action({ id: 'jnGo', icon: 'link', title: 'Join' }), ST.action({ id: 'jnCancel', title: 'Cancel' })])
+    + ST.section('', ST.action({ id: 'jnCopy', icon: 'link', title: 'Copy link', sub: 'For the Home Screen app, paste this link into Address there.' }), { id: 'jnIos' });
+  // Devices with access: the list (ACCESS.open), then Done
+  $('vAccess').innerHTML = '<div class="status" id="acStatus"></div><div id="acList"></div>' + ST.section('', ST.action({ id: 'acDone', title: 'Done' }));
+  $('haConnect').type = $('jnGo').type = 'submit';   // Connect and Join send their forms (Return in a box does too)
+  for (const id of ['haFam', 'haHow', 'haCancel', 'jnIos']) $(id).hidden = true;
+})();
 function renderSettings() {
   const box = $('stMain'), main = view === 'locked' || view === 'edit';
   box.hidden = !main;
@@ -1503,7 +1544,7 @@ async function famFill(ask) {
   let a = null;
   try { const r = await A.fetch(FAM_URL, { cache: 'no-store' }); if (r.ok) a = (await r.json()).address || null; } catch {}
   if (a) { if (!$('haUrl').value.trim()) $('haUrl').value = a; return; }
-  if (ask) { b.hidden = false; b.textContent = 'No family address yet'; }
+  if (ask) { b.hidden = false; b.querySelector('.st-title').textContent = 'No family address yet'; }
 }
 $('haFam').onclick = () => famFill(true);
 addEventListener('aos:account', e => { if (e.detail && view === 'edit') famFill(false); });   // signed in (the family sign-in sheet): fill it in
@@ -1535,8 +1576,8 @@ const pad = { job: null, first: '', typed: '', then: null, back: 'locked', busy:
 function askPin(job, then, back = 'locked') {
   Object.assign(pad, { job, first: '', typed: '', then, back, busy: false });
   showView('pin');
-  $('pinForgot').hidden = job !== 'check';
-  $('pinForgot').className = 'linkbtn'; $('pinForgot').textContent = 'Forgot PIN?';
+  $('pinForgotSec').hidden = job !== 'check';
+  if ($('pinForgot').dataset.armed) ST.armed($('pinForgot'));   // a tap left from last time: back to Forgot PIN?
   $('pinPad').querySelector('[data-k="cancel"]').textContent = job === 'check' ? 'Cancel' : back === 'done' ? 'Not now' : 'Cancel';
   pinPrompt();
 }
@@ -1584,16 +1625,9 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Backspace') pinKey('del');
 });
 // Forgot: the way out wipes what the PIN protects, so it cannot be used to
-// get round it. Two taps, so a stray one does nothing.
-let forgetArmed = 0;
+// get round it. Two taps within 4 s (a danger row, ST.armed), so a stray one does nothing.
 $('pinForgot').onclick = () => {
-  const b = $('pinForgot');
-  if (Date.now() - forgetArmed > 4000) {
-    forgetArmed = Date.now(); b.className = 'linkbtn warn'; b.textContent = 'Tap again to erase the address, token and PIN';
-    setTimeout(() => { if (Date.now() - forgetArmed >= 4000) { b.className = 'linkbtn'; b.textContent = 'Forgot PIN?'; } }, 4100);
-    return;
-  }
-  forgetArmed = 0;
+  if (!ST.armed($('pinForgot'), 'Tap again to erase the address, token and PIN')) return;
   store.set('ha', null); store.set('pin', null); store.set('pinFails', null);
   HA.stop(); goPreview(); showView('edit');
 };
@@ -1851,8 +1885,9 @@ const ACCESS = {
       const list = (await HA.send({ type: 'auth/refresh_tokens' })).filter(t => t.type !== 'system')
         .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
       $('acStatus').textContent = '';
-      $('acList').innerHTML = list.map(t => { const [a, b, own] = this.label(t); return `<div class="rowi"><span class="k"><b${own ? ' translate="no"' : ''}>${esc(a)}</b><small>${esc(b)}</small></span>${
-        t.is_current ? '<span class="me">This device</span>' : `<button type="button" class="rm" data-id="${esc(t.id)}">Remove</button>`}</div>`; }).join('');
+      $('acList').innerHTML = ST.section('', list.map(t => { const [a, b, own] = this.label(t); return ST.info({ html: true,
+        title: own ? `<span translate="no">${esc(a)}</span>` : esc(a), sub: esc(b) + '.',
+        extra: t.is_current ? '<span class="me">This device</span>' : `<button type="button" class="rm" data-id="${esc(t.id)}">Remove</button>` }); }));
     } catch (e) { $('acStatus').className = 'status bad'; $('acStatus').textContent = e.message || String(e); }
   },
   async remove(b) {
@@ -1862,7 +1897,7 @@ const ACCESS = {
       return;
     }
     b.disabled = true;
-    try { await HA.send({ type: 'auth/delete_refresh_token', refresh_token_id: b.dataset.id }); b.closest('.rowi').remove(); }
+    try { await HA.send({ type: 'auth/delete_refresh_token', refresh_token_id: b.dataset.id }); b.closest('.st-row').remove(); }
     catch (e) { b.disabled = false; $('acStatus').className = 'status bad'; $('acStatus').textContent = e.message || String(e); }
     this.armed = null;
   },

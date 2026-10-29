@@ -535,36 +535,22 @@
   .status { font-size: 14px; margin: 12px 8px 0; min-height: 1.4em; }
   .status.bad { color: #FF8A80; }
   .status.good { color: #7BE495; }
-  .btns { display: flex; gap: 8px; margin-top: 14px; }
-  .btn { flex: 1; padding: 14px 0; border-radius: 999px; font-size: 16px; font-weight: 600; background: var(--lgs-field); box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1px 1px var(--lgs-rim); }
-  /* Save / Connect: the Sea glass pastel, with dark ink */
-  .btn.primary {
-    color: var(--cta-ink); background: var(--cta);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.34), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent);
-  }
-  .btn.primary:not(:disabled):active { filter: brightness(.94); }
-  .btn:disabled { opacity: 0.5; }
-  .btn[hidden] { display: none; }
-
-  /* Settings' own views: edit (the form), pin (the pad), share, join, access. */
+  /* Settings' own views: edit (the form), pin (the pad), share, join, access. Their rows are ../home/settings.js's
+     (app.js, drawSubViews); a row or section some of them hide (Cancel, Show me how, Forgot PIN?) takes hidden */
   .view[hidden] { display: none; }
+  #sheetWrap .st-row[hidden], #sheetWrap .st-sec[hidden] { display: none; }
   /* Share: the code to read out, and how long it has left */
+  .sharebox { padding: 16px 12px 14px; }
   .sharecode { margin: 6px 0 0; text-align: center; font-size: 32px; font-weight: 400; letter-spacing: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
   .sharecode.gone { opacity: .35; text-decoration: line-through; }
   .sharelft { text-align: center; font-size: 14px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
-  .sharebtn { width: 100%; margin-top: 14px; }
-  .sharebtn + .sharebtn { margin-top: 8px; }
-  /* Devices with access: one row per way in, with Remove */
-  .acc .rowi { min-height: 60px; padding: 8px 14px; }
-  .acc .k b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .acc .k small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .acc .rm { flex: none; font-size: 14px; font-weight: 600; color: #FF8A80; padding: 8px 4px; }
-  .acc .rm.arm { color: #fff; background: #FF453A; border-radius: 999px; padding: 6px 12px; }
-  .acc .me { flex: none; font-size: 13px; color: var(--muted); }
+  /* Devices with access: one row per way in, with Remove (two taps) at its end */
+  #acList .rm { flex: none; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--st-danger); padding: 8px 4px; }
+  #acList .rm.arm { min-height: 0; color: #fff; background: #FF453A; border-radius: 999px; padding: 6px 12px; }
+  #acList .me { flex: none; font-size: 13px; color: var(--muted); }
 
   /* The PIN pad: glass keys, as on the iPhone's lock screen */
-  .pinv { display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; }
-  .pinv[hidden] { display: none; }
+  .pinv { display: flex; flex-direction: column; align-items: center; padding: 20px 0 22px; }
   .pin-title { font-size: 18px; font-weight: 600; letter-spacing: -0.2px; text-align: center; }
   .pin-sub { font-size: 13px; color: var(--muted); margin-top: 4px; text-align: center; min-height: 1.3em; }
   .pin-sub.bad { color: #FF8A80; }
@@ -583,11 +569,8 @@
   .pad button:active { transform: scale(0.92); background: rgba(255,255,255,0.28); }
   .pad button.txt { background: none; box-shadow: none; font-size: 15px; font-weight: 500; }
   .pad button:disabled { opacity: .35; }
-  .linkbtn { margin-top: 16px; font-size: 14px; color: var(--muted); padding: 8px 12px; }
   .haguide { margin: 2px 0 16px; }
   .haguide .hg-cap { color: var(--text); }
-  #haHow { margin: 0; padding: 0 0 0 4px; font-size: 13px; color: var(--accent); }
-  .linkbtn.warn { color: #FF8A80; font-weight: 600; }
   /* The settings sheet, laid out as in every other app's Settings: the title and a Done tick, labelled groups, hints */
   #sheetWrap .sheet h2 { font-size: 17px; font-weight: 600; letter-spacing: 0; padding: 18px 12px 10px 20px; }
   #sheetWrap .sheet h2 button.okbtn { color: var(--cta-ink); background: var(--cta); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.34), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
@@ -604,22 +587,11 @@
   .aos-design .sw { -webkit-backdrop-filter: none; backdrop-filter: none; }
   .aos-design .sw::after { content: none; }
   .ambient { display: none; }   /* the atomic shapes behind the title: the Vintage design's (#vintage) */
-  #sheetWrap .label { margin: 4px 8px -6px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-  #sheetWrap .group { border-radius: 26px; margin-top: 0; }
-  #sheetWrap .rowi { min-height: 48px; font-size: 15px; }
-  #sheetWrap button.rowi { padding: 12px 14px; font-weight: 600; }
-  #sheetWrap .rowi.danger .k, #sheetWrap .rowi.danger .ic { color: var(--bad); }
-  #sheetWrap .rowi.danger { color: var(--bad); }
-  #sheetWrap .rowi .ic { width: 26px; height: auto; background: none; border-radius: 0; color: var(--accent); }
-  #sheetWrap .group .field { margin: 0; border-radius: 0; background: none; box-shadow: none; padding: 10px 16px; }
-  #sheetWrap .group .field + .field { border-top: 0.5px solid var(--tile-edge); }
   #sheetWrap .help, #sheetWrap .status { margin: 0 12px; font-size: 12px; line-height: 1.55; text-align: start; }
   #sheetWrap .status { font-size: 14px; min-height: 0; color: var(--muted); }
   #sheetWrap .status.bad { color: var(--bad); }
   #sheetWrap .status.good { color: var(--good); }
   #sheetWrap .status:empty { display: none; }
-  #sheetWrap .btns { margin: 0; }
-  #sheetWrap .linkbtn { margin-top: 0; align-self: center; }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sheet, .toast { background: var(--lgs-solid); } }
   @media (prefers-reduced-transparency: reduce) { .sheet, .toast { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   /* LIGHT-BEGIN (generated by tools/lightgen.py; edit the dark rules, then re-run) */
@@ -668,7 +640,7 @@
     .grab { background: rgba(28,32,40,0.165); }
     .help b { color: rgba(28,32,40,0.85); }
     .btn.primary { box-shadow: inset 0 0 0 1px rgba(28,32,40,0.187), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
-    .acc .rm.arm { color: var(--text); }
+    #acList .rm.arm { color: var(--text); }
     .dots i { box-shadow: inset 0 0 0 1.5px rgba(28,32,40,0.468); }
     .pad button:active { background: rgba(28,32,40,0.21); }
   }
@@ -995,7 +967,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <h1>Home</h1>
     <div class="right">
       <span class="chip" id="chip" data-s="preview"><i></i><span>Preview</span></span>
-      <button class="round" id="gear" aria-label="Home Assistant settings"></button>
+      <button class="round" id="gear" aria-label="Settings"></button>
     </div>
   </header>
 
@@ -1027,76 +999,24 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <h2><span id="sheetTitle">Settings</span><button data-close id="sheetClose" aria-label="Done"></button></h2>
     <div class="sheet-body">
       <!-- Settings itself: Design · Background · Connected accounts (app.js, renderSettings, ../home/settings.js).
-           The PIN, Share, Join and Devices with access are its sub-views, and the form connects Home Assistant. -->
+           The PIN, Share, Join and Devices with access are its sub-views, and the form connects Home Assistant:
+           their rows are ../home/settings.js's too, drawn by app.js (drawSubViews). -->
       <div id="stMain"></div>
 
       <!-- Devices with access: every token and sign-in of this Home Assistant user. -->
-      <div class="view" id="vAccess" hidden>
-        <div class="status" id="acStatus"></div>
-        <div class="group acc" id="acList"></div>        <div class="btns"><button class="btn" type="button" id="acDone">Done</button></div>
-      </div>
+      <div class="view" id="vAccess" hidden></div>
 
       <!-- Share: a one-off link and a 10-character code, good for 5 minutes. -->
-      <div class="view" id="vShare" hidden>
-        <div class="sharecode" id="shCode"></div>
-        <div class="sharelft" id="shLeft"></div>
-        <div class="btns">
-          <button class="btn" type="button" id="shCopy">Copy link</button>
-          <button class="btn primary" type="button" id="shSend">Send link</button>
-        </div>
-        <div class="status" id="shStatus"></div>
-        <p class="help">Send the link, then tell them the code <b>separately</b>.</p>
-        <div class="btns"><button class="btn" type="button" id="shDone">Done</button></div>
-      </div>
+      <div class="view" id="vShare" hidden></div>
 
       <!-- Join: a share link opened (or pasted into Address) on the other device. -->
-      <form class="view" id="vJoin" autocomplete="off" hidden>
-        <p class="help" id="jnFrom"></p>
-        <label class="field"><span>Code</span>
-          <input id="jnCode" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" maxlength="12" placeholder="10 letters and numbers" spellcheck="false"></label>
-        <label class="field"><span>Name this device</span>
-          <input id="jnName" maxlength="40" spellcheck="false"></label>
-        <div class="status" id="jnStatus"></div>
-        <div class="btns">
-          <button class="btn" type="button" id="jnCancel">Cancel</button>
-          <button class="btn primary" type="submit" id="jnGo">Join</button>
-        </div>
-        <p class="help" id="jnIos" hidden>For the Home Screen app, paste this link into <b>Address</b> there. <button type="button" class="linkbtn" id="jnCopy">Copy link</button></p>
-      </form>
+      <form class="view" id="vJoin" autocomplete="off" hidden></form>
 
       <!-- Edit: the address and token. A saved token is never put back in the box. -->
-      <form class="view" id="haForm" autocomplete="off" hidden>
-        <div class="haguide" id="haGuide" hidden></div>
-        <p class="label">Home Assistant</p>
-        <div class="group">
-          <label class="field"><span>Address</span>
-            <input id="haUrl" type="url" inputmode="url" placeholder="https://xxxxxxxx.ui.nabu.casa" spellcheck="false" autocapitalize="off"></label>
-          <label class="field"><span>Long-lived access token</span>
-            <input id="haToken" type="password" placeholder="Paste the token" spellcheck="false" autocapitalize="off"></label>
-        </div>
-        <button type="button" class="linkbtn" id="haFam" hidden>Use your family's address (Face ID)</button>
-        <div class="status hastatus" id="haStatus"></div>
-        <div class="btns">
-          <button class="btn" type="button" id="haCancel" hidden>Cancel</button>
-          <button class="btn primary" type="submit" id="haConnect">Connect</button>
-        </div>
-        <p class="help">Address: your <b>https</b> address (such as Nabu Casa), or a share link.</p>
-        <p class="help">Token: in Home Assistant, <b>your name</b> → <b translate="no">Security</b> → <b translate="no">Long-lived access tokens</b>. <button type="button" class="linkbtn" id="haHow" hidden>Show me how</button></p>
-      </form>
+      <form class="view" id="haForm" autocomplete="off" hidden></form>
 
       <!-- PIN: enter it, or choose one (twice). -->
-      <div class="pinv" id="vPin" hidden>
-        <div class="pin-title" id="pinTitle"></div>
-        <div class="pin-sub" id="pinSub"></div>
-        <div class="dots" id="pinDots"><i></i><i></i><i></i><i></i></div>
-        <div class="pad" id="pinPad">
-          <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
-          <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
-          <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
-          <button type="button" class="txt" data-k="cancel">Cancel</button><button type="button" data-k="0">0</button><button type="button" class="txt" data-k="del" aria-label="Delete"></button>
-        </div>
-        <button type="button" class="linkbtn" id="pinForgot">Forgot PIN?</button>
-      </div>
+      <div class="view" id="vPin" hidden></div>
 
     </div>
   </div>
