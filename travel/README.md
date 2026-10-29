@@ -140,7 +140,12 @@ that, every time it opens (at most every 30 minutes) for anything new. It
 only opens emails whose subject looks like a booking (confirmation,
 itinerary, reservation, e-ticket, cancelled, …), that come from the
 airlines, Marriott, National and the other big rental car companies, or that carry
-Gmail's **Travel** label. Promotions are skipped. Each email is read once;
+Gmail's **Travel** label. Promotions are skipped. Each email is read once,
+newest first, at most 90 in one pass: Gmail lets one person use 6,000 quota units
+a minute and reading a whole email costs 60, so about 100 emails a minute is the
+most it allows. A longer read (the first one, which goes back a year) carries on in
+another pass after a minute's break, or the next time Travel opens, and Settings
+says how many are still to read.
 **Read the last year again** in Settings starts over,
 replacing everything read from email except bookings you edited, checked or
 deleted.
@@ -237,7 +242,7 @@ airports); airline promotions with a flight number in them are still ignored.
 
 ## Smart help
 
-Two things, each switchable in Settings (the AI one runs when you press its button, or by itself once you have told Ipsy yes):
+Two things, each switchable in Settings (the AI one runs by itself, and when you press its button):
 
 **The Family calendar, both ways** (needs the Calendar app's function: the iCloud
 secrets in `calendar/README.md`). Each time Travel reads Gmail, opens (every 20
@@ -281,16 +286,15 @@ board, and last the AI:
   board for that airport in a window around the time. Only a single match is
   used.
 - *AI: Have Ipsy check, or Ipsy by itself.* A trip card (an upcoming trip with a booking that
-  still lacks something) has a **Have Ipsy check** button (it was Check with AI). Nothing is sent
-  to Claude by itself until you say yes to Ipsy: the first time Travel finds an upcoming booking
-  from an email that is missing something, Ipsy offers from its corner ("2 bookings are missing
-  details. Want me to look?"), and asks in its bubble. Yes turns on **Ipsy checks by itself**
-  (Settings, Smart help): after each read of Gmail, when Travel opens and after you change a
+  still lacks something) has a **Have Ipsy check** button (it was Check with AI). **Ipsy checks
+  by itself** (Settings, Smart help; on unless you turn it off, the owner's call: it used to ask
+  first): after each read of Gmail, when Travel opens and after you change a
   booking (once the calendar and the flight board have had their go), every upcoming booking
   still missing something is checked, once per email, at most 10 at a time, quietly (with the
-  family session it has, never a Face ID prompt; signed out, it stops and says so). What it fills in
-  is marked **Check** (so it waits in To check for you to look over), with Undo in Ipsy's chat;
-  Ipsy says in its corner what it did. Not now, or the switch off, and only the button sends
+  family session it has, never a Face ID prompt; signed out, it stops and says so once). A booking
+  it completes (nothing missing any more) leaves To check for Upcoming; one still missing
+  something is marked **Check** and waits in To check. Undo for either is in Ipsy's chat, and
+  Ipsy says in its corner what it did. With the switch off, only the button sends
   anything. A press
   reads the emails behind that trip's incomplete bookings from Gmail, and for each
   asks only about what is missing (a date is asked for only if the email has
@@ -408,10 +412,12 @@ next scan on each phone then reads the last year again once, and what the old
 reader made of those emails is made again by the new one. What you edited,
 checked or deleted, what was filled in by AI, and what came from the calendar
 stays as it is (the same as Settings, *Read the last year again*, which does it
-on demand). The re-reading counts as done when (nearly) all the mail came down;
-if the look stops partway, or more than three emails could not be downloaded,
-what it had cleared is put back and the whole re-reading is tried again next time,
-so an interrupted update never leaves holes.
+on demand). The old reader's bookings stay on screen until their email is read
+again (each is replaced then by the new reader's), so a re-reading in several passes,
+or one cut off partway, never leaves holes; it carries on from where it stopped.
+Once the whole re-reading is done (more than three emails that could not be
+downloaded stop it, to be tried again), the old bookings whose email wasn't found
+again go.
 
 **Settings > What Travel read** lists the emails the last look went through (up to
 200, newest first): the subject, who from, the day, and what Travel made of each

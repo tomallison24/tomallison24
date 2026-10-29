@@ -50,13 +50,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore', family: KEY + '-family', who: KEY + '-who', people: KEY + '-people',
     calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
-    ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut',
+    ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut', more: KEY + '-scan-more',
   };
   // Inside aOS, reading Gmail (and the checks after it) count as an update under way: aOS doesn't put Travel away
   // or start it again until it's done (../home/welcome.js AllisonOS.updating).
   const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
   const FIRST_SCAN = 'newer_than:1y';
-  const MAX_SCAN = 400;              // messages read in one go at most
+  // Gmail lets one person use 6,000 quota units a minute, and reading a whole email costs 60 (its usage limits page, Oct 2026):
+  // 100 emails a minute. So a pass reads 90 (room for the list calls), newest first, and the rest follow after a minute's break.
+  const BATCH = 90;                  // emails read in one pass
+  const PASS_BREAK = 65e3;           // the break between passes
+  const MAX_LIST = 1000;             // emails listed in one look at most
   const LOOKUPS_A_MONTH = 250;       // per phone; meant to stay inside AeroDataBox's free plan (README, "What I could not verify")
   // Booking emails: the subjects they use, and the senders you book with.
   const SENDERS = [
@@ -918,7 +922,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (b.type === 'hotel' || b.type === 'car') return !!b.conf && x.conf === b.conf;
     return false;
   }
-  let revive = new Set(ls.json(K.revive, []));   // ids "Read the last year again" cleared, which may come back (kept until a scan finishes)
+  let revive = new Set(ls.json(K.revive, []));   // the old reader's bookings, made again as their emails are read again (reviveFrom, in scan)
   function upsert(b, byHand) {
     upsert.id = b.id;
     if (graves['bookings:' + b.id] && !revive.has(b.id)) return 'gone';  // deleted on purpose: stays deleted
@@ -1081,6 +1085,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ls.set(K.scanLog, JSON.stringify([...byId.values()].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 200)));
     ls.set(K.scanInfo, JSON.stringify(info));
   }
+  // The old reader's bookings to make again (revive, K.revive), when the reader changes or you ask Travel to read the last year
+  // again. They stay on screen until their email is read again, so a long read in several passes leaves no hole; once the
+  // whole read is done, the ones whose email wasn't found again go.
+  function reviveFrom(list) {
+    list.forEach(b => revive.add(b.id));
+    ls.set(K.revive, JSON.stringify([...revive]));
+    seen = new Set(); saveSeen(); ls.del(K.lastScan); ls.set(K.more, '1');
+  }
+  let nextPass = 0;
   async function scan({ loud } = {}) {
     if (st.scanning) return;
     if (!getToken()) {
@@ -1088,17 +1101,23 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (loud) openSettings();
       return;
     }
+    clearTimeout(nextPass);
     st.scanning = true; scanErr = ''; render();
     updating('gmail', true);
     ls.set(K.cut, '1');   // until this read ends: one cut off (Travel closed, the phone) goes on as soon as Travel is back
     busyPill('Reading Gmail');
     const startedAt = Date.now();
-    const rebuild = ls.get(K.queryV, '') !== QUERY_V;   // the reader changed: read the mail again once, and rebuild what the old reader made of it
-    const readHere = new Set(seen);                      // the emails read on this phone, from its own Gmail
-    if (rebuild) { seen = new Set(); saveSeen(); }
-    const last = ls.get(K.queryV, '') === QUERY_V ? +ls.get(K.lastScan, 0) : 0;   // a wider search reads back a year once (seen mail is skipped)
+    const rebuild = ls.get(K.queryV, '') !== QUERY_V;   // the reader changed: read the mail again once, and make again what the old reader made of it
+    if (rebuild) {
+      // What you edited, checked or deleted, and what was filled in by AI or came from the calendar, stays; the rest was made by the
+      // old reader and is made again by the new one. Only bookings from emails read on this phone (someone else's shared booking
+      // came from their Gmail, which this phone can't read again), and not those kept in the Sheet past the 90 days.
+      reviveFrom(bookings.filter(b => b.source && b.source.msgId && seen.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked && !b.filled && !b.fromCal));
+      ls.set(K.queryV, QUERY_V);
+    }
+    const last = +ls.get(K.lastScan, 0);   // none yet (or reading again): back a year (seen mail is skipped)
     const since = last ? 'after:' + Math.floor(last / 1000 - 3 * 86400) : FIRST_SCAN;
-    let added = 0, changed = 0, cancelled = 0, read = 0, failed = 0, listed = 0, found = 0, dropped = [];
+    let added = 0, changed = 0, cancelled = 0, read = 0, failed = 0, listed = 0, found = 0, more = 0;
     const failedIds = new Set();
     const notes = new Map();   // what each email came to, for Settings > What Travel read
     const note = (m, msg, out) => notes.set(m.id, { id: m.id, at: +(msg && msg.internalDate) || 0, from: msg ? senderName(header(msg, 'from')) : '', subj: msg ? header(msg, 'subject').trim().slice(0, 100) : '', out });
@@ -1110,20 +1129,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         const r = await gmail('/messages', { q: since + ' ' + QUERY, maxResults: 100, pageToken });
         (r.messages || []).forEach(m => ids.push(m));
         pageToken = r.nextPageToken;
-      } while (pageToken && ids.length < MAX_SCAN);
+      } while (pageToken && ids.length < MAX_LIST);
       listed = ids.length;
-      if (rebuild) {
-        // Only now that the list came back (a failed look leaves everything as it was). What you edited, checked or deleted, and what was
-        // filled in by AI or came from the calendar, stays; the rest was made by the old reader and is made again by the new one.
-        // Only bookings from emails read on this phone (someone else's shared booking came from their Gmail, which this
-        // phone can't read again), and not those kept in the Sheet past the 90 days (fetched to look back).
-        const old = bookings.filter(b => b.source && b.source.msgId && readHere.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked && !b.filled && !b.fromCal);
-        old.forEach(b => revive.add(b.id));
-        ls.set(K.revive, JSON.stringify([...revive]));
-        dropped = old;
-        bookings = bookings.filter(b => !revive.has(b.id));
-      }
-      const todo = ids.filter(m => !seen.has(m.id)).slice(0, MAX_SCAN);
+      // newest first, BATCH at a time: the rest is read in the next pass, after a break
+      const unread = ids.filter(m => !seen.has(m.id)), todo = unread.slice(0, BATCH);
+      more = unread.length - todo.length;
       st.scanTotal = todo.length; st.scanDone = 0;
       await pool(todo, 4, async m => {
         let msg;
@@ -1133,8 +1143,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         let doc = null;
         if (html && /itemscope/i.test(html) && window.DOMParser) { try { doc = new DOMParser().parseFromString(html, 'text/html'); } catch {} }
         const r = P.parseEmail({ html, text, doc, subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || Date.now(), id: msg.id, threadId: msg.threadId });
+        // read again: what the old reader made of this email gives way to what the new one makes of it
+        if (revive.size) bookings = bookings.filter(b => !(revive.has(b.id) && b.source && b.source.msgId === m.id && !b.edited && !b.checked));
         r.bookings.forEach(b => {
           const x = upsert(b); if (x === 'new') added++; else if (x === 'changed') changed++;
+          revive.delete(upsert.id);     // found again: kept
         });
         if (r.cancelled && !r.bookings.length) cancelled += cancelByConf(P.findConf(P.htmlToText(html) || text));
         found += r.bookings.length;
@@ -1142,33 +1155,39 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         seen.add(m.id); read++;
         st.scanDone++;
         if (st.scanDone % 10 === 0) busyPill('Reading Gmail · ' + st.scanDone + ' of ' + st.scanTotal);
-        // kept as it goes, so a read cut off loses at most the last few (not while rebuilding: what it took out
-        // to make again is only put back at the end, so a half-made copy mustn't be kept)
-        if (!rebuild && st.scanDone % 25 === 0) { track(); persist(); saveSeen(); }
+        if (st.scanDone % 25 === 0) { ls.set(K.revive, JSON.stringify([...revive])); track(); persist(); saveSeen(); }    // kept as it goes, so a read cut off loses at most the last few
       });
-      // A look that read the mail again after an update counts as done when (nearly) all of it came down; otherwise it is tried again.
-      if (rebuild && failed > 3) scanErr = plural(failed, 'email') + ' could not be downloaded';
-      else { ls.set(K.lastScan, String(startedAt)); ls.set(K.queryV, QUERY_V); }
+      // Reading again (an update, or Read the last year again) counts as done when (nearly) all of it came down; otherwise it is
+      // tried again (as is a pass that downloaded nothing, rather than another pass straight after).
+      if ((revive.size || !read) && failed > 3) scanErr = plural(failed, 'email') + ' could not be downloaded';
+      else if (more) ls.set(K.more, '1');
+      else {
+        ls.set(K.lastScan, String(startedAt)); ls.del(K.more);
+        // the whole read is done: what the old reader made, and the new one didn't find again, goes (an email that couldn't be downloaded keeps its old version)
+        if (revive.size) bookings = bookings.filter(b => !revive.has(b.id) || b.edited || b.checked || !(b.source && b.source.msgId) || failedIds.has(b.source.msgId));
+        revive = new Set(); ls.del(K.revive);
+      }
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
-      // A rebuild that stopped partway puts back what it had not made again (the old reader's version is better than a hole).
-      if (dropped.length) { const have = new Set(bookings.map(b => b.id)); dropped.forEach(b => { if (!have.has(b.id) && (scanErr || failedIds.has(b.source.msgId))) bookings.push(b); }); }
-      if (scanErr && rebuild) seen = new Set();     // the next look starts the re-reading afresh
+      if (revive.size) ls.set(K.revive, JSON.stringify([...revive]));
       saveSeen(); save();
-      if (!scanErr) { revive = new Set(); ls.del(K.revive); }
-      saveScanLog(notes, { at: startedAt, ok: !scanErr, err: scanErr === 'auth' ? 'signed out' : scanErr, listed, read, failed, found, rebuilt: rebuild });
+      saveScanLog(notes, { at: startedAt, ok: !scanErr, err: scanErr === 'auth' ? 'signed out' : scanErr, listed, read, failed, found, more, rebuilt: rebuild });
       st.scanning = false;
       if (scanErr !== 'auth') ls.del(K.cut);   // cut off by a sign-in that ran out out of sight: renewed once Travel is on screen
       updating('gmail', false);
       render();
+      const bits = [];
+      if (added) bits.push(plural(added, 'new booking'));
+      if (changed) bits.push(plural(changed, 'update'));
+      if (cancelled) bits.push(plural(cancelled, 'cancellation'));
       if (scanErr === 'auth') { busyPill(); if (loud) { toast('Gmail needs you to sign in again.'); openSettings(); } else if (mayRenew()) signIn({ silent: true }); }
       else if (scanErr) { busyPill(); if (loud) toast(scanErr); }
-      else {
-        const bits = [];
-        if (added) bits.push(plural(added, 'new booking'));
-        if (changed) bits.push(plural(changed, 'update'));
-        if (cancelled) bits.push(plural(cancelled, 'cancellation'));
+      else if (more) {
+        // a break between passes, then the next one, while Travel is open (else when it's back: scanDue)
+        busyPill('Reading Gmail · ' + plural(more, 'more email') + ' in a moment');
+        nextPass = setTimeout(() => { if (document.visibilityState === 'visible') scan({ loud }); else busyPill(); }, PASS_BREAK);
+      } else {
         pillDone(bits.length ? bits.join(', ') : 'Up to date');
         if (loud && !bits.length) toast(read ? 'Read ' + plural(read, 'email') + '. Nothing new.' : 'Nothing new in Gmail.');
       }
@@ -1178,7 +1197,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('scanBtn').onclick = () => scan({ loud: true });
   // Due every half hour, and straight away once the search has widened.
-  const scanDue = () => !!ls.get(K.cut, '') || ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
+  const scanDue = () => !!ls.get(K.cut, '') || !!ls.get(K.more, '') || ls.get(K.queryV, '') !== QUERY_V || Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
   // ---------------------------------------------------------------------
   // Live flight status (travel/api/flight, a Cloudflare Pages Function). Travel's route, named from
@@ -1511,12 +1530,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return any;
   }
   // queue: [{bid, text, subject, date, msgId}] - the emails of bookings that still lack something. A press of Have Ipsy
-  // check gets here, and Ipsy's own check (ipsyAutoCheck, once you have said yes). Returns {asked, filled, nothing, done,
+  // check gets here, and Ipsy's own check (ipsyAutoCheck, unless it's turned off). Returns {asked, filled, nothing, done,
   // changes, stop}: calls made, details filled in, bookings whose email does not state what is missing, the bookings
+  // now missing nothing (complete: out of To check, in Upcoming),
   // looked at, what changed ({id, before, after} for Undo), and why it stopped early ('' if it didn't). quiet: no Face ID
   // prompt (Ipsy's own check uses the session it has, or stops).
   async function aiPass(queue, quiet) {
-    const out = { asked: 0, filled: 0, nothing: 0, unread: 0, done: new Set(), changes: [], stop: '' };
+    const out = { asked: 0, filled: 0, complete: 0, nothing: 0, unread: 0, done: new Set(), changes: [], stop: '' };
     if (!aiOn() || !queue.length) return out;
     if (aiAvail === null) await pingLive(quiet);
     if (!aiAvail) return out;
@@ -1552,6 +1572,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (d.ok) noteModel('check', d.model);
       if (d.ok && applyAi(b, M.show(d.fields || {}))) {
         changed = true; out.filled += Math.max(1, Object.keys(b.filled || {}).length - had);
+        // nothing missing any more: it leaves To check for Upcoming (Undo, in Ipsy's chat, puts it back)
+        if (!P.missingFields(b).length) { b.guess = false; out.complete++; }
         out.changes.push({ id: b.id, before, after: sameAs(b) });
       }
     }
@@ -1579,17 +1601,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return { queue, noMail };
   }
   // Undo for what a check filled in: each booking goes back to how it was, unless it has changed again since.
-  const sameAs = b => { const { updated, ...rest } = b; return JSON.stringify(rest); };     // save() stamps updated
+  const sameAs = b => { const { updated, by, ...rest } = b; return JSON.stringify(rest); };     // save() stamps updated, the Sheet's sync by
   const undoChanges = changes => () => {
     let any = false;
     for (const c of changes) {
       const i = bookings.findIndex(x => x.id === c.id);
       if (i < 0 || sameAs(bookings[i]) !== c.after) continue;
-      bookings[i] = c.before; any = true;
+      bookings[i] = bookings[i].by ? { ...c.before, by: bookings[i].by } : c.before; any = true;
     }
     if (any) { save(); render(); smartSoon(); }
   };
-  const filledLine = r => 'Filled in ' + plural(r.filled, 'detail') + ' on ' + (r.changes.length === 1 ? titleOf(bookings.find(b => b.id === r.changes[0].id) || {}) : plural(r.changes.length, 'booking')) + '. Marked Check.';
+  // what became of them: complete ones are in Upcoming, the rest wait in To check
+  const doneSay = r => !r.complete ? 'Marked Check.' : r.complete === r.changes.length ? 'Nothing is missing now: in Upcoming.' : r.complete + ' complete, in Upcoming; the rest marked Check.';
+  const filledLine = r => 'Filled in ' + plural(r.filled, 'detail') + ' on ' + (r.changes.length === 1 ? titleOf(bookings.find(b => b.id === r.changes[0].id) || {}) : plural(r.changes.length, 'booking')) + '. ' + doneSay(r);
   // Have Ipsy check, on a trip card: reads the emails behind the trip's bookings that still lack something and
   // asks Claude only about what they lack. You press it, so you decide when anything is sent.
   async function checkTripWithAI(id, btn) {
@@ -1608,7 +1632,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       await findNumbers();
       const bits = [];
       if (r.stop === 'ai-budget') bits.push(AllisonOS.budgetSay(r.until));
-      else if (r.filled) bits.push('Ipsy filled in ' + plural(r.filled, 'detail') + '. They’re marked to check.');
+      else if (r.filled) bits.push('Ipsy filled in ' + plural(r.filled, 'detail') + '. ' + (r.complete === r.changes.length ? 'Nothing is missing now.' : 'They’re marked to check.'));
       else if (r.asked > r.unread) bits.push('Ipsy read the email. It doesn’t say anything more.');
       else if (r.unread) bits.push('Ipsy couldn’t read the emails just now.');
       else if (r.nothing) bits.push('The email doesn’t state what’s missing, so Ipsy has nothing to read. Your calendar, or you, can add it.');
@@ -1759,9 +1783,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // Ipsy checks by itself: after Travel reads Gmail, opens or you change a booking (smartPass, once the calendar and the
   // flight board have had their go), every upcoming booking still missing something that came from an email is
-  // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. Asked once first, from Ipsy's
-  // corner; Settings > Smart help turns it on or off. What it fills in is marked Check (To check), with Undo in Ipsy's chat.
-  let autoBusy = false, autoOffered = false;
+  // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. On unless Settings > Smart help
+  // turns it off. A booking it completes goes to Upcoming; one still missing something waits in To check; Undo in Ipsy's chat.
+  let autoBusy = false, signinSaid = false;
   async function ipsyAutoCheck() { updating('check', true); try { await ipsyAutoCheckNow(); } finally { updating('check', false); } }
   async function ipsyAutoCheckNow() {
     if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken()) return;
@@ -1773,16 +1797,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!todo.length) return;
     if (aiAvail === null) await pingLive(true);
     if (!aiAvail) return;
-    if (mode !== '1') {
-      if (autoOffered) return;
-      autoOffered = true;
-      ipsy.hint(plural(todo.length, 'booking') + (todo.length === 1 ? ' is' : ' are') + ' missing details. Want me to look?', async () => {
-        const ok = await ipsy.ask('Want me to fill in what your upcoming bookings are missing, by myself? I’ll send Claude a short excerpt of each email, and mark what I fill in **Check**, with Undo.', { yes: 'Yes, check them', no: 'Not now' });
-        ls.set(K.ipsyAuto, ok ? '1' : '0');
-        if (ok) { ipsy.close(); ipsyAutoCheck(); }
-      });
-      return;
-    }
     autoBusy = true; ipsy.working(true);
     let r = null, stop = '';
     try {
@@ -1798,9 +1812,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     autoBusy = false; ipsy.working(false); render();
     if (r && r.changes.length) {
       ipsy.change(filledLine(r), undoChanges(r.changes));
-      ipsy.hint('I filled in ' + plural(r.filled, 'detail') + ' on ' + plural(r.changes.length, 'booking') + '. They’re in To check for you to look over.');
+      const n = r.changes.length, rest = n - r.complete;
+      ipsy.hint('I filled in ' + plural(r.filled, 'detail') + ' on ' + plural(n, 'booking') + '. ' + (!r.complete ? (n === 1 ? 'It’s' : 'They’re') + ' in To check for you to look over.'
+        : !rest ? 'Nothing is missing now, so ' + (n === 1 ? 'it’s' : 'they’re') + ' in Upcoming.' : r.complete + ' ' + (r.complete === 1 ? 'is' : 'are') + ' in Upcoming now; ' + plural(rest, 'booking') + ' still missing something ' + (rest === 1 ? 'is' : 'are') + ' in To check.'));
     } else if (r && r.done.size) ipsy.note('Checked ' + plural(r.done.size, 'booking') + ' missing details: ' + (r.done.size === 1 ? 'its email doesn’t' : 'their emails don’t') + ' say any more.');
-    else if (stop === 'signin') ipsy.hint('Sign in with Face ID in aOS and I can fill in what your bookings are missing.');
+    else if (stop === 'signin' && !signinSaid) { signinSaid = true; ipsy.hint('Sign in with Face ID in aOS and I can fill in what your bookings are missing.'); }
     else if (stop === 'ai-budget') ipsy.hint(AllisonOS.budgetSay(r.until));
   }
   // -- Changes Ipsy makes (ipsy-tools.js): "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
@@ -2013,7 +2029,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function scanSummary() {
     const i = ls.json(K.scanInfo, null);
     if (!i) return 'Nothing yet';
-    return i.ok ? 'Last look ' + ago(i.at) + ': ' + plural(i.read, 'email') + ' read, ' + plural(i.found, 'booking') + ' found' + (i.failed ? ', ' + i.failed + ' not downloaded' : '')
+    return i.ok ? 'Last look ' + ago(i.at) + ': ' + plural(i.read, 'email') + ' read, ' + plural(i.found, 'booking') + ' found' + (i.failed ? ', ' + i.failed + ' not downloaded' : '') + (i.more ? ', ' + i.more + ' more to read' : '')
       : 'Last look ' + ago(i.at) + ' stopped: ' + (i.err || 'something went wrong');
   }
   function openLog() {
@@ -2046,7 +2062,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('stAiSub').textContent = aiAvail === false ? 'Not set up on this copy of the site.' : aiOn() ? 'On. Ipsy fills in a trip’s missing details from its email.' + modelsLine() : 'Off. Ipsy fills in a trip’s missing details from its email.';
     const auto = ls.get(K.ipsyAuto, '');
     $('stIpsyAutoOpt').hidden = aiAvail === false || !aiOn();
-    $('stIpsyAutoSub').textContent = (auto === '1' ? 'On. ' : auto === '0' ? 'Off. ' : 'Asks first. ') + 'Ipsy checks new bookings that are missing details.';
+    $('stIpsyAutoSub').textContent = (auto === '0' ? 'Off. ' : 'On. ') + 'Ipsy fills in what new bookings are missing, and moves them to Upcoming.';
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
     $('stIpsyGmailOpt').hidden = !PV;
     if (PV) $('stIpsyGmailSub').textContent = (PV.gmail('travel') ? 'On. ' : 'Off. ') + 'Lets Ipsy search and read your email in chats.';
@@ -2078,7 +2094,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   $('stCalOpt').onclick = () => { ls.set(K.calOn, calOn() ? '0' : '1'); renderSettings(); if (calOn()) smartSoon(); };
   $('stAiOpt').onclick = () => { ls.set(K.aiOn, aiOn() ? '0' : '1'); renderSettings(); render(); };
   $('stIpsyAutoOpt').onclick = () => {
-    const on = ls.get(K.ipsyAuto, '') !== '1';
+    const on = ls.get(K.ipsyAuto, '') === '0';
     ls.set(K.ipsyAuto, on ? '1' : '0'); renderSettings();
     if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); ipsyAutoCheck(); }
   };
@@ -2089,14 +2105,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (e.target.closest('#stLog')) openLog();
     else if (e.target.closest('#stRescan')) {
       // Start over: bookings read from email (and not edited or checked by
-      // you) are cleared and read again, so an improved reader replaces its
-      // old mistakes. Anything not found again stays gone, on both phones.
+      // you) are made again as their emails are read again, so an improved reader replaces its
+      // old mistakes. Anything not found again goes, on both phones.
       // Only those whose email was read on this phone (as when the reader changes, in scan), and none past the 90 days.
-      const auto = bookings.filter(b => b.source && b.source.msgId && seen.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked);
-      revive = new Set(auto.map(b => b.id)); ls.set(K.revive, JSON.stringify([...revive]));
-      bookings = bookings.filter(b => !revive.has(b.id));
-      save();
-      seen = new Set(); saveSeen(); ls.del(K.lastScan); closeSheet('setSheet'); scan({ loud: true });
+      if (st.scanning) return;
+      reviveFrom(bookings.filter(b => b.source && b.source.msgId && seen.has(b.source.msgId) && !isOld(b) && !b.edited && !b.checked));
+      closeSheet('setSheet'); scan({ loud: true });
     }
     else if (e.target.closest('#stOut')) signOut();
   });
