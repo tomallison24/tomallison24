@@ -15,12 +15,15 @@
 // PODCASTINDEX_KEY and PODCASTINDEX_SECRET secrets (podcasts/README.md,
 // "Search").
 //
+// And one that isn't a fetch: POST /podcasts/api/tags, the show's tags (Music,
+// Talk, News...) for the Library, picked by Claude from TAGS (tag(), below).
+//
 // It runs only where the site is on Cloudflare Pages (behind Cloudflare
 // Access, like the rest of it). Wrangler picks up this functions/ folder when
 // .github/workflows/news.yml deploys from the repository root. On GitHub Pages
 // it is just a file; the app then reads feeds directly where the feed allows.
 //
-// It only fetches, never stores. To keep it from being used for anything else:
+// Its fetches store nothing. To keep it from being used for anything else:
 // - requests must carry the X-Podcasts header, which a link or a form can't
 //   add, so nothing can be opened here by visiting an address;
 // - replies are plain text or JSON with nosniff and a sandbox CSP, so nothing
@@ -32,6 +35,9 @@ const UA = 'AllisonOS-Podcasts/1.0 (personal podcast app)';
 const MAX_BYTES = 25 * 1024 * 1024;
 const TIMEOUT_MS = 20000;
 const COUNTRIES = new Set(['gb', 'us', 'ie', 'ca', 'au', 'nz']);
+
+import { kv, sessionUser } from '../../../server/auth.js';
+import { fail, aiFail, today } from '../../../server/ipsy.js';
 
 export async function onRequestGet({ request, params, env = {}, waitUntil }) {
   if (request.headers.get('X-Podcasts') !== '1') return reply('Not found', 404);
@@ -45,6 +51,14 @@ export async function onRequestGet({ request, params, env = {}, waitUntil }) {
     return reply(JSON.stringify({ error: String(e && e.message || e).slice(0, 200) }), 502, 'application/json');
   }
   return reply('Not found', 404);
+}
+
+export async function onRequestPost({ request, params, env = {} }) {
+  if (request.headers.get('X-Podcasts') !== '1') return reply('Not found', 404);
+  const route = [].concat(params.route || []).join('/');
+  if (route !== 'tags') return reply('Not found', 404);
+  try { return json(await tag(request, env)); }
+  catch (e) { return reply(JSON.stringify({ error: String(e && e.message || e).slice(0, 200) }), e && e.status || 502, 'application/json'); }
 }
 
 function reply(body, status = 200, type = 'text/plain; charset=utf-8', maxAge = 0) {
@@ -241,4 +255,56 @@ async function chart(c) {
   const data = await itunes(`lookup?entity=podcast&country=${c}&id=${ids.slice(0, 50).join(',')}`);
   const byId = new Map((data.results || []).map(r => [String(r.collectionId), show(r)]));
   return ids.map(id => byId.get(id)).filter(s => s && s.feed);
+}
+
+// ---- tags ----
+// The Library's tags, one list for everyone so they stay few and the same. Claude picks one or two
+// for each show from its title, author, Apple's genre and the start of its description; the phone
+// sends the shows it has no tags for (TAG_MAX at a time) and keeps what comes back, and you can
+// change them. Each call costs a little, so at most TAG_DAILY a person a day, counted in the
+// accounts' KV as podcasts:tags:<user id>:<day> (gone after two days), before the call.
+export const TAGS = ['Music', 'Talk', 'News', 'Comedy', 'True Crime', 'Sport', 'Education', 'Kids', 'Business', 'Health', 'Society', 'Other'];
+export const TAG_MODEL = 'claude-haiku-5-5';
+export const TAG_MAX = 25, TAG_DAILY = 30;
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+const clip = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+export const TAG_SYSTEM = 'You sort podcasts for a family\'s podcast app. For each show, pick one tag, or two when one '
+  + 'isn\'t enough, from exactly this list: ' + TAGS.join(', ') + '. Music: shows about or made of music. Talk: chat, '
+  + 'interviews and personalities, when nothing more specific fits. Other: only when nothing else fits. Answer with only '
+  + 'a JSON object from each show\'s id to its list of tags, like {"a1": ["Comedy"], "b2": ["News", "Business"]}.';
+
+async function tag(request, env) {
+  const db = kv(env);
+  const me = db && await sessionUser(db, request);
+  if (!me) throw fail('signin', 401);
+  if (!env.ANTHROPIC_API_KEY) throw fail('no-ai', 503);
+  let body;
+  try { body = await request.json(); } catch { throw fail('bad-request', 400); }
+  const shows = (Array.isArray(body && body.shows) ? body.shows : []).slice(0, TAG_MAX)
+    .map(x => ({ id: clip(x && x.id, 80), title: clip(x && x.title, 200), author: clip(x && x.author, 120), genre: clip(x && x.genre, 60), about: clip(x && x.desc, 400) }))
+    .filter(x => x.id && x.title);
+  if (!shows.length) return { tags: {} };
+  const key = 'podcasts:tags:' + me.id + ':' + today(), n = (+(await db.get(key)) || 0) + 1;
+  if (n > TAG_DAILY) throw fail('limit', 429);
+  await db.put(key, String(n), { expirationTtl: 2 * 86400 });
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+  let r;
+  try {
+    r = await fetch(ANTHROPIC_URL, { method: 'POST', signal: ctl.signal,
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: TAG_MODEL, max_tokens: 2000, system: TAG_SYSTEM, messages: [{ role: 'user', content: JSON.stringify(shows) }] }) });
+  } catch { throw fail('ai-unreachable', 502); }
+  finally { clearTimeout(timer); }
+  if (!r.ok) throw await aiFail(r);
+  const text = ((await r.json()).content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  let got;
+  try { got = JSON.parse(text.slice(a, b + 1)); } catch { throw fail('ai-format', 502); }
+  // only the shows asked about, only tags from the list, at most two each
+  const tags = {};
+  for (const x of shows) {
+    const t = [...new Set([].concat(got && got[x.id] || []).map(v => TAGS.find(g => g.toLowerCase() === String(v).trim().toLowerCase())).filter(Boolean))].slice(0, 2);
+    if (t.length) tags[x.id] = t;
+  }
+  return { tags };
 }

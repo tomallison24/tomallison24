@@ -1,15 +1,18 @@
 // Checks functions/podcasts/api/[[route]].js (the feed fetcher) in plain Node, with Apple, Podcast
 // Index and Cloudflare's cache stubbed out: Search when Apple turns the site away ("429"), from
 // Podcast Index once its key is set, from the copy kept at Cloudflare, or the busy message; the Top
-// shows chart kept the same way; and Podcast Index's signed headers. Podcast Index's answer is shaped
+// shows chart kept the same way; and Podcast Index's signed headers. And the tags (POST tags), with a
+// stand-in for Anthropic's API and Workers KV and real sessions from server/auth.js: signed in only,
+// tags from the list only, for the shows asked about only, and the daily count. Podcast Index's answer is shaped
 // as its documentation shows (search/byterm: feeds with url, artwork, itunesId, categories); the
 // real services were not called.
 //
 //   node podcasts/scripts/api-test.mjs
 import assert from 'assert/strict';
 import { createHash } from 'crypto';
+import { issue, putJSON } from '../../server/auth.js';
 
-const { onRequestGet } = await import('../../functions/podcasts/api/[[route]].js');
+const { onRequestGet, onRequestPost, TAGS, TAG_MODEL, TAG_MAX, TAG_DAILY } = await import('../../functions/podcasts/api/[[route]].js');
 
 const store = new Map();
 globalThis.caches = { default: {
@@ -17,7 +20,7 @@ globalThis.caches = { default: {
   put: async (req, res) => { store.set(req.url, res.clone()); },
 } };
 let calls = [], answer = () => new Response('{}');
-globalThis.fetch = async (url, init = {}) => { calls.push({ url: String(url), headers: init.headers || {} }); return answer(String(url)); };
+globalThis.fetch = async (url, init = {}) => { calls.push({ url: String(url), headers: init.headers || {} }); if (init.body) globalThis.__lastBody = init.body; return answer(String(url)); };
 const jsonRes = (v, status = 200) => new Response(JSON.stringify(v), { status, headers: { 'Content-Type': 'application/json' } });
 
 const KEYS = { PODCASTINDEX_KEY: 'PIKEY', PODCASTINDEX_SECRET: 'pisecret' };
@@ -119,6 +122,67 @@ await test('Top shows: Apple refuses and nothing is kept: an error, as before', 
 await test('still refuses requests without the app header', async () => {
   const res = await onRequestGet({ request: new Request('https://site.example/podcasts/api/search?term=x'), params: { route: ['search'] }, env: KEYS });
   assert.equal(res.status, 404);
+});
+
+// ---- tags ----
+const fakeKV = () => { const m = new Map(); return { m, get: async k => m.has(k) ? m.get(k) : null, put: async (k, v) => { m.set(k, String(v)); }, delete: async k => { m.delete(k); } }; };
+const db = fakeKV();
+await db.put('owner', 'u1');
+await putJSON(db, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
+const tok = await issue(db, 'u1');
+const ENV = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'ak' };
+const post = async (body, { env = ENV, t = tok, header = true } = {}) => {
+  const h = { 'Content-Type': 'application/json' }; if (header) h['X-Podcasts'] = '1'; if (t) h.Authorization = 'Bearer ' + t;
+  const res = await onRequestPost({ request: new Request('https://site.example/podcasts/api/tags', { method: 'POST', headers: h, body: JSON.stringify(body) }), params: { route: ['tags'] }, env });
+  return { status: res.status, body: await res.json().catch(() => null) };
+};
+const claude = text => () => jsonRes({ content: [{ type: 'text', text }] });
+const two = { shows: [{ id: 'a1', title: 'Song Exploder', author: 'Hrishikesh Hirway', genre: 'Music', desc: 'Musicians take apart their songs.' }, { id: 'b2', title: 'The Daily', genre: 'News' }] };
+
+await test('tags: Claude picks from the list, for the shows asked about only', async () => {
+  answer = claude('Here you go: {"a1": ["music", "Talk", "Jazz"], "b2": ["News", "News", "Politics", "Society"], "zz": ["Comedy"]}');
+  const r = await post(two);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.tags, { a1: ['Music', 'Talk'], b2: ['News', 'Society'] }, 'known tags, any case, no repeats, at most two, nothing for a show not asked about');
+  const asked = calls.find(c => c.url === 'https://api.anthropic.com/v1/messages');
+  assert.equal(asked.headers['x-api-key'], 'ak');
+  const sent = JSON.parse(globalThis.__lastBody);
+  assert.equal(sent.model, TAG_MODEL);
+  for (const t of TAGS) assert.ok(sent.system.includes(t), 'the list is in the instructions: ' + t);
+  assert.deepEqual(JSON.parse(sent.messages[0].content).map(x => x.id), ['a1', 'b2']);
+  assert.equal(JSON.parse(sent.messages[0].content)[0].about, 'Musicians take apart their songs.');
+});
+
+await test('tags: signed in only, the app header only, a key needed', async () => {
+  answer = claude('{}');
+  assert.equal((await post(two, { t: '' })).status, 401);
+  assert.equal((await post(two, { t: 'nonsense' })).status, 401);
+  assert.equal((await post(two, { header: false })).status, 404);
+  assert.equal((await post(two, { env: { ACCOUNTS: db } })).body.error, 'no-ai');
+  assert.ok(!calls.some(c => c.url.includes('anthropic')), 'Claude never asked');
+});
+
+await test('tags: at most TAG_MAX shows a call, nothing asked for nothing', async () => {
+  answer = claude('{}');
+  assert.deepEqual((await post({ shows: [] })).body, { tags: {} });
+  assert.equal(calls.length, 0);
+  await post({ shows: Array.from({ length: TAG_MAX + 10 }, (_, i) => ({ id: 's' + i, title: 'Show ' + i })) });
+  assert.equal(JSON.parse(JSON.parse(globalThis.__lastBody).messages[0].content).length, TAG_MAX);
+});
+
+await test('tags: a garbled answer is an error, not wrong tags', async () => {
+  answer = claude('Sorry, I can’t.');
+  const r = await post(two);
+  assert.equal(r.status, 502); assert.equal(r.body.error, 'ai-format');
+});
+
+await test('tags: TAG_DAILY calls a person a day', async () => {
+  const d2 = fakeKV(); await d2.put('owner', 'u1'); await putJSON(d2, 'user:u1', { id: 'u1', name: 'Sam', role: 'owner', creds: [] });
+  const t2 = await issue(d2, 'u1'), env = { ACCOUNTS: d2, ANTHROPIC_API_KEY: 'ak' };
+  answer = claude('{"a1": ["Music"]}');
+  for (let i = 0; i < TAG_DAILY; i++) assert.equal((await post(two, { env, t: t2 })).status, 200);
+  const r = await post(two, { env, t: t2 });
+  assert.equal(r.status, 429); assert.equal(r.body.error, 'limit');
 });
 
 console.log(`\n${n} passed`);

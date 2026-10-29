@@ -284,7 +284,7 @@ svg.fs{fill:currentColor}
 .notes .quiet{color:var(--faint)}
 
 /* ---- mini player + tabs + search, floating above the home indicator ---- */
-.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 14px;z-index:5;pointer-events:none}
+.dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:0 14px;z-index:5;pointer-events:none}
 .dock > *{pointer-events:auto}
 .tabs{display:inline-flex;align-items:center;gap:2px;padding:4px;border-radius:999px}
 .tab{height:44px;border-radius:999px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--muted);transition:background .2s,color .2s,transform .18s var(--ease)}
@@ -336,6 +336,8 @@ svg.fs{fill:currentColor}
 .rowbtn .tick{color:var(--accent-text);display:grid}
 .rowbtn.danger,.rowbtn.danger .ic{color:var(--danger-text)}
 .linkbtn{color:var(--accent-text);font-weight:600;font-size:14px;padding:4px 6px}
+.tagline{display:inline-flex;align-items:center;gap:5px;margin-top:2px}
+.tagline svg{width:15px;height:15px;flex:none}
 .qrow{display:flex;align-items:center;gap:10px;padding:9px 8px 9px 12px;border-top:1px solid var(--hair-2)}
 .qrow:first-child{border-top:0}
 .qrow .sopen{gap:10px}
@@ -892,27 +894,15 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <div class="app" id="app">
   <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 
-  <!-- HOME -->
-  <section class="view" id="homeView" aria-label="Listen Now">
-    <header class="top">
-      <div class="titlerow">
-        <h1 class="title">Listen Now<small id="homeSub"></small></h1>
-        <div class="acts">
-          <button class="iconbtn glass" id="refreshBtn" type="button" aria-label="Check for new episodes">
-            <svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg>
-          </button>
-        </div>
-      </div>
-    </header>
-    <main class="list" id="homeBody"></main>
-  </section>
-
   <!-- LIBRARY -->
-  <section class="view" id="libView" aria-label="Library" hidden>
+  <section class="view" id="libView" aria-label="Library">
     <header class="top">
       <div class="titlerow">
         <h1 class="title">Library<small id="libSub"></small></h1>
         <div class="acts">
+          <button class="iconbtn glass" id="refreshBtn" type="button" aria-label="Check for new episodes">
+            <svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg>
+          </button>
           <button class="iconbtn glass" id="setBtn" type="button" aria-label="Settings">
             <svg viewBox="0 0 24 24" style="stroke-width:1.6"><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
@@ -926,7 +916,9 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
   <!-- SEARCH -->
   <section class="view" id="searchView" aria-label="Search" hidden>
     <header class="top">
-      <div class="titlerow"><h1 class="title">Search<small id="searchSub"></small></h1></div>
+      <div class="titlerow"><h1 class="title">Search<small id="searchSub"></small></h1>
+        <div class="acts"><button class="iconbtn glass" id="searchBack" type="button" aria-label="Back to Library"><svg viewBox="0 0 24 24" class="b"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      </div>
       <form class="search glass" id="qForm" role="search" action="#">
         <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
         <input id="q" type="search" placeholder="Shows, or paste a feed link" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search podcasts">
@@ -959,16 +951,8 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     </div>
   </div>
 
-  <!-- DOCK: tabs, and Search on its own, as on iOS 26 -->
+  <!-- DOCK: Search on its own, as on iOS 26 (Library is the app's one page) -->
   <div class="dock">
-    <nav class="tabs glass" role="tablist" aria-label="Sections">
-      <button class="tab" type="button" role="tab" data-tab="home" aria-selected="true">
-        <svg viewBox="0 0 24 24"><path d="M3.6 10.4l7.5-6.3a1.4 1.4 0 0 1 1.8 0l7.5 6.3"/><path d="M5.8 8.8v9.4a2.4 2.4 0 0 0 2.4 2.4h7.6a2.4 2.4 0 0 0 2.4-2.4V8.8"/><path d="M10 20.6v-5a2 2 0 0 1 4 0v5"/></svg>Listen Now
-      </button>
-      <button class="tab" type="button" role="tab" data-tab="lib" aria-selected="false">
-        <svg viewBox="0 0 24 24"><rect x="3.4" y="9.4" width="17.2" height="11.2" rx="3"/><path d="M5.6 6.2h12.8M8 3.2h8"/></svg>Library
-      </button>
-    </nav>
     <button class="fab glass" id="searchTab" type="button" data-tab="search" aria-pressed="false" aria-label="Search">
       <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
     </button>
