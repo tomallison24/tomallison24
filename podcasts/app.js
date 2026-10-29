@@ -17,7 +17,7 @@
   // release changes all four; sw.js keeps each release's script with its page). A page from another release
   // lacks what this script draws into, and the app would stop with an empty Library (your shows are safe on the
   // phone and in the Sheet): so the app opens again, once, to get the pair; if that can't (offline), it says so.
-  const PAGE = 'podcasts-v32';
+  const PAGE = 'podcasts-v33';
   if ((document.querySelector('meta[name="aos-build"]') || {}).content !== PAGE) {
     let tried = '';
     try { tried = sessionStorage.getItem(KEY + '-page'); sessionStorage.setItem(KEY + '-page', PAGE); } catch(e) {}
@@ -539,7 +539,7 @@
   }
   async function withFeed(r, then){
     try { await feedOf(r); } catch(e) { toast(quiet(e.message) ? 'That show can’t be opened right now.' : e.message); return; }
-    renderSearchIfOpen(); then(r);
+    renderListsIfOpen(); then(r);
   }
   async function directory(path, direct, bg){
     try { return ((await (await api(path, bg)).json()).results || []).map(cleanShow); }
@@ -727,10 +727,11 @@
     return h;
   }
   // Shows, as a grid of artwork, of the tag picked in the pill at the bottom (renderTagbar, below).
+  const TOP = ':top';   // the pill's Top shows, never a tag's name
   const tagsUsed = () => TAGS.filter(t => S.follows.some(f => (f.tags || []).includes(t)));
   const withTag = t => S.follows.filter(f => (f.tags || []).includes(t));
   function showGrid(){
-    if (st.tag && !tagsUsed().includes(st.tag)) st.tag = '';
+    if (st.tag && st.tag !== TOP && !tagsUsed().includes(st.tag)) st.tag = '';
     const list = (st.tag ? withTag(st.tag) : [...S.follows]).sort((a, b) => (b.latest || 0) - (a.latest || 0) || (b.at || 0) - (a.at || 0));
     return '<div class="sgrid">' + list.map((f, i) => {
         const sh = shows.get(f.id), title = f.title || (sh && sh.title) || 'Loading…';
@@ -757,6 +758,9 @@
       const more = synced && signedIn() && !olderEnd ? '<button class="morebtn" type="button" data-act="hist-older"' + (olderBusy ? ' disabled' : '') + '>' + (olderBusy ? 'Loading…' : 'Show older') + '</button>' : '';
       h = eps.length ? '<div class="rgroup glass">' + eps.map((e, i) => epRow(e, true, i)).join('') + '</div>' + more + '<button class="morebtn" type="button" data-act="hist-clear">Clear history</button>'
         : emptyCard('Nothing played yet', '') + more;
+    } else if (st.lib === 'shows' && st.tag === TOP) {
+      h = chartList();
+      if (!st.top && !st.topErr) loadTop();   // once; after an error, Try again
     } else if (!S.follows.length) {
       h = emptyCard(st.lib === 'new' ? 'Find something to listen to' : 'No shows yet', st.lib === 'new' ? 'Follow a show to see its new episodes.' : '',
         '<button class="btn" type="button" data-act="go-search">' + I.search + 'Search podcasts</button>');
@@ -765,18 +769,21 @@
     if (st.lib === 'new') slideChips($('libBody'), 'new');
   }
   // The tag picker: over Library's Shows while any show has a tag; All shows, then each tag in use, with how many.
+  // The pill over Library's Shows: All shows, each tag in use, and Apple's Top shows (TOP; loaded only when picked).
   function renderTagbar(){
-    const used = tagsUsed(), on = !st.show && st.tab === 'lib' && st.lib === 'shows' && used.length > 0;
+    const used = tagsUsed(), on = !st.show && st.tab === 'lib' && st.lib === 'shows';
     $('tagbar').hidden = !on;
     if (!on) { closeTagMenu(); return; }
-    if (st.tag && !used.includes(st.tag)) st.tag = '';
-    $('tagName').textContent = st.tag || 'All shows';
-    $('tagBtn').setAttribute('aria-label', 'Showing ' + (st.tag || 'all shows') + '. Pick a tag');
+    if (st.tag && st.tag !== TOP && !used.includes(st.tag)) st.tag = '';
+    const name = st.tag === TOP ? 'Top shows' : st.tag || 'All shows';
+    $('tagName').textContent = name;
+    $('tagBtn').setAttribute('aria-label', 'Showing ' + name + '. Pick a tag or Top shows');
     if (!$('tagMenu').hidden) drawTagMenu();
   }
   function drawTagMenu(){
     const row = (t, label, n) => '<button type="button" role="option" data-tag="' + esc(t) + '" aria-selected="' + (st.tag === t) + '"><span class="k">' + esc(label) + '</span><span class="n">' + n + '</span><span class="tick">' + I.check + '</span></button>';
-    $('tagMenu').innerHTML = row('', 'All shows', S.follows.length) + tagsUsed().map(t => row(t, t, withTag(t).length)).join('');
+    $('tagMenu').innerHTML = row('', 'All shows', S.follows.length) + tagsUsed().map(t => row(t, t, withTag(t).length)).join('')
+      + '<div class="tmsep" role="separator"></div>' + row(TOP, 'Top shows', '');
   }
   function closeTagMenu(){ $('tagMenu').hidden = true; $('tagBtn').setAttribute('aria-expanded', 'false'); }
   $('tagBtn').onclick = () => {
@@ -804,13 +811,8 @@
     $('qClear').hidden = !st.q;
     let h = '';
     if (!q) {
-      st.list = st.top || [];
-      h += '<section><p class="sechead">' + (st.top && st.top.some(r => r.trend) ? 'Trending podcasts' : 'Top shows in ' + esc(CC[S.set.cc] || 'the US')) + '</p>';
-      if (st.topErr) h += '<div class="notice glass"><span>' + esc(st.topErr) + '</span><button class="linkbtn" type="button" data-act="top-retry">Try again</button></div>';
-      else if (!st.top) h += '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
-      else if (!st.top.length) h += '<div class="empty glass"><span>No chart right now.</span></div>';
-      else h += '<div class="rgroup glass">' + st.top.map((r, i) => srow(r, i, i + 1)).join('') + '</div>';
-      h += '</section>';
+      st.list = [];
+      h = '<div class="empty glass"><strong>Find a show</strong><span>Search by name, or paste a show’s RSS link. Top shows are in the pill at the bottom of Library.</span></div>';
     } else if (looksLikeFeed(q)) {
       st.list = [{title: 'Open this feed', author: feedFromInput(q), feed: feedFromInput(q), art: '', genre: '', open: true}];
       h = '<div class="rgroup glass">' + srow(st.list[0], 0) + '</div>';
@@ -825,14 +827,24 @@
     }
     $('searchBody').innerHTML = h;
   }
+  // Top shows (Library's pill, TOP): Apple's chart for Settings' country, or Podcast Index's trending shows.
+  function chartList(){
+    st.list = st.top || [];
+    let h = '<section><p class="sechead">' + (st.top && st.top.some(r => r.trend) ? 'Trending podcasts' : 'Top shows in ' + esc(CC[S.set.cc] || 'the US')) + '</p>';
+    if (st.topErr) h += '<div class="notice glass"><span>' + esc(st.topErr) + '</span><button class="linkbtn" type="button" data-act="top-retry">Try again</button></div>';
+    else if (!st.top) h += '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+    else if (!st.top.length) h += '<div class="empty glass"><span>No chart right now.</span></div>';
+    else h += '<div class="rgroup glass">' + st.top.map((r, i) => srow(r, i, i + 1)).join('') + '</div>';
+    return h + '</section>';
+  }
   let topBusy = false;
   async function loadTop(force){
     if (topBusy || (st.top && st.topCc === S.set.cc && !force)) return;
     const CK = KEY + '-top';
     if (!force) {
-      try { const c = JSON.parse(localStorage.getItem(CK)); if (c && c.cc === S.set.cc && Date.now() - c.at < 6 * HOUR && Array.isArray(c.results)) { st.top = c.results.map(cleanShow); st.topCc = c.cc; renderSearchIfOpen(); return; } } catch(e) {}
+      try { const c = JSON.parse(localStorage.getItem(CK)); if (c && c.cc === S.set.cc && Date.now() - c.at < 6 * HOUR && Array.isArray(c.results)) { st.top = c.results.map(cleanShow); st.topCc = c.cc; renderListsIfOpen(); return; } } catch(e) {}
     }
-    topBusy = true; st.topErr = ''; st.top = null; renderSearchIfOpen();
+    topBusy = true; st.topErr = ''; st.top = null; renderListsIfOpen();
     try {
       st.top = await topShows(); st.topCc = S.set.cc;
       // only a whole chart is kept on the phone (one still to be looked up is asked for again next time)
@@ -841,9 +853,10 @@
       st.topErr = navigator.onLine === false ? 'You’re offline.' : 'The chart couldn’t be loaded' + (e.message && !/isn’t available right now\.$/.test(e.message) ? ' (' + e.message.replace(/\.$/, '') + ').' : '.');
     }
     topBusy = false;
-    renderSearchIfOpen();
+    renderListsIfOpen();
   }
   const renderSearchIfOpen = () => { if (st.tab === 'search' && !st.show) renderSearch(); };
+  const renderListsIfOpen = () => { renderSearchIfOpen(); if (st.tab === 'lib' && !st.show && st.lib === 'shows' && st.tag === TOP) renderLib(); };
   let searchTimer = 0, searchSeq = 0;
   async function runSearch(){
     const q = st.q.trim(), seq = ++searchSeq;
@@ -930,7 +943,6 @@
     showViews(); render();
     animateIn($(t === 'lib' ? 'libBody' : 'searchBody'));
     requestAnimationFrame(() => window.scrollTo(0, st.scroll[t] || 0));
-    if (t === 'search') loadTop();
   }
   async function openShow(meta){
     const feed = webUrl(meta.feed), id = meta.id || (feed && showId(feed));
@@ -1503,7 +1515,7 @@
   });
   $('setBody').addEventListener('change', e => {
     if (e.target.id === 'setFwd') { S.set.fwd = +e.target.value; setChanged(); }
-    else if (e.target.id === 'setCc') { S.set.cc = e.target.value; S.set.ccChosen = true; st.top = null; setChanged(); }
+    else if (e.target.id === 'setCc') { S.set.cc = e.target.value; S.set.ccChosen = true; st.top = null; st.topErr = ''; setChanged(); }
   });
   function exportShows(){
     if (!S.follows.length) { toast('You’re not following any shows yet.'); return; }
@@ -1723,7 +1735,6 @@
     await Promise.all(S.follows.map(f => ensureShow(f.id)));
     showViews(); render();
     animateIn($(st.tab === 'lib' ? 'libBody' : 'searchBody'));
-    if (st.tab === 'search') loadTop();
     // A shared show: ?feed=<feed link>
     const shared = new URLSearchParams(location.search).get('feed');
     if (shared && webUrl(shared)) { history.replaceState(null, '', location.pathname); openShow({feed: shared}); }

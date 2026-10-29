@@ -152,8 +152,19 @@ await test('opens on Library, its one page (Listen Now and the tab bar are gone)
   assert.match(await p.textContent('#libView .title'), /Library/);
   assert.deepEqual(await p.$$eval('#libChips .chip', e => e.map(x => x.dataset.act)), ['lib:shows', 'lib:new', 'lib:saved', 'lib:hist']);
   assert.equal(await p.$$eval('#libBody .stile', e => e.length), 2, 'two followed shows');
-  assert.equal(await p.evaluate(() => document.getElementById('tagbar').hidden), true, 'no tag pill before any show has a tag');
+  assert.equal(await p.evaluate(() => document.getElementById('tagbar').hidden), false, 'the pill is on Shows, tags or not');
+  assert.equal(await p.textContent('#tagName'), 'All shows');
   assert.equal(await p.$('#libBody .tagchips'), null, 'and no tag chips in the page');
+  // Top shows is in the pill, not Search: no tags yet, its menu is All shows and Top shows
+  const calledTop = () => p.evaluate(() => performance.getEntriesByType('resource').some(r => /rss\.applemarketingtools\.com|\/api\/top/.test(r.name)));
+  assert.equal(await calledTop(), false, 'no chart asked for until it’s picked');
+  await p.click('#tagBtn'); await p.waitForSelector('#tagMenu:not([hidden])');
+  assert.deepEqual(await p.$$eval('#tagMenu [data-tag]', e => e.map(x => x.dataset.tag)), ['', ':top']);
+  await p.click('#tagMenu [data-tag=":top"]'); await p.waitForTimeout(600);
+  assert.equal(await p.textContent('#tagName'), 'Top shows');
+  assert.match(await p.textContent('#libBody'), /Top shows in the US[\s\S]*No chart right now/, 'the chart, in Library, from the stand-in for Apple (the page asks Apple itself with no route)');
+  await p.click('#tagBtn'); await p.click('#tagMenu [data-tag=""]'); await p.waitForTimeout(300);
+  assert.equal(await p.$$eval('#libBody .stile', e => e.length), 2, 'All shows again');
   await shot(p, '02-library-light');
   await p.click('#libChips [data-act="lib:new"]'); await p.waitForSelector('#libBody .rgroup .ep');
   assert.deepEqual(await p.$$eval('#libBody .chips .chip', e => e.map(x => x.dataset.act)), ['new:all', 'new:unplayed'], 'New: All / Unplayed');
@@ -162,7 +173,9 @@ await test('opens on Library, its one page (Listen Now and the tab bar are gone)
   // Search: the round button opens it, and its ✕ (or the button again) goes back to Library
   await p.click('#searchTab'); await p.waitForTimeout(600);
   assert.equal(await p.evaluate(() => !document.getElementById('searchView').hidden), true);
-  assert.match(await p.textContent('#searchBody'), /No chart right now/, 'Top shows from the stand-in for Apple (the page asks Apple itself with no route), not the real one');
+  assert.match(await p.textContent('#searchBody'), /Find a show/, 'Search opens empty, ready to type');
+  assert.doesNotMatch(await p.textContent('#searchBody'), /Top shows in/, 'no chart in Search');
+  assert.equal(await p.evaluate(() => document.getElementById('tagbar').hidden), true, 'the pill is Library’s only');
   await p.click('#searchBack'); await p.waitForTimeout(300);
   assert.equal(await p.evaluate(() => !document.getElementById('libView').hidden), true, 'back to Library');
   await p.click('#searchTab'); await p.waitForTimeout(300); await p.click('#searchTab'); await p.waitForTimeout(300);
@@ -412,12 +425,11 @@ await test('signed out, the refresh on open and the Top shows chart ask nobody t
   assert.ok(calls.some(c => c.startsWith('/' + FOLDER + '/api/feed')), 'the feeds were asked for on open: ' + JSON.stringify(calls));
   assert.equal(await p.$('#aos-signin'), null, 'no sign-in sheet for the refresh on open');
   assert.deepEqual(await p.evaluate(() => window.__podcasts.S.follows.map(f => f.id)), ['alpha', 'beta'], 'the library it has stays');
-  await p.click('#searchTab'); await p.waitForTimeout(1200);   // the Top shows chart loads by itself
+  await p.click('#tagBtn'); await p.click('#tagMenu [data-tag=":top"]'); await p.waitForTimeout(1200);   // Top shows, picked in the pill
   assert.ok(calls.some(c => c.startsWith('/' + FOLDER + '/api/top')), 'the chart was asked for: ' + JSON.stringify(calls));
   assert.equal(await p.$('#aos-signin'), null, 'no sign-in sheet for the chart');
   assert.deepEqual(await p.evaluate(() => window.__csp || []), []);
-  // a tap: Refresh (in Library now) asks for Face ID
-  await p.click('#searchBack'); await p.waitForTimeout(300);
+  // a tap: Refresh (in Library) asks for Face ID
   await p.click('#refreshBtn');
   await p.waitForSelector('#aos-signin', { timeout: 5000 });
   assert.match(await p.textContent('#aos-signin'), /Continue with Face ID/, 'a tap raises the sign-in sheet');
@@ -627,7 +639,7 @@ await test('tags: Ipsy tags the shows (POST tags, signed in), Library filters by
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) });
   });
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts);
-  await p.waitForSelector('#tagbar:not([hidden])', { timeout: 10000 });
+  await p.waitForFunction(() => window.__podcasts.S.follows.every(f => Array.isArray(f.tags)), null, { timeout: 10000 });
   assert.equal(asked.length, 1, 'one call for both shows');
   assert.equal(asked[0].who.id, 'tom', 'signed in'); assert.equal(asked[0].header, '1');
   assert.deepEqual(asked[0].body.shows.map(x => [x.id, x.title, x.genre]).sort(), [['alpha', 'Alpha Show', 'News'], ['beta', 'Beta Show', 'Comedy']]);
@@ -640,7 +652,7 @@ await test('tags: Ipsy tags the shows (POST tags, signed in), Library filters by
   assert.ok(Math.abs(bar.mid - 195) < 2 && bar.bottom < 40, 'centred over the home indicator: ' + JSON.stringify(bar));
   await p.click('#tagBtn'); await p.waitForSelector('#tagMenu:not([hidden])');
   assert.equal(await p.getAttribute('#tagBtn', 'aria-expanded'), 'true');
-  assert.deepEqual(await p.$$eval('#tagMenu [data-tag]', e => e.map(x => [x.dataset.tag, x.querySelector('.n').textContent])), [['', '2'], ['Talk', '1'], ['News', '1'], ['Comedy', '1']], 'All shows, then the tags in use, in the list’s order, with how many');
+  assert.deepEqual(await p.$$eval('#tagMenu [data-tag]', e => e.map(x => [x.dataset.tag, x.querySelector('.n').textContent])), [['', '2'], ['Talk', '1'], ['News', '1'], ['Comedy', '1'], [':top', '']], 'All shows, then the tags in use, in the list’s order, with how many, and Top shows');
   const menu = await p.$eval('#tagMenu', e => e.getBoundingClientRect().bottom), btnTop = await p.$eval('#tagBtn', e => e.getBoundingClientRect().top);
   assert.ok(menu <= btnTop, 'the menu opens upwards');
   await shot(p, '05-tags-light');
@@ -725,7 +737,7 @@ await test('a page from another release (an offline copy) with this script: the 
   await Q.ctx.close();
 });
 
-await test('Top shows when Apple won’t look up their feeds: the chart still shows, and a show’s feed is asked for when it’s tapped', async () => {
+await test('Top shows, in the pill: when Apple won’t look up their feeds the chart still shows, and a show’s feed is asked for when it’s tapped', async () => {
   const P = await newPage('light', { 'aos.session': session('tok-tom'), [KEY]: seed().replace(/"follows":\[.*?\],"prog"/, '"follows":[],"prog"') }), p = P.page;
   const asked = [];
   await p.route('**/' + FOLDER + '/api/**', route => {
@@ -736,12 +748,14 @@ await test('Top shows when Apple won’t look up their feeds: the chart still sh
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) });
   });
   await p.goto(BASE + '/' + FOLDER + '/'); await p.waitForFunction(() => window.__podcasts);
-  await p.click('#searchTab'); await p.waitForSelector('#searchBody .srow');
-  assert.match(await p.textContent('#searchBody .sechead'), /Top shows in the US/);
-  assert.equal(await p.$$eval('#searchBody .sopen:disabled', e => e.length), 0, 'every show can be opened, though none came with its feed');
-  assert.doesNotMatch(await p.textContent('#searchBody'), /Only on Apple Podcasts/);
+  await p.click('#tagBtn'); await p.click('#tagMenu [data-tag=":top"]'); await p.waitForSelector('#libBody .srow');
+  assert.match(await p.textContent('#libBody .sechead'), /Top shows in the US/);
+  await shot(p, '09-top-shows-light');
+  await p.click('#tagBtn'); await p.waitForTimeout(300); await shot(p, '09-top-shows-menu-light'); await p.click('#tagBtn');
+  assert.equal(await p.$$eval('#libBody .sopen:disabled', e => e.length), 0, 'every show can be opened, though none came with its feed');
+  assert.doesNotMatch(await p.textContent('#libBody'), /Only on Apple Podcasts/);
   assert.ok(!asked.some(a => a.startsWith('lookup')), 'nothing looked up before a tap');
-  await p.click('#searchBody .sopen[data-res="0"]'); await p.waitForSelector('#showView:not([hidden]) .hero');
+  await p.click('#libBody .sopen[data-res="0"]'); await p.waitForSelector('#showView:not([hidden]) .hero');
   assert.ok(asked.includes('lookup?id=123'), 'its feed, asked for on the tap: ' + JSON.stringify(asked));
   await p.waitForFunction(() => /Alpha Show episode 1/.test(document.getElementById('showBody').textContent));
   await p.click('#showBack'); await p.waitForTimeout(200);
@@ -752,16 +766,19 @@ await test('Top shows when Apple won’t look up their feeds: the chart still sh
   const T = await newPage('light', { 'aos.session': session('tok-tom') }), t = T.page;
   await t.route('**/' + FOLDER + '/api/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: new URL(route.request().url()).pathname.endsWith('/top') ? [{ title: 'Index Show', author: 'B', feed: 'https://feeds.example.com/b.xml', art: '', genre: 'Comedy', trend: true }] : [] }) }));
   await t.goto(BASE + '/' + FOLDER + '/'); await t.waitForFunction(() => window.__podcasts);
-  await t.click('#searchTab'); await t.waitForSelector('#searchBody .srow');
-  assert.equal(await t.textContent('#searchBody .sechead'), 'Trending podcasts');
+  await t.click('#tagBtn'); await t.click('#tagMenu [data-tag=":top"]'); await t.waitForSelector('#libBody .srow');
+  assert.equal(await t.textContent('#libBody .sechead'), 'Trending podcasts');
   await T.ctx.close();
   // and when it can't be loaded, the server's reason
   const E = await newPage('light', { 'aos.session': session('tok-tom') }), ep = E.page;
   await ep.route(/^https:\/\/(itunes\.apple\.com|rss\.applemarketingtools\.com)\//, route => route.abort());   // as on a phone: Apple's chart doesn't let a page read it
   await ep.route('**/' + FOLDER + '/api/**', route => route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'Apple’s chart isn’t available right now' }) }));
   await ep.goto(BASE + '/' + FOLDER + '/'); await ep.waitForFunction(() => window.__podcasts);
-  await ep.click('#searchTab'); await ep.waitForSelector('#searchBody .notice');
-  assert.match(await ep.textContent('#searchBody .notice'), /The chart couldn’t be loaded \(Apple’s chart isn’t available right now\)\./);
+  await ep.click('#tagBtn'); await ep.click('#tagMenu [data-tag=":top"]'); await ep.waitForSelector('#libBody .notice');
+  assert.match(await ep.textContent('#libBody .notice'), /The chart couldn’t be loaded \(Apple’s chart isn’t available right now\)\./);
+  const tries = await ep.evaluate(() => performance.getEntriesByType('resource').filter(r => r.name.includes('/api/top')).length);
+  await ep.waitForTimeout(1500);
+  assert.equal(await ep.evaluate(() => performance.getEntriesByType('resource').filter(r => r.name.includes('/api/top')).length), tries, 'asked once, not again and again (Try again asks)');
   await E.ctx.close();
 });
 
