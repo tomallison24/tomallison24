@@ -8,8 +8,8 @@
   "background_color": "#241E1A",
   "theme_color": "#241E1A",
   "icons": [
-    { "src": "icon-180.png?v=3", "sizes": "180x180", "type": "image/png" },
-    { "src": "icon-512.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "icon-180.png?v=4", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "related_applications": [
     { "platform": "webapp", "id": "https://tomallison24-news.pages.dev/fitness/", "url": "https://tomallison24-news.pages.dev/fitness/manifest.webmanifest" }

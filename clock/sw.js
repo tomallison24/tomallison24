@@ -1,8 +1,8 @@
 // Offline shell for the Clock app. Same-origin files load network-first, so a new
 // deploy shows up on the next open and the cache is only the fallback. Clock has no
 // server: everything it keeps is in this phone's storage.
-const CACHE = 'clock-v4';
-const SHELL = ['./', 'index.html', 'design.js', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/settings.js', '../home/sky.js', '../home/welcome.js', '../home/names.js'];
+const CACHE = 'clock-v5';
+const SHELL = ['./', 'index.html', 'design.js', 'app.js', 'logic.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=2', 'icon-glass-512.png?v=2', '../home/slide.js', '../home/settings.js', '../home/sky.js', '../home/welcome.js', '../home/names.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

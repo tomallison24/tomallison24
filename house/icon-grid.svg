@@ -6,7 +6,7 @@
       <g fill="#000"><rect x="214" y="268" width="38" height="38" rx="9"/><rect x="260" y="268" width="38" height="38" rx="9"/><rect x="214" y="314" width="38" height="38" rx="9"/><rect x="260" y="314" width="38" height="38" rx="9"/></g>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#170F08"/>
+  <rect width="512" height="512" fill="#11100F"/>
   <rect width="512" height="512" fill="#F6F7F9" mask="url(#cut)"/>
   <g transform="scale(1)" fill="none" filter="url(#trg)"><path d="M120 26H392A94 94 0 0 1 486 120V392A94 94 0 0 1 392 486H120A94 94 0 0 1 26 392V120A94 94 0 0 1 120 26Z" stroke="#FF2A2A" stroke-width="8"/><path d="M120 26H392A94 94 0 0 1 486 120V392A94 94 0 0 1 392 486H120A94 94 0 0 1 26 392V120A94 94 0 0 1 120 26Z" stroke="#FFE3E0" stroke-width="10" stroke-linecap="round" stroke-dasharray="168 1679" stroke-dashoffset="-252"/></g>
 </svg>

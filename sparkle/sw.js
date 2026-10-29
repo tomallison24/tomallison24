@@ -2,8 +2,8 @@
 // files load network-first, so a new deploy shows up on the next open and the cache is only the
 // fallback. The players' saves never pass through here: they live in this phone's storage, and the
 // calls to the family account (../sparkle/api/) are left alone.
-const CACHE = 'sparkle-v8';
-const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'content.js', 'art.js', 'pictures.js', 'chapters.js', 'rooms.js', 'bedroom.js', 'kitchen.js', 'stable-art.js', 'care.js', 'world.js', 'voice.js', 'letters.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/settings.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/names.js'];
+const CACHE = 'sparkle-v9';
+const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'content.js', 'art.js', 'pictures.js', 'chapters.js', 'rooms.js', 'bedroom.js', 'kitchen.js', 'stable-art.js', 'care.js', 'world.js', 'voice.js', 'letters.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=2', 'icon-glass-512.png?v=2', '../home/settings.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/names.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

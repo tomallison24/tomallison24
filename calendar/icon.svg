@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, Retro colours: a cream calendar page (binder pegs, a date grid and today's date cut out of it) on denim blue, with a mustard sun and a burnt-orange pill behind it. Flat shapes, full-bleed; the phone rounds the corners. -->
+  <!-- Mid-century modern, as a tinted tile: the calendar page in Calendar's own colour (#83433B) on a pale tint of it (#FFDED5); every app has its own, a shade of its room's (Family: aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
   <defs>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <rect x="100" y="124" width="312" height="292" rx="52" fill="#fff"/>
@@ -13,9 +13,9 @@
       </g>
     </mask>
   </defs>
-  <rect width="512" height="512" fill="#3F6E9A"/>
-  <circle cx="404" cy="108" r="140" fill="#E3A72F"/>
-  <rect x="34" y="424" width="190" height="50" rx="25" fill="#D8572A" transform="rotate(-18 129 449)"/>
-  <rect width="512" height="512" fill="#FBF5E9" mask="url(#cut)"/>
-  <rect x="166" y="88" width="26" height="68" rx="13" fill="#FBF5E9"/><rect x="320" y="88" width="26" height="68" rx="13" fill="#FBF5E9"/>
+  <rect width="512" height="512" fill="#FFDED5"/>
+  <circle cx="424" cy="88" r="44" fill="#E3A72F"/>
+  <rect x="46" y="432" width="88" height="24" rx="12" fill="#D8572A" transform="rotate(-18 90 444)"/>
+  <rect width="512" height="512" fill="#83433B" mask="url(#cut)"/>
+  <rect x="166" y="88" width="26" height="68" rx="13" fill="#83433B"/><rect x="320" y="88" width="26" height="68" rx="13" fill="#83433B"/>
 </svg>

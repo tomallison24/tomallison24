@@ -1,12 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Layers: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#AB7977"/><stop offset="1" stop-color="#873F3C"/></linearGradient></defs>
+  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF2EA"/><stop offset="1" stop-color="#FEDFCB"/></linearGradient></defs>
   <rect width="512" height="512" fill="url(#lyg)"/>
-  <circle cx="404" cy="108" r="150" fill="#FFFFFF" fill-opacity=".24"/>
   <g>
-    <path d="M104 262h304c0 84-68 142-152 142S104 346 104 262z" fill="#F9FBFE"/>
-    <path d="M196 404h120" fill="none" stroke="#F9FBFE" stroke-width="22" stroke-linecap="round"/>
-    <g fill="none" stroke="#F9FBFE" stroke-width="20" stroke-linecap="round">
+    <path d="M104 262h304c0 84-68 142-152 142S104 346 104 262z" fill="#A75600"/>
+    <path d="M196 404h120" fill="none" stroke="#A75600" stroke-width="22" stroke-linecap="round"/>
+    <g fill="none" stroke="#A75600" stroke-width="20" stroke-linecap="round">
       <path d="M196 214c-18-22 18-38 0-62s14-36 4-52"/>
       <path d="M256 214c-18-22 18-38 0-62s14-36 4-52"/>
       <path d="M316 214c-18-22 18-38 0-62s14-36 4-52"/>

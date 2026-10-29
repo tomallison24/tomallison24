@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs><filter id="trg" filterUnits="userSpaceOnUse" x="-40" y="-40" width="592" height="592"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
   <!-- Tron: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <rect width="512" height="512" fill="#061315"/>
+  <rect width="512" height="512" fill="#101011"/>
   <g fill="#F6F7F9">
     <rect x="100" y="276" width="312" height="122" rx="61"/>
     <circle cx="204" cy="284" r="70"/>

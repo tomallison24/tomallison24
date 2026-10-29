@@ -48,8 +48,10 @@ for (const app of pages) {
 }
 
 // ---- the icons ----
-// Layers: the app's own ground in sea glass tones, lit from the top left; the disc a soft glow of light, the pill gone, the
-// drawing white.
+// Layers: an app's tinted tile (a pale ground with its drawing in the app's own colour, Vintage's small sun and pill as its
+// mark) keeps its colours, as every app does in every look (aOS/app.js, ROOM_HUE): its ground lit from the top left, the
+// mark gone. aOS's own icon: its ground in sea glass tones, lit from the top left; the disc a soft glow of light, the pill
+// gone, the drawing white.
 // Tron (Trail frame): a near-black ground with a hint of the app's own hue, the drawing in the night palette's light, and
 // the screen's red light trail around the icon's edge, its light at the top right; the disc and the pill go, so it's calm.
 // The trail runs just inside the corners the phone rounds off.
@@ -65,6 +67,16 @@ function iconFor(look, svg) {
   const bgRe = new RegExp(`<rect width="${full}" height="${full}" fill="(#[0-9A-Fa-f]{3,6})"`);
   const bg = (bgRe.exec(svg) || [])[1];
   let defs = '';
+  const MARK = /[ \t]*<circle cx="424" cy="88" r="44" fill="#[0-9A-Fa-f]{6}"\/>\n?/, PILL = /[ \t]*<rect[^>]*rx="\d+"[^>]*transform="rotate[^"]*"\/>\n?/;
+  if (look === 'layers' && bg && MARK.test(svg)) {   // a tinted tile
+    svg = svg.replace(MARK, '').replace(PILL, '').replace(bgRe, m => m.replace(`fill="${bg}"`, 'fill="url(#lyg)"'));
+    defs = `<linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(bg, '#FFFFFF', 0.6)}"/><stop offset="1" stop-color="${bg}"/></linearGradient>`;
+    svg = /<defs>/.test(svg) ? svg.replace('<defs>', '<defs>' + defs) : svg.replace(/(<svg[^>]*>)/, `$1<defs>${defs}</defs>`);
+    return svg.replace(/\u0000(\d+)\u0000/g, (_, i) => masks[+i]);
+  }
+  if (look === 'grid' && bg && MARK.test(svg)) {   // Tron, from a tinted tile: no sun, and the drawing light as it always is in Tron
+    svg = svg.replace(MARK, '').replace(/(fill|stroke)="(#[0-9A-Fa-f]{6})"/g, (m, k, c) => c === bg ? m : `${k}="#FBF5E9"`);
+  }
   svg = svg.replace(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)" fill="(#[0-9A-Fa-f]{6})"\/>/g, (m, cx, cy, r, fill) => {
     if (+r < 90) return m;   // the big disc only
     [cx, cy, r] = [+cx, +cy, +r];

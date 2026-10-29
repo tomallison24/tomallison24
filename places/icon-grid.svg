@@ -4,7 +4,7 @@
       <path d="M256 420C222 382 140 300 140 214a116 116 0 0 1 232 0c0 86-82 168-116 206z" fill="#fff"/>
       <circle cx="256" cy="212" r="44" fill="#000"/>
     </mask></defs>
-  <rect width="512" height="512" fill="#041316"/>
+  <rect width="512" height="512" fill="#101010"/>
   <g>
     <ellipse cx="256" cy="430" rx="64" ry="14" fill="#F6F7F9" fill-opacity="0.45"/>
     <rect width="512" height="512" fill="#F6F7F9" mask="url(#cut)"/>
