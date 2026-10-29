@@ -237,9 +237,14 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
 
   await test(`${label}: the gear opens Settings, titled Settings with a Done tick, and the sub-views get a Close cross`, async () => {
+    assert.equal(await page.getAttribute('#gear', 'aria-label'), 'Settings', 'the gear is labelled Settings');
     await page.click('#gear');
     await page.waitForFunction(() => document.getElementById('sheetWrap').classList.contains('open'));
     assert.equal((await page.textContent('#sheetTitle')).trim(), 'Settings');
+    // the connect form and the sub-views (PIN, Share, Join, Devices with access) are the shared rows too
+    assert.deepEqual(await page.$$eval('#sheetWrap .sheet-body :is(button, input)', els => els.filter(e => !e.closest('.st-sec')).map(e => e.id || e.outerHTML.slice(0, 60))), [], 'every control in a shared section');
+    assert.ok(await page.isVisible('#haForm .st-input #haUrl') && await page.isVisible('#haForm .st-input #haToken'), 'the address and token are shared input rows');
+    assert.equal(await page.$eval('#haConnect', b => b.type), 'submit', 'Connect sends the form');
     assert.equal(await page.getAttribute('#sheetClose', 'aria-label'), 'Done');
     assert.ok(await page.$('#sheetClose.okbtn'), 'the Done tick is the main button');
     assert.ok(await page.$('#sheetWrap .st-lbl'), 'labelled sections');

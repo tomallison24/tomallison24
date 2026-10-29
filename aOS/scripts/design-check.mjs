@@ -30,6 +30,7 @@ import { execSync } from 'child_process';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { pathToFileURL } from 'url';
 
 const args = process.argv.slice(2);
 const flag = n => { const i = args.indexOf(n); if (i < 0) return null; const v = args[i + 1]; args.splice(i, 2); return v; };
@@ -159,21 +160,27 @@ function serve() {
 
 // Reaching Settings, where the button labelled Settings isn't on the first screen:
 //   seed      what the phone keeps first (Mail's Settings is there once you're signed in to Gmail)
-//   before    what a person does first (none today: Podcasts is one page now)
+//   phone     what the phone has around it (Weather's main screen is a forecast: the made-up one its own
+//             test uses, for where the phone is; without a place it opens to its first-run screen)
+//   before    what a person does first, or waits for (Weather: the forecast in)
 //   other     how to open it where it isn't behind a button labelled Settings yet (the title check still
-//             fails for these: the button should say Settings). Sparkle's is behind the grown-up check:
-//             hold Grown-ups, then answer the sum.
+//             fails for these: the button should say Settings)
+//   press     how the button labelled Settings opens it, where a tap isn't how (the title check passes).
+//             Sparkle's is behind the grown-up check: hold the button, then answer the sum.
 const GMAIL = JSON.stringify({ t: 'CHECK', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.modify' });
 const OPEN = {
   mail: { seed: { 'mail.token': GMAIL, 'mail.token.ever': '1', 'mail.hint': 'me@example.com', 'mail.swept': String(Date.now()), 'aos.signin.asked': '1' } },
   podcasts: {},   // one page now (Library), its Settings on it
-  meals: { other: '#setBtn' },
-  house: { other: '#gear' },
-  weather: { other: '[data-action="location"]' },
+  weather: {
+    async phone(ctx) {
+      const { installWeather, PLACE } = await import(pathToFileURL(path.join(ROOT, 'weather/scripts/fake-weather.mjs')).href);
+      await installWeather(ctx);
+      await ctx.grantPermissions(['geolocation']); await ctx.setGeolocation({ latitude: PLACE.lat, longitude: PLACE.lon });
+    },
+    before: p => p.waitForSelector('#hxTray .hx-col', { timeout: 10000 }).catch(() => {}),   // the forecast in
+  },
   sparkle: {
-    async other(p) {
-      const g = p.locator('#grownBtn');
-      if (!(await g.count())) return false;
+    async press(p, g) {
       await g.dispatchEvent('pointerdown');
       if (!(await p.waitForSelector('#gAns', { timeout: 6000 }).then(() => true, () => false))) return false;
       const m = /(\d+)\s*[×x]\s*(\d+)/.exec(await p.locator('.sheet').last().innerText());
@@ -247,6 +254,7 @@ async function browserChecks(browser, base, id) {
     localStorage.setItem('aos.sky', 'day');   // the Vintage sky held still
     for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
   }, [['aos', ...APPS], (OPEN[id] || {}).seed || {}]);
+  if ((OPEN[id] || {}).phone) await OPEN[id].phone(ctx);
   const p = await ctx.newPage();
   try {
     await p.goto(base + '/' + dir(id) + '/');
@@ -261,7 +269,7 @@ async function browserChecks(browser, base, id) {
     if (o.before) { await o.before(p); await p.waitForTimeout(400); }
     const btn = p.locator('button[aria-label^="Settings"]:visible, [role="button"][aria-label^="Settings"]:visible').first();
     let how = '';
-    if (await btn.count()) { await btn.click(); how = 'button'; }
+    if (await btn.count()) { if (o.press) { if (await o.press(p, btn)) how = 'button'; } else { await btn.click(); how = 'button'; } }
     else if (typeof o.other === 'function') { if (await o.other(p)) how = 'other'; }
     else if (o.other && await p.locator(o.other).first().count()) { await p.locator(o.other).first().click(); how = 'other'; }
     await p.waitForTimeout(900);

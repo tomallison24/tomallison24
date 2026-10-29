@@ -337,6 +337,10 @@ await test('aOS: Lost a phone? step by step, and Sign out and erase my other dev
   assert.ok(!text.includes('What erasing can\'t do'), 'no explanations under the steps');
   await shot(page, 'aos-lost');
   await page.click('#lEraseOthers');
+  // aOS asks first in the app (the shared sheet), not with the browser's confirm()
+  await page.waitForSelector('.st-ask .st-yes.st-bad', { timeout: 5000 });
+  assert.match(await page.textContent('.st-ask'), /Sign out and erase every other device/);
+  await page.click('.st-ask .st-yes');
   await page.waitForFunction(() => /Done/.test(document.querySelector('#lErr').textContent));
   const c = calls.find(x => x.url.endsWith('/aOS/api/signout-others'));
   assert.deepEqual(JSON.parse(c.body), { erase: true });
