@@ -88,10 +88,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     repeat: '<svg viewBox="0 0 24 24"><path d="M17 3.6l3 3-3 3"/><path d="M4 11.4V10a3.4 3.4 0 0 1 3.4-3.4H20"/><path d="M7 20.4l-3-3 3-3"/><path d="M20 12.6V14a3.4 3.4 0 0 1-3.4 3.4H4"/></svg>',
     trend: '<svg viewBox="0 0 24 24"><path d="M3.6 16.4l5.6-5.6 4 4 7.2-7.2"/><path d="M15.4 7.6h5v5"/></svg>',
     store: '<svg viewBox="0 0 24 24"><path d="M4 9.4l1.4-4.8h13.2L20 9.4"/><path d="M4 9.4h16v1a2.6 2.6 0 0 1-5.2 0 2.6 2.6 0 0 1-5.2 0 2.6 2.6 0 0 1-5.6 0z"/><path d="M5.4 12.6v6.8h13.2v-6.8"/></svg>',
-    export: '<svg viewBox="0 0 24 24"><path d="M12 15V4M7.6 8.4L12 4l4.4 4.4"/><path d="M4.4 13.6v4.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-4.6"/></svg>',
-    bin: '<svg viewBox="0 0 24 24"><path d="M4.6 6.8h14.8M9.6 6.8V4.6h4.8v2.2M6.6 6.8l.9 12a1.6 1.6 0 0 0 1.6 1.5h5.8a1.6 1.6 0 0 0 1.6-1.5l.9-12"/></svg>',
-    out: '<svg viewBox="0 0 24 24"><path d="M14.4 4.6H18a2 2 0 0 1 2 2v10.8a2 2 0 0 1-2 2h-3.6"/><path d="M10 16.4L5.6 12 10 7.6M5.6 12h10.2"/></svg>',
-    refresh: '<svg viewBox="0 0 24 24"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg>',
   };
 
   // ---------------------------------------------------------------------
@@ -983,76 +979,78 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   addEventListener('aos:account', e => { if (e.detail) sync(); else { st.server = null; render(); } });
 
   // ---------------------------------------------------------------------
-  // Settings: the design, your account, Gmail, who sees Money, card rewards, your data
+  // Settings: the design, who sees Money, card rewards, categories, Gmail, Ipsy, your data, your account
   // ---------------------------------------------------------------------
   let people = null;
   async function loadPeople() {
     try { people = (await api('people')).people || []; } catch { people = []; }
     if (!$('setSheet').hidden) renderSettings();
   }
+  // Settings, as in every app (../home/settings.js): Design · Who sees Money · Card rewards · Categories ·
+  // Connected accounts · Ipsy · Your data · Family account
   function renderSettings() {
-    const s = st.server, signed = signedIn(), reader = signed && s && s.reader, viewer = signed && s && !s.reader && !s.open;
-    let acct;
-    if (!signed) acct = ['On this phone only', 'Sign in with Face ID to share Money with your family, or to see it if it’s shared with you.'];
-    else if (!s) acct = ['Checking…', ''];
-    else if (s.reader) acct = ['You read Monarch’s emails for the family', (s.with || []).length ? 'Shared with ' + names(s.with) + '.' : 'Not shared with anyone yet.'];
-    else if (s.can) acct = [s.readerName + '’s phone reads Monarch’s emails', 'Updated ' + ago(D.readAt) + '.'];
-    else if (s.open) acct = ['Nobody reads Monarch’s emails yet', 'Connect Gmail on the phone that gets them.'];
-    else acct = [s.readerName + '’s phone reads Monarch’s emails', 'Ask ' + s.readerName + ' to share Money with you: Settings, Who sees Money.'];
-    let html = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<div class="rgroup acct"><p><strong>' + esc(acct[0]) + '</strong>' + esc(acct[1]) + '</p>' + (!signed ? '<button class="btn" type="button" id="signIn">Sign in with Face ID</button>' : '') + '</div>';
-    if (!viewer) {
-      html += '<p class="label">Monarch’s emails</p><div class="rgroup">';
-      const tok = getToken(), own = !!ls.get(K.token + '.ever', '');   // Mail's sign-in, or Money's own (ever: there's one to disconnect)
-      if (hasGmail()) html += '<div class="acct"><p><strong>' + (tok && tok.mail ? 'Gmail connected through Mail' : 'Gmail connected') + '</strong>Read ' + esc(ago(D.readAt)) + '. Money reads only Monarch’s emails, and can’t change or send anything.</p></div>'
-        + '<button class="rowbtn" type="button" id="readNow"><span class="ic">' + I.refresh + '</span><span>Read now</span></button>'
-        + '<button class="rowbtn" type="button" id="readAgain"><span class="ic">' + I.mail + '</span><span>Read the last 5 years again<span class="sub">Every Monarch email, from the start</span></span></button>'
-        + (own ? '<button class="rowbtn" type="button" id="gmailOut"><span class="ic">' + I.out + '</span><span>Disconnect Gmail</span></button>' : '');
-      else html += '<div class="acct"><p><strong>Gmail not connected</strong>Money reads Monarch’s alert emails, read-only: it can’t change or send anything.</p><button class="btn" type="button" id="gmailIn">Connect Gmail</button></div>';
-      html += '</div><p class="note">In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.</p>';
-    }
+    const S = AllisonOS.settings, s = st.server, signed = signedIn(), reader = signed && s && s.reader, viewer = signed && s && !s.reader && !s.open;
+    const user = signed && A().user ? A().user() : null, sees = D.tx.length && (!viewer || (s && s.can));
+    // the family account: who reads Monarch's emails, in a sentence
+    let how = '';
+    if (!s) how = 'Checking…';
+    else if (s.reader) how = 'You read Monarch’s emails for the family, ' + ((s.with || []).length ? 'shared with ' + names(s.with) + '.' : 'not shared with anyone yet.');
+    else if (s.can) how = s.readerName + '’s phone reads Monarch’s emails, updated ' + ago(D.readAt) + '.';
+    else if (s.open) how = 'Nobody reads Monarch’s emails yet: connect Gmail on the phone that gets them.';
+    else how = s.readerName + '’s phone reads Monarch’s emails: ask ' + s.readerName + ' to share Money with you (Settings, Who sees Money).';
+    let html = window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'setDesign' })) : '';
     if (reader) {
       if (people === null) { people = []; loadPeople(); }
-      html += '<p class="label">Who sees Money</p><div class="rgroup">' + (people.length ? people.map(p => '<button class="rowbtn" type="button" role="checkbox" data-person="' + esc(p.id) + '" aria-checked="' + (s.with || []).includes(p.id) + '"><span class="check" aria-hidden="true">' + I.tick + '</span><span>' + no(p.name) + '</span></button>').join('')
-        : '<div class="acct"><p>Nobody else is in the family yet.</p></div>') + '</div><p class="note">Only you, and those you tick, see Money. Not even the family’s owner otherwise.</p>';
+      html += S.section('Who sees Money', people.length ? people.map(p => S.toggle({ html: true, title: no(p.name), on: (s.with || []).includes(p.id), data: { person: p.id } }))
+        : S.info({ title: 'Nobody else is in the family yet.' }), { hint: 'Only you, and those you turn on, see Money: not even the family’s owner otherwise.' });
     }
-    if (D.tx.length && (!viewer || (s && s.can))) {
+    if (sees) {
       const colour = cardColours(), acct2 = C.accounts(D.tx);
       const cards = [...new Set(D.tx.filter(x => x.dir === 'out').map(x => acct2(x).name).filter(n => n && C.isCard(n)))];
       if (cards.length) {
-        html += '<p class="label">Card rewards</p>' + cards.map(c => {
-          const r = C.ruleFor(c, settings()) || { base: 0, online: 0, grocery: 0, cap: 0 }, k = esc(C.cardKey(c));
-          const f = (id, label, v, unit) => '<div class="frow"><label for="' + id + k + '">' + esc(label) + '</label><input class="num" id="' + id + k + '" data-rule="' + id + '" data-key="' + k + '" type="text" inputmode="decimal" value="' + esc(v || 0) + '" aria-label="' + esc(label) + ', ' + unit + '"><span>' + unit + '</span></div>';
-          return '<div class="rgroup"><div class="cardhead"><i class="cdot" data-k="' + colour(c) + '"></i>' + no(c) + '</div>'
-            + f('base', 'On everything', r.base, '%') + f('online', 'Online shopping', r.online, '%') + f('grocery', 'Groceries and wholesale clubs', r.grocery, '%') + f('cap', 'Bonus on the first, a quarter', r.cap, '$') + '</div>';
-        }).join('') + '<p class="note">Set from what you said: Robinhood 3% on everything; Customized Cash 6% online, and Bank of America’s 2% at grocery stores and wholesale clubs and 1% else, the bonus on the first $2,500 a quarter. Check them against your cards’ terms. 0 for the bonus limit means none.</p>'
-          + '<p class="label">Online stores</p><div class="rgroup"><div class="frow"><label class="vh" for="onlineList">Online stores</label><input class="txt" id="onlineList" type="text" autocomplete="off" value="' + esc((settings().online || C.ONLINE).join(', ')) + '"></div></div>'
-          + '<p class="note">What counts as online shopping for the card rates, separated by commas.</p>';
+        const f = (rule, key, title, v, sub) => S.input({ id: rule + key, title, sub, value: String(v || 0), data: { rule, key }, attrs: 'inputmode="decimal" autocomplete="off"' });
+        html += S.section('Card rewards', cards.flatMap(c => {
+          const r = C.ruleFor(c, settings()) || { base: 0, online: 0, grocery: 0, cap: 0 }, k = C.cardKey(c);
+          return [S.raw('<div class="cardhead"><i class="cdot" data-k="' + colour(c) + '"></i>' + no(c) + '</div>'),
+            f('base', k, 'On everything (%)', r.base), f('online', k, 'Online shopping (%)', r.online), f('grocery', k, 'Groceries and wholesale clubs (%)', r.grocery),
+            f('cap', k, 'Bonus on the first, a quarter ($)', r.cap, '0 for no limit.')];
+        }).concat(S.input({ id: 'onlineList', title: 'Online stores', sub: 'What counts as online shopping, separated by commas.', value: (settings().online || C.ONLINE).join(', '), attrs: 'autocomplete="off"' })),
+        { hint: 'Set from what you said (Robinhood 3% on everything; Customized Cash 6% online, 2% at groceries and wholesale clubs, 1% else, the bonus on the first $2,500 a quarter): check them against your cards’ terms.' });
       }
-    }
-    if (D.tx.length && (!viewer || (s && s.can))) {
-      const rc = settings().recat || {}, names = new Map(D.tx.map(x => [C.catKey(x.merchant), x.merchant]));
-      const rules = [...Object.entries(rc.g || {}).filter(([, v]) => v.c).map(([k, v]) => ({ k: 'g:' + k, what: no(v.f || k) + ' → ' + no(v.c), sub: 'Category merged' })),
-        ...Object.entries(rc.m || {}).filter(([, v]) => v.c).map(([k, v]) => ({ k: 'm:' + k, what: no(names.get(k) || k) + ' → ' + no(v.c), sub: 'Always for this merchant' }))];
+      const rc = settings().recat || {}, merchants = new Map(D.tx.map(x => [C.catKey(x.merchant), x.merchant]));
+      const rules = [...Object.entries(rc.g || {}).filter(([, v]) => v.c).map(([k, v]) => ({ k: 'g:' + k, what: no(v.f || k) + ' → ' + no(v.c), sub: 'Category merged.' })),
+        ...Object.entries(rc.m || {}).filter(([, v]) => v.c).map(([k, v]) => ({ k: 'm:' + k, what: no(merchants.get(k) || k) + ' → ' + no(v.c), sub: 'Always for this merchant.' }))];
       const one = Object.values(rc.t || {}).filter(v => v.c).length;
-      html += '<p class="label">Categories</p><div class="rgroup">'
-        + (rules.length ? rules.map(r => '<div class="frow"><span style="flex:1"><span>' + r.what + '</span><br><small>' + esc(r.sub) + '</small></span><button class="chip quiet" type="button" data-unrule="' + esc(r.k) + '">Remove</button></div>').join('')
-          : '<div class="acct"><p>Monarch’s categories, as its emails say. Change one from a transaction: tap it, then Change.</p></div>')
-        + (one ? '<div class="acct"><p>' + esc(plural(one, 'transaction')) + ' <span>changed on its own</span></p></div>' : '')
-        + (signed && s && s.can ? '<button class="rowbtn" type="button" id="ideasNow"><span class="ic">💡</span><span>Ask Ipsy for ideas<span class="sub">Categories to merge, and merchants to move</span></span></button>' : '') + '</div>'
-        + '<p class="note">Shared with whoever sees Money. Once a month Ipsy also looks on its own; nothing changes until you accept an idea. It uses Claude Sonnet 5.5: under a cent each time.</p>';
+      html += S.section('Categories', [
+        ...(rules.length ? rules.map(r => S.info({ html: true, title: r.what, sub: esc(r.sub), extra: '<button class="chip quiet" type="button" data-unrule="' + esc(r.k) + '">Remove</button>' }))
+          : [S.info({ title: 'Monarch’s categories, as its emails say', sub: 'Change one from a transaction: tap it, then Change.' })]),
+        one ? S.info({ title: plural(one, 'transaction') + ' changed on its own' }) : '',
+      ], { hint: 'Shared with whoever sees Money.' });
     }
-    if (reader) {
-      const lc = D.lastCheck;
-      html += '<p class="label">Ipsy’s daily check</p><div class="rgroup">'
-        + '<button class="swrow" type="button" role="switch" id="checkOn" aria-checked="' + checkOn() + '"><span class="grow">Check each day<span class="sub">Ipsy checks each new transaction against its Monarch email.</span></span><span class="switch" aria-hidden="true"></span></button>'
-        + '<div class="acct"><p>' + (lc ? '<span>Last checked</span> ' + esc(ago(lc.at)) + ': <span>' + esc(plural(lc.n, 'transaction')) + '</span>' + (lc.fixed ? ', <span>' + esc(plural(lc.fixed, 'correction')) + '</span>' : '') + (lc.flagged ? ', <span>' + esc(lc.flagged + ' to look at') + '</span>' : '') + '.' : 'Not checked yet.') + '</p></div>'
-        + '<button class="rowbtn" type="button" id="checkNow"><span class="ic">' + I.tick + '</span><span>Check now</span></button></div>'
-        + '<p class="note">What passed is never checked again. It uses Claude Sonnet 5.5: a few cents a month.</p>';
+    if (!viewer) {
+      const tok = getToken(), own = !!ls.get(K.token + '.ever', '');   // Mail's sign-in, or Money's own (ever: there's one to disconnect)
+      const who = tok && tok.mail ? 'Mail’s sign-in' : ls.get(K.hint, '') || 'Connected';
+      html += S.section('Connected accounts', hasGmail() ? [
+        S.info({ id: 'gmailWho', title: 'Gmail', sub: who + ', read-only.' }),
+        S.action({ id: 'readNow', icon: 'refresh', title: 'Check now', sub: D.readAt ? 'Last checked ' + ago(D.readAt) + '.' : 'Not checked yet.' }),
+        S.action({ id: 'readAgain', icon: 'mail', title: 'Read the last 5 years again', sub: 'Every Monarch email, from the start.' }),
+        own ? S.danger({ id: 'gmailOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
+      ] : S.action({ id: 'gmailIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Money reads only Monarch’s emails, and can’t change or send anything.' }),
+      { hint: 'In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.' });
     }
-    html += '<p class="label">Your data</p><div class="rgroup">'
-      + (D.tx.length ? '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + I.export + '</span><span>Export<span class="sub">As a CSV spreadsheet</span></span></button>' : '')
-      + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + I.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">' + (reader ? 'From this phone, and aOS for everyone it’s shared with' : 'From this phone') + '</span></span></button></div>';
+    const lc = D.lastCheck, ideas = sees && signed && s && s.can;
+    if (reader || ideas) html += S.section('Ipsy', [
+      reader ? S.toggle({ id: 'checkOn', title: 'Check each day', sub: 'Ipsy checks each new transaction against its Monarch email; what passed is never checked again.', on: checkOn() }) : '',
+      reader ? S.action({ id: 'checkNow', icon: 'refresh', title: 'Check now', sub: lc ? 'Last checked ' + ago(lc.at) + ': ' + plural(lc.n, 'transaction') + (lc.fixed ? ', ' + plural(lc.fixed, 'correction') : '') + (lc.flagged ? ', ' + lc.flagged + ' to look at' : '') + '.' : 'Not checked yet.' }) : '',
+      ideas ? S.action({ id: 'ideasNow', icon: 'list', title: 'Ask Ipsy for ideas', sub: 'Categories to merge and merchants to move; it looks once a month too, and nothing changes until you accept.' }) : '',
+    ], { hint: 'Ipsy uses Claude Sonnet 5.5: a few cents a month for the daily check, under a cent for each look at your categories.' });
+    html += S.section('Your data', [
+      D.tx.length ? S.action({ id: 'exportBtn', icon: 'upload', title: 'Export as a spreadsheet', sub: 'A CSV file.' }) : '',
+      S.danger({ id: 'wipeBtn', title: 'Delete all data', sub: reader ? 'From this phone, and from aOS for everyone it’s shared with.' : 'From this phone.' }),
+    ]);
+    html += S.section('Family account', user ? S.info({ id: 'acctState', title: 'Signed in as ' + user.name, sub: how })
+      : [S.info({ id: 'acctState', title: 'On this phone only' }),
+        S.action({ id: 'signIn', icon: 'face', title: 'Sign in with Face ID', sub: 'Shares Money with your family, or shows it if it’s shared with you.' })], { id: 'acct' });
     $('setBody').innerHTML = html;
   }
   const names = ids => (people || []).filter(p => ids.includes(p.id)).map(p => p.name).join(', ') || plural(ids.length, 'person');
@@ -1067,7 +1065,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return;
     }
     if (t.closest('#gmailIn')) { signIn(); return; }
-    if (t.closest('#gmailOut')) { signOutGmail(); return; }
+    const go = t.closest('#gmailOut'); if (go) { if (AllisonOS.settings.armed(go, 'Tap again to disconnect')) signOutGmail(); return; }
     if (t.closest('#readNow')) { closeSheet('setSheet'); scan({ loud: true }); return; }
     if (t.closest('#readAgain')) { closeSheet('setSheet'); scan({ loud: true, again: true }); return; }
     if (t.closest('#checkOn')) { ls.set(K.checkOff, checkOn() ? '1' : ''); renderSettings(); return; }
@@ -1088,7 +1086,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (t.closest('#exportBtn')) { exportCSV(); return; }
     const w = t.closest('#wipeBtn');
     if (w) {
-      if (!w.dataset.armed) { w.dataset.armed = '1'; $('wipeTxt').firstChild.textContent = 'Tap again to delete everything'; setTimeout(() => { if (document.contains(w)) { delete w.dataset.armed; $('wipeTxt').firstChild.textContent = 'Delete all data'; } }, 3500); return; }
+      if (!AllisonOS.settings.armed(w, 'Tap again to delete everything')) return;
       if (st.server && st.server.reader) { try { await api('forget', {}, true); } catch { toast('Couldn’t reach aOS, so nothing was deleted. Try again when you’re online.', null, 6000); return; } }
       const n = D.tx.length;
       Object.assign(D, { tx: [], alerts: [], hints: [], settings: null, mAt: {}, dirty: [], setDirty: false, seen: [], lastScan: 0, readAt: 0, checkDay: '', lastCheck: null });

@@ -850,7 +850,7 @@ await test('More > Design: the first section; Standard and back, at once, kept a
   await pp.goto(BASE + '/drinks/'); await pp.waitForFunction(() => window.__drinks); await pp.waitForTimeout(500);
   assert.equal(await look(), 'vintage');
   await pp.click('#moreBtn'); await pp.waitForSelector('#moreSheet:not([hidden])'); await pp.waitForTimeout(300);
-  assert.equal(await pp.$eval('#moreBody', b => b.firstElementChild.textContent), 'Design', 'Design is the first section');
+  assert.equal(await pp.$eval('#moreBody .st-sec:first-child .st-lbl', b => b.textContent), 'Design', 'Design is the first section');
   assert.equal(await pp.getAttribute('#moreBody [data-design="vintage"]', 'aria-checked'), 'true');
   assert.equal(await pp.getAttribute('#moreBody [data-design="glass"]', 'aria-checked'), 'false');
   await shot(pp, '23-more-design-vintage');

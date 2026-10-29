@@ -353,16 +353,6 @@ details.tview th{color:var(--faint);font-size:12px} details.tview td.n,details.t
 @media (prefers-reduced-transparency:reduce){.viewmenu,.vbar::before{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
 
 /* ---- More: your account, goals, your data ---- */
-.rowbtn{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;text-align:left;padding:10px 14px;font-size:15px;font-weight:600;border-top:1px solid var(--hair-2);color:var(--text)}
-.rowbtn:first-child{border-top:0}
-.rowbtn:active{background:var(--fill)}
-.rowbtn .ic{width:26px;display:grid;place-items:center;flex:none;color:var(--icon)}
-.rowbtn .ic svg{width:22px;height:22px}
-.rowbtn .sub{display:block;font-weight:400;color:var(--muted);font-size:13px}
-.rowbtn.danger,.rowbtn.danger .ic{color:var(--danger-text)}
-.acct{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.acct p{margin:0;font-size:14px;color:var(--muted)}
-.acct strong{display:block;font-size:16px;color:var(--text);margin-bottom:2px}
 
 /* ---- the dock: + logs today ---- */
 .dock{position:fixed;left:0;right:0;max-width:560px;margin:0 auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:flex-end;padding:0 14px;z-index:5;pointer-events:none;transition:opacity .2s}
@@ -584,7 +574,6 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 .sheet{background:var(--mc-card);border-radius:28px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
 .sheethead h2{font-weight:600;letter-spacing:-.01em}
 .toast{background:var(--mc-card-2);border-radius:18px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
-.rowbtn .ic{color:var(--icon)}
 
 /* Analysis: the week / month and by name / by kind switches, with a mustard thumb */
 .seg{background:var(--mc-card);border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
@@ -754,7 +743,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
         <h1 class="title">Drinks</h1>
         <div class="acts">
           <button class="iconbtn" id="todayBtn" type="button" aria-label="This week" hidden><svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/><rect x="9.6" y="12.6" width="4.8" height="4.4" rx="1.2" fill="currentColor" stroke="none"/></svg></button>
-          <button class="iconbtn" id="moreBtn" type="button" aria-label="Account, goals and your data"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.4" r="3.6"/><path d="M4.8 20c.9-3.6 3.8-5.6 7.2-5.6s6.3 2 7.2 5.6"/></svg></button>
+          <button class="iconbtn" id="moreBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.4" r="3.6"/><path d="M4.8 20c.9-3.6 3.8-5.6 7.2-5.6s6.3 2 7.2 5.6"/></svg></button>
         </div>
       </div>
     </header>
@@ -788,13 +777,13 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     </div>
   </div>
 
-  <!-- More: your account, goals, and your data -->
+  <!-- Settings: Design, your goals, your data and your family account (../home/settings.js) -->
   <div class="sheetwrap" id="moreSheet" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="moreLbl">
       <div class="grab" aria-hidden="true"></div>
-      <div class="sheethead"><h2 id="moreLbl">Drinks</h2><button class="iconbtn" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button></div>
-      <div class="sheetbody" id="moreBody"></div>
+      <div class="sheethead"><h2 id="moreLbl">Settings</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
+      <div class="sheetbody"><div id="moreBody"></div></div>   <!-- the sections, written by renderMore -->
     </div>
   </div>
   <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" tabindex="-1" aria-hidden="true">
@@ -804,6 +793,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 </div>
 
 <script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: signing in, for the family's Google Sheet -->
 <script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
 <script src="calc.js"></script>

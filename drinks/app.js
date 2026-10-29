@@ -65,9 +65,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     close: '<svg viewBox="0 0 24 24" class="b"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg>',
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     plus: '<svg viewBox="0 0 24 24" class="b"><path d="M12 6v12M6 12h12"/></svg>',
-    import: '<svg viewBox="0 0 24 24"><path d="M12 3.6v11M7.6 10.6l4.4 4.4 4.4-4.4"/><path d="M4.4 15.6v2.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-2.6"/></svg>',
-    export: '<svg viewBox="0 0 24 24"><path d="M12 15V4M7.6 8.4L12 4l4.4 4.4"/><path d="M4.4 13.6v4.6a2.2 2.2 0 0 0 2.2 2.2h10.8a2.2 2.2 0 0 0 2.2-2.2v-4.6"/></svg>',
-    bin: '<svg viewBox="0 0 24 24"><path d="M4.6 6.8h14.8M9.6 6.8V4.6h4.8v2.2M6.6 6.8l.9 12a1.6 1.6 0 0 0 1.6 1.5h5.8a1.6 1.6 0 0 0 1.6-1.5l.9-12"/></svg>',
   };
 
   // ---------------------------------------------------------------------
@@ -376,32 +373,39 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // More: your account, your goals, your data
   // ---------------------------------------------------------------------
   const A = () => window.AllisonOS && window.AllisonOS.account;
+  const more = $('moreBody');
+  // Settings, as in every app (../home/settings.js): Design · Your goals · Your data · Family account
+  const oneLine = m => String(m || '').replace(/\.\s+(\S)/g, (_, c) => '; ' + c.toLowerCase());   // a note in one sentence
   function renderMore() {
-    const g = goals();
+    const S = AllisonOS.settings, g = goals();
     const ACCT = {
       ok: ['In the family’s Google Sheet', 'Last synced ' + ago(lastSyncAt) + '.'],
       syncing: ['Syncing…', ''],
       signin: ['On this phone only', 'Sign in to sync your log.'],
       offline: ['Offline', ''],
-      error: ['Couldn’t sync just now', SYNC_ERRORS[syncErr] || 'Your log is safe on this phone. Trying again shortly.'],
+      error: ['Couldn’t sync just now', oneLine(SYNC_ERRORS[syncErr] || 'Your log is safe on this phone. Trying again shortly.')],
       idle: [signedIn() ? 'Checking…' : 'On this phone only', ''],
     }[syncState === 'syncing' && settled !== 'idle' ? settled : syncState] || ['', ''];
-    $('moreBody').innerHTML = '<p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div>'
-      + '<div class="rgroup acct" id="acct"><p><strong>' + esc(ACCT[0]) + '</strong>' + esc(ACCT[1]) + '</p>'
-      + (!signedIn() ? '<button class="btn" type="button" id="signIn">Sign in with Face ID</button>' : '') + '</div>'
-      + '<p class="label">Your goals</p><div class="rgroup">'
-      + '<div class="frow"><label for="gWeek">A week, at most</label><select id="gWeek">' + opts(withVal([0, 3, 5, 7, 10, 12, 14, 18, 21, 25, 30], g.week), g.week, v => +v ? v + ' drinks' : 'No limit') + '</select></div>'
-      + '<div class="frow"><label for="gDay">A day, at most</label><select id="gDay">' + opts(withVal([1, 2, 3, 4, 5, 6, 8, 10], g.day), g.day, v => plural(+v, 'drink')) + '</select></div>'
-      + '<div class="frow"><label for="gAf">Alcohol-free days a week</label><select id="gAf">' + opts([0, 1, 2, 3, 4, 5, 6, 7], g.af) + '</select></div></div>'
-      + '<p class="label">Your data</p><div class="rgroup">'
-      + '<button class="rowbtn" type="button" id="importBtn"><span class="ic">' + ICON.import + '</span><span>Bring in ABV Tracker history<span class="sub">JSON backup or Log tab CSV</span></span></button>'
-      + '<button class="rowbtn" type="button" id="exportBtn"><span class="ic">' + ICON.export + '</span><span>Export<span class="sub">As a CSV spreadsheet</span></span></button>'
-      + '<button class="rowbtn danger" type="button" id="wipeBtn"><span class="ic">' + ICON.bin + '</span><span id="wipeTxt">Delete all data<span class="sub">From this phone' + (synced ? ' and the Sheet' : '') + '</span></span></button></div>';
+    const sel = (id, title, list, v, label) => S.select({ id, title, value: v, options: list.map(x => [x, label ? label(x) : String(x)]) });
+    more.innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'moreDesign' })) : '')
+      + S.section('Your goals', [
+        sel('gWeek', 'A week, at most', withVal([0, 3, 5, 7, 10, 12, 14, 18, 21, 25, 30], g.week), g.week, v => +v ? v + ' drinks' : 'No limit'),
+        sel('gDay', 'A day, at most', withVal([1, 2, 3, 4, 5, 6, 8, 10], g.day), g.day, v => plural(+v, 'drink')),
+        sel('gAf', 'Alcohol-free days a week', [0, 1, 2, 3, 4, 5, 6, 7], g.af),
+      ])
+      + S.section('Your data', [
+        S.action({ id: 'importBtn', icon: 'download', title: 'Import a backup', sub: 'An ABV Tracker JSON backup, or its Log tab as a CSV.' }),
+        S.action({ id: 'exportBtn', icon: 'upload', title: 'Export as a spreadsheet', sub: 'A CSV file.' }),
+        S.danger({ id: 'wipeBtn', title: 'Delete all data', sub: 'From this phone' + (synced ? ' and the Sheet.' : '.') }),
+      ])
+      + S.section('Family account', [
+        S.info({ id: 'acctState', title: ACCT[0], sub: ACCT[1] }),
+        !signedIn() ? S.action({ id: 'signIn', icon: 'face', title: 'Sign in with Face ID', sub: 'Keeps your log in the family’s Google Sheet.' }) : '',
+      ], { id: 'acct' });
   }
   const ago = t => { if (!t) return 'just now'; const m = Math.round((Date.now() - t) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); if (syncState !== 'syncing') sync(false); };
-  const more = $('moreBody');
-  if (window.aosDesign) aosDesign.bind(more);   // Design: Vintage or Standard, at once (../home/design.js)
+  if (window.aosDesign) aosDesign.bind(more);   // Design: the four looks, at once (../home/design.js)
   more.addEventListener('change', e => {
     const t = e.target, k = { gWeek: 'week', gDay: 'day', gAf: 'af' }[t.id]; if (!k) return;
     const g = Object.assign({ id: 'goals' }, goals(), { [k]: +t.value });
@@ -418,12 +422,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (e.target.closest('#exportBtn')) { exportCSV(await everything()); return; }
     const w = e.target.closest('#wipeBtn');
     if (w) {
-      if (!w.dataset.armed) { w.dataset.armed = '1'; $('wipeTxt').firstChild.textContent = 'Tap again to delete everything'; setTimeout(() => { if (document.contains(w)) { delete w.dataset.armed; $('wipeTxt').firstChild.textContent = 'Delete all data'; } }, 3500); return; }
+      if (!AllisonOS.settings.armed(w, 'Tap again to delete everything')) return;
       // Everything of yours in the Sheet too, not just the 90 days here: each one leaves a grave, so it goes from there and your other phones.
       if (synced) {
-        delete w.dataset.armed; $('wipeTxt').firstChild.textContent = 'Deleting…';
+        const wt = w.querySelector('.st-title'); wt.textContent = 'Deleting…';
         const all = await everything();
-        if (!all) { $('wipeTxt').firstChild.textContent = 'Delete all data'; toast(signedIn() ? 'Couldn’t reach the family’s Google Sheet, so nothing was deleted. Try again when you’re online.' : 'Sign in first, to delete your log from the family’s Google Sheet too.', null, 6000); return; }
+        if (!all) { wt.textContent = 'Delete all data'; toast(signedIn() ? 'Couldn’t reach the family’s Google Sheet, so nothing was deleted. Try again when you’re online.' : 'Sign in first, to delete your log from the family’s Google Sheet too.', null, 6000); return; }
         for (const kind of ['entries', 'days']) for (const x of all[kind]) if (!data[kind].some(y => y.id === x.id)) { data[kind].push(x); const { updated, ...rest } = x; shadow.set(kind + ':' + x.id, JSON.stringify(rest)); }
       }
       const n = data.entries.length;

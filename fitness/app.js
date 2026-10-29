@@ -1447,10 +1447,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch { olderAsked.delete(key); }
   }
   function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 2000 : ms); }
-  // Settings: the design, Vintage or Standard, at once and just on this phone (../home/design.js);
-  // Steps (the daily goal, and linking your own iPhone); and signing out and erasing this phone.
-  $('setBody').innerHTML = '<div class="field"><p class="label">Design</p><div class="rgroup">' + (window.aosDesign ? aosDesign.picker() : '') + '</div></div>'
-    + '<div id="setMore"></div>';
+  // Settings, as in every app (../home/settings.js): Design · Steps · Linked phones (the owner) · Health · Ipsy ·
+  // Family account. The design at once and just on this phone (../home/design.js); Steps (the goals, and linking
+  // your own iPhone); and signing out and erasing this phone.
   if (window.aosDesign) aosDesign.bind($('setBody'));
   $('setBtn').onclick = () => { renderSetMore(); openSheet('setSheet'); loadPhones(); };
   const phones = { state: 'idle', data: null, err: '' };
@@ -1470,28 +1469,37 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     renderSetMore();
   }
   function renderSetMore() {
-    const box = $('setMore'); if (!box) return;
-    const d = phones.data || {}, row = (t, sub, btn, name) => '<div class="frow"><span class="l"' + (name ? ' translate="no"' : '') + '>' + esc(t) + (sub ? '<small class="sub">' + esc(sub) + '</small>' : '') + '</span>' + (btn || '') + '</div>';
-    let link = '';
-    if (phones.state === 'signin') link = row('Your iPhone’s steps', 'Sign in to link your iPhone', '<button class="btn quiet sm" type="button" data-psignin>Sign in</button>');
-    else if (phones.state === 'loading' || phones.state === 'idle') link = row('Your iPhone’s steps', 'Checking Home Assistant…');
-    else if (phones.state === 'error') link = row('Your iPhone’s steps', phones.err, '<button class="btn quiet sm" type="button" data-pretry>Try again</button>');
-    else if (d.linked) link = row('Your iPhone: ' + (d.linked.name || d.linked.entity), d.linked.entity, '<button class="btn quiet sm" type="button" data-punlink>Unlink</button>');
+    const S = AllisonOS.settings, d = phones.data || {};
+    // a phone's name as it is (translate="no"), and a small button on its row
+    const phone = (name, entity, btn) => S.info({ html: true, title: '<span translate="no">' + esc(name) + '</span>', sub: esc(entity), extra: btn });
+    const small = (label, attr, quiet) => '<button class="btn' + (quiet ? ' quiet' : '') + ' sm" type="button" ' + attr + '>' + label + '</button>';
+    let link = [];
+    if (phones.state === 'signin') link = [S.action({ icon: 'face', title: 'Your iPhone’s steps', sub: 'Sign in to link your iPhone.', data: { psignin: '' } })];
+    else if (phones.state === 'loading' || phones.state === 'idle') link = [S.info({ title: 'Your iPhone’s steps', sub: 'Checking Home Assistant…' })];
+    else if (phones.state === 'error') link = [S.action({ icon: 'refresh', title: 'Try again', sub: phones.err, data: { pretry: '' } })];
+    else if (d.linked) link = [phone('Your iPhone: ' + (d.linked.name || d.linked.entity), d.linked.entity, small('Unlink', 'data-punlink', true))];
     else {
-      link = row('Link your iPhone', d.list === false ? 'Type your phone’s step sensor' : d.phones && d.phones.length ? 'Pick your own phone' : 'No step sensors found that aren’t linked already.');
-      if (d.list !== false) link += (d.phones || []).map(p => row(p.name || p.entity, p.entity, '<button class="btn sm" type="button" data-plink="' + esc(p.entity) + '">Link</button>', true)).join('');
-      else link += '<div class="frow"><input class="txt" id="stEntity" type="text" placeholder="sensor.your_iphone_steps" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Step sensor"><button class="btn sm" type="button" data-plinktyped>Link</button></div>';
+      link = [S.info({ title: 'Link your iPhone', sub: d.list === false ? 'Type your phone’s step sensor.' : d.phones && d.phones.length ? 'Pick your own phone.' : 'No step sensors found that aren’t linked already.' })];
+      if (d.list !== false) link = link.concat((d.phones || []).map(p => phone(p.name || p.entity, p.entity, small('Link', 'data-plink="' + esc(p.entity) + '"'))));
+      else link.push(S.input({ id: 'stEntity', title: 'Step sensor', placeholder: 'sensor.your_iphone_steps', attrs: 'autocapitalize="off" autocomplete="off" spellcheck="false"' }),
+        S.action({ icon: 'link', title: 'Link', data: { plinktyped: '' } }));
     }
-    if (phones.err && phones.state === 'ok') link += row('', phones.err);
-    const links = d.links && d.links.length ? '<p class="label">Linked phones (owner)</p><div class="rgroup">' + d.links.map(l => row(l.name, l.entity, '<button class="btn quiet sm" type="button" data-punlinkid="' + esc(l.id) + '">Unlink</button>', true)).join('') + '</div>' : '';
-    box.innerHTML = '<div class="field"><p class="label">Steps</p><div class="rgroup"><div class="frow"><label for="stGoal">Daily goal</label><select id="stGoal">' + opts(STEP_GOALS, goal(), g => g.toLocaleString('en-US')) + '</select></div>'
-      + '<div class="frow"><label for="stMove">Move goal</label><select id="stMove">' + opts(MOVE_GOALS, moveGoal(), g => g.toLocaleString('en-US') + ' kcal') + '</select></div>' + link + '</div>' + links + '</div>'
-      + '<div class="field"><p class="label">Health</p><div class="rgroup"><button class="swrow" type="button" role="switch" id="stVitals" aria-checked="' + vitalsAlertsOn() + '"><span class="grow">Vitals alerts'
-      + '<span class="sub">Alerts you when a vital is off your usual.</span></span><span class="switch" aria-hidden="true"></span></button></div></div>'
+    const user = signedIn() && AllisonOS.account.user ? AllisonOS.account.user() : null;
+    $('setBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'setDesign' })) : '')
+      + S.section('Steps', [
+        S.select({ id: 'stGoal', title: 'Daily goal', value: goal(), options: STEP_GOALS.map(g => [g, g.toLocaleString('en-US')]) }),
+        S.select({ id: 'stMove', title: 'Move goal', value: moveGoal(), options: MOVE_GOALS.map(g => [g, g.toLocaleString('en-US') + ' kcal']) }),
+        ...link,
+      ], { hint: phones.err && phones.state === 'ok' ? phones.err : '' })
+      + S.section('Linked phones', (d.links || []).map(l => phone(l.name, l.entity, small('Unlink', 'data-punlinkid="' + esc(l.id) + '"', true))))
+      + S.section('Health', S.toggle({ id: 'stVitals', title: 'Vitals alerts', sub: 'Alerts you when a vital is off your usual.', on: vitalsAlertsOn() }))
       + ipsySetting()
-      + '<div class="field"><p class="label">This phone</p><div class="rgroup">'
-      + '<button class="rowbtn" type="button" id="setErase"><span class="ic">' + ICON.close + '</span><span>Sign out and erase</span></button>'
-      + '<a class="rowbtn" href="../aOS/#lost-phone"><span class="ic">' + ICON.chevR + '</span><span>Lost a phone?</span></a></div></div>';
+      + S.section('Family account', [
+        user ? S.info({ title: 'Signed in as ' + (user.name || 'you'), sub: 'Syncs your log, Meds and Steps with the family’s Google Sheet.' })
+          : S.action({ id: 'setSignIn', icon: 'face', title: 'Sign in with Face ID', sub: 'Keeps your log, Meds and Steps in the family’s Google Sheet.' }),
+        S.danger({ id: 'setErase', icon: 'out', title: 'Sign out and erase', sub: lastSyncAt ? 'Fitness goes from this phone; the Sheet keeps a copy.' : 'Fitness goes from this phone, with your unsynced log, Meds and Steps.' }),
+        S.nav({ id: 'setLost', title: 'Lost a phone?' }),
+      ]);
   }
   $('setBody').addEventListener('change', e => {
     if (e.target.id === 'stGoal') { ls.set(K.goal, e.target.value); render(); }
@@ -1500,9 +1508,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   $('setBody').addEventListener('click', async e => {
     let b;
     if (e.target.closest('[data-psignin]')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to read your iPhone’s steps.')) loadPhones(); return; }
+    if (e.target.closest('#setSignIn')) { const A = window.AllisonOS && AllisonOS.account; if (A && await A.prompt('Sign in to keep Fitness in the family’s Google Sheet.')) { loadPhones(); sync(false); } return; }
     if (e.target.closest('[data-pretry]')) { loadPhones(); return; }
     if (e.target.closest('#stIpsy')) { await setIpsy(!ipsyOn()); renderSetMore(); return; }
     if (e.target.closest('#stVitals')) { ls.set(K.vitalsAlerts, vitalsAlertsOn() ? '0' : '1'); renderSetMore(); sendVitals(); return; }
+    if (e.target.closest('#setLost')) { location.href = '../aOS/#lost-phone'; return; }
     const linkTo = async (body, route) => {
       try { await fapi(route, body); phones.err = ''; ls.set(K.stepsLink, ''); ls.set(K.healthLink, ''); await loadPhones(); if (route === 'link') { loadHealth(true).finally(() => loadSteps(true)); toast('Linked. Your steps come in on their own.'); } }
       catch (x) { phones.err = PHONE_ERR[x.message] || 'Couldn’t do that (' + x.message + ').'; renderSetMore(); }
@@ -1511,9 +1521,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (e.target.closest('[data-plinktyped]')) return linkTo({ entity: ($('stEntity').value || '').trim() }, 'link');
     if (e.target.closest('[data-punlink]')) return linkTo({}, 'unlink');
     if ((b = e.target.closest('[data-punlinkid]'))) return linkTo({ id: b.dataset.punlinkid }, 'unlink');
-    if (e.target.closest('#setErase')) {
-      const msg = lastSyncAt ? 'Sign out and erase Fitness from this phone (the Sheet keeps a copy)?' : 'Sign out and erase Fitness from this phone, losing your unsynced log, Meds and Steps?';
-      if (!confirm(msg)) return;
+    if ((b = e.target.closest('#setErase'))) {
+      if (!AllisonOS.settings.armed(b, 'Tap again to sign out and erase')) return;
       if (lastSyncAt) await sync(true);
       if (window.AllisonOS && AllisonOS.erase) AllisonOS.erase();
     }
@@ -1654,8 +1663,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // only reads; Claude answers through ../fitness/api (ipsy), with no web search.
   function ipsyOn() { return ls.get(KEY + '-ipsy', '') === '1'; }
   function ipsySetting() {
-    return '<div class="field"><p class="label">Ipsy</p><div class="rgroup"><button class="swrow" type="button" role="switch" id="stIpsy" aria-checked="' + ipsyOn() + '"><span class="grow">Ask Ipsy about your patterns'
-      + '<span class="sub">Ipsy finds patterns in your workouts, sleep and meds.</span></span><span class="switch" aria-hidden="true"></span></button></div></div>';
+    return AllisonOS.settings.section('Ipsy', AllisonOS.settings.toggle({ id: 'stIpsy', title: 'Ask Ipsy about your patterns', sub: 'Ipsy finds patterns in your workouts, sleep and meds.', on: ipsyOn() }));
   }
   async function setIpsy(on) {
     const A = window.AllisonOS && AllisonOS.account;
