@@ -4,7 +4,7 @@
 // sign first, then the right one), a round in Story Tower from the warm-up to the end (a miss first:
 // the hint, then the answer after a second miss), coins, the rainbow bridge (counting planks) and the
 // Gem Mine, the crystal door and Star Meadow's sparkle sequences, the castle (trying on, asking the
-// price, buying, not enough coins), the Parent corner behind the grown-up check (a report, the play
+// price, buying, not enough coins), Settings behind the grown-up check (a report, the play
 // timer badge, the starting levels, the design), everything kept after a reload, and the family
 // account through the real functions/sparkle/api route (on an in-memory Workers KV with a real
 // session): a second phone gets the same player, coins and all.
@@ -258,7 +258,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   report('the castle: one tap asks the price, a second buys; never with too few coins; changing back; the treasure book; kept after a reload', pr); await ctx.close();
 }
 
-// 5. the Parent corner, behind the grown-up check: a report, the timer badge, starting levels, the design
+// 5. Settings, behind the grown-up check: a report, the timer badge, starting levels, the design
 {
   const ava = JSON.parse(JSON.stringify(AVA)); ava.skills.read = { level: 5, hist: [], streak: 0, misses: 0, answers: 20, placed: true, best: 5 };
   ava.review = { 'read/w:pig': { due: '2099-01-01', step: 0, days: 0, last: '2026-01-01', missed: 3 } };
@@ -269,12 +269,18 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.locator('#grownBtn').dispatchEvent('pointerdown'); await p.waitForSelector('#gAns', { timeout: 8000 }).catch(() => pr.push('holding Grown-ups does not ask a grown-up question'));
   const m2 = /(\d+) × (\d+)/.exec(await p.locator('.sheet').innerText());
   await p.fill('#gAns', '1'); await p.click('#gOk');
-  if (await p.locator('.sheet h2', { hasText: 'Parent corner' }).count()) pr.push('a wrong answer opened the Parent corner');
+  if (await p.locator('.sheet h2', { hasText: 'Settings' }).count()) pr.push('a wrong answer opened Settings');
   await p.fill('#gAns', String(+m2[1] * +m2[2])); await p.click('#gOk'); await p.waitForTimeout(300);
-  if (!(await p.locator('.sheet h2', { hasText: 'Parent corner' }).count())) pr.push('the right answer did not open the Parent corner');
+  if (!(await p.locator('.sheet h2', { hasText: 'Settings' }).count())) pr.push('the right answer did not open Settings');
+  const labels = await p.locator('.sheet .st-lbl').allInnerTexts();
+  if (labels.join() !== 'DESIGN,PLAYERS,LEARNING,VOICE AND SOUND,LETTER SOUNDS,FAMILY ACCOUNT') pr.push('Settings\' sections are ' + labels.join());
   await shot(p, '10-parent');
   if (await p.getAttribute('#sBadge', 'role') !== 'switch') pr.push('Play timer on screen is not a switch');
   await p.click('#sBadge');
+  await p.click('#sLands [data-land="math"]');
+  if (!(await sp(p, () => window.sparkle.save.settings.off.includes('math')))) pr.push('switching Gem Mine off did not close it');
+  await p.click('#sLands [data-land="math"]');
+  if (await sp(p, () => window.sparkle.save.settings.off.includes('math'))) pr.push('switching Gem Mine on again did not open it');
   await p.click('#sDesign [data-design="glass"]'); await p.waitForTimeout(200);
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'glass') pr.push('Design > Standard did not switch to Sea glass');
   await p.click('[data-rep="p1"]'); await p.waitForTimeout(200);
@@ -287,7 +293,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.click('[data-player="p1"]'); await p.waitForTimeout(300);
   if (await p.locator('#timer').isVisible()) pr.push('the play timer still shows after Hide');
   pr.push(...errs);
-  report('the Parent corner: only after holding and the grown-up question; a report with words to practice; the timer badge; a level up; the design', pr); await ctx.close();
+  report('Settings: only after holding and the grown-up question; a report with words to practice; the timer badge; a level up; the design', pr); await ctx.close();
 }
 
 // 6. the family account: a round on one phone, the same player on another

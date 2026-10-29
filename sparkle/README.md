@@ -65,8 +65,8 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   more or one fewer, put together, take away, make 10, tens and ones (a sack of ten), share cookies
   fairly on plates, within 20; 10 levels, 5 bakes a round. Each thing put in is counted out loud; a
   wrong bake counts the bowl with her, a second says the recipe. Every bake that comes out right is a
-  treat for her unicorn's pantry. Not in the story's chapters or the quest; a Parent corner switch
-  (Lands open > Bakery) rests it.
+  treat for her unicorn's pantry. Not in the story's chapters or the quest; a Settings switch
+  (Learning > Bakery) rests it.
 - **Her castle** (`stable-art.js` castle): the castle's button on the map opens it cut away like a
   dollhouse: tap the bedroom, the library, the ballroom, the dressing room (the Boutique, the
   stories, the treasures), the kitchen (the bakery) or the stables. The stables glow, and the map's
@@ -96,16 +96,17 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   back in. Pieces to buy can come as a surprise present too.
 - **Her rank**: Little Princess, Princess (20), Royal Princess (32), Princess of Sparkle Kingdom (45):
   the first seven skills' highest levels added up (7 to 55; Pattern Parade and the bakery don't count), never going back down. It shows in the castle, the
-  end of the round that earns it, and the Parent corner.
+  end of the round that earns it, and Settings.
 - **Coins and the castle**: 1 coin a right answer (first or second try), 3 for finishing a round,
   never taken away. In her castle she tries on what she has, and in the Royal Boutique the first
   tap says the price and a second buys. Surprise presents (about one round in four, and the quest),
   and the unicorn grows with her stickers (one each time she moves up a level).
-- **The Parent corner**: press and hold Grown-ups, then Face ID (the family account), or, where
+- **Settings** (for grown-ups; the shared rows of `../home/settings.js`): press and hold Grown-ups, then Face ID (the family account), or, where
   there's none, a grown-up's times-table question. Each child's levels and how they moved this
   week, accuracy, words known and learning, words to **practice together** (missed on 2 or more
-  days), play time (today, the week, 30 days, by land), her rank and chapters by land, starting levels; Favor reading, lands open,
-  voice speed, sound effects, the play timer badge, the design, signing in.
+  days), play time (today, the week, 30 days, by land), her rank and chapters by land, starting levels (a player's report);
+  the design, players, Favor reading, lands open, voice speed, sound effects, the play timer badge, natural voices, letter
+  sounds, signing in.
 - **Natural voices**: each friend speaks in a voice of their own (the storyteller Sulafat, Professor
   Hoot Charon, Pebble Puck, Gemma Leda, Bloom Vindemiatrix: Google Cloud Text-to-Speech's Chirp 3: HD
   voices), made by the family's server (`functions/sparkle/api` speak, with the `GOOGLE_TTS_KEY` secret: a GitHub repository secret, a Google Cloud API key limited to
@@ -114,11 +115,11 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   on the phone that heard it (Cache Storage `sparkle-voice-v1`), and a chapter's pages are fetched when it
   opens. A letter's sound ("sss") goes with how to say it (IPA, `SOUNDS` in the route; read as text it
   came out as "s, s, s"), and a part that's only punctuation ('?', '...') is a pause, never read out.
-  Signed out, without the key, offline, or switched off in the Parent corner, the phone's own
+  Signed out, without the key, offline, or switched off in Settings, the phone's own
   voice speaks instead. Google's first million characters a month are free; a family's play is a small
   part of that.
 - **Letter sounds**: a phone's voice says letter names well and letter sounds poorly, so a grown-up
-  records each sound once in the Parent corner (`voice.js`); the game plays those, and otherwise
+  records each sound once in Settings (`voice.js`); the game plays those, and otherwise
   the voice's best try.
 - **Play time**: a badge shows this session's minutes. The game never stops play: the family is in
   charge of screen time. Time counts only while she's playing (a tap in the last minute); 5 minutes
@@ -143,8 +144,8 @@ sits beside its shelf. An iPad in Split View gets whichever layout its half fits
 
 ## Two designs
 
-Vintage (the default) and Standard (Sea glass), in the Parent corner > Design, dress the frame:
-the player picker and the Parent corner's sheets. The kingdom and the game are the same storybook
+Vintage (the default) and Standard (Sea glass), in Settings > Design, dress the frame:
+the player picker and Settings and its sheets. The kingdom and the game are the same storybook
 art in both.
 
 ## Data
