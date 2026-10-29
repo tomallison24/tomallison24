@@ -189,7 +189,7 @@ there are), Ipsy can't change it, and Ipsy doesn't check it, by itself or with
 Have Ipsy check. Its emails are hidden too: the email it came from, that
 email's thread, and any email that names its order or tracking number are left
 out of what Ipsy finds or reads in Gmail. It still syncs and shows as usual:
-Private only hides it from Ipsy. **Settings → Ipsy can search Gmail** turns
+Private only hides it from Ipsy. **Settings → AI helper can search Gmail** turns
 Ipsy's Gmail off altogether, on this phone (`home/ipsy.js`, `privacy`).
 
 ## Returns
@@ -302,7 +302,7 @@ unavailable) stays in To check for you. An order with no new email isn't read
 again: re-reading the same email wouldn't tell Ipsy anything new.
 
 - **Offered once.** The first time there's something to check, Ipsy asks from
-  its corner; nothing is sent until you say yes. **Settings > Ipsy > Ipsy keeps
+  its corner; nothing is sent until you say yes. **Settings > AI helper > Ipsy keeps
   orders up to date** turns it on or off (it was *Ipsy checks To check*; a yes
   given then still counts).
 - It never asks for Face ID by itself: signed out, it waits (and says so).

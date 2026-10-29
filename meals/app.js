@@ -91,6 +91,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const SAY = {
     'no-ai': 'Meals needs its AI key first: the owner adds it (see Meals’ README).',
+    'ai-off': 'Claude is turned off for Meals on this phone (Settings, AI helper), so it can’t write a plan.',
     'accounts-off': 'Family accounts aren’t switched on yet, so Meals can’t plan for the family.',
     'setup': 'Family accounts aren’t switched on yet, so Meals can’t plan for the family.',
     'signin': 'Sign in with your family account to see the family’s meals.',
@@ -638,8 +639,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         canAvoid() ? S.input({ id: 'sAdd', title: 'Add an allergy or dislike', placeholder: 'Shellfish, say', attrs: 'maxlength="40"' }) : '',
         canAvoid() ? S.action({ id: 'sAddGo', icon: 'plus', title: 'Add' }) : '',
       ], { hint: canAvoid() ? '' : 'Only the owner can change what the family avoids.' })
-      + S.section('Ipsy', t.loved.length || t.nope.length ? [chips('Loved', t.loved), chips('Not again', t.nope)]
-        : S.info({ title: 'Nothing learned yet', sub: 'Use Loved it or Not again on a recipe, and Ipsy plans with it.' }), { hint: 'AI: ' + ai + '.' })
+      + S.section('AI helper', [S.claude('meals'), ...(t.loved.length || t.nope.length ? [chips('Loved', t.loved), chips('Not again', t.nope)]
+        : [S.info({ title: 'Nothing learned yet', sub: 'Use Loved it or Not again on a recipe, and Ipsy plans with it.' })])], { hint: 'AI: ' + ai + '.' })
       + S.section('Family account', user ? S.info({ title: 'Signed in as ' + user.name, sub: 'Plans and the shopping list are shared with the family.' })
         : S.action({ icon: 'face', title: 'Sign in with Face ID', sub: 'Sign in to plan for the family.', data: { act: 'signin' } }));
   }
