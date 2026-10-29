@@ -184,6 +184,8 @@ for (const [scheme, design] of [['light', 'vintage'], ['dark', 'glass']]) {
     let a = (await stored(page)).alarms.find(x => x.h === 6);
     assert.equal(new Date(a.next).toString().slice(0, 21), 'Thu Mar 12 2026 06:45');
     assert.equal(a.snoozeMin, 5);
+    const sw = await row.locator('[data-sw]').evaluate(b => ({ shared: b.matches('button.st-sw[role="switch"]'), label: b.getAttribute('aria-label'), on: b.getAttribute('aria-checked') }));
+    assert.ok(sw.shared && sw.label === '6:45 AM alarm' && sw.on === 'true', 'the alarm\'s switch is the shared one (home/settings.js), named for the alarm: ' + JSON.stringify(sw));
     await row.locator('[data-sw]').click();
     a = (await stored(page)).alarms.find(x => x.h === 6);
     assert.equal(a.on, false); assert.equal(a.next, null);
@@ -198,12 +200,20 @@ for (const [scheme, design] of [['light', 'vintage'], ['dark', 'glass']]) {
   await step(`${scheme}: Sleep | Wake Up is set up`, async () => {
     await page.click('#sleepSetup');
     assert.match(await text(page, '#slLen'), /^8 hr of sleep · wake up Weekdays/);
+    const rows = await page.$$eval('#sleepSheet [role="switch"]', bs => bs.map(b => b.id + (b.matches('button.st-row.st-switch') && b.querySelector('.st-sw') ? '' : ' (not shared)') + ' ' + b.getAttribute('aria-checked')));
+    assert.deepEqual(rows, ['slOn true', 'slAlarm true', 'slSnooze true', 'slRemind true'], 'the schedule\'s switches are the shared switch row');
+    assert.equal(await page.locator('#sleepSheet .switch, #alarmSheet .switch, .swrow').count(), 0, 'no switch of Clock\'s own');
+    await page.click('#slRemind');
+    assert.equal(await page.getAttribute('#slRemind', 'aria-checked'), 'false');
+    await shot(page, scheme + '-sleep-sheet');
+    await page.click('#slRemind');
     await page.click('#slSave');
     assert.match(await text(page, '#sleepCard .st'), /^6:30\s*AM$/);
     assert.match(await text(page, '#sleepCard .sm'), /Bedtime 10:30 PM · 8 hr of sleep/);
     const sl = (await stored(page)).sleep;
     assert.equal(new Date(sl.next).toString().slice(0, 21), 'Thu Mar 12 2026 06:30');
     assert.equal(new Date(sl.bedNext).toString().slice(0, 21), 'Wed Mar 11 2026 22:30');
+    assert.ok(await page.$eval('#sleepSw', b => b.matches('button.st-sw[role="switch"][aria-checked="true"]') && b.getAttribute('aria-label') === 'Sleep schedule'), 'the schedule\'s switch is the shared one');
     await shot(page, scheme + '-alarms');
   });
 

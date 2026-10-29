@@ -34,6 +34,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 (function () {
   const L = window.ClockLogic;
   const $ = id => document.getElementById(id);
+  // The sheets' on/off rows (Snooze, Sleep Schedule, Wake-up alarm, Bedtime reminder): home/settings.js's switch
+  // row (S.toggle), the whole row the switch, drawn in place of each <i data-toggle="<id>"> in index.html.
+  document.querySelectorAll('i[data-toggle]').forEach(el => {
+    el.outerHTML = AllisonOS.settings.toggle({ id: el.dataset.toggle, title: el.dataset.title, sub: el.dataset.sub, on: true });
+  });
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ls = {
     get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
@@ -395,7 +400,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const state = !sl.on ? 'Off' : sl.skip ? 'Skipping ' + whenLine(sl.skip) : sl.days.length ? L.repeatText(sl.days) : 'No days picked';
       $('sleepCard').innerHTML = `<div class="sleeprow${sl.on ? '' : ' off'}"><button class="sleepcard" type="button" id="sleepOpen"><span class="sl">${ICON.bed}<span>Wake Up · ${esc(state)}</span></span>`
         + `<span class="st"><b>${sl.alarm ? timeHTML(sl.wake.h, sl.wake.m) : 'No Alarm'}</b></span><span class="sm">Bedtime ${esc(L.clockLine(sl.bed.h, sl.bed.m, h24()))} · ${esc(len)} of sleep${sl.snoozeAt ? ' · <span class="snz">Snoozed until ' + esc(atLine(sl.snoozeAt)) + '</span>' : ''}</span></button>`
-        + `<button class="switch" type="button" role="switch" id="sleepSw" aria-checked="${sl.on}" aria-label="Sleep schedule"></button></div>`;
+        + AllisonOS.settings.sw({ id: 'sleepSw', on: sl.on, label: 'Sleep schedule' }) + '</div>';
     }
     // the rest, earliest in the day first
     const list = $('alarmList'), A = S.alarms.slice().sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
@@ -403,7 +408,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     list.innerHTML = A.map(a => `<div class="arow${a.on ? '' : ' off'}" data-id="${esc(a.id)}">`
       + (editing ? `<button class="del" type="button" data-del="${esc(a.id)}" aria-label="Delete the ${esc(L.clockLine(a.h, a.m, h24()))} alarm">${ICON.minus}</button>` : '')
       + `<button class="open" type="button" data-open="${esc(a.id)}" aria-label="Edit the ${esc(L.clockLine(a.h, a.m, h24()))} alarm"><span class="at">${timeHTML(a.h, a.m)}</span><span class="al">${a.label ? '<span translate="no">' + esc(a.label) + '</span>' : 'Alarm'}${a.days.length ? ', ' + esc(L.repeatText(a.days)) : ''}${a.snoozeAt ? ' · <span class="snz">Snoozed until ' + esc(atLine(a.snoozeAt)) + '</span>' : ''}</span></button>`
-      + (editing ? '' : `<button class="switch" type="button" role="switch" data-sw="${esc(a.id)}" aria-checked="${a.on}" aria-label="${esc(L.clockLine(a.h, a.m, h24()))} ${esc(a.label || 'alarm')}"></button>`) + '</div>').join('');
+      + (editing ? '' : AllisonOS.settings.sw({ on: a.on, label: L.clockLine(a.h, a.m, h24()) + ' ' + (a.label || 'alarm'), data: { sw: a.id } })) + '</div>').join('');
     paintSub();
   }
   $('p-alarms').addEventListener('click', e => {
