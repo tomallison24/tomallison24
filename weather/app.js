@@ -1113,7 +1113,7 @@ function render() {
     : `${S.data.src}${S.data.note ? ' (' + S.data.note + ')' : ''} · ${at}`;
   put(alerts, alertCards(m));
   placeSky();
-  put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location">${svg('cog-outline', 14)}Places</button>`);
+  put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location">${svg('cog-outline', 14)}Settings</button>`);
 }
 
 function renderMsg(title, body, retry) {
