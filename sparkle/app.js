@@ -123,7 +123,7 @@
     if (!p) return;
     me = p; V.unlock();
     if (!me.introSeen) return intro();
-    enterWorld(true);
+    enterWorld();
   }
 
   // ---- the story, once per player ----
@@ -134,7 +134,7 @@
       <div class="story" id="storyText"></div><button type="button" class="big pink" id="introGo">${ICON.go}<span>Let's go!</span></button>`;
     let i = 0; const next = () => { $('storyText').textContent = lines[i]; V.say([lines[i]], { who: 'narrator' }); };
     next();
-    $('introGo').onclick = () => { V.sfx('sparkle'); i++; if (i < lines.length) return next(); me.introSeen = true; persist(true); enterWorld(true); };
+    $('introGo').onclick = () => { V.sfx('sparkle'); i++; if (i < lines.length) return next(); me.introSeen = true; persist(true); enterWorld(); };
   }
 
   // ---- the kingdom ----
@@ -186,17 +186,10 @@
     m.scrollTo({ left: Math.max(0, x), top: Math.max(0, y), behavior: smooth && !reduce() ? 'smooth' : 'auto' });
   }
   const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // greet: she's just picked her princess, so the storyteller says hello and where to go; back from a
-  // game, the castle or a chapter, the kingdom is quiet (the quest at the bottom still shows the way)
-  function enterWorld(greet) {
+  // the kingdom is quiet: friends talk only in the games and at the gates (the quest at the bottom shows the way)
+  function enterWorld() {
     show('world'); paintHud(); paintMap();
     requestAnimationFrame(() => centre(W.NODES[me.world.at] || W.NODES.castle, false));
-    if (greet === true) {
-      const nx = nextStop();
-      const GO = { tower: "Let's visit Story Tower.", mine: "Let's go to the Gem Mine.", meadow: "Let's go to Star Meadow.", garden: "Let's go to the Fairy Garden.", workshop: "Let's go to the Tiara Workshop." };
-      const w = Care.want(petNow());
-      V.say([nx ? `Hi ${me.name}! ${GO[nx]} Tap where you want to go.` : `Hi ${me.name}! Where shall we go?`, ...(w ? [WANT_SAY[w]] : [])], { who: 'narrator' });
-    }
     sync();
   }
   // where a tap on the map lands, in the kingdom's units
@@ -205,21 +198,21 @@
   $('mapIn').addEventListener('click', async e => {
     if (busy) return;
     const st = e.target.closest('[data-star]');
-    if (st) { const id = st.dataset.star; if (!me.world.stars.includes(id)) { me.world.stars.push(id); E.earn(me, device, 2); persist(); V.sfx('sparkle'); burst(e.clientX, e.clientY, 12); st.remove(); toast('You found a star! +2'); paintHud(); V.say(['You found a hidden star!']); } return; }
+    if (st) { const id = st.dataset.star; if (!me.world.stars.includes(id)) { me.world.stars.push(id); E.earn(me, device, 2); persist(); V.sfx('sparkle'); burst(e.clientX, e.clientY, 12); st.remove(); toast('You found a star! +2'); paintHud(); } return; }
     const cr = e.target.closest('[data-critter]');
-    if (cr) { const c = W.CRITTERS.find(x => x.id === cr.dataset.critter); if (c && !me.world.critters.includes(c.id)) { me.world.critters.push(c.id); persist(); V.sfx('sparkle'); burst(e.clientX, e.clientY); cr.remove(); toast('A new friend for your book!'); V.say([`You found ${c.name}! It's in your treasure book now.`]); } return; }
+    if (cr) { const c = W.CRITTERS.find(x => x.id === cr.dataset.critter); if (c && !me.world.critters.includes(c.id)) { me.world.critters.push(c.id); persist(); V.sfx('sparkle'); burst(e.clientX, e.clientY); cr.remove(); toast('A new friend for your book!'); } return; }
     const fog = e.target.closest('[data-fog]');
-    if (fog) { V.say([`The Grey Fog still covers ${LAND_NAME[fog.dataset.fog]}. Keep learning, and it will lift!`]); return; }
+    if (fog) { toast('Keep learning, and the fog will lift!'); return; }
     const pl = e.target.closest('.place');
     let to = null;
     if (pl) {
       const k = ['castle', 'tower', 'mine', 'door', 'signpost', 'garden', 'workshop', 'flowergate', 'gemdoor'].find(c => pl.classList.contains(c));
       const land = { garden: 'garden', flowergate: 'garden', workshop: 'workshop', gemdoor: 'workshop' }[k];
-      if (land && !(me.world.open || {})[land]) { V.say([`The Grey Fog still covers ${LAND_NAME[land]}. Keep learning, and it will lift!`]); return; }
+      if (land && !(me.world.open || {})[land]) { toast('Keep learning, and the fog will lift!'); return; }
       to = { castle: 'castle', tower: 'tower', mine: 'mine', door: 'meadow', signpost: 'sign', garden: 'garden', flowergate: 'garden', workshop: 'workshop', gemdoor: 'workshop' }[k];
     }
     if (!to) { const [x, y] = toWorld(e); to = W.nearest(x, y, me.world.open || {}); }
-    if ((set().off || []).includes(landKey(LAND[to]))) { V.say(["That land is resting today."]); return; }
+    if ((set().off || []).includes(landKey(LAND[to]))) { toast('That land is resting today.'); return; }
     await travel(to);
   });
   $('quest').addEventListener('click', () => { const nx = nextStop(); if (nx && !busy) travel(nx); });
@@ -838,7 +831,7 @@
       ${chapter ? `<button type="button" class="chbook" id="chapterBtn">${A.icon('book', 44)}<span>New chapter!</span></button>` : ''}
       <div style="display:flex;gap:12px"><button type="button" class="big mint" id="againBtn" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="mapBtn">${ICON.go}<span>Kingdom</span></button></div>`;
     V.sfx('fanfare');
-    V.say([msg, ...(R.skill === 'bake' && R.baked ? [`You baked ${R.baked} ${R.baked === 1 ? 'treat' : 'treats'} for your unicorn!`] : []), ...(R.moved.length ? ["You earned a sticker! You're ready for harder ones."] : []), ...(grew ? ['Look! Your unicorn grew!'] : []), ...(promoted ? [`Hooray! You are a ${RANKS[me.rank]} now!`] : []), ...(gifts ? ['And there is a surprise for you. Tap the present!'] : []), ...(chapter ? ['A new chapter of the story is ready. Tap the book!'] : []), ...(questDone ? ["You finished today's quest!"] : []), ...lifted.map(l => `Look! The Grey Fog is lifting. ${LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1)} is open! Find it on the map.`)], { who: 'narrator' });
+    V.say([msg], { who: 'narrator' });
     $('againBtn').onclick = () => startRound(R.skill);
     $('mapBtn').onclick = () => enterWorld();
     if (R.skill === 'bake') { $('mapBtn').innerHTML = `${ICON.home}<span>Castle</span>`; $('mapBtn').onclick = () => openCastle(); }
@@ -847,7 +840,6 @@
       const got = Array.from({ length: gifts }, () => surprise()), it = got.find(Boolean);
       burst(e.clientX, e.clientY, 16); V.sfx('sparkle');
       $('giftBtn').outerHTML = `<div class="reveal">${it ? giftArt(it) : A.coin(150)}</div>`;
-      V.say([it ? `A ${giftName(it)} for you! Find it in your castle.` : 'Ten shiny coins for you!', ...(got.length > 1 ? ['And another surprise is waiting in your castle!'] : [])]);
       persist(true); };
     sync();
   }
@@ -907,8 +899,6 @@
     V.stop(); show('castle'); $('castleBack').innerHTML = ICON.back;
     tab = t || 'gown'; asking = null; if (r) room = r;
     paintCastle();
-    V.say([tab === 'rooms' ? `Decorate your ${RM.ROOMS[room].name.toLowerCase()}! Tap something to put it in.` : tab === 'stories' ? 'Tap a chapter to hear it again.'
-      : `Try something on, ${me.name}, or buy something new in the boutique.`], { who: 'narrator' });
   }
   function paintCastle() {
     const w = wearing(me);
@@ -957,17 +947,17 @@
     if (c) { const [l, n] = c.dataset.chapter.split(':'); V.stop(); V.sfx('whoosh'); return tell(Ch.CHAPTERS[l][n - 1], null); }
     const b = e.target.closest('[data-item]'); if (!b) return;
     const id = b.dataset.item, it = A.ITEMS[id];
-    if (it.gift && !owns(me, id)) { const ch = giftChapter(id); V.sfx('pop'); V.say([`The ${it.name.toLowerCase()} is a present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}. Keep playing there to find it!`]); return; }
+    if (it.gift && !owns(me, id)) { const ch = giftChapter(id); V.sfx('pop'); toast(`A present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}!`); return; }
     if (owns(me, id)) {
       me.wearing = me.wearing || {};
       const optional = !['gown', 'tiara', 'shoes', 'mane', 'horn'].includes(it.kind);
       if (wearing(me)[it.kind] === id && optional) delete me.wearing[it.kind]; else me.wearing[it.kind] = id;
       V.sfx('sparkle'); persist(); asking = null; paintCastle(); return;
     }
-    if (asking !== id) { asking = id; V.sfx('pop'); paintCastle(); V.say([`The ${it.name.toLowerCase()} costs ${it.price} coins. Tap it again to buy it!`]); return; }
-    if (!E.spend(me, device, it.price)) { const need = it.price - E.coins(me); V.sfx('again'); V.say([`You need ${need} more coins. Play a round to earn them!`]); return; }
+    if (asking !== id) { asking = id; V.sfx('pop'); paintCastle(); toast(`${it.price} coins. Tap again to buy!`); return; }
+    if (!E.spend(me, device, it.price)) { V.sfx('again'); toast(`${it.price - E.coins(me)} more coins needed. Play a round!`); return; }
     me.owned.push(id); me.wearing = me.wearing || {}; me.wearing[it.kind] = id; asking = null;
-    V.sfx('fanfare'); burst(...centerOf(b), 16); V.say([`You bought the ${it.name.toLowerCase()}! It looks wonderful.`]);
+    V.sfx('fanfare'); burst(...centerOf(b), 16);
     persist(true); paintCastle();
   });
   // a piece for a room: hers goes in the room; a story present says where to find it; else ask the price, then buy
@@ -975,18 +965,17 @@
     const id = b.dataset.piece, it = RM.ITEMS[id];
     const put = () => { me.rooms = me.rooms || {}; const r = me.rooms[it.room] = me.rooms[it.room] || {}; r[it.slot] = id; };
     if (owns(me, id)) { put(); V.sfx('sparkle'); persist(); asking = null; paintCastle(); return; }
-    if (it.gift) { const ch = giftChapter(id); V.sfx('pop'); V.say([`The ${it.name.toLowerCase()} is a present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}. Keep playing there to find it!`]); return; }
-    if (asking !== id) { asking = id; V.sfx('pop'); paintCastle(); V.say([`The ${it.name.toLowerCase()} costs ${it.price} coins. Tap it again to buy it!`]); return; }
-    if (!E.spend(me, device, it.price)) { V.sfx('again'); V.say([`You need ${it.price - E.coins(me)} more coins. Play a round to earn them!`]); return; }
+    if (it.gift) { const ch = giftChapter(id); V.sfx('pop'); toast(`A present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}!`); return; }
+    if (asking !== id) { asking = id; V.sfx('pop'); paintCastle(); toast(`${it.price} coins. Tap again to buy!`); return; }
+    if (!E.spend(me, device, it.price)) { V.sfx('again'); toast(`${it.price - E.coins(me)} more coins needed. Play a round!`); return; }
     me.owned.push(id); put(); asking = null;
-    V.sfx('fanfare'); burst(...centerOf(b), 16); V.say([`You bought the ${it.name.toLowerCase()}! Your ${RM.ROOMS[it.room].name.toLowerCase()} looks wonderful.`]);
+    V.sfx('fanfare'); burst(...centerOf(b), 16);
     persist(true); paintCastle();
   }
   $('castleBack').addEventListener('click', () => { V.stop(); openCastle(); });
 
   // ---- her castle, cut away like a dollhouse: tap a room to go in ----
   const ROOM_NAME = { bedroom: 'Your bedroom', stable: 'The stables', kitchen: 'The kitchen: the Unicorn Bakery', wardrobe: 'The dressing room', library: 'The library', ballroom: 'The ballroom' };
-  const WANT_SAY = { food: 'Your unicorn is hungry! Visit the stables.', clean: 'Your unicorn is all muddy! Visit the stables for a bath.', fun: 'Your unicorn wants to play! Visit the stables.', rest: 'Your unicorn is very sleepy. Visit the stables.' };
   const petNow = () => { me.pet = me.pet || Care.fresh(); return Care.tick(me.pet); };
   function openCastle() {
     V.stop(); show('home'); $('homeBack').innerHTML = ICON.back;
@@ -997,13 +986,12 @@
       g.setAttribute('role', 'button'); g.setAttribute('tabindex', '0'); g.setAttribute('aria-label', ROOM_NAME[g.dataset.go] || g.dataset.go);
       g.classList.toggle('want', g.dataset.go === 'stable' && !!w);
     }
-    V.say([`Welcome home, ${me.name}! Tap a room to go in.`, ...(w ? [WANT_SAY[w]] : [])], { who: 'narrator' });
   }
   function goRoom(id) {
     V.sfx('pop');
     if (id === 'bedroom') return openBedroom();
     if (id === 'stable') return openStable();
-    if (id === 'kitchen') { if ((set().off || []).includes('castle')) { V.say(['The kitchen is resting today.'], { who: 'narrator' }); return; } return startRound('bake'); }
+    if (id === 'kitchen') { if ((set().off || []).includes('castle')) { toast('The kitchen is resting today.'); return; } return startRound('bake'); }
     if (id === 'wardrobe') return openWardrobe('gown');
     if (id === 'library' || id === 'ballroom') return openWardrobe('rooms', id);
   }
@@ -1015,7 +1003,6 @@
   const FOOD_NAME = { oats: 'Oats', apple: 'Apple', carrot: 'Carrot', clover: 'Clover', sugar: 'Sugar cubes', cupcake: 'Cupcake', cookie: 'Star cookie', pie: 'Berry pie', muffin: 'Muffin',
     donut: 'Donut', cake: 'Little cake', carrotcake: 'Carrot cake', tart: 'Lemon tart', ball: 'Ball', bubbles: 'Bubble wand', ribbon: 'Ribbon wand', kite: 'Kite' };
   const CARE_TABS = [['food', 'Food', 'food'], ['wash', 'Wash', 'clean'], ['play', 'Play', 'fun'], ['sleep', 'Sleep', 'rest'], ['shop', 'Shop', null]];
-  const WANT_TIP = { food: 'Your unicorn is hungry. Tap Food!', clean: 'Your unicorn is muddy. Tap Wash!', fun: 'Your unicorn wants to play. Tap Play!', rest: 'Your unicorn is sleepy. Tap Sleep!' };
   let careTab = 'food', tool = null, fx = { foam: 0, shine: false, eat: false }, stableT = 0, careAsk = null, patAt = 0;
   const thing = id => Care.FOODS[id] && Care.FOODS[id].treat && K ? K.treat(id) : ST ? ST.prop(id, {}) : esc(id);
   function stableStop() { clearInterval(stableT); stableT = 0; tool = null; }
@@ -1023,12 +1010,10 @@
     V.stop(); show('stable'); $('stableBack').innerHTML = ICON.back; careTab = 'food'; careAsk = null; fx = { foam: 0, shine: false, eat: false };
     const pet = petNow(); persist();
     paintStable();
-    const m = Care.mood(pet), w = Care.want(pet);
-    V.say([m === 'sleep' ? 'Shh... your unicorn is fast asleep.' : m === 'sad' ? `Oh no, your unicorn is sad. ${WANT_TIP[w]}` : m === 'happy' ? 'Your unicorn is so happy to see you!' : WANT_TIP[w]], { who: 'narrator' });
     // asleep while she watches: rest fills a little each second, and her unicorn wakes when it's full
     uniU = 0; uniLeft = false; wanderAt = Date.now() + 1500;
     stableT = setInterval(() => { const p = petNow(); if (screen !== 'stable') return stableStop(); wander();
-      if (p.asleep) { p.rest = Math.min(100, p.rest + 1); if (p.rest >= 100) { Care.wake(p); paintStable(); V.sfx('sparkle'); V.say(['Your unicorn is all rested! Good morning!'], { who: 'narrator' }); } else paintNeeds(); persist(); } }, 1000);
+      if (p.asleep) { p.rest = Math.min(100, p.rest + 1); if (p.rest >= 100) { Care.wake(p); paintStable(); V.sfx('sparkle'); } else paintNeeds(); persist(); } }, 1000);
   }
   function uniSvg(pet) { return A.unicorn(stageOf(me), wearing(me), { mood: fx.eat ? 'eat' : Care.mood(pet) === 'calm' ? 'calm' : Care.mood(pet), dirt: Care.dirt(pet), foam: fx.foam, shine: fx.shine }); }
   function paintStable() {
@@ -1066,26 +1051,26 @@
   const spot = (fx_, html, x, y, ms) => { const f = document.createElement('span'); f.innerHTML = html; f.style.left = x + 'px'; f.style.top = y + 'px'; Object.assign(f, fx_); $('stallFx').appendChild(f); if (ms) setTimeout(() => f.remove(), ms); return f; };
   const stallXY = (cx, cy) => { const r = $('stall').getBoundingClientRect(); return [cx - r.left, cy - r.top]; };
   function hearts(n = 3) { const r = uniBox(); for (let i = 0; i < n; i++) { const [x, y] = stallXY(r.left + r.width * (0.3 + Math.random() * 0.5), r.top + r.height * 0.3); spot({ className: 'heart' }, A.svg('0 0 30 30', A.heart ? A.heart(15, 15, 11) : A.star(15, 15, 12)), x, y, 1300); } }
-  function tired(pet) { if (pet.rest < 12) { V.say(['Your unicorn is too sleepy to play. Time for bed!'], { who: 'narrator' }); return true; }
-    if (pet.food < 10) { V.say(['Your unicorn is too hungry to play. Feed your unicorn first!'], { who: 'narrator' }); return true; } return false; }
+  function tired(pet) { if (pet.rest < 12) { V.sfx('again'); toast('Too sleepy to play. Time for bed!'); return true; }
+    if (pet.food < 10) { V.sfx('again'); toast('Too hungry to play. Feed your unicorn first!'); return true; } return false; }
   $('careTray').addEventListener('click', async e => {
     const pet = petNow(), bb = e.target.closest('[data-buy]');
     if (bb) {
       const id = bb.dataset.buy, price = Care.SHOP[id];
-      if (Care.TOYS[id] && (pet.toys || []).includes(id)) { V.say([`You have the ${FOOD_NAME[id].toLowerCase()}. Find it under Play!`]); return; }
-      if (careAsk !== id) { careAsk = id; V.sfx('pop'); paintTray(); V.say([`The ${FOOD_NAME[id].toLowerCase()} costs ${price} ${price === 1 ? 'coin' : 'coins'}. Tap it again to buy it!`]); return; }
-      if (!E.spend(me, device, price)) { V.sfx('again'); V.say([`You need ${price - E.coins(me)} more coins. Play a round to earn them!`]); return; }
+      if (Care.TOYS[id] && (pet.toys || []).includes(id)) { toast('Yours! Find it under Play.'); return; }
+      if (careAsk !== id) { careAsk = id; V.sfx('pop'); paintTray(); toast(`${price} ${price === 1 ? 'coin' : 'coins'}. Tap again to buy!`); return; }
+      if (!E.spend(me, device, price)) { V.sfx('again'); toast(`${price - E.coins(me)} more coins needed. Play a round!`); return; }
       Care.buy(pet, id); careAsk = null; V.sfx('fanfare'); burst(...centerOf(bb), 12); persist(true); paintStable();
-      V.say([`You bought ${Care.TOYS[id] ? 'the ' + FOOD_NAME[id].toLowerCase() + '! Find it under Play.' : 'a treat! Find it under Food.'}`]); return;
+      toast(Care.TOYS[id] ? 'Find it under Play!' : 'Find it under Food!'); return;
     }
     const b = e.target.closest('[data-care]'); if (!b) return;
     const id = b.dataset.care;
-    if (id === 'lantern') { if (pet.asleep) { Care.wake(pet); V.sfx('sparkle'); V.say(['Good morning, unicorn!'], { who: 'narrator' }); } else { Care.sleep(pet); V.sfx('whoosh'); V.say(['Goodnight, unicorn. Sweet dreams!'], { who: 'narrator' }); }
+    if (id === 'lantern') { if (pet.asleep) { Care.wake(pet); V.sfx('sparkle'); } else { Care.sleep(pet); V.sfx('whoosh'); }
       persist(); paintStable(); return; }
-    if (pet.asleep) { V.say(['Shh... your unicorn is sleeping. Wake your unicorn up under Sleep.'], { who: 'narrator' }); return; }
+    if (pet.asleep) { V.sfx('again'); return; }
     halt();
     if (careTab === 'food') {
-      if (pet.food >= 96) { const u = $('uni'); u.classList.remove('shake'); void u.offsetWidth; u.classList.add('shake'); V.sfx('again'); V.say(["Your unicorn is full! Maybe later."], { who: 'narrator' }); return; }
+      if (pet.food >= 96) { const u = $('uni'); u.classList.remove('shake'); void u.offsetWidth; u.classList.add('shake'); V.sfx('again'); return; }
       if (!Care.feed(pet, id)) return;
       // the food flies to her mouth, then munch munch
       const [x0, y0] = stallXY(...centerOf(b)), r = uniBox(), [x1, y1] = stallXY(r.left + r.width * (uniLeft ? 1 - MOUTH[0] : MOUTH[0]), r.top + r.height * MOUTH[1]);
@@ -1093,23 +1078,22 @@
       setTimeout(() => f.remove(), 800);
       await wait(550); fx.eat = true; paintUni(); const u = $('uni'); u.classList.add('chew'); V.sfx('pop'); setTimeout(() => V.sfx('pop'), 300); setTimeout(() => V.sfx('pop'), 600);
       await wait(1300); fx.eat = false; u.classList.remove('chew'); hearts(Care.FOODS[id].treat ? 4 : 2); persist(); paintStable();
-      if (Care.FOODS[id].treat) V.say(['Yum! Your unicorn loves it!'], { who: 'narrator' });
       return;
     }
     if (careTab === 'wash') {
-      if (id === 'sponge' || id === 'brush') { tool = tool === id ? null : id; V.sfx('pop'); paintTray(); if (tool) V.say([id === 'sponge' ? 'Rub your unicorn with the sponge!' : 'Brush the mane!'], { who: 'narrator' }); return; }
-      if (id === 'bucket') { if (fx.foam <= 0) { V.say(['Scrub with the sponge first!'], { who: 'narrator' }); return; }
-        fx.foam = 0; fx.shine = true; Care.wash(pet, 10); V.sfx('whoosh'); V.sfx('sparkle'); hearts(3); persist(); paintStable(); V.say(['Splash! Sparkly clean!'], { who: 'narrator' }); setTimeout(() => { fx.shine = false; if (screen === 'stable') paintUni(); }, 3000); return; }
-      if (id === 'towel') { if (fx.foam > 0) { V.say(['Rinse the bubbles off with the bucket first!'], { who: 'narrator' }); return; } fx.shine = true; V.sfx('sparkle'); paintUni(); setTimeout(() => { fx.shine = false; if (screen === 'stable') paintUni(); }, 2500); return; }
+      if (id === 'sponge' || id === 'brush') { tool = tool === id ? null : id; V.sfx('pop'); paintTray(); return; }
+      if (id === 'bucket') { if (fx.foam <= 0) { V.sfx('again'); return; }
+        fx.foam = 0; fx.shine = true; Care.wash(pet, 10); V.sfx('whoosh'); V.sfx('sparkle'); hearts(3); persist(); paintStable(); setTimeout(() => { fx.shine = false; if (screen === 'stable') paintUni(); }, 3000); return; }
+      if (id === 'towel') { if (fx.foam > 0) { V.sfx('again'); return; } fx.shine = true; V.sfx('sparkle'); paintUni(); setTimeout(() => { fx.shine = false; if (screen === 'stable') paintUni(); }, 2500); return; }
     }
     if (careTab === 'play') {
       if (tired(pet)) return;
       if (!Care.play(pet, id)) return;
       const u = $('uni'), r = $('stall').getBoundingClientRect();
-      if (id === 'ball') { spot({ className: 'ball' }, thing('ball'), r.width * 0.2, r.height * 0.62, 1300); u.classList.remove('hop'); void u.offsetWidth; u.classList.add('hop'); V.sfx('pop'); V.say(['Wheee!'], { who: 'narrator' }); }
-      if (id === 'bubbles') { for (let k = 0; k < 7; k++) setTimeout(() => { if (screen !== 'stable') return; const bub = spot({ className: 'bub' }, ST ? ST.bubble(46) : '', r.width * (0.1 + Math.random() * 0.8), r.height * 0.85, 4100); bub.dataset.pop = '1'; }, k * 300); V.say(['Pop the bubbles!'], { who: 'narrator' }); }
-      if (id === 'ribbon') { u.classList.remove('dance'); void u.offsetWidth; u.classList.add('dance'); V.sfx('sparkle'); V.say(['Your unicorn is dancing!'], { who: 'narrator' }); }
-      if (id === 'kite') { spot({ className: 'kite' }, thing('kite'), 0, r.height * 0.15, 2600); u.classList.remove('hop'); void u.offsetWidth; u.classList.add('hop'); V.sfx('whoosh'); V.say(['Look at the kite fly!'], { who: 'narrator' }); }
+      if (id === 'ball') { spot({ className: 'ball' }, thing('ball'), r.width * 0.2, r.height * 0.62, 1300); u.classList.remove('hop'); void u.offsetWidth; u.classList.add('hop'); V.sfx('pop'); }
+      if (id === 'bubbles') { for (let k = 0; k < 7; k++) setTimeout(() => { if (screen !== 'stable') return; const bub = spot({ className: 'bub' }, ST ? ST.bubble(46) : '', r.width * (0.1 + Math.random() * 0.8), r.height * 0.85, 4100); bub.dataset.pop = '1'; }, k * 300); }
+      if (id === 'ribbon') { u.classList.remove('dance'); void u.offsetWidth; u.classList.add('dance'); V.sfx('sparkle'); }
+      if (id === 'kite') { spot({ className: 'kite' }, thing('kite'), 0, r.height * 0.15, 2600); u.classList.remove('hop'); void u.offsetWidth; u.classList.add('hop'); V.sfx('whoosh'); }
       setTimeout(() => u.classList.remove('hop', 'dance'), 1300);
       hearts(2); persist(); paintNeeds();
     }
@@ -1147,7 +1131,7 @@
     if (bub) { bub.remove(); V.sfx('pop'); Care.pat(me.pet); paintNeeds(); persist(); return; }
     if (!e.target.closest('#uni')) return;
     const pet = petNow();
-    if (pet.asleep) { V.say(['Shh... your unicorn is sleeping.'], { who: 'narrator' }); return; }
+    if (pet.asleep) return;
     if (!tool) { if (Date.now() - patAt > 900) { patAt = Date.now(); Care.pat(pet); hearts(2); V.sfx('sparkle'); paintNeeds(); persist(); } return; }
     halt(); rub = { x: e.clientX, y: e.clientY, d: 0, at: 0 };
     try { e.target.closest('#uni').setPointerCapture(e.pointerId); } catch {}
@@ -1160,8 +1144,7 @@
     let t = $('stallTool'); if (!t) { t = spot({ className: 'tool', id: 'stallTool' }, thing(tool), x, y); }
     t.style.left = x + 'px'; t.style.top = y + 'px';
     const k = Math.min(3, d / 14);
-    if (tool === 'sponge') { const was = pet.clean; Care.wash(pet, 1.6 * k); fx.foam = Math.min(1, fx.foam + 0.035 * k); if (Math.random() < 0.15) V.sfx('pop');
-      if (was < 100 && pet.clean >= 100) V.say(['All clean! Now rinse the bubbles off with the bucket.'], { who: 'narrator' }); }
+    if (tool === 'sponge') { const was = pet.clean; Care.wash(pet, 1.6 * k); fx.foam = Math.min(1, fx.foam + 0.035 * k); if (Math.random() < 0.15) V.sfx('pop'); }
     else { Care.brush(pet); if (Math.random() < 0.3) spot({ className: 'heart' }, A.svg('0 0 30 30', A.star(15, 15, 11, '#FFC94A')), x, y - 10, 1200); if (Math.random() < 0.15) V.sfx('sparkle'); }
     const now = Date.now(); if (now - (rub ? rub.at : 0) > 140) { if (rub) rub.at = now; paintUni(); }
   }
@@ -1192,7 +1175,6 @@
   function openBedroom() {
     V.stop(); show('bedroom'); editing = false; sel = -1; bedAsk = null; bfx.night = false; bfx.on = {};
     $('bedBack').innerHTML = ICON.back; paintBedroom();
-    V.say([`Welcome to your bedroom, ${me.name}! Tap things to play with them. Tap the paintbrush to decorate.`], { who: 'narrator' });
   }
   const pct = (v, of) => (v / of * 100).toFixed(2) + '%';
   function boxOf(it) {
@@ -1244,14 +1226,14 @@
     $('bedItems').innerHTML = ids.map(id => card(id, bedTab === 'walls' ? 'wall' : bedTab === 'floors' ? 'floor' : 'item')).join('');
   }
   function setEditing(on) { editing = on; sel = -1; bedAsk = null; bfx.night = false; V.sfx('pop'); paintBedroom();
-    V.say([on ? 'Drag things to move them. Tap My things or the Shop to add more!' : 'Your room looks wonderful!'], { who: 'narrator' }); persist(); }
+    persist(); }
   $('bedEdit').addEventListener('click', () => setEditing(!editing));
   $('bedBack').addEventListener('click', () => { V.stop(); persist(true); openCastle(); });
   $('bedTabs').addEventListener('click', e => { const b = e.target.closest('[data-bt]'); if (!b) return; bedTab = b.dataset.bt; bedAsk = null; V.sfx('pop'); paintBedShelf(); });
   // a new thing goes where it fits: on the wall, on the floor in front of the bed, or a rug in the middle
   function placeNew(id) {
     const d = BR.ITEMS[id], b = bedState();
-    if (b.items.length >= BED_MAX) { V.say(['Your room is full! Put something away first.'], { who: 'narrator' }); return false; }
+    if (b.items.length >= BED_MAX) { V.sfx('again'); toast('Your room is full! Put something away first.'); return false; }
     // (big things stand back by the wall, small ones further forward)
     const x = 200 + (Math.random() - 0.5) * 120, y = d.place === 'wall' ? Math.max(d.h / 2 + 4, BR.FLOOR_Y - d.h / 2 - 30) : d.place === 'rug' ? 278 : d.h >= 90 ? 250 : 288;
     b.items.push(clampItem({ id, x, y })); sel = b.items.length - 1; return true;
@@ -1267,11 +1249,11 @@
     const id = c.dataset.bed, what = c.dataset.what, d = bedDef(id), b = bedState();
     const use = () => { if (what === 'wall') b.wall = id; else if (what === 'floor') b.floor = id; else if (!placeNew(id)) return false; return true; };
     if (bedOwns(id)) { if (what === 'item' && b.items.some(x => x.id === id)) { sel = b.items.findIndex(x => x.id === id); paintBedroom(); return; } if (use()) { V.sfx('sparkle'); persist(); paintBedroom(); } return; }
-    if (d.gift) { const ch = giftChapter(id); V.sfx('pop'); V.say([`The ${d.name.toLowerCase()} is a present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}. Keep playing there to find it!`]); return; }
-    if (bedAsk !== id) { bedAsk = id; V.sfx('pop'); paintBedShelf(); V.say([`The ${d.name.toLowerCase()} costs ${d.price} coins. Tap it again to buy it!`]); return; }
-    if (!E.spend(me, device, d.price)) { V.sfx('again'); V.say([`You need ${d.price - E.coins(me)} more coins. Play a round to earn them!`]); return; }
+    if (d.gift) { const ch = giftChapter(id); V.sfx('pop'); toast(`A present in the story of ${ch ? Ch.LAND[ch.land] : 'the kingdom'}!`); return; }
+    if (bedAsk !== id) { bedAsk = id; V.sfx('pop'); paintBedShelf(); toast(`${d.price} coins. Tap again to buy!`); return; }
+    if (!E.spend(me, device, d.price)) { V.sfx('again'); toast(`${d.price - E.coins(me)} more coins needed. Play a round!`); return; }
     me.owned.push(id); bedAsk = null; use();
-    V.sfx('fanfare'); burst(...centerOf(c), 16); V.say([`You bought the ${d.name.toLowerCase()}! ${what === 'item' ? 'Drag it where you like.' : 'Your room looks wonderful.'}`]);
+    V.sfx('fanfare'); burst(...centerOf(c), 16);
     persist(true); paintBedroom();
   });
   // decorating: drag a thing to move it; the bar above it turns it around or puts it away
@@ -1279,7 +1261,7 @@
     if (!editing) return;
     const sb = e.target.closest('[data-sb]');
     if (sb) { const b = bedState(), it = b.items[sel]; if (!it) return;
-      if (sb.dataset.sb === 'flip') it.flip = !it.flip; else { b.items.splice(sel, 1); sel = -1; V.say(['Put away! Find it in My things.'], { who: 'narrator' }); }
+      if (sb.dataset.sb === 'flip') it.flip = !it.flip; else { b.items.splice(sel, 1); sel = -1; }
       V.sfx('pop'); persist(); paintBedroom(); return; }
     const el = e.target.closest('.bi');
     if (!el) { if (sel >= 0) { sel = -1; paintBedroom(); } return; }
@@ -1321,7 +1303,7 @@
     if (d.act === 'light') { V.sfx('pop'); toggle(); return; }
     if (d.act === 'curtain') { V.sfx('whoosh'); toggle(); return; }
     if (d.act === 'grow') { V.sfx('sparkle'); burst(r.left + r.width / 2, r.top + r.height / 3, 8); toggle(); return; }
-    if (d.act === 'stars') { V.sfx('sparkle'); toggle(); if (it.on) V.say(['Twinkle, twinkle!'], { who: 'narrator' }); return; }
+    if (d.act === 'stars') { V.sfx('sparkle'); toggle(); return; }
     if (d.act === 'music') { blink(TUNE_BOX.length * 320 + 400); TUNE_BOX.forEach((n, k) => setTimeout(() => V.sfx('note', n), k * 320)); return; }
     if (d.act === 'chest') { blink(2600); V.sfx('pop'); burst(r.left + r.width / 2, r.top, 14); return; }
     if (d.act === 'swim') { blink(1500); V.sfx('pop'); return; }
@@ -1334,9 +1316,8 @@
   function goToSleep(i) {
     bfx.night = true; bfx.bed = i; V.sfx('whoosh'); paintBedroom();
     TUNE_BOX.slice(0, 7).forEach((n, k) => setTimeout(() => { if (bfx.night && screen === 'bedroom') V.sfx('note', n); }, 600 + k * 520));
-    V.say([`Goodnight, ${me.name}. Sweet dreams!`], { who: 'narrator' });
   }
-  function wakeUp() { bfx.night = false; V.sfx('sparkle'); paintBedroom(); V.say([`Good morning, ${me.name}! What a lovely sleep.`], { who: 'narrator' }); }
+  function wakeUp() { bfx.night = false; V.sfx('sparkle'); paintBedroom(); }
 
   // ---- grown-ups: hold the button, then Face ID (or a grown-up question) ----
   let holdT = 0, holdStart = 0;

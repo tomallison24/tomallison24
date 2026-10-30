@@ -9,8 +9,10 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   The first player is made right there; more are added by a grown-up.
 - **The kingdom** (`world.js`): one big scrolling picture. She taps where to go and her unicorn
   glides along the paths in one smooth trip up to each shut gate (a transform each frame, the view
-  easing after her). The storyteller says hello and where to go once, when she picks her princess;
-  back from a game the kingdom is quiet. The paths themselves are practice, at her level:
+  easing after her). Friends talk only in the games (how to play, the questions, hints) and at the
+  path gates below: the kingdom, the castle, the stables and the bedroom are quiet, with a short line on
+  screen where she needs one (a price, the fog, a resting land). The story (the opening and the chapters)
+  is still read aloud. The paths themselves are practice, at her level:
   - a **signpost** to read on the way to Story Tower,
   - the **rainbow bridge** to mend by counting planks, on the way to the Gem Mine,
   - the **crystal door** that opens to a sparkle pattern, on the way to Star Meadow.
@@ -91,15 +93,15 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   Her old bedroom pieces and the story's presents carry over.
 - **Castle rooms** (`rooms.js`): a library and a ballroom to decorate, in the dressing room's
   Rooms tab. Each has four places (the wallpaper, a big piece, a rug or dance floor, a small piece),
-  each with a free piece to start, two to buy (20 to 75 coins) and a present from the story. The
-  first tap says the price and a second buys, as in the Boutique; she can move any piece she has
+  each with a free piece to start, two to buy (14 to 53 coins) and a present from the story. The
+  first tap shows the price and a second buys, as in the Boutique; she can move any piece she has
   back in. Pieces to buy can come as a surprise present too.
 - **Her rank**: Little Princess, Princess (20), Royal Princess (32), Princess of Sparkle Kingdom (45):
   the first seven skills' highest levels added up (7 to 55; Pattern Parade and the bakery don't count), never going back down. It shows in the castle, the
   end of the round that earns it, and Settings.
 - **Coins and the castle**: 1 coin a right answer (first or second try), 3 for finishing a round,
   never taken away. In her castle she tries on what she has, and in the Royal Boutique the first
-  tap says the price and a second buys. Surprise presents (about one round in four, and the quest),
+  tap shows the price and a second buys. Surprise presents (about one round in four, and the quest),
   and the unicorn grows with her stickers (one each time she moves up a level).
 - **Settings** (for grown-ups; the shared rows of `../home/settings.js`): press and hold Grown-ups, then Face ID (the family account), or, where
   there's none, a grown-up's times-table question. Each child's levels and how they moved this

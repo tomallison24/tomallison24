@@ -241,10 +241,10 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (await coins(p) !== 40) pr.push('one tap on something not hers spent coins');
   if (!(await p.locator('[data-item="gown-lilac"].ask').count())) pr.push('one tap does not ask about the price');
   await p.click('[data-item="gown-lilac"]');
-  if (await coins(p) !== 10) pr.push('buying the 30-coin gown left ' + await coins(p) + ' coins, not 10');
+  if (await coins(p) !== 19) pr.push('buying the 21-coin gown left ' + await coins(p) + ' coins, not 19');
   if ((await sp(p, () => window.sparkle.save.players.p1.wearing.gown)) !== 'gown-lilac') pr.push('she is not wearing what she bought');
   await p.click('[data-tab="tiara"]'); await p.click('[data-item="tiara-crown"]'); await p.click('[data-item="tiara-crown"]');
-  if (await coins(p) !== 10) pr.push('a 50-coin crown was bought with 10 coins');
+  if (await coins(p) !== 19) pr.push('a 35-coin crown was bought with 19 coins');
   await p.click('[data-tab="gown"]'); await p.click('[data-item="gown-petal"]');
   if ((await sp(p, () => window.sparkle.save.players.p1.wearing.gown)) !== 'gown-petal') pr.push('she can\'t change back into the gown she started with');
   await p.click('[data-tab="treasures"]');
@@ -252,7 +252,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await shot(p, '9-castle');
   // after a reload: still hers
   await p.reload(); await p.waitForTimeout(500);
-  if (await coins(p) !== 10) pr.push('after a reload her coins are ' + await coins(p));
+  if (await coins(p) !== 19) pr.push('after a reload her coins are ' + await coins(p));
   if (!(await sp(p, () => window.sparkle.save.players.p1.owned.includes('gown-lilac')))) pr.push('after a reload the gown is gone');
   pr.push(...errs);
   report('the castle: one tap asks the price, a second buys; never with too few coins; changing back; the treasure book; kept after a reload', pr); await ctx.close();
@@ -429,7 +429,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if ((await coins(p)) !== r0) pr.push('one tap bought a room piece');
   await p.click('[data-piece="library-wall-moons"]');
   const lib = await sp(p, () => { const me = window.sparkle.save.players.p1; return { own: me.owned.includes('library-wall-moons'), on: (me.rooms || {}).library && me.rooms.library.wall }; });
-  if (!lib.own || lib.on !== 'library-wall-moons' || (await coins(p)) !== r0 - 25) pr.push('buying the moon wallpaper: ' + JSON.stringify(lib));
+  if (!lib.own || lib.on !== 'library-wall-moons' || (await coins(p)) !== r0 - 18) pr.push('buying the moon wallpaper: ' + JSON.stringify(lib));
   await p.click('[data-piece="library-shelf-golden"]');
   if (await sp(p, () => window.sparkle.save.players.p1.owned.includes('library-shelf-golden'))) pr.push('a story bookshelf was given by tapping it');
   await p.click('[data-room="library"]'); await p.click('[data-piece="library-owl-lamp"]');
@@ -534,8 +534,9 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   ava.skills.read = { level: 3, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 3 }; ava.demos = { 'read:3': 1 };
   const { ctx, p, errs } = await phone({ signed: true, seed: seedOf(ava) }); const pr = [];
   await p.click('[data-player="p1"]'); await p.waitForTimeout(800);
-  const greet = SPOKEN.filter(x => x.voice.endsWith('Sulafat') && x.text.startsWith('Hi Ava'));
-  if (!greet.length) pr.push('the storyteller did not greet her in a natural voice: ' + JSON.stringify(SPOKEN.slice(0, 3)));
+  await sp(p, () => SparkleVoice.say(['Once upon a time.'], { who: 'narrator' }));
+  const told = SPOKEN.filter(x => x.voice.endsWith('Sulafat') && x.text.startsWith('Once upon'));
+  if (!told.length) pr.push('the storyteller did not speak in a natural voice: ' + JSON.stringify(SPOKEN.slice(0, 3)));
   await sp(p, () => { window.sparkle.startRound('read'); }); await state(p); await p.waitForTimeout(600);
   if (!SPOKEN.some(x => x.voice.endsWith('Charon'))) pr.push('Professor Hoot did not ask in his own voice');
   const kept = await sp(p, async () => (await (await caches.open('sparkle-voice-v1')).keys()).length);
@@ -557,6 +558,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   SPOKEN.length = 0;
   const two = await phone({ seed: seedOf(ava) });
   await two.p.click('[data-player="p1"]'); await two.p.waitForTimeout(800);
+  await sp(two.p, () => SparkleVoice.say(['Once upon a time.'], { who: 'narrator' }));
   if (SPOKEN.length) pr.push('a signed-out phone asked for natural voices');
   pr.push(...two.errs); await two.ctx.close();
   delete ENV.GOOGLE_TTS_KEY;
@@ -584,14 +586,15 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   report('the syllable drum: a beat and a dot for every tap, however quick', pr);
 }
 
-// 13. on the map: the storyteller says hello once, when she picks her princess, not again back from a game; a trip
+// 13. on the map: nobody talks (not when she picks her princess, nor back from a game); a trip
 // through a place on the way is one smooth glide (no stop at the place, no jumps), and she ends on the place
 {
   const ava = JSON.parse(JSON.stringify(AVA)); ava.introSeen = true; ava.world = Object.assign({}, ava.world, { at: 'sign' });
   const { ctx, p, errs } = await phone({ seed: seedOf(ava), motion: 'no-preference' }); const pr = [];
   await sp(p, () => { window.__said = []; const say = SparkleVoice.say; SparkleVoice.say = (parts, o) => { window.__said.push([].concat(parts).filter(x => typeof x === 'string').join(' ')); return say(parts, o); }; });
   await p.click('[data-player="p1"]'); await p.waitForTimeout(500);
-  if (!(await sp(p, () => window.__said.some(t => t.startsWith('Hi Ava'))))) pr.push('no hello when she picked her princess');
+  const hello = await sp(p, () => window.__said);
+  if (hello.length) pr.push('the kingdom spoke when she picked her princess: ' + JSON.stringify(hello));
   await sp(p, () => { window.__said = []; window.sparkle.enterWorld(); }); await p.waitForTimeout(300);
   const again = await sp(p, () => window.__said);
   if (again.length) pr.push('the kingdom spoke again on coming back: ' + JSON.stringify(again));
@@ -611,7 +614,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
     if (steps.some(x => x > avg * 3 + 2)) pr.push('she jumped: ' + steps.map(x => x.toFixed(1)).join(' '));
   }
   pr.push(...errs); await ctx.close();
-  report('the map: hello only on picking her princess; a trip is one smooth glide that ends on the place', pr);
+  report('the map: quiet, even on picking her princess; a trip is one smooth glide that ends on the place', pr);
 }
 
 // 14. Pattern Parade in Star Meadow and the Unicorn Bakery in the castle's kitchen: a round of each; a wrong bake
@@ -700,7 +703,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   // the shop: a carrot, asked then bought
   await p.click('[data-ct="shop"]'); const k0 = await coins(p);
   await p.click('[data-buy="carrot"]'); await p.click('[data-buy="carrot"]'); await p.waitForTimeout(200);
-  if ((await coins(p)) !== k0 - 2 || (await pet()).pantry.carrot !== 1) pr.push('buying a carrot: ' + (await coins(p)) + ' coins, ' + JSON.stringify((await pet()).pantry));
+  if ((await coins(p)) !== k0 - 1 || (await pet()).pantry.carrot !== 1) pr.push('buying a carrot: ' + (await coins(p)) + ' coins, ' + JSON.stringify((await pet()).pantry));
   pr.push(...errs, ...(await sp(p, () => window.__csp || [])).map(c => 'blocked by its policy: ' + c)); await ctx.close();
   report('the stables: sad after a day alone, fed, a baked treat, washed and rinsed, played with, put to bed; full is full; the shop', pr);
 }
@@ -734,7 +737,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   await p.click('[data-bt="shop"]'); const k0 = await coins(p);
   await p.click('[data-bed="bed-teddy"]'); if ((await coins(p)) !== k0) pr.push('one tap bought the teddy');
   await p.click('[data-bed="bed-teddy"]'); await p.waitForTimeout(200);
-  b = await bed(); if (iOf('bed-teddy') < 0 || (await coins(p)) !== k0 - 15) pr.push('buying the teddy: ' + (await coins(p)) + ' coins, in the room ' + (iOf('bed-teddy') >= 0));
+  b = await bed(); if (iOf('bed-teddy') < 0 || (await coins(p)) !== k0 - 11) pr.push('buying the teddy: ' + (await coins(p)) + ' coins, in the room ' + (iOf('bed-teddy') >= 0));
   await p.click('[data-bt="walls"]'); await p.click('[data-bed="wall-dots"]'); await p.click('[data-bed="wall-dots"]'); await p.waitForTimeout(200);
   if ((await bed()).wall !== 'wall-dots') pr.push('the new wallpaper is not up');
   await p.click('[data-bt="shop"]'); await p.click('[data-bed="bedroom-bed-stars"]');
