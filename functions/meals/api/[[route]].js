@@ -7,13 +7,19 @@
 //                      ai: 'anthropic', or null with no key yet; log: the accepted plans,
 //                      newest first, in short (id, dates, what they were built around, titles)
 //   GET  log/<id>   -> { plan } one accepted plan, whole
-//   POST plan       { slots, foods, days, people, lunches, courses, fridge, note, start, again } -> { draft }
+//   POST options    { slots, foods, days, people, lunches, courses, fridge, note, start } -> { options }
+//                      first, OPTIONS_N dishes to choose from for each meal (a title and a line about it, and for a
+//                      dinner of courses its starter and/or dessert): { ...the choices, at, meals: [{ key, day, slot,
+//                      choices: [{ title, about, cuisine, minutes, starter, dessert }] } or { day, slot, leftover }] }.
+//                      Not kept here: the phone keeps them until you pick, then asks for the plan with picks.
+//   POST plan       { slots, foods, days, people, lunches, courses, fridge, note, start, again, picks } -> { draft }
 //                      a new plan to look over, kept as the family's draft until someone accepts it.
 //                      slots: which meals ('breakfast', 'lunch', 'dinner'); foods: what to build the
 //                      lunches and dinners around (FOODS, or 'surprise'); days: 1 to 7 from start
 //                      (YYYY-MM-DD, default today); lunches: 'leftovers' (the night before's dinner,
 //                      cooked double), 'fresh' or 'mix'; courses: each dinner as 'main' alone (the default),
-//                      'starter' + main, main + 'dessert', or 'all' three (COURSES); fridge: what to use up first. again: true
+//                      'starter' + main, main + 'dessert', or 'all' three (COURSES); fridge: what to use up first;
+//                      picks: { <key>: { title, about, starter, dessert } } the options picked, written as those dishes. again: true
 //                      for another go, unlike the draft before it.
 //   POST accept     { start? } -> { plan, log }
 //                      the draft becomes the family's plan, day 1 on start (default: the draft's),
@@ -282,7 +288,9 @@ export const MEALS_SCHEMA = { type: 'object', additionalProperties: false, requi
   tip: STR } };
 const FOOD_WORDS = { vegetarian: 'meat-free (vegetarian: beans, lentils, eggs, tofu, cheese)', fish: 'fish (salmon, cod, tuna...)' };
 function specLine(s, o) {
-  const what = s.slot === 'breakfast' ? 'breakfast: ' + s.style
+  const pk = s.pick, what = pk ? s.slot + ': "' + pk.title + '"' + (pk.about ? ' (' + pk.about + ')' : '')
+    + (pk.starter ? ', starter "' + pk.starter + '"' : '') + (pk.dessert ? ', dessert "' + pk.dessert + '"' : '')
+    : s.slot === 'breakfast' ? 'breakfast: ' + s.style
     : s.slot + ', ' + s.cuisine + (s.food ? ', built around ' + (FOOD_WORDS[s.food] || s.food) : '');
   return '- ' + s.key + ' (' + s.weekday + ' ' + s.slot + '): ' + what
     + (s.maxMinutes ? ', ready in ' + s.maxMinutes + ' minutes or less' : '')
@@ -297,7 +305,8 @@ export function chunkAsk(settings, o, part, { history = [], taste = { loved: [],
     + '"fridge" lists the things from the family\'s fridge a meal uses (none: []). '
     + 'A meal asked as courses is one dinner: "title" is the main\'s dish; "courses" has an entry for each course asked (its "course", its own dish as "title", and its own "steps"), "steps" is [], and every ingredient says which course it is for ("starter", "main" or "dessert"). The time ("minutes") is for the whole dinner; the vegetables and protein count across its courses. A starter is light; a dessert is simple and not too sweet, fruit welcome. Any other meal has "courses": [] and every ingredient "course": "main". '
     + (avoid ? 'ALLERGIES - the family must never eat: ' + avoid + '. Use none of them in any form (oils, milks, flours, butters, sauces, garnishes, pesto, curry pastes), and don\'t mention them at all, not even to say a dish is free of them. ' : '');
-  const lines = ['Write these ' + part.length + ' meals for ' + o.people + ' people, every one a different dish and a different way of cooking:\n' + part.map(s => specLine(s, o)).join('\n')];
+  const lines = ['Write these ' + part.length + ' meals for ' + o.people + ' people, every one a different dish and a different way of cooking'
+    + (part.some(s => s.pick) ? ' (a dish in quotes is the one the family picked: write that dish, with that title)' : '') + ':\n' + part.map(s => specLine(s, o)).join('\n')];
   if (fridge && o.fridge) lines.push('Use up what is in the fridge in these first meals where it fits: ' + o.fridge + '.');
   if (history.length) lines.push('The family had these lately; make different dishes: ' + history.map(h => h.title).join('; ') + '.');
   if (taste.loved.length) lines.push('The family loved these: ' + taste.loved.map(t => t.title).join('; ') + '. Now and then make something in the same spirit.');
@@ -338,8 +347,9 @@ async function writePart(env, settings, o, part, extra, f) {
   return r;   // a vegetable or a few grams short after two goes: kept, with the counts it has
 }
 
-export async function makePlan(env, settings, o, history = [], taste = { loved: [], nope: [] }, f = fetch, rnd = Math.random) {
+export async function makePlan(env, settings, o, history = [], taste = { loved: [], nope: [] }, f = fetch, rnd = Math.random, picks = {}) {
   const sp = specs(o, settings, rnd), todo = sp.filter(s => !s.leftover), parts = [];
+  for (const s of todo) if (Object.hasOwn(picks, s.key)) s.pick = picks[s.key];
   for (const s of todo) { const last = parts[parts.length - 1]; if (last && weight([...last, s]) <= CHUNK) last.push(s); else parts.push([s]); }
   const done = await Promise.all(parts.map((part, i) => writePart(env, settings, o, part, { history, taste, fridge: i === 0 }, f)));
   const by = new Map(); parts.forEach((part, i) => part.forEach((s, j) => by.set(s.key, done[i].meals[j])));
@@ -349,6 +359,64 @@ export async function makePlan(env, settings, o, history = [], taste = { loved: 
     else meals.push(by.get(s.key));
   }
   return { meals, tip: done[0] ? done[0].tip : '' };
+}
+
+// ---- options: a few dishes for each meal, to pick from before the recipes are written ----
+export const OPTIONS_N = 3, OPTIONS_CHUNK = 8;   // dishes a meal; meals asked at once
+export const OPTIONS_SCHEMA = { type: 'object', additionalProperties: false, required: ['meals'], properties: {
+  meals: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['key', 'options'], properties: {
+    key: STR, options: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'about', 'cuisine', 'minutes', 'starter', 'dessert'],
+      properties: { title: STR, about: STR, cuisine: STR, minutes: { type: 'integer' }, starter: STR, dessert: STR } } } } } } } };
+export function optionsAsk(settings, o, part, { history = [], taste = { loved: [], nope: [] }, why = '' } = {}) {
+  const avoid = settings.avoid.join(', ');
+  const system = 'You suggest dishes for a family\'s meals: healthy, varied home cooking. Answer with one JSON object only: for each meal asked, its "key" and '
+    + OPTIONS_N + ' "options", each a different dish (a different cuisine or way of cooking where the meal allows): "title" (the dish, like "Lemon chicken thighs with white beans and greens"), '
+    + '"about" (one short sentence that makes it appealing: what it is like and why it suits the day), "cuisine", "minutes" (total time), and for a meal asked as courses the "starter" and/or "dessert" dish that goes with it ("" when not asked). '
+    + 'Write US English. Every dish has vegetables and good protein; whole foods, not much sugar or deep frying. '
+    + (avoid ? 'ALLERGIES - the family must never eat: ' + avoid + '. Suggest nothing with any of them in any form, and don\'t mention them at all. ' : '');
+  const lines = ['Suggest ' + OPTIONS_N + ' dishes for each of these ' + part.length + ' meals for ' + o.people + ' people (the cuisine named is a starting point, not a rule):\n' + part.map(s => specLine(s, o)).join('\n')];
+  if (o.fridge) lines.push('Use up what is in the fridge where it fits: ' + o.fridge + '.');
+  if (history.length) lines.push('The family had these lately; suggest different dishes: ' + history.map(h => h.title).join('; ') + '.');
+  if (taste.loved.length) lines.push('The family loved these: ' + taste.loved.map(t => t.title).join('; ') + '.');
+  if (taste.nope.length) lines.push('Never suggest these again, or anything much like them: ' + taste.nope.map(t => t.title).join('; ') + '.');
+  if (o.note) lines.push('Also: ' + o.note);
+  if (why) lines.push(why);
+  return { system, prompt: lines.join('\n\n'), maxTokens: Math.min(16000, 500 * part.length + 4000), schema: OPTIONS_SCHEMA, effort: 'low' };
+}
+const cleanOption = (x, s) => x && typeof x === 'object' && str(x.title, 100) ? { title: str(x.title, 100), about: str(x.about, 200), cuisine: str(x.cuisine, 30), minutes: int(x.minutes, 5, 600, 0),
+  ...(s.courses && s.courses.includes('starter') && str(x.starter, 100) ? { starter: str(x.starter, 100) } : {}),
+  ...(s.courses && s.courses.includes('dessert') && str(x.dessert, 100) ? { dessert: str(x.dessert, 100) } : {}) } : null;
+const optionText = c => [c.title, c.about, c.starter || '', c.dessert || ''];
+// One part's options: what the family avoids is taken out; a meal left with fewer than two is asked again once
+async function optionsPart(env, settings, o, part, extra, f) {
+  const take = j => { const by = new Map(); for (const m of Array.isArray(j && j.meals) ? j.meals : []) if (m && typeof m.key === 'string') by.set(m.key, m);
+    return part.map(s => ((by.get(s.key) || {}).options || []).slice(0, OPTIONS_N + 2).map(x => cleanOption(x, s)).filter(c => c && !avoidHits(optionText(c), settings.avoid).length)
+      .filter((c, i, a) => a.findIndex(x => x.title.toLowerCase() === c.title.toLowerCase()) === i).slice(0, OPTIONS_N)); };
+  let got = take(json(await ask(env, optionsAsk(settings, o, part, extra), f)));
+  const short = part.filter((s, i) => got[i].length < 2).map(s => s.key);
+  if (short.length) {
+    const again = take(json(await ask(env, optionsAsk(settings, o, part, { ...extra, why: 'Your last answer was short of options for ' + short.join(', ') + ' (or used something the family never eats). Write all of them again.' }), f)));
+    got = got.map((g, i) => again[i].length > g.length ? again[i] : g);
+  }
+  if (got.some(g => !g.length)) throw fail('ai-format', 502);
+  return got;
+}
+export async function makeOptions(env, settings, o, history = [], taste = { loved: [], nope: [] }, f = fetch, rnd = Math.random) {
+  const sp = specs(o, settings, rnd), todo = sp.filter(s => !s.leftover), parts = [];
+  for (let i = 0; i < todo.length; i += OPTIONS_CHUNK) parts.push(todo.slice(i, i + OPTIONS_CHUNK));
+  const done = await Promise.all(parts.map(part => optionsPart(env, settings, o, part, { history, taste }, f)));
+  const by = new Map(); parts.forEach((part, i) => part.forEach((s, j) => by.set(s.key, done[i][j])));
+  return sp.map(s => s.leftover ? { day: s.day, slot: s.slot, leftover: s.leftover } : { key: s.key, day: s.day, slot: s.slot, choices: by.get(s.key) });
+}
+// The options picked, from the phone: { <key>: { title, about, starter, dessert } }, only for the plan's own keys
+const PICK_KEY = /^d[1-7]-(breakfast|lunch|dinner)$/;
+export function picksOf(b) {
+  const out = {};
+  if (b && b.picks && typeof b.picks === 'object' && !Array.isArray(b.picks)) for (const [k, v] of Object.entries(b.picks).slice(0, 21)) {
+    if (!PICK_KEY.test(k) || !v || typeof v !== 'object' || !str(v.title, 100)) continue;
+    out[k] = { title: str(v.title, 100), about: str(v.about, 200), ...(str(v.starter, 100) ? { starter: str(v.starter, 100) } : {}), ...(str(v.dessert, 100) ? { dessert: str(v.dessert, 100) } : {}) };
+  }
+  return out;
 }
 
 // The plan's choices, from what the phone (or Ipsy) asked for.
@@ -522,13 +590,20 @@ export async function onRequest({ request, params, env }, f = fetch) {
       await putJSON(db, 'meals:again', again);
       return reply({ again });
     }
+    if (route === 'options' && method === 'POST') {
+      if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
+      if (!(await countAi(db, me))) return reply({ error: 'limit' }, 429);
+      const b = await body(request), o = choicesOf(b, settings), history = (await getJSON(db, 'meals:history')) || [];
+      const meals = await makeOptions(env, settings, o, history.slice(-30), tasteOf(await getJSON(db, 'meals:taste')), f);
+      return reply({ options: { ...o, at: Date.now(), meals } });
+    }
     if (route === 'plan' && method === 'POST') {
       if (!aiOf(env)) return reply({ error: 'no-ai' }, 503);
       if (!(await countAi(db, me))) return reply({ error: 'limit' }, 429);
       const b = await body(request), o = choicesOf(b, settings), history = (await getJSON(db, 'meals:history')) || [];
       // another go: different from the draft it replaces, as well as from what the family had
       const before = b.again ? ((await getJSON(db, 'meals:draft')) || {}).meals || [] : [];
-      const p = await makePlan(env, settings, o, [...history.slice(-30), ...before.filter(m => !m.leftover).map(m => ({ title: m.title }))], tasteOf(await getJSON(db, 'meals:taste')), f);
+      const p = await makePlan(env, settings, o, [...history.slice(-30), ...before.filter(m => !m.leftover).map(m => ({ title: m.title }))], tasteOf(await getJSON(db, 'meals:taste')), f, Math.random, picksOf(b));
       const draft = { at: Date.now(), by: me.name, ...o, ...p };
       await putJSON(db, 'meals:draft', draft);
       return reply({ draft });

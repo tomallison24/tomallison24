@@ -11,7 +11,7 @@
 // Cooking again (POST again): past meals back for two weeks, checked against what the family avoids now.
 //   node meals/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, AGAIN_DAYS, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, MEALS_SCHEMA, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
+import { onRequest, AGAIN_DAYS, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, MEALS_SCHEMA, OPTIONS_SCHEMA, OPTIONS_N, picksOf, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 // The month's AI budget used up: Anthropic's answer to every request until the 1st (server/ipsy.js, budgetUntil).
 const back = (d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString())(new Date());
@@ -181,6 +181,51 @@ await test('courses: a week of three-course dinners is written in parts of two d
   const r = await call('plan', { token, body: DIN({ days: 7, courses: 'all' }) });
   assert.equal(r.status, 200); assert.equal(asked.length, 4, 'parts: ' + asked.length);
   assert.ok(asked.every(a => a.body.max_tokens <= 16000)); assert.equal(r.body.draft.meals.filter(m => m.courses && m.courses.length === 3).length, 7);
+  freshDay();
+});
+// options: a stand-in that suggests OPTIONS_N dishes for every meal asked (extra: one more, or a bad one)
+const opts = (extra = () => []) => b => JSON.stringify({ meals: keysOf(b).map(k => ({ key: k, options: [
+  ...extra(k), ...[1, 2, 3].map(n => ({ title: 'Option ' + n + ' for ' + k, about: 'A good one.', cuisine: 'Greek', minutes: 30, starter: 'Soup ' + n, dessert: '' }))] })) });
+await test('options: three dishes a meal to pick from (a title, a line about it), leftover lunches as they are; nothing kept on the server', async () => {
+  freshDay(); answers = [opts()]; asked.length = 0;
+  const before = db.m.get('meals:draft');
+  const r = await call('options', { token, body: { slots: ['lunch', 'dinner'], days: 2, lunches: 'leftovers', courses: 'starter', people: 2 } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const o = r.body.options;
+  assert.equal(o.people, 2); assert.equal(o.courses, 'starter'); assert.ok(o.at);
+  assert.deepEqual(o.meals.map(m => m.key || 'leftover ' + m.day), ['d1-lunch', 'd1-dinner', 'leftover 2', 'd2-dinner']);
+  const d1 = o.meals[1];
+  assert.equal(d1.choices.length, OPTIONS_N);
+  assert.deepEqual(d1.choices[0], { title: 'Option 1 for d1-dinner', about: 'A good one.', cuisine: 'Greek', minutes: 30, starter: 'Soup 1' }, 'a dinner with a starter keeps it');
+  assert.equal(o.meals[0].choices[0].starter, undefined, 'a lunch has no starter');
+  assert.equal(asked.length, 1); const q = asked[0].body;
+  assert.equal(q.output_config.format.type, 'json_schema'); assert.deepEqual(q.output_config.format.schema, OPTIONS_SCHEMA); assert.equal(q.output_config.effort, 'low');
+  assert.match(q.messages[0].content, /Suggest 3 dishes for each of these 3 meals for 2 people/); assert.match(q.system, /ALLERGIES - the family must never eat: tree nuts, coconut/);
+  assert.equal(db.m.get('meals:draft'), before, 'options are not a plan');
+});
+await test('options: one with what the family avoids is taken out; a meal left short is asked again once; none at all is ai-format', async () => {
+  freshDay();
+  answers = [opts(k => [{ title: 'Coconut curry', about: 'Creamy.', cuisine: 'Thai', minutes: 30, starter: '', dessert: '' }])];
+  const r = await call('options', { token, body: DIN({ days: 1 }) });
+  assert.ok(r.body.options.meals[0].choices.every(c => !/coconut/i.test(c.title)), JSON.stringify(r.body.options.meals[0].choices));
+  asked.length = 0;
+  answers = [JSON.stringify({ meals: [{ key: 'd1-dinner', options: [{ title: 'Only one', about: '', cuisine: '', minutes: 20, starter: '', dessert: '' }] }] }), opts()];
+  const r2 = await call('options', { token, body: DIN({ days: 1 }) });
+  assert.equal(asked.length, 2); assert.match(asked[1].body.messages[0].content, /short of options for d1-dinner/); assert.equal(r2.body.options.meals[0].choices.length, 3);
+  answers = [JSON.stringify({ meals: [] }), JSON.stringify({ meals: [] })];
+  assert.equal((await call('options', { token, body: DIN({ days: 1 }) })).body.error, 'ai-format');
+  freshDay();
+});
+await test('picks: the plan is written as the dishes picked, by key; anything else in picks is ignored', async () => {
+  freshDay();
+  assert.deepEqual(picksOf({ picks: { 'd1-dinner': { title: ' Duck  breast ', about: 'Rich.', starter: 'Beet salad', dessert: '' }, 'd9-dinner': { title: 'x' }, '__proto__': { title: 'x' }, 'd2-lunch': { about: 'no title' } } }),
+    { 'd1-dinner': { title: 'Duck breast', about: 'Rich.', starter: 'Beet salad' } });
+  assert.deepEqual(picksOf({ picks: ['x'] }), {}); assert.deepEqual(picksOf({}), {});
+  answers = [coursed()]; asked.length = 0;
+  const r = await call('plan', { token, body: DIN({ days: 1, courses: 'starter', picks: { 'd1-dinner': { title: 'Duck breast with cherries', about: 'Date night.', starter: 'Beet salad' } } }) });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.match(asked[0].body.messages[0].content, /- d1-dinner \(\w+ dinner\): dinner: "Duck breast with cherries" \(Date night\.\), starter "Beet salad"/);
+  assert.match(asked[0].body.messages[0].content, /a dish in quotes is the one the family picked/);
   freshDay();
 });
 await test('a plan: 4 dinners for 4, kept as the family\'s draft with what was asked, nothing accepted yet', async () => {
