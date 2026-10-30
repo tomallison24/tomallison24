@@ -212,7 +212,7 @@ await test('a tile opens its sheet: 7, 30 or 90 days, each reading charted with 
   assert.match(await page.textContent('.hm[data-k="hr_rest"] .hmh'), /Resting heart rate\s*Good\s*52bpm/);
   assert.equal(await page.$$eval('.hm[data-k="hr_rest"] .hchart .dot', els => els.length), 6, 'a dot a day with a reading (none three days ago)');
   assert.equal(await page.$$eval('.hm[data-k="hr_rest"] .hchart .band', els => els.length), 1, 'your usual, shaded');
-  assert.match(await page.getAttribute('.hm[data-k="hr_rest"] .hchart', 'aria-label'), /^Resting heart rate, the last 7 days, your usual \d+ to \d+ bpm\. Arrow keys pick a day\.$/);
+  assert.match(await page.getAttribute('.hm[data-k="hr_rest"] .hchart', 'aria-label'), /^Resting heart rate, the last 7 days, average \d+ bpm, your usual \d+ to \d+ bpm\. Arrow keys pick a day\.$/);
   assert.deepEqual(await page.$$eval('.hm[data-k="hr_rest"] .hax span', els => els.map(e => e.textContent)), [short(day(-6)), short(day(0))]);
   assert.equal(await page.textContent('#hBody .hfoot'), 'Ranges: CDC, AHA, FDA. Not medical advice.');
   assert.equal(await page.$('#hBody .htr'), null, 'no trends when there are none');
@@ -234,6 +234,18 @@ await test('a tile opens its sheet: 7, 30 or 90 days, each reading charted with 
   assert.deepEqual((await page.$$eval('#hBody .hm', els => els.map(e => e.dataset.k))).slice(0, 3), ['steps', 'active_kcal', 'exercise_min'], 'the rings\' readings first');
   assert.equal(await page.$$eval('.hm[data-k="steps"] .bar', els => els.length), 6);
   assert.equal(await page.$$eval('.hm[data-k="steps"] .goal', els => els.length), 1, 'the step goal, a line');
+  // the average over the days shown: its number under the name and a dotted line, following 7, 30 or 90 days
+  const avgOf = async k => (await page.textContent('.hm[data-k="' + k + '"] .hmavg')).trim();
+  const seven = await page.evaluate(() => { const d = __fitness.st.healthDay, out = []; for (let i = 0; i < 7; i++) { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() - i); const ds = x.toISOString().slice(0, 10), r = __fitness.data.health.find(h => h.date === ds); if (r && r.m && r.m.steps != null) out.push(+r.m.steps); } return Math.round(out.reduce((a, b) => a + b, 0) / out.length); });
+  assert.equal(await avgOf('steps'), '7-day average ' + seven.toLocaleString('en-US') + ' steps');
+  assert.equal(await page.$$eval('.hm[data-k="steps"] .avg', els => els.length), 1, 'the average, a dotted line');
+  assert.match(await page.getAttribute('.hm[data-k="steps"] .hchart', 'aria-label'), /the last 7 days, average [\d,]+ steps/);
+  await page.click('[data-hrange="30"]');
+  assert.match(await avgOf('steps'), /^30-day average [\d,]+ steps$/);
+  await page.click('[data-hrange="90"]');
+  assert.match(await avgOf('active_kcal'), /^90-day average [\d,]+ kcal$/);
+  await shot(page, 'health-activity-sheet-glass');
+  await page.click('[data-hrange="7"]');
   assert.match(await page.textContent('.hm[data-k="steps"] .hmh'), /^Steps\s*8,000steps$/, 'today, short of the goal: no dot yet');
   const svg = page.locator('.hm[data-k="steps"] .hchart svg'), box = await svg.boundingBox();
   await svg.click({ position: { x: box.width * 0.5 / 7, y: box.height / 2 } });
@@ -261,6 +273,8 @@ await test('a tile opens its sheet: 7, 30 or 90 days, each reading charted with 
   assert.match(await page.textContent('.hm[data-k="sleep"] .hmh'), /Asleep\s*Check\s*6 h 25 m/);
   assert.equal(await page.$$eval('.hm[data-k="sleep"] .stg', els => els.length), 18, 'deep, core and REM for 6 nights');
   assert.equal(await page.$$eval('.hm[data-k="sleep"] .goal', els => els.length), 1);
+  assert.match(await page.textContent('.hm[data-k="sleep"] .hmavg'), /^7-day average \d+ h( \d+ m)?$/, 'the nights\' average asleep');
+  assert.equal(await page.$$eval('.hm[data-k="sleep"] .avg', els => els.length), 1);
   assert.deepEqual(await page.$$eval('.hm[data-k="sleep"] .hleg span', els => els.map(e => e.textContent)), ['Deep 1h', 'Core 3h 30m', 'REM 1h 32m', 'Awake']);
   assert.equal(await page.textContent('.hscore .hsh b'), '90');
   assert.match(await page.textContent('.hscore .hsh'), /Sleep score\s*High/);
