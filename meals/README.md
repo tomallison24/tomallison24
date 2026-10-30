@@ -6,12 +6,17 @@ AI first: tell Ipsy what you fancy, and it plans the family's meals. One screen,
   choice, each showing what's picked, so nothing is forgotten on the way. One
   row is open at a time, with its chips; tap any row to open it again:
   1. **Meals**: Breakfast, Lunch, Dinner (any of them; Dinner to start).
-  2. **Food**: chicken, lamb, beef, pork, turkey, fish, shrimp, vegetarian, or
+  2. **Courses** (only with dinner): Just a main (to start), Starter + main,
+     Main + dessert or All three. A dinner of courses is one meal, named for its
+     main: its recipe shows each course with its own dish, ingredients and steps,
+     and every course's ingredients go on the shopping list. The vegetables,
+     protein and time count across the courses.
+  3. **Food**: chicken, lamb, beef, pork, turkey, fish, shrimp, vegetarian, or
      **Surprise me** (none picked is a mix).
-  3. **How long**: Just today, 3 days (to start) or A week.
-  4. **People**: how many you're cooking for (the last plan's number to start).
-  5. **Lunches** (only with both lunch and dinner): Leftovers, Fresh each day or A mix.
-  6. **Extras** (optional): quick notes as chips (Quick, Kid-friendly, Not
+  4. **How long**: Just today, 3 days (to start) or A week.
+  5. **People**: how many you're cooking for (the last plan's number to start).
+  6. **Lunches** (only with both lunch and dinner): Leftovers, Fresh each day or A mix.
+  7. **Extras** (optional): quick notes as chips (Quick, Kid-friendly, Not
      spicy, Budget-friendly, One pan), **In the fridge?** and **Anything else?**.
   Several-at-once steps have **Next**; a one-of choice opens the next step itself.
   Under the steps: what it will plan ("3 days of dinners for 4: 3 meals…") and

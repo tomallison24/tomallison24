@@ -52,8 +52,9 @@ window.MealsIpsy = function (app) {
   const short = (p, m) => ({ day: m.day || 1, ...(app.dateOf(p, m.day || 1) ? { date: app.dateOf(p, m.day || 1) } : {}), meal: slotOf(m), title: m.title,
     ...(m.leftover ? { leftoversOfDay: m.leftover } : { cuisine: m.cuisine, minutes: m.minutes }), ...(m.veg ? { vegetables: m.veg.length } : {}), ...(m.protein ? { proteinGramsAPerson: m.protein } : {}) });
   const whole = (p, m) => ({ ...short(p, m), ...(m.leftover ? {} : { method: m.method, why: m.why, vegetables: m.veg || [], ...(m.fridge && m.fridge.length ? { usesFromTheFridge: m.fridge } : {}),
-    ingredients: m.ingredients.map(x => (x.qty ? x.qty + ' ' : '') + x.item + (x.pantry ? ' (pantry)' : '')), steps: m.steps }) });
-  const head = p => ({ ...(p.id ? { id: p.id } : {}), builtAround: p.foods || [p.meat], meals: p.slots || ['dinner'], people: p.people, ...(p.lunches ? { lunches: p.lunches } : {}),
+    ...(m.courses ? { courses: m.courses.map(c => c.course + ': ' + c.title) } : {}),
+    ingredients: m.ingredients.map(x => (x.qty ? x.qty + ' ' : '') + x.item + (x.pantry ? ' (pantry)' : '') + (x.course ? ' (' + x.course + ')' : '')), steps: m.steps }) });
+  const head = p => ({ ...(p.id ? { id: p.id } : {}), builtAround: p.foods || [p.meat], meals: p.slots || ['dinner'], people: p.people, ...(p.lunches ? { lunches: p.lunches } : {}), ...(p.courses && p.courses !== 'main' ? { courses: p.courses } : {}),
     ...(p.fridge ? { fridge: p.fridge } : {}), ...(p.note ? { asked: p.note } : {}), ...(p.acceptedBy ? { acceptedBy: p.acceptedBy } : p.by ? { plannedBy: p.by } : {}), ...(p.tip ? { tip: p.tip } : {}) });
   const brief = p => ({ ...head(p), schedule: p.meals.map(m => short(p, m)) });
   const label = (p, m) => app.dateOf(p, m.day || 1) ? app.dayLabel(app.dateOf(p, m.day || 1)) + ' ' + slotOf(m) : 'Day ' + (m.day || 1) + ' ' + slotOf(m);
@@ -144,7 +145,7 @@ window.MealsIpsy = function (app) {
       const slots = SLOTS.filter(s => Array.isArray(q.meals) && q.meals.includes(s)), foods = (Array.isArray(q.foods) ? q.foods : []).filter(f => FOODS.includes(f));
       const ask = { slots: slots.length ? slots : ['dinner'], foods: foods.length ? foods : ['surprise'], days: int(q.days, 1, 7, 3),
         people: int(q.people, 1, 10, (d.settings && d.settings.people) || 4), start: ymd(q.start) ? q.start : app.today(),
-        lunches: ['leftovers', 'fresh', 'mix'].includes(q.lunches) ? q.lunches : 'leftovers', fridge: clip(q.fridge, 300), note: clip(q.note, 200), ...(before && q.again ? { again: true } : {}) };
+        lunches: ['leftovers', 'fresh', 'mix'].includes(q.lunches) ? q.lunches : 'leftovers', courses: ['main', 'starter', 'dessert', 'all'].includes(q.courses) ? q.courses : 'main', fridge: clip(q.fridge, 300), note: clip(q.note, 200), ...(before && q.again ? { again: true } : {}) };
       if (before && !(await confirm('Make a new plan in place of the one waiting (' + sum(before) + (before.by ? ', by ' + before.by : '') + ')? Everyone in the family sees the change.',
         { yes: 'Yes, make a new one', no: 'No, keep it' }))) return { content: { made: false, note: 'They said no, so the new plan waiting is as it was.' } };
       app.planning(ask);

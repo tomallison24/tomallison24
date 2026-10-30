@@ -175,6 +175,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const tags = m => {
     const t = [];
     if (m.leftover) t.push('<span class="tag lo">Leftovers</span>');
+    if (Array.isArray(m.courses) && m.courses.length > 1) t.push('<span class="tag">' + esc(m.courses.length === 3 ? '3 courses' : m.courses.some(c => c.course === 'starter') ? 'With a starter' : 'With a dessert') + '</span>');
     if (Array.isArray(m.veg) && m.veg.length) t.push('<span class="tag veg">' + esc(plural(m.veg.length, 'vegetable')) + '</span>');
     if (m.protein) t.push('<span class="tag pro">' + esc('about ' + m.protein + ' g protein') + '</span>');
     if (m.minutes) t.push('<span class="tag">' + esc(m.minutes + ' min') + '</span>');
@@ -193,9 +194,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---- the Ipsy tab: the planner, one card: a row a step, each showing what's picked; one step open at a time ----
   // Kept on this phone (K.flow) until the plan is accepted or you start over, so the choices are still there
   // after a plan comes back, after Try again or Discard, or when the app is opened again.
-  const FLOW = () => ({ open: 'meals', slots: ['dinner'], foods: [], days: 3, people: 0, lunches: 'leftovers', fridge: '', extras: [], note: '' });
+  const FLOW = () => ({ open: 'meals', slots: ['dinner'], foods: [], days: 3, people: 0, lunches: 'leftovers', courses: 'main', fridge: '', extras: [], note: '' });
   const DAYS = [[1, 'Just today'], [3, '3 days'], [7, 'A week']];
   const LUNCH = [['leftovers', 'Leftovers'], ['fresh', 'Fresh each day'], ['mix', 'A mix']];
+  // a dinner's courses: the main alone, or a starter and/or a dessert with it (the server's COURSES)
+  const COURSES = [['main', 'Just a main'], ['starter', 'Starter + main'], ['dessert', 'Main + dessert'], ['all', 'All three']];
+  const COURSE_NAME = { starter: 'Starter', main: 'Main', dessert: 'Dessert' };
   // quick notes, as chips: each adds its words to the note the plan is asked with
   const EXTRAS = [['quick', 'Quick', 'quick to make'], ['kids', 'Kid-friendly', 'kid-friendly'], ['mild', 'Not spicy', 'not spicy'], ['budget', 'Budget-friendly', 'budget-friendly'], ['onepan', 'One pan', 'one pan, easy cleanup']];
   const flow = Object.assign(FLOW(), ls.json(K.flow, {}));
@@ -220,12 +224,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const daysWords = o => (DAYS.find(x => x[0] === o.days) || [0, plural(o.days, 'day')])[1];
   const peopleWords = n => plural(n, 'person').replace('persons', 'people');
   const lunchWords = o => ({ leftovers: 'Leftover lunches', fresh: 'Fresh lunches', mix: 'Some leftover lunches' })[o.lunches] || '';
+  const hasDinner = o => (o.slots || []).includes('dinner');
+  const courseWords = o => hasDinner(o) && o.courses && o.courses !== 'main' ? ({ starter: 'Starter + main', dessert: 'Main + dessert', all: '3 courses' })[o.courses] || '' : '';
   const extraWords = o => [o.fridge ? 'Use up ' + o.fridge : '', ...EXTRAS.filter(x => (o.extras || []).includes(x[0])).map(x => x[1]), o.note ? '“' + o.note + '”' : ''].filter(Boolean);
-  const STEPS = () => ['meals', 'foods', 'days', 'people', ...(both(flow) ? ['lunches'] : []), 'extras'];
+  const STEPS = () => ['meals', ...(hasDinner(flow) ? ['courses'] : []), 'foods', 'days', 'people', ...(both(flow) ? ['lunches'] : []), 'extras'];
   const chip = (attr, v, label, on, multi) => '<button class="opt" type="button" role="' + (multi ? 'checkbox' : 'radio') + '" ' + attr + '="' + esc(v) + '" aria-checked="' + !!on + '">' + esc(label) + '</button>';
   const STEP = {
     meals: { name: 'Meals', ask: 'Which meals', multi: true, val: () => flow.slots.length ? slotsWords(flow) : 'Pick at least one',
       body: () => SLOTS.map(([k, n]) => chip('data-slot', k, n, flow.slots.includes(k), true)).join('') },
+    courses: { name: 'Courses', ask: 'Courses for dinner', val: () => (COURSES.find(x => x[0] === flow.courses) || COURSES[0])[1],
+      hint: () => 'For dinners: the main on its own, or with a starter, a dessert or both.', body: () => COURSES.map(([v, n]) => chip('data-courses', v, n, v === flow.courses)).join('') },
     foods: { name: 'Food', ask: 'What do you fancy', multi: true, val: () => foodsWords(flow),
       body: () => FOODS.map(([k, n]) => chip('data-food', k, n, flow.foods.includes(k), true)).join('') + chip('data-food', 'surprise', 'Surprise me', flow.foods.includes('surprise'), true) },
     days: { name: 'How long', ask: 'How far ahead', val: () => daysWords(flow), body: () => DAYS.map(([v, n]) => chip('data-days', v, n, v === flow.days)).join('') },
@@ -272,13 +280,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function summary() {
     if (!flow.slots.length) return 'Pick breakfast, lunch or dinner to start.';
-    const n = flow.days * flow.slots.length, which = join(SLOTS.filter(s => flow.slots.includes(s[0])).map(s => ({ breakfast: 'breakfasts', lunch: 'lunches', dinner: 'dinners' })[s[0]]));
+    const dinners = { starter: 'dinners with a starter', dessert: 'dinners with a dessert', all: 'three-course dinners' }[flow.courses] || 'dinners';
+    const n = flow.days * flow.slots.length, which = join(SLOTS.filter(s => flow.slots.includes(s[0])).map(s => ({ breakfast: 'breakfasts', lunch: 'lunches', dinner: dinners })[s[0]]));
     return 'Planning ' + (flow.days === 1 ? 'today’s ' + which : flow.days + ' days of ' + which) + ' for ' + people()
       + (both(flow) && flow.lunches === 'leftovers' && flow.days > 1 ? ', lunches from the night before' : '') + ': ' + plural(n, 'meal') + ', each with ' + rulesLine().split(' · ')[0].replace(/ in every meal$/, '') + '.';
   }
   // what a plan was asked with, as tags: on the plan waiting and while it's planned, so the choices stay in sight
   const chosen = o => { if (!o || !o.slots) return '';
-    const t = [slotsWords(o), foodsWords(o), daysWords(o), 'For ' + o.people, ...(both(o) ? [lunchWords(o)] : []), ...extraWords(Object.assign({ fridge: o.fridge }, fromNote(o.note)))];
+    const t = [slotsWords(o), courseWords(o), foodsWords(o), daysWords(o), 'For ' + o.people, ...(both(o) ? [lunchWords(o)] : []), ...extraWords(Object.assign({ fridge: o.fridge }, fromNote(o.note)))];
     return '<span class="tags chosen" aria-label="Your choices">' + t.filter(Boolean).map(x => '<span class="tag">' + esc(x) + '</span>').join('') + '</span>'; };
   const askBar = (ph, act) => '<div class="rgroup askbar"><div class="frow"><label class="vh" for="askIn">' + esc(ph) + '</label><input class="txt" id="askIn" maxlength="300" placeholder="' + esc(ph) + '">'
     + '<button class="btn" type="button" data-act="' + act + '">Ask</button></div></div>';
@@ -394,7 +403,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const toggle = (a, v) => { const i = a.indexOf(v); if (i < 0) a.push(v); else a.splice(i, 1); };
   main.addEventListener('click', async e => {
-    const b = e.target.closest('[data-act], [data-meal], [data-unagain], [data-key], [data-past], [data-step], [data-slot], [data-food], [data-extra], [data-days], [data-people], [data-lunches]'); if (!b) return;
+    const b = e.target.closest('[data-act], [data-meal], [data-unagain], [data-key], [data-past], [data-step], [data-slot], [data-food], [data-extra], [data-days], [data-people], [data-lunches], [data-courses]'); if (!b) return;
     if (b.dataset.meal) return openRecipe(+b.dataset.meal, b.dataset.src === 'draft' ? data.draft : b.dataset.src === 'again' ? AGAIN() : data.plan);
     if (b.dataset.unagain) return unAgain([b.dataset.unagain]);
     if (b.dataset.past) return openPast(b.dataset.past);
@@ -415,7 +424,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       main.querySelectorAll('[data-' + a + ']').forEach(x => x.setAttribute('aria-checked', flow[k].includes(x.dataset[a])));
       return refreshPlanner();
     }
-    for (const q of ['days', 'people', 'lunches']) if (b.dataset[q] != null) { flow[q] = q === 'lunches' ? b.dataset[q] : +b.dataset[q]; return nextStep(q); }
+    for (const q of ['days', 'people', 'lunches', 'courses']) if (b.dataset[q] != null) { flow[q] = q === 'lunches' || q === 'courses' ? b.dataset[q] : +b.dataset[q]; return nextStep(q); }
     const act = b.dataset.act;
     if (act === 'next') return nextStep(flow.open);
     if (act === 'make') { flow.fridge = flow.fridge.trim(); flow.note = flow.note.trim(); saveFlow(); return makePlan(); }
@@ -453,7 +462,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function editChoices() {
     const d = data.draft; if (!d) return goTab('ipsy');
     Object.assign(flow, FLOW(), { open: '', slots: (d.slots || ['dinner']).slice(), foods: (d.foods || []).slice(), days: d.days || flow.days, people: +d.people || 0,
-      lunches: d.lunches || 'leftovers', fridge: d.fridge || '' }, fromNote(d.note));
+      lunches: d.lunches || 'leftovers', courses: d.courses || 'main', fridge: d.fridge || '' }, fromNote(d.note));
     saveFlow(); goTab('ipsy');
   }
   function goTab(t) { st.tab = t; ls.set(K.tab, t); render(); slideTabs(false); scrollTo(0, 0); }
@@ -465,7 +474,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // A new plan: what was picked and answered, or (Try again) the draft's own choices
   async function makePlan(more) {
-    const ask = more || { slots: flow.slots.slice(), foods: flow.foods.length ? flow.foods.slice() : ['surprise'], days: flow.days, people: people(), lunches: flow.lunches || 'leftovers',
+    const ask = more || { slots: flow.slots.slice(), foods: flow.foods.length ? flow.foods.slice() : ['surprise'], days: flow.days, people: people(), lunches: flow.lunches || 'leftovers', courses: flow.courses || 'main',
       fridge: flow.fridge, note: noteOf(flow), start: isoDay(new Date()) };
     const n = ask.days * ask.slots.length;
     st.busy = 'plan'; st.planning = { ...ask, n }; st.tab = 'plan'; ls.set(K.tab, st.tab); render(); slideTabs(false); scrollTo(0, 0);
@@ -477,7 +486,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     render();
   }
   // another go at the draft, with the same choices
-  const again = () => { const d = data.draft; if (d) makePlan({ slots: d.slots || ['dinner'], foods: d.foods || ['surprise'], days: d.days || d.meals.length, people: d.people, lunches: d.lunches || 'leftovers',
+  const again = () => { const d = data.draft; if (d) makePlan({ slots: d.slots || ['dinner'], foods: d.foods || ['surprise'], days: d.days || d.meals.length, people: d.people, lunches: d.lunches || 'leftovers', courses: d.courses || 'main',
     fridge: d.fridge || '', note: d.note || '', start: d.start && d.start >= isoDay(new Date()) ? d.start : isoDay(new Date()), again: true }); };
   async function accept() {
     const start = ($('aStart') || {}).value;
@@ -558,6 +567,18 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // thumbs (the family loved it, or never again), and Swap or Ask Ipsy about it
   const lovedNow = t => data.taste.loved.some(x => x.title.toLowerCase() === t.toLowerCase()) ? true : data.taste.nope.some(x => x.title.toLowerCase() === t.toLowerCase()) ? false : null;
   const fromFridge = (item, m) => (m.fridge || []).some(f => { const a = f.toLowerCase(), b = item.toLowerCase(); return a.includes(b) || b.includes(a); });
+  // the ingredients and steps: for a dinner of courses, course by course (each with its own dish), else the one list of each
+  const ingList = (m, list) => '<div class="rgroup"><ul>' + list.map(x => '<li><span translate="no">' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + '</span>'
+    + (fromFridge(x.item, m) ? ' <span class="tag fr">In your fridge</span>' : '') + '</li>').join('') + '</ul></div>';
+  const stepList = steps => '<div class="rgroup"><ol>' + steps.map(s => '<li translate="no">' + esc(s) + '</li>').join('') + '</ol></div>';
+  function recipeParts(m) {
+    if (!Array.isArray(m.courses) || m.courses.length < 2) return '<p class="label">Ingredients</p>' + ingList(m, m.ingredients) + '<p class="label">Steps</p>' + stepList(m.steps);
+    return m.courses.map(c => {
+      const ing = m.ingredients.filter(x => (x.course || 'main') === c.course);
+      return '<div class="course"><p class="label">' + esc(COURSE_NAME[c.course] || c.course) + '</p><h4 translate="no">' + esc(c.title) + '</h4></div>'
+        + (ing.length ? ingList(m, ing) : '') + stepList(c.steps);
+    }).join('');
+  }
   function openRecipe(i, p) {
     const m = p && p.meals[i]; if (!m) return;
     st.recipe = { p, i };
@@ -572,9 +593,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('recipeBody').innerHTML = '<div><h3 translate="no">' + esc(m.title) + '</h3><p class="cm">' + ([m.cuisine, m.method].filter(Boolean).length ? '<span translate="no">' + esc([m.cuisine, m.method].filter(Boolean).join(' · ')) + '</span> · ' : '') + '<span>' + esc('serves ' + (m.people || p.people)) + '</span></p>' + tags(m) + '</div>'
       + (m.veg && m.veg.length ? '<p class="hint" style="margin:0 2px">' + esc('Vegetables: ' + join(m.veg) + '. The vegetables and protein are Ipsy’s estimates.') + '</p>' : '')
       + (m.why ? '<p class="hint" style="margin:0 2px" translate="no">' + esc(m.why) + '</p>' : '')
-      + '<p class="label">Ingredients</p><div class="rgroup"><ul>' + m.ingredients.map(x => '<li><span translate="no">' + esc(x.qty ? x.qty + ' ' : '') + esc(x.item) + '</span>'
-        + (fromFridge(x.item, m) ? ' <span class="tag fr">In your fridge</span>' : '') + '</li>').join('') + '</ul></div>'
-      + '<p class="label">Steps</p><div class="rgroup"><ol>' + m.steps.map(s => '<li translate="no">' + esc(s) + '</li>').join('') + '</ol></div>'
+      + recipeParts(m)
       + '<div class="opts rate" role="group" aria-label="What the family thought">'
       + '<button class="opt" type="button" role="checkbox" data-rate="up" aria-checked="' + (up === true) + '">' + ICON.up + 'Loved it</button>'
       + '<button class="opt" type="button" role="checkbox" data-rate="down" aria-checked="' + (up === false) + '">' + ICON.down + 'Not again</button></div>'

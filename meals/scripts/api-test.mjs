@@ -90,7 +90,9 @@ await test('the allergy check: tree nuts and coconut in any form, but not peanut
 await test('choices: what the phone asks for, cleaned; dinners for 3 days from today by default', async () => {
   const now = Date.UTC(2026, 9, 25, 16), t = '2026-10-25';
   const o = choicesOf({}, rules, now);
-  assert.deepEqual(o, { start: t, days: 3, slots: ['dinner'], foods: ['surprise'], people: 4, lunches: 'leftovers', fridge: '', note: '' });
+  assert.deepEqual(o, { start: t, days: 3, slots: ['dinner'], foods: ['surprise'], people: 4, lunches: 'leftovers', courses: 'main', fridge: '', note: '' });
+  assert.equal(choicesOf({ courses: 'all' }, rules, now).courses, 'all');
+  for (const c of ['__proto__', 'constructor', 'soup', 3]) assert.equal(choicesOf({ courses: c }, rules, now).courses, 'main', String(c));
   const o2 = choicesOf({ slots: ['dinner', 'breakfast', 'snack'], foods: ['Lamb', 'tofu', 'vegetarian'], days: 9, people: 2, lunches: 'fresh', start: '2027-01-01', fridge: 'half a cabbage' }, rules, now);
   assert.deepEqual(o2.slots, ['breakfast', 'dinner']); assert.deepEqual(o2.foods, ['lamb', 'vegetarian']);
   assert.equal(o2.days, 3, 'more than a week is not a choice'); assert.equal(o2.people, 2); assert.equal(o2.lunches, 'fresh');
@@ -128,6 +130,58 @@ await test('what each part asks: the rules, the allergies, what the family had a
   assert.match(q.prompt, /loved these: Chicken shawarma/); assert.match(q.prompt, /Never make these again.*Liver and onions/);
   assert.match(q.prompt, /Also: mild for the kids/);
   assert.doesNotMatch(chunkAsk(s, o, specs(o, s, () => 0), {}).prompt, /fridge/, 'the fridge goes to the first part only');
+});
+// these tests make several plans: the day's count (AI_DAILY) starts again for them, so the later tests have theirs
+const freshDay = () => { for (const k of [...db.m.keys()]) if (k.startsWith('meals:ai:')) db.m.delete(k); };
+// a stand-in that writes each meal as the courses its line asks for ("as 3 courses: a starter, a main, a dessert")
+const coursed = (extra = {}) => b => {
+  const lines = String(b.messages[0].content).split('\n');
+  return JSON.stringify({ tip: 'Prep the dessert first.', meals: keysOf(b).map(k => {
+    const line = lines.find(l => l.startsWith('- ' + k + ' (')) || '', want = /as \d courses: (.*)$/.exec(line);
+    const cs = want ? want[1].split(', ').map(w => w.replace(/^an? /, '')) : [];
+    if (!cs.length) return dish(k);
+    return dish(k, { steps: [], courses: cs.map(c => ({ course: c, title: c + ' of ' + k, steps: ['Make the ' + c + '.'] })),
+      ingredients: cs.map(c => ({ item: c === 'dessert' ? 'pears' : c === 'starter' ? 'beets' : 'duck breasts', qty: '2', pantry: false, course: c })), ...extra });
+  }) });
+};
+await test('courses: a dinner as a starter, a main and a dessert; the meal is the main, each course with its steps, every ingredient for its course', async () => {
+  freshDay();
+  const o = { start: '2026-10-26', days: 2, slots: ['lunch', 'dinner'], foods: ['chicken'], people: 2, lunches: 'fresh', courses: 'all' };
+  const sp = specs(o, rules, () => 0);
+  assert.deepEqual(sp.filter(x => x.slot === 'dinner').map(x => x.courses), [['starter', 'main', 'dessert'], ['starter', 'main', 'dessert']]);
+  assert.equal(sp.filter(x => x.slot === 'lunch').every(x => !x.courses), true, 'lunches stay one dish');
+  assert.equal(specs({ ...o, courses: 'main' }, rules, () => 0).some(x => x.courses), false);
+  assert.deepEqual(specs({ ...o, courses: 'starter' }, rules, () => 0).find(x => x.slot === 'dinner').courses, ['starter', 'main']);
+  assert.match(chunkAsk(rules, o, sp, {}).prompt, /d1-dinner \(Monday dinner\): .*, as 3 courses: a starter, a main, a dessert/);
+  answers = [coursed()]; asked.length = 0;
+  const r = await call('plan', { token, body: DIN({ days: 1, people: 2, courses: 'all' }) });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const d = r.body.draft, m = d.meals[0];
+  assert.equal(d.courses, 'all'); assert.equal(m.title, 'Dish ' + made + ' d1-dinner', 'the meal is the main');
+  assert.deepEqual(m.courses.map(c => [c.course, c.title, c.steps]), [['starter', 'starter of d1-dinner', ['Make the starter.']], ['main', 'main of d1-dinner', ['Make the main.']], ['dessert', 'dessert of d1-dinner', ['Make the dessert.']]]);
+  assert.deepEqual(m.steps, ['Starter: Make the starter.', 'Main: Make the main.', 'Dessert: Make the dessert.'], 'the meal\'s steps are every course\'s');
+  assert.deepEqual(m.ingredients.map(x => [x.item, x.course]), [['beets', 'starter'], ['duck breasts', undefined], ['pears', 'dessert']], 'the main\'s need no tag');
+  assert.match(asked[0].body.messages[0].content, /as 3 courses/); assert.match(asked[0].body.system, /A meal asked as courses is one dinner/);
+});
+await test('courses: a dessert with what the family avoids is caught like any dish; a dinner without its courses is sent back once', async () => {
+  freshDay();
+  answers = [coursed({ courses: [{ course: 'main', title: 'Duck', steps: ['Sear.'] }, { course: 'dessert', title: 'Coconut panna cotta', steps: ['Set.'] }] })];
+  answers.push(answers[0]);
+  const r = await call('plan', { token, body: DIN({ days: 1, courses: 'dessert' }) });
+  assert.equal(r.status, 422); assert.equal(r.body.error, 'avoid');
+  answers = [auto(), coursed()]; asked.length = 0;
+  const ok = await call('plan', { token, body: DIN({ days: 1, courses: 'starter' }) });
+  assert.equal(asked.length, 2, 'sent back once'); assert.match(asked[1].body.messages[0].content, /d1-dinner needs its courses \(starter, main\)/);
+  assert.deepEqual(ok.body.draft.meals[0].courses.map(c => c.course), ['starter', 'main']);
+});
+await test('courses: a week of three-course dinners is written in parts of two dinners (six courses) at a time', async () => {
+  freshDay();
+  answers = []; asked.length = 0;
+  for (let i = 0; i < 4; i++) answers.push(coursed());
+  const r = await call('plan', { token, body: DIN({ days: 7, courses: 'all' }) });
+  assert.equal(r.status, 200); assert.equal(asked.length, 4, 'parts: ' + asked.length);
+  assert.ok(asked.every(a => a.body.max_tokens <= 16000)); assert.equal(r.body.draft.meals.filter(m => m.courses && m.courses.length === 3).length, 7);
+  freshDay();
 });
 await test('a plan: 4 dinners for 4, kept as the family\'s draft with what was asked, nothing accepted yet', async () => {
   asked.length = 0;
