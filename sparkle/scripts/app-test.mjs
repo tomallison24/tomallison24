@@ -534,8 +534,9 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   ava.skills.read = { level: 3, hist: [], streak: 0, misses: 0, answers: 30, placed: true, best: 3 }; ava.demos = { 'read:3': 1 };
   const { ctx, p, errs } = await phone({ signed: true, seed: seedOf(ava) }); const pr = [];
   await p.click('[data-player="p1"]'); await p.waitForTimeout(800);
-  const greet = SPOKEN.filter(x => x.voice.endsWith('Sulafat') && x.text.startsWith('Hi Ava'));
-  if (!greet.length) pr.push('the storyteller did not greet her in a natural voice: ' + JSON.stringify(SPOKEN.slice(0, 3)));
+  await sp(p, () => SparkleVoice.say(['Once upon a time.'], { who: 'narrator' }));
+  const told = SPOKEN.filter(x => x.voice.endsWith('Sulafat') && x.text.startsWith('Once upon'));
+  if (!told.length) pr.push('the storyteller did not speak in a natural voice: ' + JSON.stringify(SPOKEN.slice(0, 3)));
   await sp(p, () => { window.sparkle.startRound('read'); }); await state(p); await p.waitForTimeout(600);
   if (!SPOKEN.some(x => x.voice.endsWith('Charon'))) pr.push('Professor Hoot did not ask in his own voice');
   const kept = await sp(p, async () => (await (await caches.open('sparkle-voice-v1')).keys()).length);
@@ -557,6 +558,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   SPOKEN.length = 0;
   const two = await phone({ seed: seedOf(ava) });
   await two.p.click('[data-player="p1"]'); await two.p.waitForTimeout(800);
+  await sp(two.p, () => SparkleVoice.say(['Once upon a time.'], { who: 'narrator' }));
   if (SPOKEN.length) pr.push('a signed-out phone asked for natural voices');
   pr.push(...two.errs); await two.ctx.close();
   delete ENV.GOOGLE_TTS_KEY;
@@ -584,14 +586,15 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   report('the syllable drum: a beat and a dot for every tap, however quick', pr);
 }
 
-// 13. on the map: the storyteller says hello once, when she picks her princess, not again back from a game; a trip
+// 13. on the map: nobody talks (not when she picks her princess, nor back from a game); a trip
 // through a place on the way is one smooth glide (no stop at the place, no jumps), and she ends on the place
 {
   const ava = JSON.parse(JSON.stringify(AVA)); ava.introSeen = true; ava.world = Object.assign({}, ava.world, { at: 'sign' });
   const { ctx, p, errs } = await phone({ seed: seedOf(ava), motion: 'no-preference' }); const pr = [];
   await sp(p, () => { window.__said = []; const say = SparkleVoice.say; SparkleVoice.say = (parts, o) => { window.__said.push([].concat(parts).filter(x => typeof x === 'string').join(' ')); return say(parts, o); }; });
   await p.click('[data-player="p1"]'); await p.waitForTimeout(500);
-  if (!(await sp(p, () => window.__said.some(t => t.startsWith('Hi Ava'))))) pr.push('no hello when she picked her princess');
+  const hello = await sp(p, () => window.__said);
+  if (hello.length) pr.push('the kingdom spoke when she picked her princess: ' + JSON.stringify(hello));
   await sp(p, () => { window.__said = []; window.sparkle.enterWorld(); }); await p.waitForTimeout(300);
   const again = await sp(p, () => window.__said);
   if (again.length) pr.push('the kingdom spoke again on coming back: ' + JSON.stringify(again));
@@ -611,7 +614,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
     if (steps.some(x => x > avg * 3 + 2)) pr.push('she jumped: ' + steps.map(x => x.toFixed(1)).join(' '));
   }
   pr.push(...errs); await ctx.close();
-  report('the map: hello only on picking her princess; a trip is one smooth glide that ends on the place', pr);
+  report('the map: quiet, even on picking her princess; a trip is one smooth glide that ends on the place', pr);
 }
 
 // 14. Pattern Parade in Star Meadow and the Unicorn Bakery in the castle's kitchen: a round of each; a wrong bake
