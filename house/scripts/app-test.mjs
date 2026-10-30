@@ -414,6 +414,12 @@ for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']])
     assert.equal(await page.textContent('#viewName'), 'Lights');
     assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), 'lights');
     assert.ok(await page.isVisible('#g-lights') && !(await page.isVisible('#g-fav')), 'Lights is shown, Favorites is not');
+    // the slider: one lit pill that slides across to the view you tapped, and ends under it
+    await page.waitForTimeout(500);
+    const sl = await page.evaluate(() => { const t = document.querySelector('#vtop .vt-thumb'), c = document.querySelector('#vtop [aria-current]'), m = new DOMMatrix(getComputedStyle(t).transform);
+      return { on: t.classList.contains('on'), x: Math.round(m.m41), w: Math.round(parseFloat(t.style.width)), cx: c.offsetLeft, cw: c.offsetWidth, moves: /transform/.test(getComputedStyle(t).transitionProperty) }; });
+    assert.ok(sl.on && Math.abs(sl.x - sl.cx) <= 1 && Math.abs(sl.w - sl.cw) <= 1, 'the slider sits under Lights: ' + JSON.stringify(sl));
+    assert.ok(sl.moves, 'the slider slides (a transition on its transform)');
     await page.evaluate(() => scrollTo(0, 600)); await page.waitForTimeout(200);
     assert.ok(await page.$eval('#vtop', n => n.getBoundingClientRect().top >= 0 && n.getBoundingClientRect().top < 40), 'it stays at the top as you scroll');
   });

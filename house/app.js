@@ -1372,20 +1372,30 @@ function renderViewHead() {
   drawTopNav();
 }
 // The view bar at the top, on a larger screen (CSS shows it from 700 points wide): every view in the menu, the one
-// you're on marked; drawn again only when the views shown change, so a tap stays where it is.
+// you're on marked, with a lit pill behind it (the slider) that slides across to the next one you tap; drawn again
+// only when the views shown change, so a tap stays where it is.
 function drawTopNav() {
   const nav = $('vtop'); if (!nav) return;
   const shown = VIEWS.filter(viewShown), key = shown.map(v => v.id).join();
   if (nav.dataset.key !== key) {
-    nav.dataset.key = key;
-    put(nav, shown.map(v => `<button type="button" data-view="${v.id}"><span class="vt-ic" aria-hidden="true">${svg(v.icon, 17)}</span>${esc(v.name)}</button>`).join(''));
+    nav.dataset.key = key; nav.classList.remove('ready');
+    put(nav, '<i class="vt-thumb" aria-hidden="true"></i>' + shown.map(v => `<button type="button" data-view="${v.id}"><span class="vt-ic" aria-hidden="true">${svg(v.icon, 17)}</span>${esc(v.name)}</button>`).join(''));
   }
+  let cur = null;
   for (const b of nav.querySelectorAll('[data-view]')) {
     if (b.dataset.view !== curView) { b.removeAttribute('aria-current'); continue; }
-    b.setAttribute('aria-current', 'page');
+    b.setAttribute('aria-current', 'page'); cur = b;
     if (nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2);   // the one you're on, in sight
   }
+  const th = nav.querySelector('.vt-thumb'); if (!th) return;
+  if (!cur || !cur.offsetWidth) { th.classList.remove('on'); nav.classList.remove('ready'); return; }   // hidden (a phone): placed again when it shows
+  Object.assign(th.style, { transform: `translate(${cur.offsetLeft}px, ${cur.offsetTop}px)`, width: cur.offsetWidth + 'px', height: cur.offsetHeight + 'px' });
+  th.classList.add('on');
+  if (!nav.classList.contains('ready')) requestAnimationFrame(() => requestAnimationFrame(() => nav.classList.add('ready')));   // placed first, then it slides
 }
+// a phone turned on its side, a window made wider: the bar shows (or its buttons change size), so the slider is placed again
+let navResize = 0;
+addEventListener('resize', () => { cancelAnimationFrame(navResize); navResize = requestAnimationFrame(() => { $('vtop').classList.remove('ready'); drawTopNav(); }); });
 function goView(id) { curView = id; closeViewMenu(); renderViewHead(); window.scrollTo({ top: 0 }); }
 // A view with nothing in it (Labs between ideas) is left out of the menu.
 const viewShown = v => { const box = $('g-' + v.id); return !box || box.children.length > 0; };
