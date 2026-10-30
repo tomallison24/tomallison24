@@ -325,9 +325,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           + (c.minutes ? '<span class="tags"><span class="tag">' + esc(c.minutes + ' min') + '</span>' + (c.cuisine ? '<span class="tag" translate="no">' + esc(c.cuisine) + '</span>' : '') + '</span>' : '')
           + '</button>').join('') + '</div></div>';
     });
-    // and again at the bottom, for a long plan picked from the top down
+    // and again at the bottom, for a long plan picked from the top down; or ask Ipsy for something else
     if (n > 2) h += '<div class="btns"><button class="btn okbtn" type="button" data-act="recipes"' + (noAI() ? ' disabled' : '') + '>Get the recipes</button></div>';
-    return h;
+    return h + askBar('Something else? Ask Ipsy…', 'optask');
   }
   function planTab() {
     const p = data.plan, d = data.draft;
@@ -358,7 +358,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + '<div class="pnights" id="planDays"' + (folded ? ' hidden' : '') + '>' + days(p, 'plan', 2);
       if (p.tip) h += '<div class="card"><p><b>Tip:</b> <span translate="no">' + esc(p.tip) + '</span></p></div>';
       if (p.acceptedBy || p.by) h += '<p class="hint">' + esc(p.acceptedBy ? 'Accepted by ' + p.acceptedBy : 'Planned by ' + p.by) + '.</p>';
-      h += '</div>' + askBar('Change anything…', 'change');
+      h += '</div>' + (picking ? '' : askBar('Change anything…', 'change'));   // (while picking, the options' own bar)
     } else if (!picking) {
       h += '<div class="card" style="--i:1"><strong>Nothing planned yet</strong><p>The plan you make with Ipsy shows here.</p></div>';
     }
@@ -473,6 +473,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (act === 'restart') { Object.assign(flow, FLOW()); saveFlow(); return render(); }
     if (act === 'edit') return editChoices();
     if (act === 'rules') return openSettings();
+    if (act === 'optask') { const t = (($('askIn') || {}).value || '').trim(); return askIpsy(t ? t + ' (on the options being picked)' : ''); }
     if (act === 'tell' || act === 'change') { const t = (($('askIn') || {}).value || '').trim(); return askIpsy(act === 'change' && t && data.draft ? t + ' (on the new plan waiting)' : t); }
     if (act === 'new') return goTab('ipsy');
     if (act === 'accept') return accept();
@@ -1082,7 +1083,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         get data() { return data; }, state: () => st.state,
         keep,
         today: () => isoDay(new Date()),
-        planning: ask => { if (ask && opts) { opts = null; saveOpts(); } st.busy = ask ? 'plan' : null; st.planning = ask && { ...ask, n: (ask.days || 1) * (ask.slots || ['dinner']).length }; if (ask) { st.tab = 'plan'; ls.set(K.tab, st.tab); } render(); slideTabs(true); },
+        // the options being picked (this phone's): read, picked or changed by Ipsy, found again, or done with
+        options: () => opts,
+        setOptions: o => { opts = o; saveOpts(); render(); },
+        finding: ask => { st.busy = ask ? 'opts' : null; st.planning = ask && { ...ask, n: (ask.days || 1) * (ask.slots || ['dinner']).length }; if (ask) { st.tab = 'plan'; ls.set(K.tab, st.tab); } render(); slideTabs(true); },
+        planning: ask => { st.busy = ask ? 'plan' : null; st.planning = ask && { ...ask, n: (ask.days || 1) * (ask.slots || ['dinner']).length }; if (ask) { st.tab = 'plan'; ls.set(K.tab, st.tab); } render(); slideTabs(true); },
         ticked: () => data.plan && ticks.at === data.plan.at ? ticks.keys.slice() : [],
         setTicks: keys => { ticks = { at: data.plan && data.plan.at, keys: keys.slice() }; ls.set(K.ticks, ticks); render(); },
         show: (p, i) => { st.tab = 'plan'; ls.set(K.tab, st.tab); render(); slideTabs(true); openRecipe(i, p); },

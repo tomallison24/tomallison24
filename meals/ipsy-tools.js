@@ -10,7 +10,11 @@
 //        has it), api (its server calls), keep (its save: this phone's copy, the Sheet, the
 //        screen), say, toast, L (logic.js), shopOf, shop (the List's: the plan and the meals
 //        cooked again), whenWords, dayLabel, dateOf, slotName, about, past (a past plan, whole),
-//        state, today, planning, ticked, setTicks, show, screen
+//        state, today, planning, finding, options, setOptions, ticked, setTicks, show, screen
+//
+// The options being picked (a few dishes for each meal, before the recipes are written) are this
+// phone's, as in the app: Ipsy finds them (show_options), picks or changes them as asked
+// (pick_options, set_option), and has the recipes written from them (write_recipes).
 //
 // The plan, the new plan waiting (the draft) and the family's rules are the family's, on the
 // family server. Ipsy changes the plans only through the app's own server calls (night, plan,
@@ -67,6 +71,29 @@ window.MealsIpsy = function (app) {
     return i;
   };
 
+  // The options being picked, as Claude sees them: each meal's dishes, numbered from 1, and which is picked
+  const O = () => app.options();
+  const hasOpts = o => !!(o && Array.isArray(o.meals) && o.meals.length);
+  const optionsBrief = () => { const o = O(); if (!hasOpts(o)) return null;
+    return { ...head(o), note: 'On this phone only, not saved: write_recipes writes the plan from the dishes picked.', meals: o.meals.map(m => m.leftover
+      ? { day: m.day, meal: m.slot, leftoversOfDay: m.leftover }
+      : { day: m.day, ...(app.dateOf(o, m.day) ? { date: app.dateOf(o, m.day) } : {}), meal: m.slot, picked: (m.pick || 0) + 1,
+        choices: m.choices.map((c, j) => ({ choice: j + 1, title: c.title, about: c.about, ...(c.minutes ? { minutes: c.minutes } : {}), ...(c.cuisine ? { cuisine: c.cuisine } : {}),
+          ...(c.starter ? { starter: c.starter } : {}), ...(c.dessert ? { dessert: c.dessert } : {}) })) }) }; };
+  const needOpts = () => { const o = O(); if (!hasOpts(o)) fail('There are no options being picked: show_options first.'); return o; };
+  const optAt = (o, day, slot) => {
+    const sl = SLOTS.includes(slot) ? slot : 'dinner', i = o.meals.findIndex(m => m.day === day && m.slot === sl && !m.leftover);
+    if (i < 0) fail('The options have no ' + sl + ' on day ' + day + '. Their meals: ' + o.meals.filter(m => !m.leftover).map(m => 'day ' + m.day + ' ' + m.slot).join(', ') + '.');
+    return i;
+  };
+  const askOf = (q, d) => {
+    const int = (v, lo, hi, dflt) => Number.isInteger(v) && v >= lo && v <= hi ? v : dflt;
+    const slots = SLOTS.filter(s => Array.isArray(q.meals) && q.meals.includes(s)), foods = (Array.isArray(q.foods) ? q.foods : []).filter(f => FOODS.includes(f));
+    return { slots: slots.length ? slots : ['dinner'], foods: foods.length ? foods : ['surprise'], days: int(q.days, 1, 7, 3),
+      people: int(q.people, 1, 10, (d.settings && d.settings.people) || 4), start: ymd(q.start) ? q.start : app.today(),
+      lunches: ['leftovers', 'fresh', 'mix'].includes(q.lunches) ? q.lunches : 'leftovers', courses: ['main', 'starter', 'dessert', 'all'].includes(q.courses) ? q.courses : 'main', fridge: clip(q.fridge, 300), note: clip(q.note, 200) };
+  };
+
   const tools = {
     async get_meals() {
       const d = D(), s = d.settings || {}, t = d.taste || { loved: [], nope: [] }, state = app.state();
@@ -74,6 +101,7 @@ window.MealsIpsy = function (app) {
         today: app.today(),
         plan: has(d.plan) ? brief(d.plan) : null,
         draft: has(d.draft) ? { ...brief(d.draft), saved: false } : null,
+        optionsBeingPicked: optionsBrief(),
         rules: { vegetablesInEveryMeal: s.veg, proteinAPerson: s.protein, usuallyCookingFor: s.people, weeknightDinnerMinutes: s.weeknight || 'no limit' },
         avoid: s.avoid || [],
         loved: t.loved.map(x => x.title), neverAgain: t.nope.map(x => x.title),
@@ -139,6 +167,60 @@ window.MealsIpsy = function (app) {
         change: { text: name + (w === 'draft' ? ' of the new plan' : '') + ': ' + old.title + ' → ' + m.title, undo: later(name, () => put(old)) } };
     },
 
+    // A few dishes for each meal, to pick from (as Show me options in the app): on the Plan tab and here
+    async show_options(q) {
+      const before = O(), ask = askOf(q, D());
+      app.finding(ask);
+      let j;
+      try { j = await call('options', ask); } finally { app.finding(null); }
+      app.setOptions({ ...j.options, meals: j.options.meals.map(m => m.leftover ? m : { ...m, pick: 0 }) });
+      return { content: { options: optionsBrief(), note: 'The first dish of each meal is picked to start. Pick others as they say (pick_options), put in a dish of your own (set_option), then write_recipes.' },
+        change: { text: 'Found options for ' + j.options.meals.filter(m => !m.leftover).length + ' meals', undo: () => { app.setOptions(before); return Promise.resolve(); } } };
+    },
+    async pick_options(q) {
+      const o = needOpts(), before = copy(o), now = copy(o), picked = [];
+      for (const p of Array.isArray(q.picks) ? q.picks.slice(0, 21) : []) {
+        const i = optAt(now, p && p.day, p && p.slot), m = now.meals[i], c = p && p.choice;
+        if (!Number.isInteger(c) || c < 1 || c > m.choices.length) fail('choice is 1 to ' + m.choices.length + ' for day ' + m.day + ' ' + m.slot + '.');
+        m.pick = c - 1; picked.push(m.choices[c - 1].title);
+      }
+      if (!picked.length) fail('Give picks: [{ day, slot, choice }].');
+      app.setOptions(now);
+      return { content: { options: optionsBrief() }, change: { text: 'Picked ' + join(picked), undo: () => { app.setOptions(before); return Promise.resolve(); } } };
+    },
+    async set_option(q) {
+      const o = needOpts(), before = copy(o), now = copy(o), i = optAt(now, q.day, q.slot), m = now.meals[i];
+      const title = clip(q.title, 100); if (!title) fail('A dish needs a title.');
+      const c = { title, about: clip(q.about, 200), cuisine: clip(q.cuisine, 30), minutes: Number.isInteger(q.minutes) && q.minutes > 0 && q.minutes <= 600 ? q.minutes : 0,
+        ...(clip(q.starter, 100) ? { starter: clip(q.starter, 100) } : {}), ...(clip(q.dessert, 100) ? { dessert: clip(q.dessert, 100) } : {}) };
+      // yours goes in place of the one picked, and is picked
+      m.choices[m.pick || 0] = c;
+      app.setOptions(now);
+      return { content: { options: optionsBrief(), note: 'It is checked against what the family never eats when the recipes are written.' },
+        change: { text: label(now, m) + ': ' + title, undo: () => { app.setOptions(before); return Promise.resolve(); } } };
+    },
+    // The recipes for the dishes picked: the new plan waiting, as Get the recipes in the app
+    async write_recipes(q, { confirm }) {
+      const o = needOpts(), d = D(), before = has(d.draft) ? copy(d.draft) : null, opts = copy(o);
+      if (before && !(await confirm('Write the recipes as a new plan in place of the one waiting (' + sum(before) + (before.by ? ', by ' + before.by : '') + ')? Everyone in the family sees the change.',
+        { yes: 'Yes, write them', no: 'No, keep it' }))) return { content: { made: false, note: 'They said no, so the new plan waiting is as it was, and the options are still being picked.' } };
+      const picks = {};
+      for (const m of o.meals) if (!m.leftover && m.choices && m.choices.length) picks[m.key] = m.choices[Math.min(m.pick || 0, m.choices.length - 1)];
+      const ask = { slots: o.slots, foods: o.foods, days: o.days, people: o.people, lunches: o.lunches, courses: o.courses, fridge: o.fridge || '', note: o.note || '',
+        start: ymd(o.start) && o.start >= app.today() ? o.start : app.today(), picks };
+      app.planning(ask);
+      let j;
+      try { j = await call('plan', ask); } finally { app.planning(null); }
+      const made = j.draft;
+      app.keep({ draft: made }); app.setOptions(null);
+      return { content: { draft: brief(made), saved: false, note: 'Not saved yet: it waits as the new plan until it is accepted (accept_plan, or Accept plan in the app).' },
+        change: { text: 'Wrote the recipes: ' + sum(made) + ' (not saved yet)', undo: later('the new plan', async () => {
+          if (before) { const r = await call('draft', { draft: before, over: made.at }); app.keep({ draft: r.draft }); }
+          else { await call('discard', { at: made.at }); app.keep({ draft: null }); }
+          app.setOptions(opts);
+        }) } };
+    },
+
     async make_plan(q, { confirm }) {
       const d = D(), before = has(d.draft) ? copy(d.draft) : null;
       const int = (v, lo, hi, dflt) => Number.isInteger(v) && v >= lo && v <= hi ? v : dflt;
@@ -153,6 +235,7 @@ window.MealsIpsy = function (app) {
       try { j = await call('plan', ask); } finally { app.planning(null); }
       const made = j.draft;
       app.keep({ draft: made });
+      if (hasOpts(O())) app.setOptions(null);   // a plan written in one go: options being picked are done with
       return { content: { draft: brief(made), saved: false, note: 'Not saved yet: it waits as the new plan until it is accepted (accept_plan, or Accept plan in the app).' },
         change: { text: 'Made a new plan: ' + sum(made) + ' (not saved yet)', undo: later('the new plan', async () => {
           if (before) { const r = await call('draft', { draft: before, over: made.at }); app.keep({ draft: r.draft }); }

@@ -217,6 +217,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('options: one call, asked with the choices', asked === a0 + 1 && /Suggest 3 dishes for each of these 3 meals for 4 people/.test(opted[opted.length - 1]) && /half a cabbage/.test(opted[opted.length - 1]));
   ok('options: the first of each is picked to start', (await page.$$eval('#main .optcard', els => els.map(e => e.getAttribute('aria-checked')))).join() === 'true,false,false,true,false,false,true,false,false');
   ok('options: nothing is a plan yet', !m.get('meals:draft') && (await page.locator('#main [data-meal]').count()) === 0);
+  ok('options: Something else? Ask Ipsy… under them, the one ask bar on the page', (await page.locator('#main .askbar [data-act="optask"]').count()) === 1 && (await page.locator('#main .askbar').count()) === 1);
   await page.click('[data-opick="1:2"]');
   ok('options: tapping another picks it, for that meal only', (await page.getAttribute('[data-opick="1:2"]', 'aria-checked')) === 'true' && (await page.getAttribute('[data-opick="1:0"]', 'aria-checked')) === 'false'
     && (await page.getAttribute('[data-opick="0:0"]', 'aria-checked')) === 'true');

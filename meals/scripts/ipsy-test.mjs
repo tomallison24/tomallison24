@@ -47,9 +47,19 @@ const PLANS = {
   beef: ['Beef bulgogi bowls', 'Beef and bean chili', 'Bolognese with penne', 'Beef kofta wraps'],
 };
 let planAsked = 0;
+let optsAsked = 0;
 function haiku(b) {
+  const p = b.messages[0].content;
+  if (/^Suggest/.test(p)) {   // the options: three dishes a meal
+    optsAsked++;
+    const keys = [...p.matchAll(/^- (d\d-\w+) \(/gm)].map(x => x[1]);
+    return { content: [{ type: 'text', text: JSON.stringify({ meals: keys.map(key => ({ key, options: ['Duck à l’orange', 'Steak frites', 'Mushroom risotto'].map(t => ({ title: t, about: 'A treat.', cuisine: 'French', minutes: 40, starter: '', dessert: '' })) })) }) }], stop_reason: 'end_turn' };
+  }
   planAsked++;
-  const p = b.messages[0].content, lines = [...p.matchAll(/^- (d\d-\w+) \(.*built around (\w+)/gm)];
+  // a dish picked from the options is written as that dish
+  const picked = [...p.matchAll(/^- (d\d-\w+) \(\w+ \w+\): \w+: "([^"]+)"/gm)];
+  if (picked.length) return { content: [{ type: 'text', text: JSON.stringify({ meals: picked.map(([, key, title]) => ({ key, ...meal(title, 'French', 'duck breasts') })), tip: 'Rest the duck.' }) }], stop_reason: 'end_turn' };
+  const lines = [...p.matchAll(/^- (d\d-\w+) \(.*built around (\w+)/gm)];
   const again = /make different dishes: .*Beef bulgogi/.test(p);
   const meals = lines.map(([, key, food], i) => { const names = PLANS[food] || PLANS.chicken; return { key, ...meal((again ? [...names].reverse() : names)[i % names.length], 'Any', food) }; });
   return { content: [{ type: 'text', text: JSON.stringify({ meals, tip: 'Buy it in one family pack.' }) }], stop_reason: 'end_turn' };
@@ -83,6 +93,17 @@ const SCRIPTS = [
   { re: /another go/i, turns: [
     () => use(['make_plan', { foods: ['beef'], days: 4, again: true }]),
     r => { assert.equal(parsed(r[0]).made, false); return end('OK, I left it as it was.'); },
+  ] },
+  { re: /date night/i, turns: [
+    () => use(['show_options', { meals: ['dinner'], days: 1, people: 2, note: 'date night' }]),
+    r => { const o = parsed(r[0]).options; assert.equal(o.meals[0].picked, 1); assert.deepEqual(o.meals[0].choices.map(c => c.title), ['Duck à l’orange', 'Steak frites', 'Mushroom risotto']);
+      return use(['pick_options', { picks: [{ day: 1, slot: 'dinner', choice: 2 }] }]); },
+    r => { assert.equal(parsed(r[0]).options.meals[0].picked, 2); return end('Here are three: **Duck à l’orange**, **Steak frites** or **Mushroom risotto**. I picked the steak frites.'); },
+  ] },
+  { re: /actually duck/i, turns: [
+    () => use(['set_option', { day: 1, title: 'Seared duck breast with cherry sauce', about: 'Rich and quick.', minutes: 35 }]),
+    r => { const m = parsed(r[0]).options.meals[0]; assert.equal(m.choices[m.picked - 1].title, 'Seared duck breast with cherry sauce'); return use(['write_recipes', {}]); },
+    r => { assert.equal(parsed(r[0]).saved, false); return end('Your duck dinner is written and waiting for you to accept it.'); },
   ] },
   { re: /throw it away/i, turns: [
     () => use(['discard_draft', {}]),
@@ -336,6 +357,32 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     assert.deepEqual(draft(m), d, 'just as it was');
     await page.waitForFunction(() => /New plan · not saved yet/.test(document.getElementById('main').textContent));
     // (and away again, the app's own way, for what's next)
+    await page.evaluate(() => fetch('../meals/api/discard', { method: 'POST', headers: { 'X-Meals': '1', 'Content-Type': 'application/json', Authorization: 'Bearer ' + JSON.parse(localStorage.getItem('aos.session')).token }, body: '{}' }));
+    await page.evaluate(() => window.__meals.load());
+  });
+
+  await step(tag + ': options in the chat: found, picked, one of its own put in, then the recipes written from them', async () => {
+    const o0 = optsAsked;
+    await ask(page, 'Ideas for date night dinner?');
+    await page.waitForFunction(() => /I picked the steak frites/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
+    await idle(page);
+    assert.equal(optsAsked, o0 + 1);
+    const o = await page.evaluate(() => JSON.parse(localStorage.getItem('allison-meals-v1-options')));
+    assert.equal(o.meals[0].pick, 1, 'the second is picked'); assert.equal(o.people, 2);
+    assert.equal(draft(m), null, 'options are not a plan');
+    await page.waitForFunction(() => document.querySelectorAll('#main .optcard').length === 3 && document.querySelector('[data-opick="0:1"]').getAttribute('aria-checked') === 'true');
+    // Undo of the pick puts the first back
+    await page.locator('.ipsy-change .ipsy-undo').last().click();
+    await page.waitForFunction(() => document.querySelector('[data-opick="0:0"]').getAttribute('aria-checked') === 'true');
+    const p0 = planAsked;
+    await ask(page, 'Actually duck, seared with cherries');
+    await page.waitForFunction(() => /duck dinner is written/.test(document.querySelector('.ipsy-log').textContent), null, { timeout: 15000 });
+    await idle(page);
+    assert.equal(planAsked, p0 + 1);
+    const d = draft(m); assert.deepEqual(d.meals.map(x => x.title), ['Seared duck breast with cherry sauce']); assert.equal(d.people, 2);
+    assert.equal(await page.evaluate(() => localStorage.getItem('allison-meals-v1-options')), null, 'the options are done with');
+    await page.waitForFunction(() => /New plan · not saved yet/.test(document.getElementById('main').textContent));
+    // (and away again, for what's next)
     await page.evaluate(() => fetch('../meals/api/discard', { method: 'POST', headers: { 'X-Meals': '1', 'Content-Type': 'application/json', Authorization: 'Bearer ' + JSON.parse(localStorage.getItem('aos.session')).token }, body: '{}' }));
     await page.evaluate(() => window.__meals.load());
   });
