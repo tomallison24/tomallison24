@@ -222,6 +222,14 @@ for (const [design, scheme] of [['glass', 'light'], ['glass', 'dark'], ['vintage
     await page.click('#tabs [data-tab="plan"]');
     if (SHOTS) { await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(SHOTS, 'meals-' + design + '-' + scheme + '.png') }); }
   });
+  await step('meals (' + design + ', ' + scheme + '): Nova in the dock has no box round it (the page\'s svg{stroke} doesn\'t reach its frame)', async () => {
+    await page.evaluate(() => localStorage.setItem('aos.helper', '{"who":"nova","name":"Nova"}'));
+    await page.reload();
+    await page.waitForFunction(() => window.__meals && window.__meals.st.state === 'ok', null, { timeout: 10000 });
+    await page.waitForSelector('.ipsy-btn .ipsy-char[data-who="nova"]');
+    const strokes = await page.$$eval('.ipsy-char[data-who="nova"] rect', els => els.map(e => getComputedStyle(e).stroke));
+    assert.ok(strokes.length && strokes.every(x => x === 'none'), JSON.stringify(strokes));
+  });
   await step('meals (' + design + ', ' + scheme + '): no script errors and nothing blocked by the page policy', async () => assert.deepEqual(problems, []));
   await ctx.close();
 }

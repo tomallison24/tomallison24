@@ -362,7 +362,7 @@
   function novaSvg() {
     queueMicrotask(novaWake);   // once it's on the page
     return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="nova"><g class="h-pose"><g class="h-hop"><g class="h-bob"><g class="h-lean"><g class="h-code">'
-      + '<rect width="200" height="200" fill="none"/></g></g></g></g></g></svg><canvas class="h-dots" aria-hidden="true"></canvas>';
+      + '<rect width="200" height="200" fill="none" stroke="none"/></g></g></g></g></g></svg><canvas class="h-dots" aria-hidden="true"></canvas>';   // stroke none: an app's own svg{stroke:currentColor} drew it as a box
   }
   // One loop for every Nova on the screen (requestAnimationFrame: it stops by itself when the page is hidden, and
   // stops here when no Nova is moving). Each dot eases towards where it's going, at its own pace, and its colour
