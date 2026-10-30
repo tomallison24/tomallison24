@@ -127,7 +127,7 @@ the same kinds of row and the same words.**
     **Notifications** · **Your data** · **Family account**. Notifications live
     here too (Notes' bell opens this section).
   - Rows: the kinds in rule 5. At most one line under a section (`hint`).
-- **Enforced:** CI: `shared`, `title`, `design-first`, `order`.
+- **Enforced:** CI: `shared`, `title`, `gear`, `design-first`, `order`.
 - **Known gaps:** none. Allowed differences: Clock draws its own Design rows,
   as its looks live in `clock/design.js` (the check takes them); Sparkle's
   button, "Settings, for grown-ups", opens on a press and hold behind its
@@ -351,12 +351,18 @@ are line drawings in the accent colour.**
   swaps them with the look. A tint no other app uses; detail cut out of the
   glyph, not drawn in another colour. In the app: line icons at about 1.7
   stroke, rounded ends (`home/settings.js`'s `ICONS` for action rows), in
-  `--icon` or the accent. Settings is a gear.
-- **Enforced:** CI: `check-apps.mjs` (the icons exist and are current).
-  The glyphs: Review.
-- **Known gaps:** Drinks' Settings button is a person, not a gear.
+  `--icon` or the accent. **Settings is the gear, the same in every app**:
+  Orders' drawing (a circle in a ring of sixteen points), 22 points, its line
+  in the button's colour (Weather's small Settings link draws it at 14), the
+  markup in `GEAR` in `aOS/scripts/design-check.mjs`.
+- **Enforced:** CI: `check-apps.mjs` (the icons exist and are current);
+  `gear` (the button labelled Settings draws Orders' gear). The other glyphs:
+  Review.
+- **Known gaps:** none.
 
 ![Icons in the four looks](docs/design/icons.png)
+
+![The gear on each app's Settings button, in the four looks](docs/design/gear.png)
 
 ## 14. Shared parts: use `home/`, never a copy
 
@@ -387,6 +393,7 @@ Chromium, offline, opens Settings as a person would, and checks:
 |---|---|
 | `shared` | 4, 5, 14: `home/settings.js` loaded before the app's script and in `sw.js` SHELL; the open sheet is its sections, and every switch in it the shared one |
 | `title` | 3, 4: a button labelled Settings opens a sheet named Settings |
+| `gear` | 4, 13: that button draws the gear, Orders' drawing, the same in every app |
 | `done` | 3: the ✓ labelled Done, in the head's right corner, 44 × 44 |
 | `design-first` | 4: Design is the first section, with the shared picker |
 | `order` | 4: the sections in the standard order |

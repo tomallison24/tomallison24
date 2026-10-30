@@ -4,6 +4,7 @@
 //   shared        Settings is home/settings.js: loaded before the app's own script, in sw.js SHELL, and the
 //                 open sheet is made of its sections (.st-sec)
 //   title         a button labelled "Settings" opens a sheet named "Settings"
+//   gear          that button is the gear, the same drawing in every app (Orders': a circle in a toothed ring, GEAR)
 //   done          the sheet's way out is the ✓ labelled Done, in the head's right corner
 //   design-first  the first section is Design, with the shared picker (aosDesign.picker()); Clock, whose looks
 //                 live in clock/design.js (DESIGN.md rule 14), with its own picker of the four looks
@@ -44,6 +45,7 @@ const dir = id => (id === 'aos' ? 'aOS' : id);
 export const CHECKS = [
   ['shared', 'Settings is home/settings.js'],
   ['title', 'A sheet named Settings'],
+  ['gear', 'Settings is the gear'],
   ['done', '✓ Done in the corner'],
   ['design-first', 'Design first'],
   ['order', 'Sections in order'],
@@ -55,7 +57,7 @@ export const CHECKS = [
   ['aos-case', 'aOS lowercase a'],
   ['motion', 'Reduce Motion'],
 ];
-const SETTINGS_CHECKS = ['shared', 'title', 'done', 'design-first', 'order', 'on-off', 'one-sentence'];
+const SETTINGS_CHECKS = ['shared', 'title', 'gear', 'done', 'design-first', 'order', 'on-off', 'one-sentence'];
 const NA = { aos: SETTINGS_CHECKS, house: ['switch-css'] };
 // Clock keeps its looks in clock/design.js (DESIGN.md rule 14 names it the one exception to home/design.js), so its
 // Design section draws Clock's own picker rather than aosDesign.picker(): design-first takes that picker there, as
@@ -232,6 +234,8 @@ function pageSheet() {
     looks: [...((dlg.querySelector('.st-sec') || dlg).querySelectorAll('[role="radiogroup"] [role="radio"][data-design]'))].map(b => b.dataset.design), text, upper: (text.match(/(^|[^\w])AOS([^\w]|$)/g) || []).length };
 }
 
+// the gear: Orders' drawing, in every app's Settings button (DESIGN.md rule 13)
+export const GEAR = 'M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z';
 const ORDER = ['Design', '', 'Connected accounts', 'AI helper', 'Notifications', 'Your data', 'Family account'];
 const rank = l => { const i = ORDER.findIndex(x => x && x.toLowerCase() === l.toLowerCase()); return i < 0 ? 1 : i; };
 // sentences: a full stop, question or exclamation mark, then a space and the next sentence
@@ -269,13 +273,15 @@ async function browserChecks(browser, base, id) {
     if (o.before) { await o.before(p); await p.waitForTimeout(400); }
     const btn = p.locator('button[aria-label^="Settings"]:visible, [role="button"][aria-label^="Settings"]:visible').first();
     let how = '';
+    if (await btn.count()) r.gear = await btn.evaluate((b, G) => { const p = b.querySelectorAll('svg path'), c = b.querySelectorAll('svg circle');
+      return p.length === 1 && p[0].getAttribute('d') === G && c.length === 1 && c[0].getAttribute('r') === '3'; }, GEAR) ? [] : ['the Settings button isn\'t the gear (Orders\' drawing)'];
     if (await btn.count()) { if (o.press) { if (await o.press(p, btn)) how = 'button'; } else { await btn.click(); how = 'button'; } }
     else if (typeof o.other === 'function') { if (await o.other(p)) how = 'other'; }
     else if (o.other && await p.locator(o.other).first().count()) { await p.locator(o.other).first().click(); how = 'other'; }
     await p.waitForTimeout(900);
     const s = how ? await p.evaluate(pageSheet) : null;
     const none = ['Settings didn\'t open'];
-    if (!s) { for (const k of SETTINGS_CHECKS) r[k] = how ? none : ['no button labelled Settings']; return r; }
+    if (!s) { for (const k of SETTINGS_CHECKS) if (!(k === 'gear' && r.gear)) r[k] = how ? none : ['no button labelled Settings']; return r; }
     r.title = [];
     if (how !== 'button') r.title.push('its button isn\'t labelled Settings');
     if (s.name !== 'Settings') r.title.push(`the sheet is named "${s.name}"`);
