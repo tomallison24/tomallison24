@@ -197,12 +197,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // after a plan comes back, after Try again or Discard, or when the app is opened again.
   const FLOW = () => ({ open: 'meals', slots: ['dinner'], foods: [], days: 3, people: 0, lunches: 'leftovers', courses: 'main', fridge: '', extras: [], note: '' });
   const DAYS = [[1, 'Just today'], [3, '3 days'], [7, 'A week']];
-  const LUNCH = [['leftovers', 'Leftovers'], ['fresh', 'Fresh each day'], ['mix', 'A mix']];
+  const LUNCH = [['leftovers', 'Leftovers'], ['fresh', 'Fresh daily'], ['mix', 'A mix']];
   // a dinner's courses: the main alone, or a starter and/or a dessert with it (the server's COURSES)
   const COURSES = [['main', 'Just a main'], ['starter', 'Starter + main'], ['dessert', 'Main + dessert'], ['all', 'All three']];
   const COURSE_NAME = { starter: 'Starter', main: 'Main', dessert: 'Dessert' };
   // quick notes, as chips: each adds its words to the note the plan is asked with
-  const EXTRAS = [['quick', 'Quick', 'quick to make'], ['kids', 'Kid-friendly', 'kid-friendly'], ['mild', 'Not spicy', 'not spicy'], ['budget', 'Budget-friendly', 'budget-friendly'], ['onepan', 'One pan', 'one pan, easy cleanup']];
+  const EXTRAS = [['quick', 'Quick', 'quick to make'], ['kids', 'Kid-friendly', 'kid-friendly'], ['mild', 'Not spicy', 'not spicy'], ['budget', 'Budget', 'budget-friendly'], ['onepan', 'One pan', 'one pan, easy cleanup'], ['ahead', 'Make ahead', 'can be made ahead']];
   const flow = Object.assign(FLOW(), ls.json(K.flow, {}));
   let opts = ls.json(K.opts, null);
   const saveOpts = () => opts ? ls.set(K.opts, opts) : localStorage.removeItem(K.opts);
@@ -235,20 +235,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const chip = (attr, v, label, on, multi) => '<button class="opt" type="button" role="' + (multi ? 'checkbox' : 'radio') + '" ' + attr + '="' + esc(v) + '" aria-checked="' + !!on + '">' + esc(label) + '</button>';
   const STEP = {
     meals: { name: 'Meals', ask: 'Which meals', multi: true, val: () => flow.slots.length ? slotsWords(flow) : 'Pick at least one',
-      body: () => SLOTS.map(([k, n]) => chip('data-slot', k, n, flow.slots.includes(k), true)).join('') },
+      cls: 'tiles', body: () => SLOTS.map(([k, n]) => chip('data-slot', k, n, flow.slots.includes(k), true)).join('') },
     courses: { name: 'Courses', ask: 'Courses for dinner', val: () => (COURSES.find(x => x[0] === flow.courses) || COURSES[0])[1],
-      hint: () => 'For dinners: the main on its own, or with a starter, a dessert or both.', body: () => COURSES.map(([v, n]) => chip('data-courses', v, n, v === flow.courses)).join('') },
+      hint: () => 'For dinners: the main on its own, or with a starter, a dessert or both.', cls: 'tiles c2', body: () => COURSES.map(([v, n]) => chip('data-courses', v, n, v === flow.courses)).join('') },
     foods: { name: 'Food', ask: 'What do you fancy', multi: true, val: () => foodsWords(flow),
-      // a tidy three-by-three grid of equal tiles: Surprise me, then the foods
+      // every step's choices are the same equal tiles, three across (two for courses, four for people)
       cls: 'tiles', body: () => chip('data-food', 'surprise', 'Surprise me', surprise(), true) + FOODS.map(([k, n]) => chip('data-food', k, n, flow.foods.includes(k), true)).join('') },
-    days: { name: 'How long', ask: 'How far ahead', val: () => daysWords(flow), body: () => DAYS.map(([v, n]) => chip('data-days', v, n, v === flow.days)).join('') },
+    days: { name: 'How long', ask: 'How far ahead', val: () => daysWords(flow), cls: 'tiles', body: () => DAYS.map(([v, n]) => chip('data-days', v, n, v === flow.days)).join('') },
     people: { name: 'People', ask: 'How many at the table', val: () => peopleWords(people()),
       hint: () => data.plan && data.plan.people ? 'Last time it was ' + data.plan.people + '.' : 'Usually it’s ' + rules().people + '.',
-      body: () => [1, 2, 3, 4, 5, 6, 8].map(n => chip('data-people', n, String(n), n === people())).join('') },
+      cls: 'tiles c4', body: () => [1, 2, 3, 4, 5, 6, 7, 8].map(n => chip('data-people', n, String(n), n === people())).join('') },
     lunches: { name: 'Lunches', ask: 'Lunches', val: () => (LUNCH.find(x => x[0] === flow.lunches) || LUNCH[0])[1],
-      hint: () => 'The night before’s leftovers, or something fresh each day?', body: () => LUNCH.map(([v, n]) => chip('data-lunches', v, n, v === flow.lunches)).join('') },
+      hint: () => 'The night before’s leftovers, or something fresh each day?', cls: 'tiles', body: () => LUNCH.map(([v, n]) => chip('data-lunches', v, n, v === flow.lunches)).join('') },
     extras: { name: 'Extras', ask: 'Anything else', multi: true, val: () => extraWords(flow).join(' · ') || 'Optional',
-      body: () => EXTRAS.map(([k, n]) => chip('data-extra', k, n, flow.extras.includes(k), true)).join(''),
+      cls: 'tiles', body: () => EXTRAS.map(([k, n]) => chip('data-extra', k, n, flow.extras.includes(k), true)).join(''),
       after: () => '<div class="rgroup pfields"><div class="frow"><label class="vh" for="fFridge">In the fridge</label><input class="txt" id="fFridge" maxlength="300" placeholder="In the fridge? Half a cabbage, feta…" value="' + esc(flow.fridge) + '"></div>'
         + '<div class="frow"><label class="vh" for="fNote">Anything else</label><input class="txt" id="fNote" maxlength="160" placeholder="Anything else? Quick on Tuesday…" value="' + esc(flow.note) + '"></div></div>' },
   };

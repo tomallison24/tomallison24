@@ -199,7 +199,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
     && (await page.getAttribute('[data-people="4"]', 'aria-checked')) === 'true' && /Usually it’s 4\./.test(await page.textContent('#pb-people')));
   ok('no lunches step with dinners only', (await page.locator('[data-step="lunches"]').count()) === 0);
   await page.click('[data-step="days"]'); await page.click('[data-days="3"]'); await page.click('[data-people="4"]'); await page.waitForTimeout(200);
-  ok('then the extras: quick notes, the fridge and anything else', await open('extras') && (await page.locator('[data-extra]').count()) === 5 && await page.isVisible('#fFridge') && await page.isVisible('#fNote'));
+  ok('then the extras: quick notes, the fridge and anything else', await open('extras') && (await page.locator('[data-extra]').count()) === 6 && await page.isVisible('#fFridge') && await page.isVisible('#fNote'));
   await page.fill('#fFridge', 'half a cabbage');
   ok('what it will plan, under the steps', /Planning 3 days of dinners for 4: 3 meals, each with 2\+ vegetables and about 30 g protein\./.test(await page.textContent('#pSum')) && await row('extras') === 'Use up half a cabbage');
   await page.reload(); await page.waitForTimeout(800);

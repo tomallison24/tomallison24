@@ -158,7 +158,9 @@ svg.b{stroke-width:2.2}
   background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
 .opt:active{transform:scale(.93)}
 .opts.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.opts.tiles .opt{justify-content:center;height:44px;padding:0 6px;border-radius:14px;white-space:nowrap}
+.opts.tiles.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.opts.tiles.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.opts.tiles .opt{justify-content:center;height:auto;min-height:44px;padding:6px;border-radius:14px;text-align:center;line-height:1.2}
 /* the dishes to pick from: a card a meal, an option a row */
 .card.optc{gap:8px}
 .optlist{display:flex;flex-direction:column;gap:8px}
