@@ -12,7 +12,7 @@
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
 //   - Thumb arc (Home layout): the fixed four and four favorites on two rings in the corner, every app on the
 //     first screen (a small phone too), the orb going to the Ipsy bar, Edit, the left hand, and Classic again
-//   - Layers' grid (Classic, in Layers): every app as a round button, the top row your pins, Edit swaps two and
+//   - Layers' grid (Classic, in Layers): every app as a pebble, the top row your pins, Edit swaps two and
 //     it's kept, Thumb arc still there, and Classic's Favorites again out of Layers
 //   - no dock, nothing floats over Home (Home floats at the bottom on Today); Mail's unread count on
 //     its icon; Today beside the account; Home scrolls in its own box, the page never moves
@@ -405,7 +405,7 @@ for (const [w, h, look] of [[390, 844, 'vintage'], [375, 667, 'glass']]) {
   check(!errs.length, `no script errors ${tag}` + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await ctx.close();
 }
-// ---- Layers' grid (Classic, in Layers): every app on one screen as round buttons, the top row yours, nothing moves unless you move it ----
+// ---- Layers' grid (Classic, in Layers): every app on one screen as pebbles, the top row yours, nothing moves unless you move it ----
 for (const [w, h, scheme] of [[390, 844, 'light'], [375, 667, 'dark']]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, hasTouch: true, serviceWorkers: 'block', colorScheme: scheme });
   await ctx.route(/^https?:\/\/(?!localhost)/, r => r.fulfill({ status: 503, body: '' }));
@@ -424,6 +424,10 @@ for (const [w, h, scheme] of [[390, 844, 'light'], [375, 667, 'dark']]) {
   const fit = await pg.evaluate(() => { const rs = [...document.querySelectorAll('#hgrid .orb')].map(e => e.getBoundingClientRect());
     return { big: rs.every(r => r.width >= 44 && r.height >= 44), on: rs.every(r => r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth), sky: !!document.querySelector('#hgsky [data-open="weather"]') && !!document.querySelector('#hgsky [data-open="calendar"]') }; });
   check(fit.big && fit.sky, `buttons 44 pt or more; the weather and what's next on the sky ${tag}`);
+  // each app a pebble in its own colour, its drawing in white at 40% of it (aOS/glyphs.js)
+  const peb = await pg.evaluate(() => [...document.querySelectorAll('#hgrid .orb')].map(o => { const g = o.querySelector('svg.gl'), r = o.getBoundingClientRect();
+    return o.classList.contains('pebble') && !!o.querySelector('svg.peb path') && g && Math.abs(g.getBoundingClientRect().width / r.width - .4) < .02; }));
+  check(peb.length === APPS.length && peb.every(Boolean), `every app is a pebble with its drawing at 40% (${peb.filter(Boolean).length} of ${peb.length}) ${tag}`);
   if (h > 800) check(fit.on, `every app on the first screen ${tag}`);
   await pg.evaluate(() => window.aosHome.unread('mail', 3)); await pg.waitForTimeout(100);
   check(await pg.textContent('#hgrid [data-gapp="mail"] em') === '3', `Mail's unread count on its button ${tag}`);

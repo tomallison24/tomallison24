@@ -15,8 +15,8 @@
 //     rests on (the left one for the left hand), with what's next and every other app above them, so
 //     every app is on the first screen. Tried first in labs/layouts/.
 //   - In Layers (aOS/look.js), Classic is Layers' own grid: what's next and the weather on the sky, then every app
-//     on one screen, four across, as raised round buttons with a line drawing in the app's own colour on a pale tint
-//     of it. The top row is yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
+//     on one screen, four across, as pebbles in the app's own colour, lighter at the top left, with its drawing in
+//     white. The top row is yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
 //     on the phone and on your other devices: aos.home.grid). Tried first as a test page (Calm aOS, Layers).
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
@@ -72,7 +72,10 @@
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
-  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} if (d === 'neon') d = 'layers'; return `../${id}/icon${/^(glass|layers|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };   // neon: Night Drive's, which Layers replaced
+  // in Layers, its pebble (icon-pebble.svg, made by make-looks.mjs), as on Layers' grid
+  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} if (d === 'neon') d = 'layers';
+    if (d === 'layers' && window.aosGlyphs && aosGlyphs[id]) return `../${id}/icon-pebble.svg`;
+    return `../${id}/icon${/^(glass|layers|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };   // neon: Night Drive's, which Layers replaced
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
   // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
@@ -271,8 +274,7 @@
     if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
 
   // ---- Layers' grid ----
-  // Every app as a round button with its line drawing, in the app's own colour on a pale tint of it (aOS/app.js, ROOM_HUE;
-  // --ink-<app> and --pale-<app> in aOS/index.html); the order is yours alone: the
+  // Every app as a pebble in its own colour with its drawing in white (pebble, below); the order is yours alone: the
   // top row starts as your pins (else Mail, Calendar, Weather and Home), then each group, and an app that's new
   // goes on the end. Edit, then tap one app and another, swaps them.
   const GRID = 'aos.home.grid';
@@ -295,6 +297,13 @@
     sparkle: '<path d="M12 3c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7z"/>',
   };
   const glyph = id => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[id] || GLYPH.sparkle}</svg>`;
+  // Each app as a pebble: its own colour, lighter at the top left, with its drawing in white at 40% of it (aOS/glyphs.js,
+  // made by make-looks.mjs from the app's icon.svg); an app without one keeps its line drawing on the round button.
+  const pebble = id => { const g = (window.aosGlyphs || {})[id], P = window.aosPebble; if (!g || !P) return glyph(id);
+    return `<svg class="peb" viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="pg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.top}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`
+      + `<radialGradient id="pw-${id}" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
+      + `<path d="${P}" fill="url(#pg-${id})"/><path d="${P}" fill="url(#pw-${id})"/><path class="edge" d="${P}"/></svg>`
+      + `<svg class="gl" viewBox="${g.vb}" aria-hidden="true">${g.defs ? `<defs>${g.defs}</defs>` : ''}${g.body}</svg>`; };
   function gridOrder() {
     const saved = get(GRID, []).filter(known);
     const top = saved.length ? saved : [...new Set([...pins.filter(known), 'mail', 'calendar', 'weather', 'house'].filter(known))].slice(0, 4);
@@ -310,7 +319,7 @@
         ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Today</b><span>Nothing else on</span>'}</button>` : ''));
     setHTML($('hgrid'), order.map((id, i) => (i === 4 ? '<i class="grule" aria-hidden="true"></i>' : '')
       + `<button type="button" class="gapp${ed && gsel === id ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--ink-${id}, var(--sp-every));--pale:var(--pale-${id}, var(--orb-on))" aria-label="${label(id)}"${ed ? ` aria-pressed="${gsel === id}"` : ''}>`
-      + `<span class="orb">${glyph(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
+      + `<span class="orb${window.aosGlyphs && aosGlyphs[id] ? ' pebble' : ''}">${pebble(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
   }
   function gridTap(id) {
     if (!gsel) { gsel = id; return paintHome(true); }
