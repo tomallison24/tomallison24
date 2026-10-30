@@ -15,8 +15,8 @@
 //     rests on (the left one for the left hand), with what's next and every other app above them, so
 //     every app is on the first screen. Tried first in labs/layouts/.
 //   - In Layers (aOS/look.js), Classic is Layers' own grid: what's next and the weather on the sky, then every app
-//     on one screen, four across, as raised round buttons with a line drawing in the app's own colour on a pale tint
-//     of it. The top row is yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
+//     on one screen, four across, as pebbles in the app's own colour, lighter at the top left, with its drawing in
+//     white. The top row is yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
 //     on the phone and on your other devices: aos.home.grid). Tried first as a test page (Calm aOS, Layers).
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
@@ -271,8 +271,7 @@
     if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
 
   // ---- Layers' grid ----
-  // Every app as a round button with its line drawing, in the app's own colour on a pale tint of it (aOS/app.js, ROOM_HUE;
-  // --ink-<app> and --pale-<app> in aOS/index.html); the order is yours alone: the
+  // Every app as a pebble in its own colour with its drawing in white (pebble, below); the order is yours alone: the
   // top row starts as your pins (else Mail, Calendar, Weather and Home), then each group, and an app that's new
   // goes on the end. Edit, then tap one app and another, swaps them.
   const GRID = 'aos.home.grid';
@@ -295,6 +294,14 @@
     sparkle: '<path d="M12 3c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7z"/>',
   };
   const glyph = id => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[id] || GLYPH.sparkle}</svg>`;
+  // Each app as a pebble: its own colour, lighter at the top left, with its drawing in white at 40% of it (aOS/glyphs.js,
+  // made by make-looks.mjs from the app's icon.svg); an app without one keeps its line drawing on the round button.
+  // The pebble is a soft superellipse with a little wobble, like sea glass.
+  const PEBBLE = 'M506 256L505 294L503 321L499 344L493 365L485 383L476 400L466 415L454 429L441 441L427 452L412 461L396 470L379 477L360 483L340 487L318 490L292 492L256 493L220 492L194 490L172 487L152 481L134 475L118 467L102 458L89 448L76 436L65 423L55 409L46 394L38 377L31 359L25 340L21 318L17 293L15 256L14 219L14 192L16 169L19 147L25 127L32 109L40 92L51 77L64 64L78 52L94 43L111 35L130 29L150 25L171 23L194 22L220 22L256 24L291 27L315 30L336 35L355 40L373 46L390 52L405 60L420 68L434 78L447 89L459 101L470 115L480 131L489 149L496 169L501 192L504 218Z';
+  const pebble = id => { const g = (window.aosGlyphs || {})[id]; if (!g) return glyph(id);
+    return `<svg class="peb" viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="pg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.top}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`
+      + `<radialGradient id="pw-${id}" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
+      + `<path d="${PEBBLE}" fill="url(#pg-${id})"/><path d="${PEBBLE}" fill="url(#pw-${id})"/><path class="edge" d="${PEBBLE}"/></svg>${g.svg}`; };
   function gridOrder() {
     const saved = get(GRID, []).filter(known);
     const top = saved.length ? saved : [...new Set([...pins.filter(known), 'mail', 'calendar', 'weather', 'house'].filter(known))].slice(0, 4);
@@ -310,7 +317,7 @@
         ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Today</b><span>Nothing else on</span>'}</button>` : ''));
     setHTML($('hgrid'), order.map((id, i) => (i === 4 ? '<i class="grule" aria-hidden="true"></i>' : '')
       + `<button type="button" class="gapp${ed && gsel === id ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--ink-${id}, var(--sp-every));--pale:var(--pale-${id}, var(--orb-on))" aria-label="${label(id)}"${ed ? ` aria-pressed="${gsel === id}"` : ''}>`
-      + `<span class="orb">${glyph(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
+      + `<span class="orb${window.aosGlyphs && aosGlyphs[id] ? ' pebble' : ''}">${pebble(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
   }
   function gridTap(id) {
     if (!gsel) { gsel = id; return paintHome(true); }

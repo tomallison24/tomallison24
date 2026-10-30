@@ -1,7 +1,7 @@
 // Layers' intro, Skylight: when aOS opens in the Layers look (data-look="layers", set by look.js), the sun (the moon
 // from 6pm) rises into the top right of the time of day's sky (the --ly-* colours of Layers' block, by data-tod), and a
 // cloud of hundreds of tiny dots, the agents, in the apps' group colours, swoops in from the bottom left like a flock
-// of birds. Each dot has a place: they come together into Home's sixteen line drawings, drawn in dots, and the
+// of birds. Each dot has a place: they come together into the apps' sixteen line drawings, drawn in dots, and the
 // drawings into a house - its ground first, then the walls, then the roof up to its peak. A warm light comes on inside,
 // with a family standing in it (the people solid, the agents dots). "aOS" bounces in letter by letter with "Good
 // morning", "Good afternoon" (from noon) or "Good evening" (from 6pm); then the house fades and "aOS" glides up into
@@ -110,7 +110,7 @@ html[data-theme="dark"] #layersIntro{--li-light:rgba(255,255,255,.16);--li-glow:
 
   // Home's sixteen in its order, by group (Family, Every day, Out and about, You, Games), and each group's colour
   const APPS = ['every', 'family', 'every', 'family', 'family', 'family', 'family', 'every', 'every', 'every', 'out', 'out', 'you', 'you', 'you', 'games'];
-  // and their line drawings, as on Home's buttons (aOS/home-tab.js, GLYPH): Mail, Calendar, Weather, Home, Meals, Notes, Orders,
+  // and their line drawings (aOS/home-tab.js, GLYPH): Mail, Calendar, Weather, Home, Meals, Notes, Orders,
   // News, Clock, Podcasts, Travel, Places, Fitness, Drinks, Money, Sparkle Kingdom
   const GLYPHS = ['<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>', '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     '<path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 11.1 3.5 3.5 0 0 0 7 18z"/>', '<path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H14v-6h-4v6H5.5A1.5 1.5 0 0 1 4 19.5z"/>',

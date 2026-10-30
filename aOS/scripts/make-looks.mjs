@@ -154,6 +154,72 @@ if (!check && pngs.length) {
   await browser.close();
 }
 
+// ---- Layers' grid on aOS Home: each app's drawing in white, for its pebble (aOS/glyphs.js, read by aOS/home-tab.js) ----
+// The drawing from the app's icon.svg (its own colour, named in the icon's note: "own colour (#…) on a pale tint of it
+// (#…)"), without the tile and the Vintage marks, cropped to a square round the drawing so CSS can size every app's the
+// same; and the pebble's gradient, the app's colour (aOS/app.js, ROOM_HUE) lighter at the top left, down to its own,
+// dark enough for the white drawing. Each keeps a hash of what it was made from, so --check needs no browser.
+{
+  const { createHash } = await import('crypto');
+  const file = path.join(ROOT, 'aOS/glyphs.js');
+  const HUE = Function('return ' + /const ROOM_HUE = (\{[^}]*\})/.exec(readFileSync(path.join(ROOT, 'aOS/app.js'), 'utf8'))[1])();
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const mixc = (a, b, k) => '#' + rgb(a).map((v, i) => Math.round(v + (rgb(b)[i] - v) * k).toString(16).padStart(2, '0')).join('').toUpperCase();
+  const lum = h => { const [r, g, b] = rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
+  let was = {};
+  try { was = JSON.parse(/window\.aosGlyphs = (\{[\s\S]*\});/.exec(readFileSync(file, 'utf8'))[1]); } catch {}
+  const out = {}, todo = [];
+  for (const app of icons.filter(a => HUE[a])) {
+    const raw = readFileSync(path.join(ROOT, app, 'icon.svg'), 'utf8'), m = /own colour \((#[0-9A-F]{6})\)[^#]*\((#[0-9A-F]{6})\)/i.exec(raw);
+    if (!m) { stale.push(`${app}/icon.svg (its note doesn't name its own colour and tint)`); continue; }
+    const [, deep, pale] = m, s = raw.replace(/<!--[\s\S]*?-->/g, '');
+    const defs = (/<defs>([\s\S]*?)<\/defs>/.exec(s) || ['', ''])[1].trim();
+    const body = s.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/<defs>[\s\S]*?<\/defs>/, '')
+      .replace(`<rect width="512" height="512" fill="${pale}"/>`, '').replace(/<circle cx="424" cy="88" r="44"[^>]*\/>/, '')
+      .replace(/<rect[^>]*rotate\(-18 90 444\)"\/>/, '').replace(/\s+/g, ' ').trim();
+    const white = t => t.split(deep).join('#FFFFFF').split(deep.toLowerCase()).join('#FFFFFF')
+      .replace(/id="([^"]+)"/g, `id="g-${app}-$1"`).replace(/url\(#([^)]+)\)/g, `url(#g-${app}-$1)`);
+    const mid = '#' + HUE[app].split(',').map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    let top = mixc(mid, '#FFFFFF', .12);
+    while ((1.05) / (lum(mixc(top, deep, .5)) + .05) < 3) top = mixc(top, deep, .2);   // the white drawing reads on the middle of it
+    const h = createHash('sha1').update([defs, body, deep, top].join('|')).digest('hex').slice(0, 12);
+    out[app] = { h, top, end: deep, defs: white(defs), body: white(body) };
+    if (!was[app] || was[app].h !== h) todo.push(app);
+  }
+  const gone = Object.keys(was).filter(a => !out[a]);
+  if (todo.length || gone.length) {
+    stale.push('aOS/glyphs.js' + (todo.length ? ` (${todo.join(', ')})` : ''));
+    if (!check) {
+      const { createRequire } = await import('module');
+      const { execSync } = await import('child_process');
+      const require = createRequire(execSync('npm root -g').toString().trim() + '/');
+      const { chromium } = require('playwright');
+      const browser = await chromium.launch(), page = await browser.newPage({ viewport: { width: 512, height: 512 } });
+      const final = {};
+      for (const app of Object.keys(out)) {
+        const o = out[app];
+        if (!todo.includes(app)) { final[app] = was[app]; continue; }
+        // the drawing's own box: drawn alone, and its pixels scanned
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs>${o.defs}</defs>${o.body}</svg>`;
+        const [x0, y0, x1, y1] = await page.evaluate(async svg => {
+          const img = new Image(); img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))); await img.decode();
+          const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+          const d = x.getImageData(0, 0, 512, 512).data; let a = 512, b = 512, e = 0, f = 0;
+          for (let y = 0; y < 512; y++) for (let i = 0; i < 512; i++) if (d[(y * 512 + i) * 4 + 3] > 40) { if (i < a) a = i; if (i > e) e = i; if (y < b) b = y; if (y > f) f = y; }
+          return [a, b, e + 1, f + 1];
+        }, svg);
+        const size = Math.max(x1 - x0, y1 - y0), vx = Math.round((x0 + x1 - size) / 2), vy = Math.round((y0 + y1 - size) / 2);
+        final[app] = { h: o.h, top: o.top, end: o.end, svg: `<svg class="gl" viewBox="${vx} ${vy} ${size} ${size}" aria-hidden="true">${o.defs ? `<defs>${o.defs}</defs>` : ''}${o.body}</svg>` };
+      }
+      await browser.close();
+      writeFileSync(file, `// Made by aOS/scripts/make-looks.mjs from each app's icon.svg - don't edit by hand.\n`
+        + `// Layers' grid on aOS Home (aOS/home-tab.js, pebble): each app's drawing in white, cropped to a square round it, and its\n`
+        + `// pebble's gradient, top left to bottom right. h: a hash of what it was made from.\n`
+        + `window.aosGlyphs = ${JSON.stringify(final, null, 1)};\n`);
+    }
+  }
+}
+
 if (check) {
   if (stale.length) { console.log('Out of date (run node aOS/scripts/make-looks.mjs):\n  ' + stale.join('\n  ')); process.exit(1); }
   console.log('Looks up to date: ' + pages.length + ' pages, ' + icons.length + ' icons');
