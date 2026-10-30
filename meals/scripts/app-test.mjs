@@ -67,10 +67,18 @@ let coconut = false, asked = 0, made = 0;
 const ai = async (url, init) => {
   asked++;
   const b = JSON.parse(init.body), keys = [...String(b.messages[0].content).matchAll(/^- (d\d-\w+) \(/gm)].map(x => x[1]);
-  const meals = keys.map(key => ({ key, title: DISHES[made++ % DISHES.length], cuisine: 'Korean', method: 'skillet', minutes: 30, why: 'Quick on a weeknight.',
-    veg: ['broccoli', 'carrots', 'spring onions'], protein: 38, fridge: [],
-    ingredients: [{ item: 'ground beef', qty: '1.5 lb' }, { item: 'broccoli', qty: '1 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }, ...(coconut ? [{ item: 'coconut milk', qty: '1 can' }] : [])],
-    steps: ['Brown the beef.', 'Add the rest and simmer.'] }));
+  const lines = String(b.messages[0].content).split('\n');
+  const meals = keys.map(key => { const cs = /as \d courses: (.*)$/.exec(lines.find(l => l.startsWith('- ' + key + ' (')) || '');
+    const meal = { key, title: DISHES[made++ % DISHES.length], cuisine: 'Korean', method: 'skillet', minutes: 30, why: 'Quick on a weeknight.',
+      veg: ['broccoli', 'carrots', 'spring onions'], protein: 38, fridge: [],
+      ingredients: [{ item: 'ground beef', qty: '1.5 lb' }, { item: 'broccoli', qty: '1 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }, ...(coconut ? [{ item: 'coconut milk', qty: '1 can' }] : [])],
+      steps: ['Brown the beef.', 'Add the rest and simmer.'] };
+    if (!cs) return meal;
+    // a dinner of courses: a beet salad first, pears after
+    const want = cs[1].split(', ').map(w => w.replace(/^an? /, ''));
+    return { ...meal, steps: [], ingredients: [...meal.ingredients.map(x => ({ ...x, course: 'main' })), ...(want.includes('starter') ? [{ item: 'beets', qty: '1 lb', course: 'starter' }] : []),
+      ...(want.includes('dessert') ? [{ item: 'pears', qty: '4', course: 'dessert' }] : [])],
+      courses: want.map(c => ({ course: c, title: { starter: 'Roast beet salad', main: meal.title, dessert: 'Poached pears' }[c], steps: { starter: ['Roast the beets.'], main: meal.steps, dessert: ['Poach the pears.'] }[c] })) }; });
   await new Promise(r => setTimeout(r, 300));
   return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ meals, tip: 'Buy the beef in one family pack.' }) }], stop_reason: 'end_turn' }));
 };
@@ -158,10 +166,13 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
     && (await page.getAttribute('[data-slot="lunch"]', 'aria-checked')) === 'false' && /2\+ vegetables and about 30 g protein in every meal · never tree nuts and coconut/.test(await page.textContent('#main .rules')));
   const row = async k => (await page.textContent('[data-val="' + k + '"]')).trim();
   const open = async k => (await page.getAttribute('[data-step="' + k + '"]', 'aria-expanded')) === 'true';
-  ok('one card, a row a step, each with what\'s picked: the usual to start', (await page.locator('#main .prow').count()) === 5 && await row('meals') === 'Dinner' && await row('foods') === 'Surprise me'
+  ok('one card, a row a step, each with what\'s picked: the usual to start', (await page.locator('#main .prow').count()) === 6 && await row('meals') === 'Dinner' && await row('courses') === 'Just a main' && await row('foods') === 'Surprise me'
     && await row('days') === '3 days' && await row('people') === '4 people' && await row('extras') === 'Optional' && await open('meals') && !(await open('foods')), (await text(page, '#main .prow')).join(' | '));
   await page.click('[data-act="next"]');
-  ok('Next opens the next step, and only it', await open('foods') && !(await open('meals')) && (await page.locator('[data-slot]').count()) === 0);
+  ok('Next opens the next step, and only it: courses, for the dinners', await open('courses') && !(await open('meals')) && (await page.locator('[data-slot]').count()) === 0
+    && (await text(page, '[data-courses]')).join('|') === 'Just a main|Starter + main|Main + dessert|All three' && (await page.getAttribute('[data-courses="main"]', 'aria-checked')) === 'true');
+  await page.click('[data-courses="main"]');
+  ok('a course picked, and the food step opens', await open('foods') && !(await open('courses')));
   await page.click('[data-food="beef"]'); await page.click('[data-food="surprise"]');
   ok('Surprise me and the foods take turns', (await page.getAttribute('[data-food="beef"]', 'aria-checked')) === 'false' && (await page.getAttribute('[data-food="surprise"]', 'aria-checked')) === 'true');
   await page.click('[data-food="beef"]');
@@ -669,6 +680,37 @@ const SHEET_STEP = async () => {
   await ctx.close();
 }
 await SHEET_STEP();
+{ // courses: a dinner with a starter and a dessert, picked in the planner; the recipe course by course; all of it on the list
+  const { ctx, page, errs } = await phone();
+  await page.click('#tabs [data-tab="ipsy"]'); await page.waitForTimeout(200);
+  await page.click('[data-act="restart"]'); await page.waitForTimeout(200);
+  const row = async k => (await page.textContent('[data-val="' + k + '"]')).trim();
+  await page.click('[data-step="courses"]'); await page.click('[data-courses="all"]'); await page.waitForTimeout(200);
+  ok('courses: All three, and its row says so', await row('courses') === 'All three' && (await page.getAttribute('[data-step="foods"]', 'aria-expanded')) === 'true');
+  await page.click('[data-step="days"]'); await page.click('[data-days="1"]'); await page.click('[data-people="2"]'); await page.waitForTimeout(200);
+  ok('the summary says the dinners have three courses', /Planning today’s three-course dinners for 2:/.test(await page.textContent('#pSum')), await page.textContent('#pSum'));
+  await page.click('[data-step="meals"]'); await page.click('[data-slot="dinner"]'); await page.waitForTimeout(200);
+  ok('no dinner, no courses step', (await page.locator('[data-step="courses"]').count()) === 0);
+  await page.click('[data-slot="dinner"]'); await page.waitForTimeout(200);
+  await page.click('[data-act="make"]');
+  await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
+  const d = JSON.parse(m.get('meals:draft'));
+  ok('the plan is asked with the courses, and its dinner has them', d.courses === 'all' && d.meals[0].courses.map(c => c.course).join() === 'starter,main,dessert', JSON.stringify(d.meals[0].courses));
+  ok('the dinner\'s card and the plan\'s choices say 3 courses', (await text(page, '#main [data-meal] .tag')).includes('3 courses') && (await text(page, '#main .card.accept .chosen .tag')).includes('3 courses'));
+  await page.click('#main [data-meal="0"]'); await page.waitForTimeout(400);
+  await shot(page, 'recipe-courses');
+  const labels = await text(page, '#recipeBody .course .label'), dishes = await text(page, '#recipeBody .course h4'), steps = await text(page, '#recipeBody ol li');
+  ok('the recipe, course by course: each its dish, its ingredients and its steps', labels.join('|') === 'Starter|Main|Dessert' && dishes[0] === 'Roast beet salad' && dishes[2] === 'Poached pears'
+    && steps.join('|') === 'Roast the beets.|Brown the beef.|Add the rest and simmer.|Poach the pears.', labels.join('|') + ' / ' + dishes.join('|') + ' / ' + steps.join('|'));
+  ok('the starter\'s ingredients under the starter', /beets/.test(await page.textContent('#recipeBody .course + .rgroup')));
+  await page.click('#recipeSheet .iconbtn[data-close]'); await page.waitForTimeout(300);
+  await page.click('[data-act="accept"]'); await page.waitForTimeout(500);
+  await page.click('#tabs [data-tab="list"]'); await page.waitForTimeout(300);
+  const list = await page.textContent('#main');
+  ok('every course\'s ingredients are on the shopping list', /beets/i.test(list) && /pears/i.test(list) && /ground beef/i.test(list));
+  ok('no script errors', !errs.length, errs.join(' | '));
+  await ctx.close();
+}
 await browser.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed');
 process.exit(failed ? 1 : 0);

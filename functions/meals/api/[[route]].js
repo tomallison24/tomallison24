@@ -7,12 +7,13 @@
 //                      ai: 'anthropic', or null with no key yet; log: the accepted plans,
 //                      newest first, in short (id, dates, what they were built around, titles)
 //   GET  log/<id>   -> { plan } one accepted plan, whole
-//   POST plan       { slots, foods, days, people, lunches, fridge, note, start, again } -> { draft }
+//   POST plan       { slots, foods, days, people, lunches, courses, fridge, note, start, again } -> { draft }
 //                      a new plan to look over, kept as the family's draft until someone accepts it.
 //                      slots: which meals ('breakfast', 'lunch', 'dinner'); foods: what to build the
 //                      lunches and dinners around (FOODS, or 'surprise'); days: 1 to 7 from start
 //                      (YYYY-MM-DD, default today); lunches: 'leftovers' (the night before's dinner,
-//                      cooked double), 'fresh' or 'mix'; fridge: what to use up first. again: true
+//                      cooked double), 'fresh' or 'mix'; courses: each dinner as 'main' alone (the default),
+//                      'starter' + main, main + 'dessert', or 'all' three (COURSES); fridge: what to use up first. again: true
 //                      for another go, unlike the draft before it.
 //   POST accept     { start? } -> { plan, log }
 //                      the draft becomes the family's plan, day 1 on start (default: the draft's),
@@ -71,7 +72,7 @@
 // Stored in the accounts' Workers KV (ACCOUNTS, server/auth.js):
 //   meals:settings  { avoid, veg, protein, people, weeknight, at }
 //   meals:taste     { loved: [{ title, at }], nope: [{ title, at }] } the last 20 of each
-//   meals:draft     { at, by, start, days, slots, foods, people, lunches, fridge, note, meals, tip }
+//   meals:draft     { at, by, start, days, slots, foods, people, lunches, courses, fridge, note, meals, tip }
 //                   meals: [{ day, slot, title, cuisine, method, minutes, why, veg, protein, fridge,
 //                   ingredients, steps }], or { day, slot: 'lunch', leftover: <day>, title, ... }
 //   meals:plan      the accepted plan: the draft, with id, dates (one a day), acceptedAt, acceptedBy
@@ -91,11 +92,18 @@ export const MODEL = 'claude-haiku-5-5';
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const TIMEOUT_MS = 120e3;
 const MAX_BODY = 128 * 1024;
-export const CHUNK = 6;            // meals the model writes at once
+export const CHUNK = 6;            // meals the model writes at once (a dinner of two or three courses counts as two or three)
 
 export const SLOTS = ['breakfast', 'lunch', 'dinner'];
 export const FOODS = ['chicken', 'beef', 'pork', 'turkey', 'lamb', 'fish', 'shrimp', 'vegetarian'];
 export const LUNCHES = ['leftovers', 'fresh', 'mix'];
+// A dinner's courses (POST plan's courses): one dish, or a starter and/or a dessert with the main. The meal is the
+// main (its title, the plan's tags); each course keeps its own title and steps (courses), each ingredient says
+// which course it's for, and the meal's steps are all of them, course by course, so everything that reads a
+// meal's ingredients and steps (the shopping list, the Sheet, Ipsy, the allergy check) has the whole dinner.
+export const COURSES = { main: ['main'], starter: ['starter', 'main'], dessert: ['main', 'dessert'], all: ['starter', 'main', 'dessert'] };
+const COURSE = ['starter', 'main', 'dessert'];
+const COURSE_NAME = { starter: 'Starter', main: 'Main', dessert: 'Dessert' };
 // protein a person a meal, grams: the family picks one in Settings (breakfasts aim for at most 25)
 export const PROTEIN = { some: 20, good: 30, high: 40 };
 export const WEEKNIGHT = [0, 20, 30, 40, 60];   // minutes for a Monday to Thursday dinner; 0: no limit
@@ -150,7 +158,7 @@ export function avoidHits(texts, avoid) {
   }
   return [...hits];
 }
-const planText = meals => meals.flatMap(m => [m.title, m.why, ...(m.veg || []), ...m.ingredients.map(i => i.item + ' ' + i.qty), ...m.steps]);
+const planText = meals => meals.flatMap(m => [m.title, m.why, ...(m.veg || []), ...(m.courses || []).map(c => c.title), ...m.ingredients.map(i => i.item + ' ' + i.qty), ...m.steps]);
 
 // ---- the model ----
 export const modelOf = env => str(env && env.MEALS_MODEL, 60) || MODEL;
@@ -212,8 +220,17 @@ export function cleanMeal(m) {
   }
   const meal = { ...base, cuisine: str(m.cuisine, 30), method: str(m.method, 30), minutes: int(m.minutes, 5, 600, 0), why: str(m.why, 200),
     veg: list(m.veg, 40, 8), protein: int(m.protein, 0, 150, 0), fridge: list(m.fridge, 60, 8),
-    ingredients: (Array.isArray(m.ingredients) ? m.ingredients : []).slice(0, 30).map(x => x && { item: str(x.item, 60), qty: str(x.qty, 30), pantry: !!x.pantry }).filter(x => x && x.item),
+    ingredients: (Array.isArray(m.ingredients) ? m.ingredients : []).slice(0, 40).map(x => x && { item: str(x.item, 60), qty: str(x.qty, 30), pantry: !!x.pantry,
+      ...(COURSE.includes(x.course) && x.course !== 'main' ? { course: x.course } : {}) }).filter(x => x && x.item),
     steps: (Array.isArray(m.steps) ? m.steps : []).map(s => str(s, 400)).filter(Boolean).slice(0, 12) };
+  // a dinner of courses: each with its title and steps, in order (starter, main, dessert); the meal's steps are theirs
+  const courses = (Array.isArray(m.courses) ? m.courses : []).filter(c => c && COURSE.includes(c.course))
+    .map(c => ({ course: c.course, title: str(c.title, 100), steps: (Array.isArray(c.steps) ? c.steps : []).map(s => str(s, 400)).filter(Boolean).slice(0, 12) }))
+    .filter((c, i, a) => c.title && c.steps.length && a.findIndex(x => x.course === c.course) === i).sort((a, b) => COURSE.indexOf(a.course) - COURSE.indexOf(b.course));
+  if (courses.length > 1 && courses.some(c => c.course === 'main')) {
+    meal.courses = courses;
+    meal.steps = courses.flatMap(c => c.steps.map(s => COURSE_NAME[c.course] + ': ' + s)).slice(0, 36);
+  } else meal.ingredients.forEach(x => delete x.course);
   return meal.title && meal.ingredients.length && meal.steps.length ? meal : null;
 }
 const list = (a, n, max) => (Array.isArray(a) ? a : []).map(x => str(x, n)).filter(Boolean).slice(0, max);
@@ -241,24 +258,27 @@ export function specs(o, settings, rnd = Math.random) {
       const s = { key: 'd' + d + '-' + slot, day: d, slot, weekday: WEEKDAYS[wd] };
       if (slot === 'breakfast') s.style = BREAKFASTS[bi++ % BREAKFASTS.length];
       else { s.cuisine = CUISINES[ci++ % CUISINES.length]; s.food = foods.length ? foods[fi++ % foods.length] : ''; }
-      if (slot === 'dinner') { s.maxMinutes = wd >= 1 && wd <= 4 ? settings.weeknight : 0; s.double = d < o.days && leftoverDay(d + 1); }
+      if (slot === 'dinner') { s.maxMinutes = wd >= 1 && wd <= 4 ? settings.weeknight : 0; s.double = d < o.days && leftoverDay(d + 1);
+        if (COURSES[o.courses] && o.courses !== 'main') s.courses = COURSES[o.courses]; }
       out.push(s);
     }
   }
   return out;
 }
 const MEAL_SHAPE = '{"meals":[{"key":"d1-dinner","title":"Lemon chicken thighs with white beans and greens","cuisine":"Mediterranean","method":"roasted","minutes":35,"why":"one short line on why it suits the day",'
-  + '"veg":["spinach","leeks","zucchini"],"protein":42,"fridge":["cabbage"],"ingredients":[{"item":"boneless chicken thighs","qty":"2 lb","pantry":false},{"item":"olive oil","qty":"2 tbsp","pantry":true}],"steps":["..."]}],"tip":"one prep-ahead or money-saving tip"}';
+  + '"veg":["spinach","leeks","zucchini"],"protein":42,"fridge":["cabbage"],"ingredients":[{"item":"boneless chicken thighs","qty":"2 lb","pantry":false,"course":"main"},{"item":"olive oil","qty":"2 tbsp","pantry":true,"course":"main"}],"steps":["..."],"courses":[]}],"tip":"one prep-ahead or money-saving tip"}';
 // The shape every plan part's answer is held to (structured outputs: no numeric or length limits here;
 // cleanMeal checks those).
 const STR = { type: 'string' }, STRS = { type: 'array', items: STR };
 export const MEALS_SCHEMA = { type: 'object', additionalProperties: false, required: ['meals', 'tip'], properties: {
   meals: { type: 'array', items: { type: 'object', additionalProperties: false,
-    required: ['key', 'title', 'cuisine', 'method', 'minutes', 'why', 'veg', 'protein', 'fridge', 'ingredients', 'steps'], properties: {
+    required: ['key', 'title', 'cuisine', 'method', 'minutes', 'why', 'veg', 'protein', 'fridge', 'ingredients', 'steps', 'courses'], properties: {
       key: STR, title: STR, cuisine: STR, method: STR, minutes: { type: 'integer' }, why: STR, veg: STRS, protein: { type: 'integer' }, fridge: STRS,
-      ingredients: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['item', 'qty', 'pantry'],
-        properties: { item: STR, qty: STR, pantry: { type: 'boolean' } } } },
-      steps: STRS } } },
+      ingredients: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['item', 'qty', 'pantry', 'course'],
+        properties: { item: STR, qty: STR, pantry: { type: 'boolean' }, course: { type: 'string', enum: COURSE } } } },
+      steps: STRS,
+      courses: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['course', 'title', 'steps'],
+        properties: { course: { type: 'string', enum: COURSE }, title: STR, steps: STRS } } } } } },
   tip: STR } };
 const FOOD_WORDS = { vegetarian: 'meat-free (vegetarian: beans, lentils, eggs, tofu, cheese)', fish: 'fish (salmon, cod, tuna...)' };
 function specLine(s, o) {
@@ -266,7 +286,8 @@ function specLine(s, o) {
     : s.slot + ', ' + s.cuisine + (s.food ? ', built around ' + (FOOD_WORDS[s.food] || s.food) : '');
   return '- ' + s.key + ' (' + s.weekday + ' ' + s.slot + '): ' + what
     + (s.maxMinutes ? ', ready in ' + s.maxMinutes + ' minutes or less' : '')
-    + (s.double ? ', cook enough for ' + o.people + ' tonight plus ' + o.people + ' lunches tomorrow (list amounts for both)' : '');
+    + (s.double ? ', cook enough ' + (s.courses ? 'of the main ' : '') + 'for ' + o.people + ' tonight plus ' + o.people + ' lunches tomorrow (list amounts for both)' : '')
+    + (s.courses ? ', as ' + s.courses.length + ' courses: ' + s.courses.map(c => c === 'main' ? 'a main' : 'a ' + c).join(', ') : '');
 }
 export function chunkAsk(settings, o, part, { history = [], taste = { loved: [], nope: [] }, fridge = false, why = '' } = {}) {
   const avoid = settings.avoid.join(', '), protein = PROTEIN[settings.protein] || 30;
@@ -274,6 +295,7 @@ export function chunkAsk(settings, o, part, { history = [], taste = { loved: [],
     + 'One entry for every meal asked, with its "key". Write US English with US measures; quantities for the whole family. Mark staples most kitchens have (oil, salt, pepper, dried spices, flour, sugar) "pantry": true. Steps are short and in order. '
     + 'Healthy: every meal has at least ' + settings.veg + ' different vegetables (for a breakfast, fruit counts), named in "veg", and about ' + protein + ' g of protein a person (breakfasts at least ' + Math.min(protein, 25) + ' g), your honest estimate in "protein" (grams a person). Whole foods, not much sugar or deep frying. '
     + '"fridge" lists the things from the family\'s fridge a meal uses (none: []). '
+    + 'A meal asked as courses is one dinner: "title" is the main\'s dish; "courses" has an entry for each course asked (its "course", its own dish as "title", and its own "steps"), "steps" is [], and every ingredient says which course it is for ("starter", "main" or "dessert"). The time ("minutes") is for the whole dinner; the vegetables and protein count across its courses. A starter is light; a dessert is simple and not too sweet, fruit welcome. Any other meal has "courses": [] and every ingredient "course": "main". '
     + (avoid ? 'ALLERGIES - the family must never eat: ' + avoid + '. Use none of them in any form (oils, milks, flours, butters, sauces, garnishes, pesto, curry pastes), and don\'t mention them at all, not even to say a dish is free of them. ' : '');
   const lines = ['Write these ' + part.length + ' meals for ' + o.people + ' people, every one a different dish and a different way of cooking:\n' + part.map(s => specLine(s, o)).join('\n')];
   if (fridge && o.fridge) lines.push('Use up what is in the fridge in these first meals where it fits: ' + o.fridge + '.');
@@ -282,9 +304,11 @@ export function chunkAsk(settings, o, part, { history = [], taste = { loved: [],
   if (taste.nope.length) lines.push('Never make these again, or anything much like them: ' + taste.nope.map(t => t.title).join('; ') + '.');
   if (o.note) lines.push('Also: ' + o.note);
   if (why) lines.push(why);
-  return { system, prompt: lines.join('\n\n'), maxTokens: Math.min(16000, 1800 * part.length + 4000), schema: MEALS_SCHEMA, effort: 'low' };
+  return { system, prompt: lines.join('\n\n'), maxTokens: Math.min(16000, 1800 * weight(part) + 4000), schema: MEALS_SCHEMA, effort: 'low' };
 }
 
+// How much writing a part of a plan is: a meal each, a dinner of courses one a course.
+const weight = part => part.reduce((n, s) => n + (s.courses ? s.courses.length : 1), 0);
 // One part of a plan: the meals asked for, by key, checked; sent back once with what was wrong.
 async function writePart(env, settings, o, part, extra, f) {
   const q = chunkAsk(settings, o, part, extra);
@@ -299,6 +323,8 @@ async function writePart(env, settings, o, part, extra, f) {
       if (!m) return;
       if (m.veg.length < settings.veg) out.push(part[i].key + ' has ' + m.veg.length + ' vegetables; it needs at least ' + settings.veg + '.');
       if (m.protein < proteinFor(settings, m.slot) * 0.85) out.push(part[i].key + ' has about ' + m.protein + ' g protein a person; it needs about ' + proteinFor(settings, m.slot) + ' g.');
+      const want = part[i].courses, got = (m.courses || []).map(c => c.course);
+      if (want && want.join() !== got.join()) out.push(part[i].key + ' needs its courses (' + want.join(', ') + '), each with its title and steps.');
     });
     return { out, missing: missing.length, hits };
   };
@@ -314,7 +340,7 @@ async function writePart(env, settings, o, part, extra, f) {
 
 export async function makePlan(env, settings, o, history = [], taste = { loved: [], nope: [] }, f = fetch, rnd = Math.random) {
   const sp = specs(o, settings, rnd), todo = sp.filter(s => !s.leftover), parts = [];
-  for (let i = 0; i < todo.length; i += CHUNK) parts.push(todo.slice(i, i + CHUNK));
+  for (const s of todo) { const last = parts[parts.length - 1]; if (last && weight([...last, s]) <= CHUNK) last.push(s); else parts.push([s]); }
   const done = await Promise.all(parts.map((part, i) => writePart(env, settings, o, part, { history, taste, fridge: i === 0 }, f)));
   const by = new Map(); parts.forEach((part, i) => part.forEach((s, j) => by.set(s.key, done[i].meals[j])));
   const meals = [];
@@ -331,7 +357,8 @@ export function choicesOf(b, settings, now = Date.now()) {
   const slots = SLOTS.filter(s => Array.isArray(b.slots) && b.slots.includes(s));
   const foods = [...new Set((Array.isArray(b.foods) ? b.foods : []).map(x => String(x).toLowerCase()).filter(x => FOODS.includes(x) || x === 'surprise'))].slice(0, 8);
   return { start, days: int(b.days, 1, 7, 3), slots: slots.length ? slots : ['dinner'], foods: foods.length ? foods : ['surprise'],
-    people: int(b.people, 1, 10, settings.people), lunches: LUNCHES.includes(b.lunches) ? b.lunches : 'leftovers', fridge: str(b.fridge, 300), note: str(b.note, 200) };
+    people: int(b.people, 1, 10, settings.people), lunches: LUNCHES.includes(b.lunches) ? b.lunches : 'leftovers',
+    courses: typeof b.courses === 'string' && Object.hasOwn(COURSES, b.courses) ? b.courses : 'main', fridge: str(b.fridge, 300), note: str(b.note, 200) };
 }
 
 // ---- Ipsy: the helper you chat with (server/ipsy.js, shared by every app with Ipsy) ----
@@ -383,6 +410,7 @@ export const IPSY_CLIENT_TOOLS = [
     days: { type: 'integer', description: '1 to 7 (default 3)' }, people: { type: 'integer', description: '1 to 10 (default: the family\'s usual)' },
     start: { ...DAY, description: 'The first day (YYYY-MM-DD; default today)' },
     lunches: { type: 'string', enum: LUNCHES, description: 'leftovers: the night before\'s dinner, cooked double (default); fresh: a new lunch every day; mix: some of each' },
+    courses: { type: 'string', enum: Object.keys(COURSES), description: 'Each dinner\'s courses: main alone (default); starter: a starter and the main; dessert: the main and a dessert; all: starter, main and dessert' },
     fridge: { type: 'string', description: 'What is in the fridge to use up first (at most 300 characters)' },
     note: { type: 'string', description: 'Anything else, like "kid-friendly" or "no spice" (at most 200 characters)' },
     again: { type: 'boolean', description: 'Make it unlike the new plan already waiting (another go)' },
