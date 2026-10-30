@@ -27,6 +27,7 @@ const STORM_PARTS = {
   'weather-lightning': [['M12,11H15', '#FFD60A', 'wv-bolt']],
   'weather-lightning-rainy': [['M9.5,11H12.5', '#FFD60A', 'wv-bolt'], ['M17.5,18.67', '#9FD3FF', 'wv-drops']]
 };
+const GEAR = '<svg class="gear" viewBox="0 0 24 24" stroke-width="1.7" width="14" height="14" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="3"/><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/></svg>';   // the gear every aOS app's Settings button has (Orders' line drawing)
 const svg = (name, size, style) => {
   const d = MDI[name] || MDI['weather-cloudy'];
   let paths = `<path fill="currentColor" d="${d}"/>`;
@@ -1113,7 +1114,7 @@ function render() {
     : `${S.data.src}${S.data.note ? ' (' + S.data.note + ')' : ''} · ${at}`;
   put(alerts, alertCards(m));
   placeSky();
-  put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location" aria-label="Settings">${svg('cog-outline', 14)}Settings</button>`);
+  put(foot, `<button data-action="refresh" aria-label="Refresh">${S.loading ? '' : svg('refresh', 14)}${status}</button><span aria-hidden="true">·</span><button data-action="location" aria-label="Settings">${GEAR}Settings</button>`);
 }
 
 function renderMsg(title, body, retry) {
