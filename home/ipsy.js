@@ -32,7 +32,7 @@
 // only ever added to: the API checks that earlier turns weren't changed.
 //
 // Ipsy is the person's own helper: one of five characters (Mia, the family's Australian Shepherd, a
-// fox, an owl, a hedgehog, Nova: flying code), picked and named the first time the chat
+// fox, an owl, a hedgehog, Nova: ten thousand coloured dots), picked and named the first time the chat
 // opens (aos.helper; also in aOS, Account). It acts out each job: listening (the box has focus),
 // thinking (waiting for Claude), reading, searching with its glasses on, writing, showing (by the
 // tool's name: jobOf), talking (the answer appearing) and a hop when a change is saved. Reduce
@@ -122,8 +122,8 @@
       back: '<path d="' + SPIKES + '" fill="#7A4E2D"/><circle cx="136" cy="54" r="10" fill="#D8572A"/>' + STROKE('#7E8C34', 3, 'M136 44q4-6 9-5'),
       body: '<circle cx="100" cy="118" r="48" fill="#E8C58F"/><circle cx="72" cy="80" r="8" fill="#E8C58F"/><circle cx="128" cy="80" r="8" fill="#E8C58F"/>',
       front: '<circle class="h-ink" cx="100" cy="116" r="5"/>' },
-    // Nova: no body and no face, just code (novaSvg, below), flying round and now and then coming together into a shape
-    nova: { label: 'AI', named: 'Nova', kind: 'Nova, an AI made of flying code that comes together into shapes and tools' },
+    // Nova: no body and no face, just dots (novaSvg, below), drifting round and now and then coming together into a shape
+    nova: { label: 'AI', named: 'Nova', kind: 'Nova, an AI made of ten thousand coloured dots that come together into shapes and tools' },
   };
   const WHO = Object.keys(HELPERS);
   // the robot, the octopus and the otter are retired: whoever picked one has Nova now, with the name they gave it
@@ -231,119 +231,229 @@
   const MOODS = ['idle', 'listen', 'think', 'read', 'scan', 'write', 'show', 'talk', 'done'];
 
   // ---------------------------------------------------------------------------
-  // Nova: code flying round (bits of it, in three colours; novaGo moves them). Idle,
-  // the bits wander and every few seconds come together into a shape (a cube, a star, a heart, a globe, a gear,
-  // </>, a bolt) and fly apart again. Each job is a shape too: sound waves to listen, a whirl to think, a book to
-  // read, a magnifying glass sweeping to search, a pencil to write, an arrow to show, a speech bubble to talk
-  // (its code flickering) and a tick when a change is saved; a ball of it to cross aOS Home's bar. Neighbours
-  // in one shape are neighbours in the next, so it flows from one to another. Reduce Motion: the shape, still.
-  // No clothes: it doesn't dress for the weather.
+  // Nova: ten thousand dots, each its own colour (novaGo moves them). Idle, they drift as a cloud and every few seconds
+  // come together into a shape (a cube, a star, a heart, a globe, a gear, </>, a bolt), taking on its colours as they
+  // go (all red for the heart, gold for the star, blue seas and green land for the globe), then fly apart again in
+  // their own. Each job is a shape too: sound waves to listen, a whirl to think, a book to read, a magnifying glass
+  // sweeping to search, a pencil to write, an arrow to show, a speech bubble to talk and a green tick when a change is
+  // saved; a ball of them, in their own colours, to cross aOS Home's bar. Each shape is a small drawing (NOVA_ART); the
+  // dots take their places and colours from it, in order round the middle, so one shape flows into the next.
+  // They're drawn on a canvas over the helper's SVG, following its .h-code group (so its hops, sweeps and the cross
+  // carry them too), only while it's on the screen. Reduce Motion: the shape, still. No clothes: it doesn't dress for
+  // the weather.
   // ---------------------------------------------------------------------------
-  const NOVA_N = 36, GLYPHS = ['{', '}', '<', '>', '/', '0', '1', ';', '=', '(', ')', '[', ']', '#', '*', '+', '$', '&', '%', 'λ', '01', '=>', 'fn', '{}'];
-  const ring = (cx, cy, rx, ry, a0 = 0, a1 = 360, n = 32) => Array.from({ length: n + 1 }, (_, i) => { const t = (a0 + (a1 - a0) * i / n) * DEG; return [cx + rx * Math.cos(t), cy + ry * Math.sin(t)]; });
-  function sample(lines) {   // NOVA_N points, evenly along the lines
-    const segs = []; let L = 0;
-    for (const l of lines) for (let i = 1; i < l.length; i++) { const [ax, ay] = l[i - 1], [bx, by] = l[i], d = Math.hypot(bx - ax, by - ay); segs.push([ax, ay, bx, by, d]); L += d; }
-    const out = []; let si = 0, acc = 0;
-    for (let k = 0; k < NOVA_N; k++) {
-      const want = (k + 0.5) * L / NOVA_N;
-      while (si < segs.length - 1 && acc + segs[si][4] < want) { acc += segs[si][4]; si++; }
-      const [ax, ay, bx, by, d] = segs[si], f = d ? (want - acc) / d : 0;
-      out.push([100 + 1.18 * (ax + (bx - ax) * f - 100), 112 + 1.18 * (ay + (by - ay) * f - 112)]);   // a little bigger: as big as the others
-    }
-    return out;
-  }
-  const NOVA = (() => {
-    const hex = a => [100 + 44 * Math.cos(a * DEG), 112 + 44 * Math.sin(a * DEG)], C = [100, 112];
-    const pt = (a, r) => [100 + r * Math.cos(a * DEG), 112 + r * Math.sin(a * DEG)];
-    const d = [Math.SQRT1_2, -Math.SQRT1_2], n = [Math.SQRT1_2, Math.SQRT1_2], tip = [64, 156], end = [138, 82];
-    const at = (p, a, b) => [p[0] + d[0] * a + n[0] * b, p[1] + d[1] * a + n[1] * b];
-    return {
-      cube: sample([[-90, -30, 30, 90, 150, 210, 270].map(hex), [hex(-150), C, hex(-30)], [C, hex(90)]]),
-      star: sample([Array.from({ length: 11 }, (_, i) => pt(-90 + i * 36, i % 2 ? 19 : 48))]),
-      heart: sample([Array.from({ length: 49 }, (_, i) => { const t = i / 48 * 2 * Math.PI; return [100 + 46 * Math.sin(t) ** 3, 108 - 2.9 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]; })]),
-      globe: sample([ring(100, 112, 42, 42), ring(100, 112, 16, 42), [[58, 112], [142, 112]]]),
-      gear: sample([Array.from({ length: 33 }, (_, i) => pt(i * 11.25 - 5.6, i % 4 < 2 ? 46 : 35)), ring(100, 112, 11, 11, 0, 360, 12)]),
-      code: sample([[[80, 86], [56, 112], [80, 138]], [[120, 86], [144, 112], [120, 138]], [[108, 80], [92, 144]]]),
-      bolt: sample([[[112, 60], [76, 118], [100, 118], [88, 166], [126, 100], [102, 100], [112, 60]]]),
-      waves: sample([ring(70, 112, 18, 18, -55, 55, 12), ring(70, 112, 36, 36, -55, 55, 16), ring(70, 112, 54, 54, -55, 55, 20)]),
-      book: sample([[[100, 90], [58, 80], [54, 140], [100, 148], [146, 140], [142, 80], [100, 90], [100, 148]]]),
-      mag: sample([ring(90, 102, 28, 28), [[110, 122], [140, 154]]]),
-      pencil: sample([[tip, at(tip, 22, 10), at(end, 0, 10), at(end, 0, -10), at(tip, 22, -10), tip], [at(tip, 22, 10), at(tip, 22, -10)]]),
-      arrow: sample([[[62, 160], [138, 84]], [[104, 84], [138, 84], [138, 118]]]),
-      bubble: sample([[...ring(68, 86, 14, 14, 180, 270, 6), ...ring(132, 86, 14, 14, 270, 360, 6), ...ring(132, 126, 14, 14, 0, 90, 6), [96, 140], [76, 162], [82, 140], ...ring(68, 126, 14, 14, 90, 180, 6), [54, 86]]]),
-      check: sample([[[58, 112], [88, 144], [144, 80]]]),
-      orb: sample([ring(100, 112, 22, 22), ring(100, 112, 10, 10)]),
-    };
-  })();
+  const NOVA_N = 10000, CX = 100, CY = 112;
+  const NOVA_ART = {   // each drawn on a 200 x 200 box, round (100, 112), about as big as the other helpers
+    cube(x) {
+      const h = a => [CX + 52 * Math.cos(a * DEG), CY + 52 * Math.sin(a * DEG)], face = (pts, c) => { x.fillStyle = c; x.beginPath(); pts.forEach((p, i) => x[i ? 'lineTo' : 'moveTo'](...p)); x.fill(); };
+      face([h(-90), h(-30), [CX, CY], h(-150)], '#7FD3C3'); face([h(-150), [CX, CY], h(90), h(150)], '#3B9C8C'); face([[CX, CY], h(-30), h(30), h(90)], '#24685E');
+    },
+    star(x) {
+      x.fillStyle = '#F5B300'; x.beginPath();
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? 24 : 58, a = (-90 + i * 36) * DEG; x[i ? 'lineTo' : 'moveTo'](CX + r * Math.cos(a), CY + r * Math.sin(a)); }
+      x.fill(); x.fillStyle = '#FFD84D'; x.beginPath(); x.arc(CX, CY, 18, 0, 7); x.fill();
+    },
+    heart(x) {
+      const p = t => [CX + 54 * Math.sin(t) ** 3, CY - 4 - 3.4 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))];
+      x.fillStyle = '#E0243A'; x.beginPath(); for (let i = 0; i <= 64; i++) x[i ? 'lineTo' : 'moveTo'](...p(i / 64 * 2 * Math.PI)); x.fill();
+      x.fillStyle = '#F2475A'; x.beginPath(); x.ellipse(CX - 22, CY - 16, 12, 9, -0.5, 0, 7); x.fill();   // a glint: still red
+    },
+    globe(x) {
+      x.fillStyle = '#2F7FE0'; x.beginPath(); x.arc(CX, CY, 52, 0, 7); x.fill(); x.save(); x.clip();
+      x.fillStyle = '#3FAE5A';
+      for (const [ex, ey, rx, ry, r] of [[78, 92, 22, 16, 0.4], [92, 120, 12, 22, 0.2], [128, 100, 20, 12, -0.3], [134, 130, 12, 16, 0.5], [66, 140, 10, 7, 0]]) { x.beginPath(); x.ellipse(ex, ey, rx, ry, r, 0, 7); x.fill(); }
+      x.restore();
+    },
+    gear(x) {
+      x.fillStyle = '#7C8796'; x.beginPath();
+      for (let i = 0; i <= 64; i++) { const a = i / 64 * 360, r = (Math.floor(a / 22.5) % 2) ? 42 : 56; x[i ? 'lineTo' : 'moveTo'](CX + r * Math.cos(a * DEG), CY + r * Math.sin(a * DEG)); }
+      x.fill(); x.globalCompositeOperation = 'destination-out'; x.beginPath(); x.arc(CX, CY, 16, 0, 7); x.fill(); x.globalCompositeOperation = 'source-over';
+      x.strokeStyle = '#A9B3C0'; x.lineWidth = 6; x.beginPath(); x.arc(CX, CY, 26, 0, 7); x.stroke();
+    },
+    code(x) {
+      x.lineWidth = 13; x.lineCap = x.lineJoin = 'round';
+      for (const [c, pts] of [['#0B8E9A', [[76, 80], [46, 112], [76, 144]]], ['#CC3A84', [[124, 80], [154, 112], [124, 144]]], ['#5B48E0', [[110, 72], [90, 152]]]]) { x.strokeStyle = c; x.beginPath(); pts.forEach((p, i) => x[i ? 'lineTo' : 'moveTo'](...p)); x.stroke(); }
+    },
+    bolt(x) {
+      x.fillStyle = '#FFC21A'; x.beginPath(); [[116, 50], [70, 122], [98, 122], [84, 176], [134, 98], [106, 98], [116, 50]].forEach((p, i) => x[i ? 'lineTo' : 'moveTo'](...p)); x.fill();
+      x.strokeStyle = '#F08C00'; x.lineWidth = 4; x.stroke();
+    },
+    waves(x) {
+      x.lineWidth = 9; x.lineCap = 'round';
+      [['#1FA59A', 20], ['#2B8BD8', 40], ['#5B6BE0', 60]].forEach(([c, r]) => { x.strokeStyle = c; x.beginPath(); x.arc(70, CY, r, -55 * DEG, 55 * DEG); x.stroke(); });
+      x.fillStyle = '#1FA59A'; x.beginPath(); x.arc(60, CY, 9, 0, 7); x.fill();
+    },
+    book(x) {
+      x.fillStyle = '#9C4A2C'; x.beginPath(); [[CX, 92], [48, 80], [44, 150], [CX, 160], [156, 150], [152, 80]].forEach((p, i) => x[i ? 'lineTo' : 'moveTo'](...p)); x.fill();
+      x.fillStyle = '#E8D6AE'; x.beginPath(); [[CX, 94], [54, 84], [51, 144], [CX, 152], [149, 144], [146, 84]].forEach((p, i) => x[i ? 'lineTo' : 'moveTo'](...p)); x.fill();
+      x.strokeStyle = '#8A7A63'; x.lineWidth = 3; for (let k = 0; k < 4; k++) for (const s of [-1, 1]) { x.beginPath(); x.moveTo(CX + s * 12, 104 + k * 11); x.lineTo(CX + s * 38, 99 + k * 11); x.stroke(); }
+      x.strokeStyle = '#6E3420'; x.lineWidth = 4; x.beginPath(); x.moveTo(CX, 92); x.lineTo(CX, 156); x.stroke();
+    },
+    mag(x) {
+      x.strokeStyle = '#7A4A2A'; x.lineWidth = 15; x.lineCap = 'round'; x.beginPath(); x.moveTo(114, 126); x.lineTo(148, 162); x.stroke();
+      x.fillStyle = '#9FD8F5'; x.beginPath(); x.arc(88, 100, 30, 0, 7); x.fill();
+      x.strokeStyle = '#4A5563'; x.lineWidth = 10; x.stroke();
+    },
+    pencil(x) {
+      x.save(); x.translate(100, 118); x.rotate(-45 * DEG);
+      const r = (c, a, b, w) => { x.fillStyle = c; x.fillRect(a, -w / 2, b - a, w); };
+      r('#F7C33B', -36, 40, 22); r('#E59A1E', -36, 40, 6); r('#9AA3AD', 40, 52, 22); r('#F08AA8', 52, 64, 22);
+      x.fillStyle = '#E8C9A0'; x.beginPath(); x.moveTo(-36, -11); x.lineTo(-58, 0); x.lineTo(-36, 11); x.fill();
+      x.fillStyle = '#3A3F47'; x.beginPath(); x.moveTo(-50, -4); x.lineTo(-60, 0); x.lineTo(-50, 4); x.fill();
+      x.restore();
+    },
+    arrow(x) {
+      x.strokeStyle = '#26A65B'; x.lineWidth = 14; x.lineCap = x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(60, 164); x.lineTo(138, 86); x.stroke(); x.beginPath(); x.moveTo(100, 82); x.lineTo(140, 82); x.lineTo(140, 122); x.stroke();
+    },
+    bubble(x) {
+      x.fillStyle = '#3D7BF7'; x.beginPath(); x.roundRect(46, 70, 108, 76, 22); x.fill();
+      x.beginPath(); x.moveTo(78, 140); x.lineTo(66, 168); x.lineTo(100, 140); x.fill();
+      x.fillStyle = '#1B3F99'; for (const dx of [-24, 0, 24]) { x.beginPath(); x.arc(CX + dx, 108, 8, 0, 7); x.fill(); }
+    },
+    check(x) {
+      x.strokeStyle = '#22A55A'; x.lineWidth = 20; x.lineCap = x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(54, 114); x.lineTo(86, 146); x.lineTo(148, 80); x.stroke();
+    },
+    orb(x) { x.fillStyle = '#000'; x.beginPath(); x.arc(CX, CY, 30, 0, 7); x.fill(); },   // in the dots' own colours
+  };
+  const NOVA_OWN = new Set(['orb']);   // shapes the dots make in their own colours
   const NOVA_IDLE = ['cube', 'star', 'heart', 'globe', 'gear', 'code', 'bolt'];
   const NOVA_JOB = { listen: 'waves', read: 'book', scan: 'mag', write: 'pencil', show: 'arrow', talk: 'bubble', done: 'check', cross: 'orb' };
-  const glyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-  const tr = (x, y) => 'translate(' + f1(x) + 'px,' + f1(y) + 'px)';
+  // a shape, worked out once: NOVA_N places and colours from its drawing, in order round the middle
+  const novaShapes = {};
+  function novaShape(name) {
+    if (novaShapes[name]) return novaShapes[name];
+    const K = 2, cv = document.createElement('canvas'); cv.width = cv.height = 200 * K;
+    const x = cv.getContext('2d', { willReadFrequently: true }); x.scale(K, K); NOVA_ART[name](x);
+    const px = x.getImageData(0, 0, 200 * K, 200 * K).data, inside = [];
+    for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 160) inside.push(i >> 2);
+    const pts = [];
+    for (let k = 0; k < NOVA_N; k++) {
+      const p = inside[Math.floor(Math.random() * inside.length)] || 0, X = (p % (200 * K) + Math.random()) / K, Y = (Math.floor(p / (200 * K)) + Math.random()) / K;
+      pts.push([X, Y, px[p * 4], px[p * 4 + 1], px[p * 4 + 2], Math.atan2(Y - CY, X - CX)]);
+    }
+    pts.sort((a, b) => a[5] - b[5]);   // round the middle, from the left: as the cloud's dots are
+    const s = { x: new Float32Array(NOVA_N), y: new Float32Array(NOVA_N), c: new Uint8Array(NOVA_N * 3), own: NOVA_OWN.has(name) };
+    pts.forEach(([X, Y, r, g, b], i) => { s.x[i] = X; s.y[i] = Y; s.c[i * 3] = r; s.c[i * 3 + 1] = g; s.c[i * 3 + 2] = b; });
+    return (novaShapes[name] = s);
+  }
+  // the dots themselves, the same for every Nova on the page: each its own colour (any hue, a little lighter in dark),
+  // its place in the cloud (in order round the middle, as the shapes are) and how quickly it moves
+  let novaDots = null;
+  function dots() {
+    if (novaDots) return novaDots;
+    const d = { light: new Uint8Array(NOVA_N * 3), dark: new Uint8Array(NOVA_N * 3), a: new Float32Array(NOVA_N), r: new Float32Array(NOVA_N), ph: new Float32Array(NOVA_N), k: new Float32Array(NOVA_N) };
+    for (let i = 0; i < NOVA_N; i++) {
+      const hue = Math.random() * 360, l = 0.42 + 0.2 * Math.random();
+      d.light.set(hsl(hue, 0.78, l), i * 3); d.dark.set(hsl(hue, 0.78, l + 0.16), i * 3);
+      d.a[i] = -Math.PI + (i / NOVA_N) * 2 * Math.PI + 0.3 * (Math.random() - 0.5); d.r[i] = 58 * Math.sqrt(Math.random());
+      d.ph[i] = Math.random() * 2 * Math.PI; d.k[i] = 2.2 + 2.6 * Math.random();
+    }
+    return (novaDots = d);
+  }
+  function hsl(h, s, l) {   // to 0-255 rgb
+    const f = n => { const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l); return 255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))); };
+    return [f(0), f(8), f(4)];
+  }
+  const darkNow = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) || LOOK() === 'grid'; };
   function novaSvg() {
     queueMicrotask(novaWake);   // once it's on the page
     return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="nova"><g class="h-pose"><g class="h-hop"><g class="h-bob"><g class="h-lean"><g class="h-code">'
-      + NOVA.cube.map(([x, y], i) => '<g class="h-bit" style="transform:' + tr(x, y) + '"><text class="n' + (i % 3) + '" style="animation-delay:-' + (i * 0.37 % 2.6).toFixed(2) + 's">' + esc(glyph()) + '</text></g>').join('')
-      + '</g></g></g></g></g></svg>';
+      + '<rect width="200" height="200" fill="none"/></g></g></g></g></g></svg><canvas class="h-dots" aria-hidden="true"></canvas>';
   }
-  // The bits move by the page's own animations (Web Animations), set going when the mood changes (data-mood on its
-  // host, watched): nothing runs frame by frame on the phone. Idle is one long loop for each bit: it wanders, then
-  // three shapes in turn, each held a moment; a job is a flight to its shape (the whirl: then round and round).
+  // One loop for every Nova on the screen (requestAnimationFrame: it stops by itself when the page is hidden, and
+  // stops here when no Nova is moving). Each dot eases towards where it's going, at its own pace, and its colour
+  // towards the shape's (or back to its own).
   const novaHosts = document.getElementsByClassName('h-code'), novaLive = new Set();
-  function novaSweep() {   // a Nova taken off the page (redrawn, another helper peeking) stops moving
-    for (const g of novaLive) if (!g.isConnected) { novaLive.delete(g); g._nova.token++; g._nova.bits.forEach(b => b.getAnimations().forEach(a => a.cancel())); }
+  let novaRaf = 0, novaLast = 0;
+  const novaSeen = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { const st = e.target._nova; if (st) { st.vis = e.isIntersecting; if (st.vis) novaKick(); } })) : null;
+  const novaSize = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => { for (const st of novaLive) if (st.svg === e.target) { st.dirty = true; novaKick(); } })) : null;   // laid out, or a new size: drawn again (a still Nova too)
+  function novaSweep() {   // a Nova taken off the page (redrawn, another helper peeking) stops
+    for (const st of novaLive) if (!st.g.isConnected) { novaLive.delete(st); if (novaSeen) novaSeen.unobserve(st.cv); if (novaSize) novaSize.unobserve(st.svg); }
   }
   function novaWake() {
     novaSweep();
     for (const g of novaHosts) {
       if (g.dataset.on) continue;
-      if (g.closest('.h-peek')) { g.dataset.on = 'peek'; continue; }   // peeking out of the corner (none picked yet): the cube, still
-      const host = g.closest('[data-mood]') || g.closest('.ipsy-host') || g.parentNode;
-      g.dataset.on = '1'; g._nova = { host, mood: '', token: 0, bits: [...g.children] }; novaLive.add(g);
-      if (!host._novaMo) {   // one watcher for each host, whichever Nova it holds now
-        host._novaMo = new MutationObserver(() => { const c = host.querySelector('.h-code'); if (c && c._nova) novaGo(c); });
+      const svg = g.ownerSVGElement, cv = svg && svg.nextElementSibling;
+      if (!cv || !cv.classList.contains('h-dots')) continue;
+      const host = g.closest('[data-mood]') || g.closest('.ipsy-host') || svg.parentNode;
+      const st = { g, svg, cv, host, x: new Float32Array(NOVA_N), y: new Float32Array(NOVA_N), w: new Float32Array(NOVA_N), mood: '', t0: 0, plan: [], vis: !novaSeen, peek: !!svg.closest('.h-peek'), dirty: true };
+      const cube = novaShape('cube');
+      for (let i = 0; i < NOVA_N; i++) { st.x[i] = cube.x[i]; st.y[i] = cube.y[i]; st.w[i] = 1; }
+      st.tint = cube;
+      g.dataset.on = '1'; cv._nova = st; novaLive.add(st); if (novaSeen) novaSeen.observe(cv); if (novaSize) novaSize.observe(svg);
+      if (!host._novaMo) {   // one watcher for each host: a new mood wakes the loop
+        host._novaMo = new MutationObserver(() => { for (const s of novaLive) if (s.host === host) s.dirty = true; novaKick(); });
         host._novaMo.observe(host, { attributes: true, attributeFilter: ['data-mood'] });
       }
-      novaGo(g);
     }
+    novaKick();
   }
-  const SPRING = 'cubic-bezier(.34,1.45,.5,1)';
-  function novaGo(g) {
-    const st = g._nova, mood = st.host.dataset.mood || 'idle';
-    if (!g.isConnected || mood === st.mood) return;
-    const first = !st.mood; st.mood = mood; const token = ++st.token, R = Math.random, calm = still();
-    // where each bit is now: just drawn, where it was drawn (the cube); else read from the page, all at once (one
-    // look at the page, not one for each bit)
-    const at = st.bits.map((b, i) => { if (first) return tr(...NOVA.cube[i]); const m = new DOMMatrixReadOnly(getComputedStyle(b).transform.replace('none', '')); return tr(m.e, m.f); });
-    const wander = () => { const a = R() * 6.28, r = 10 + 50 * Math.sqrt(R()); return [100 + r * Math.cos(a), 112 + 0.9 * r * Math.sin(a)]; };
-    const picks = NOVA_IDLE.slice().sort(() => R() - 0.5).slice(0, 3);
-    const name = NOVA_JOB[mood] || (mood === 'think' ? (calm ? 'globe' : '') : calm || mood !== 'idle' ? 'cube' : '');
-    st.bits.forEach((b, i) => {
-      const cur = at[i];
-      if (!first) { b.style.transform = cur; b.getAnimations().forEach(a => a.cancel()); }
-      if (R() < 0.35) b.firstChild.textContent = glyph();
-      if (name) {   // a shape: fly there, a few bits at a time
-        const [x, y] = NOVA[name][i];
-        if (calm) { b.style.transform = tr(x, y); return; }
-        b.animate([{ transform: cur }, { transform: tr(x, y) }], { duration: 750 + 300 * R(), delay: i * 12, easing: SPRING, fill: 'forwards' });
-      } else if (mood === 'think') {   // a whirl: out to its ring, then round and round
-        const r = 16 + 40 * R(), a0 = R() * 360, dir = R() < 0.5 ? -1 : 1, ring = Array.from({ length: 13 }, (_, k) => { const t = (a0 + dir * k * 30) * DEG; return { transform: tr(100 + r * Math.cos(t), 112 + 0.75 * r * Math.sin(t)) }; });
-        b.animate([{ transform: cur }, ring[0]], { duration: 600, easing: 'ease-out', fill: 'forwards' }).finished.then(() => {
-          if (st.token === token) b.animate(ring, { duration: (1.6 + 1.6 * R()) * 1000, iterations: Infinity });
-        }, () => {});
-      } else {   // idle: wander, a shape, wander, a shape, wander, a shape, and round again
-        const keys = [[cur, 0, 'ease-in-out']]; let t = 0;
-        const go = (tf, dt, ease) => { t += dt; keys.push([tf, t, ease]); };
-        for (const sh of picks) {
-          for (let k = 0; k < 3; k++) go(tr(...wander()), 1.2 + 0.6 * R(), 'ease-in-out');
-          const [x, y] = NOVA[sh][i], lag = 0.25 * R();
-          go(tr(...wander()), lag, SPRING);   // a moment's more wandering, then in
-          go(tr(x, y), 1, 'ease-in-out'); go(tr(x, y), 2.4 - lag, 'ease-in-out');
-        }
-        go(cur, 1.2, 'ease-in-out');
-        b.animate(keys.map(([tf, at, easing]) => ({ transform: tf, offset: at / t, easing })), { duration: t * 1000, iterations: Infinity });
-      }
-    });
+  function novaKick() { if (!novaRaf && novaLive.size) { novaLast = 0; novaRaf = requestAnimationFrame(novaFrame); } }
+  function novaFrame(now) {
+    novaRaf = 0; novaSweep();
+    const dt = novaLast ? Math.min(0.05, (now - novaLast) / 1000) : 0.016; novaLast = now;
+    let more = false;
+    for (const st of novaLive) if (st.vis || st.dirty) { if (novaStep(st, now / 1000, dt)) more = true; }
+    if (more) novaRaf = requestAnimationFrame(novaFrame);
+  }
+  // where the dots are going now: a shape (by name), the cloud ('') or the whirl ('whirl')
+  function novaAim(st, t) {
+    const mood = st.host.dataset.mood || 'idle';
+    if (mood !== st.mood) {   // a new mood: a job's shape, the whirl, or idle's round of three shapes
+      st.mood = mood; st.t0 = t;
+      st.plan = NOVA_IDLE.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    }
+    if (st.peek) return 'cube';
+    const job = NOVA_JOB[mood];
+    if (job) return job;
+    if (mood === 'think') return still() ? 'globe' : 'whirl';
+    if (mood !== 'idle' || still()) return 'cube';
+    const T = 7, k = Math.floor((t - st.t0) / T), into = (t - st.t0) % T;   // 3.6 s a cloud, then 3.4 s a shape
+    return into < 3.6 ? '' : st.plan[k % 3];
+  }
+  function novaStep(st, t, dt) {
+    const aim = novaAim(st, t), calm = still() || st.peek, D = dots(), sh = aim && aim !== 'whirl' ? novaShape(aim) : null;
+    // the canvas: over the SVG, a margin round it (the dots go a little outside the box), at the screen's own pixels
+    const sr = st.svg.getBoundingClientRect(), hr = st.host.getBoundingClientRect();
+    if (!sr.width) return false;
+    const M = 0.3, dpr = Math.min(3, devicePixelRatio || 1), W = Math.round(sr.width * (1 + 2 * M) * dpr), H = Math.round(sr.height * (1 + 2 * M) * dpr);
+    if (st.cv.width !== W || st.cv.height !== H) { st.cv.width = W; st.cv.height = H; st.img = null; }
+    const cs = st.cv.style, L = (sr.left - hr.left - M * sr.width).toFixed(1) + 'px', T = (sr.top - hr.top - M * sr.height).toFixed(1) + 'px';
+    if (cs.left !== L || cs.top !== T) { cs.left = L; cs.top = T; cs.width = sr.width * (1 + 2 * M) + 'px'; cs.height = sr.height * (1 + 2 * M) + 'px'; }
+    // the .h-code group, as the page draws it now (its hops, sweeps and the cross), in the SVG's own units
+    let m = null; try { m = st.svg.getScreenCTM().inverse().multiply(st.g.getScreenCTM()); } catch {}
+    const ma = m ? m.a : 1, mb = m ? m.b : 0, mc = m ? m.c : 0, md = m ? m.d : 1, me = m ? m.e : 0, mf = m ? m.f : 0;
+    const s = sr.width / 200 * dpr, ox = M * sr.width * dpr, oy = M * sr.height * dpr, size = Math.max(1, Math.round(s * 0.8));
+    if (sh && !sh.own) st.tint = sh;   // the shape whose colours the dots take on (and fade back from)
+    for (let i = 0; i < NOVA_N; i++) {
+      let tx, ty;
+      if (sh) { tx = sh.x[i]; ty = sh.y[i]; }
+      else if (aim === 'whirl') { const a = D.a[i] + (i % 2 ? 1 : -1) * t * (0.6 + D.k[i] * 0.25), r = 14 + D.r[i] * 0.8; tx = CX + r * Math.cos(a); ty = CY + 0.8 * r * Math.sin(a); }
+      else { const a = D.a[i] + 0.15 * Math.sin(t * 0.4 + D.ph[i]); tx = CX + D.r[i] * Math.cos(a) + 3 * Math.sin(t * 0.9 + D.ph[i]); ty = CY + 0.9 * D.r[i] * Math.sin(a) + 3 * Math.cos(t * 0.7 + D.ph[i]); }
+      if (!calm) { tx += 0.6 * Math.sin(t * 2.1 + D.ph[i]); ty += 0.6 * Math.cos(t * 1.7 + D.ph[i]); }
+      const f = calm ? 1 : 1 - Math.exp(-dt * D.k[i] * (sh ? 1.2 : 0.9));
+      st.x[i] += (tx - st.x[i]) * f; st.y[i] += (ty - st.y[i]) * f;
+      const wt = sh && !sh.own ? 1 : 0; st.w[i] += (wt - st.w[i]) * (calm ? 1 : Math.min(1, f * 1.4));
+    }
+    // draw: every dot a little square of its colour, straight into the pixels
+    if (!st.img) { st.img = st.cv.getContext('2d').createImageData(W, H); st.buf = new Uint32Array(st.img.data.buffer); }
+    const buf = st.buf; buf.fill(0);
+    const own = darkNow() ? D.dark : D.light, c = st.tint ? st.tint.c : null;
+    for (let i = 0; i < NOVA_N; i++) {
+      const vx = st.x[i], vy = st.y[i], px = Math.round((ma * vx + mc * vy + me) * s + ox), py = Math.round((mb * vx + md * vy + mf) * s + oy);
+      if (px < 0 || py < 0 || px + size > W || py + size > H) continue;
+      const w = st.w[i];
+      let r = own[i * 3], g = own[i * 3 + 1], b = own[i * 3 + 2];
+      if (w > 0.01 && c) { r += (c[i * 3] - r) * w; g += (c[i * 3 + 1] - g) * w; b += (c[i * 3 + 2] - b) * w; }
+      const col = 0xFF000000 | (Math.round(b) << 16) | (Math.round(g) << 8) | Math.round(r);
+      for (let yy = 0; yy < size; yy++) { const row = (py + yy) * W + px; for (let xx = 0; xx < size; xx++) buf[row + xx] = col; }
+    }
+    st.cv.getContext('2d').putImageData(st.img, 0, 0);
+    st.dirty = false;
+    return !calm;
   }
 
   function charSvg(who, wear) {
@@ -490,7 +600,7 @@
     // curls up and rolls out, pops up with a ta-da, rolls back (turns: from how far it goes)
     hedgehog: { speed: 1, frames: d => { const t = Math.max(1, Math.round(d / (0.3 * 56) / (2 * Math.PI))) * 360; return [[0, 0, 'scale(.8) rotate(0deg)'], [0.4, 1, 'scale(.8) rotate(' + t + 'deg)'],
       [0.45, 1, 'translateY(-22px) rotate(' + t + 'deg)'], [0.5, 1, 'rotate(' + t + 'deg)'], [0.6, 1, 'rotate(' + t + 'deg)'], [0.63, 1, 'scale(.8) rotate(' + t + 'deg)'], [0.97, 0, 'scale(.8) rotate(0deg)'], [1, 0, 'none']]; } },
-    // Nova: a ball of code that zips out, spins round at the far end, and zips back
+    // Nova: a ball of its dots that zips out, spins round at the far end, and zips back
     nova: { speed: 0.9, frames: [[0, 0, 'none'], [0.08, 0, 'translateY(-10px) scale(.9,1.12)'], [0.12, 0, 'translateY(-10px) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'],
       [0.32, 1, 'translateY(-10px) skewX(-18deg) scale(1.2,.9)'], [0.38, 1, 'translateY(-10px)'], [0.5, 1, 'translateY(-26px) rotate(360deg) scale(1.1)'], [0.58, 1, 'translateY(-10px) rotate(360deg)'],
       [0.64, 1, 'translateY(-10px) rotate(360deg) scale(1.12,.9)', 'cubic-bezier(.7,0,.25,1)'], [0.86, 0, 'translateY(-10px) rotate(360deg) skewX(18deg) scale(1.2,.9)'],
@@ -636,22 +746,17 @@
 [data-mood="cross"] [data-who="rider"] .h-foot{display:none}
 [data-mood="cross"] [data-who="rider"] .h-armL{transform:rotate(-75deg)}
 [data-mood="cross"] [data-who="rider"] .h-armR{transform:rotate(-40deg)}
-/* Nova: its code (novaGo moves each bit; here, each bit floats, and the whole of it sweeps, scribbles, points or pops) */
-.h-code text{font:800 17px ui-monospace,SFMono-Regular,Menlo,monospace;text-anchor:middle;dominant-baseline:central;animation:ipsyFloat 2.6s ease-in-out infinite}
+/* Nova: its dots, on a canvas over the SVG that follows .h-code (novaStep places and draws it); here, the whole of it sweeps, scribbles, points or pops */
+.h-dots{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .h-code{transform-origin:100px 112px}
 [data-mood="scan"] .h-code{animation:ipsyNScan 1.4s ease-in-out infinite alternate}
 [data-mood="write"] .h-code{animation:ipsyScribble .5s linear infinite}
 [data-mood="show"] .h-code{animation:ipsyNPoint .9s ease-in-out infinite}
 [data-mood="done"] .h-code{animation:ipsyNPop .5s ease-in-out infinite alternate}
-[data-mood="talk"] .h-code text{animation:ipsyFloat 2.6s ease-in-out infinite,ipsyNFlick .9s steps(2) infinite}
-@keyframes ipsyFloat{50%{transform:translate(1.4px,-1.6px)}}
+[data-mood="talk"] .h-code{animation:ipsyNPop .45s ease-in-out infinite alternate}
 @keyframes ipsyNScan{from{transform:translateX(-12px)}to{transform:translateX(12px)}}
 @keyframes ipsyNPoint{50%{transform:translate(4px,-4px)}}
 @keyframes ipsyNPop{to{transform:scale(1.07)}}
-@keyframes ipsyNFlick{50%{opacity:.45}}
-.h-code .n0{fill:#0B8E9A} .h-code .n1{fill:#5B48E0} .h-code .n2{fill:#CC3A84}
-:root[data-theme="dark"] .h-code .n0{fill:#4FE3E0} :root[data-theme="dark"] .h-code .n1{fill:#A397FF} :root[data-theme="dark"] .h-code .n2{fill:#FF7AB8}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .h-code .n0{fill:#4FE3E0} :root:not([data-theme="light"]) .h-code .n1{fill:#A397FF} :root:not([data-theme="light"]) .h-code .n2{fill:#FF7AB8}}
 .h-peek{animation:ipsyPeek .5s cubic-bezier(.2,1.3,.35,1) both}
 /* idle: bobs, blinks, waves now and then; a tail wags */
 .h-bob{animation:ipsyBob 4.8s ease-in-out infinite}
