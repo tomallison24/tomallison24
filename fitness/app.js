@@ -1052,6 +1052,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const hdays = () => { const out = []; for (let i = st.hrange - 1; i >= 0; i--) out.push(addDays(st.healthDay, -i)); return out; };
   const HW = 300, CH = 84;   // a chart's drawing size (it stretches to the sheet)
+  // the average over the days shown (7, 30 or 90): of the days that have a reading, so a day without one doesn't pull it down
+  const mean = vs => { const got = vs.filter(v => v != null); return got.length ? got.reduce((a, b) => a + b, 0) / got.length : null; };
+  const avgLine = (days, said) => said == null ? '' : '<p class="hmavg"><i aria-hidden="true"></i>' + days.length + '-day average <b>' + esc(said) + '</b></p>';
+  const avgMark = (a, y) => a == null ? '' : '<line class="avg" x1="0" x2="' + HW + '" y1="' + y(a).toFixed(1) + '" y2="' + y(a).toFixed(1) + '"/>';   // dotted, in the chart's colour
   // The chart's frame: an invisible column per day for the chosen one, the dates under it.
   function frame(k, days, sel, inner, said) {
     const i = days.indexOf(sel), slot = HW / days.length;
@@ -1084,13 +1088,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       for (const p of pts) if (days.length <= 30 || p[2] === sel) g += '<line class="dot' + (p[2] === sel ? ' on' : '') + '" x1="' + p[0].toFixed(1) + '" x2="' + p[0].toFixed(1) + '" y1="' + p[1].toFixed(1) + '" y2="' + p[1].toFixed(1) + '"/>';
     }
     if (shade && shade.hi == null) g += '<line class="goal" x1="0" x2="' + HW + '" y1="' + y(shade.lo).toFixed(1) + '" y2="' + y(shade.lo).toFixed(1) + '"/>';   // a goal: a line over the bars
+    const avg = mean(vals); g += avgMark(avg, y);
     const range = shade ? (shade.hi == null ? (k === 'active_kcal' ? 'Move goal ' : k === 'steps' ? 'goal ' : 'at least ') + HL.fmt(k, shade.lo, hunit(k)) : (b ? 'healthy range ' : 'your usual ') + HL.parts(k, shade.lo, hunit(k)).v + ' to ' + HL.fmt(k, shade.hi, hunit(k))) : '';
-    return frame(k, days, sel, g, m.label + ', the last ' + days.length + ' days' + (range ? ', ' + range : '') + '. Arrow keys pick a day.');
+    return frame(k, days, sel, g, m.label + ', the last ' + days.length + ' days' + (avg != null ? ', average ' + HL.fmt(k, avg, hunit(k)) : '') + (range ? ', ' + range : '') + '. Arrow keys pick a day.');
   }
   function metricBlock(k, days, sel) {
-    const m = HL.get(k), v = hval(sel, k), s = v == null ? 'none' : HL.status(k, v, data.health, hopts(sel));
+    const m = HL.get(k), v = hval(sel, k), s = v == null ? 'none' : HL.status(k, v, data.health, hopts(sel)), a = mean(days.map(d => hval(d, k)));
     return '<section class="rgroup hm" data-k="' + k + '"><div class="hmh"><span class="hmn">' + esc(m.label) + '</span>'
-      + (s !== 'none' ? statPill(s, true) : '') + '<span class="hmv">' + (v == null ? '—' : hnum(k, v)) + '</span></div>' + chart(k, days, sel) + '</section>';
+      + (s !== 'none' ? statPill(s, true) : '') + '<span class="hmv">' + (v == null ? '—' : hnum(k, v)) + '</span></div>'
+      + avgLine(days, a == null ? null : HL.fmt(k, a, hunit(k))) + chart(k, days, sel) + '</section>';
   }
   // Sleep: each night's stages stacked (or the time asleep, without them), with a line at 7 h.
   function sleepBlock(days, sel) {
@@ -1105,12 +1111,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (n.staged) for (const [k] of STAGES) seg(k, n[k]); else { seg('asl', n.sleep); seg('awake', n.awake); }
     });
     g += '<line class="goal" x1="0" x2="' + HW + '" y1="' + y(420).toFixed(1) + '" y2="' + y(420).toFixed(1) + '"/>';
-    const n = night(sel), v = n.sleep != null ? n.sleep : n.staged ? (n.deep || 0) + (n.core || 0) + (n.rem || 0) : null;
+    const asleep = x => x.sleep != null ? x.sleep : x.staged ? (x.deep || 0) + (x.core || 0) + (x.rem || 0) : null, avg = mean(nights.map(asleep));
+    g += avgMark(avg, y);
+    const n = night(sel), v = asleep(n);
     const s = n.sleep != null ? HL.status('sleep', n.sleep, data.health, hopts(sel)) : 'none';
     const legend = '<div class="hleg">' + STAGES.map(([k, name]) => '<span data-st="' + k + '"><i aria-hidden="true"></i>' + esc(name) + (n[k] != null ? ' <b>' + esc(HL.hmShort(n[k])) + '</b>' : '') + '</span>').join('') + '</div>';
     return '<section class="rgroup hm" data-k="sleep"><div class="hmh"><span class="hmn">Asleep</span>' + (s !== 'none' ? statPill(s, true) : '')
-      + '<span class="hmv">' + (v == null ? '—' : esc(HL.hm(v))) + '</span></div>'
-      + frame('sleep', days, sel, g, 'Sleep stages, the last ' + days.length + ' nights, a line at 7 hours. Arrow keys pick a night.') + legend + '</section>';
+      + '<span class="hmv">' + (v == null ? '—' : esc(HL.hm(v))) + '</span></div>' + avgLine(days, avg == null ? null : HL.hm(avg))
+      + frame('sleep', days, sel, g, 'Sleep stages, the last ' + days.length + ' nights' + (avg != null ? ', average ' + HL.hm(avg) + ' asleep' : '') + ', a line at 7 hours. Arrow keys pick a night.') + legend + '</section>';
   }
   function scoreBlock(sel) {
     const x = healthOn(sel), sc = HL.sleepScore(x && x.m);
