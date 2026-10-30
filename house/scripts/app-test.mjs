@@ -45,8 +45,8 @@ async function test(name, fn) {
 
 // A phone: the walkthrough and any update screen as seen (as on a phone in use), the sky held at day,
 // and the design if one is given; or the storage in `seed` instead of the seen list.
-async function phone(scheme, { design = null, seed = null, at = '/house/' } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block' });
+async function phone(scheme, { design = null, seed = null, at = '/house/', size = null } = {}) {   // size: [w, h] for a larger screen
+  const ctx = await browser.newContext({ viewport: size ? { width: size[0], height: size[1] } : { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: !size, hasTouch: true, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.route('**/*', route => {
     const u = new URL(route.request().url());
     if (u.origin !== BASE) return route.abort('internetdisconnected');
@@ -66,7 +66,7 @@ async function phone(scheme, { design = null, seed = null, at = '/house/' } = {}
   page.on('pageerror', e => errors.push('script error: ' + e.message));
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { (window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI); }));
   await page.goto(BASE + at);
-  await page.waitForSelector('#viewBtn');
+  await page.waitForSelector(size ? '#vtop [data-view]' : '#viewBtn');
   await page.waitForTimeout(1500);
   return { ctx, page, errors };
 }
@@ -397,6 +397,32 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await page.$eval('main', e => getComputedStyle(e).overflowX), 'clip');
     assert.deepEqual(await page.evaluate(() => { scrollTo(400, scrollY); const x = scrollX; return [document.documentElement.scrollWidth <= innerWidth, document.body.scrollWidth <= innerWidth, x]; }), [true, true, 0]);
     assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
+// a larger screen: every view in a bar at the top, the one you're on marked, the picker at the bottom gone; a phone keeps the picker
+for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']]) {
+  const { ctx, page } = await phone('dark', { design, size });
+  await test(`the view bar at the top on a ${size[0]}-wide screen (${design})`, async () => {
+    assert.ok(await page.isVisible('#vtop') && !(await page.isVisible('#vbar')), 'the top bar shows, the bottom picker does not');
+    const names = await page.$$eval('#vtop [data-view]', bs => bs.map(b => b.textContent.trim()));
+    assert.ok(names.length >= 6 && names[0] === 'Favorites' && names.includes('Lights'), names.join());
+    assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), 'fav');
+    const fits = await page.$eval('#vtop', n => n.scrollWidth <= n.clientWidth + 1 && n.getBoundingClientRect().right <= innerWidth);
+    assert.ok(fits, 'every view fits across the screen');
+    await page.click('#vtop [data-view="lights"]'); await page.waitForTimeout(300);
+    assert.equal(await page.textContent('#viewName'), 'Lights');
+    assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), 'lights');
+    assert.ok(await page.isVisible('#g-lights') && !(await page.isVisible('#g-fav')), 'Lights is shown, Favorites is not');
+    await page.evaluate(() => scrollTo(0, 600)); await page.waitForTimeout(200);
+    assert.ok(await page.$eval('#vtop', n => n.getBoundingClientRect().top >= 0 && n.getBoundingClientRect().top < 40), 'it stays at the top as you scroll');
+  });
+  await ctx.close();
+}
+{
+  const { ctx, page } = await phone('dark');
+  await test('a phone keeps the picker at the bottom, and no bar at the top', async () => {
+    assert.ok(await page.isVisible('#vbar') && !(await page.isVisible('#vtop')));
   });
   await ctx.close();
 }

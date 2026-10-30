@@ -35,6 +35,10 @@ hand just after the block in `index.html`.
 - **Around the house**: Vacuums, Blinds, Nursery (Olivia's Hatch), Printer, Energy
 - **Automations**: every Home Assistant automation, what it does and whether it is on, with a switch to turn each on or off (see "Automations" below)
 
+On a phone the views are in the drop-down on the glass pill at the bottom, in reach of a thumb. On a larger
+screen (700 points wide or more: an iPad, a computer) every view is in one pill at the top instead, a tap
+away, the one you're on lit; it stays at the top as you scroll (iPad upright: the names alone, so all fit).
+
 A view with several kinds of device has a small heading over each, with
 what that part is doing. Each view says in the drop-down what is running or needs you ("4 running",
 "3 playing · TV on", "Toner low"). Every family works the same way: a compact card with

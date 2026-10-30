@@ -3,7 +3,7 @@
 // up on the next open and the cache is only the fallback.
 // Gmail itself is cross-origin and never touched here: a cached mailbox would
 // be both stale and a copy of private mail sitting in a cache.
-const CACHE = 'mail-v41';
+const CACHE = 'mail-v42';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon-180.png?v=4', 'icon-512.png?v=4', 'icon-glass-180.png?v=4', 'icon-glass-512.png?v=4', '../home/slide.js', '../home/settings.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/names.js'];
 
 self.addEventListener('install', e => {

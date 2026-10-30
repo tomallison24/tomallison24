@@ -2,7 +2,7 @@
 // a new deploy shows up on the next open and the cache is only the fallback.
 // What Money read never passes through here: it lives in this phone's storage,
 // and the calls to aOS (../money/api/) and Gmail are left alone.
-const CACHE = 'money-v7';
+const CACHE = 'money-v8';
 const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'calc.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=2', 'icon-512.png?v=2', 'icon-glass-180.png?v=2', 'icon-glass-512.png?v=2', '../home/settings.js', '../home/account.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/redact.js', '../home/ipsy.js', 'ipsy-tools.js', '../home/names.js'];
 
 self.addEventListener('install', e => {

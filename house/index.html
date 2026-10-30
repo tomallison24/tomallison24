@@ -143,6 +143,37 @@
   .vbar .viewmenu { top: auto; bottom: calc(100% + 10px); left: 50%; translate: -50% 0; width: max-content; transform-origin: 50% 100%; animation-name: menu-up; }
   @keyframes menu-up { from { opacity: 0; transform: scale(.92) translateY(6px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-transparency: reduce) { .vbar::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+  /* ---- the view bar at the top, on a larger screen (an iPad, a computer): every view in one glass pill, a
+     tap away, the one you're on lit; it stays at the top as you scroll. Phones keep the picker at the bottom.
+     Its colours are top-level rules, so tools/lightgen.py makes their light twins; the layout is in the
+     min-width query below. ---- */
+  .vtop { display: none; }
+  .vtop::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    -webkit-backdrop-filter: blur(18px) saturate(190%); backdrop-filter: blur(18px) saturate(190%);
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.32), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 12px 30px -10px rgba(0,0,0,0.6); }
+  .vtop button { display: inline-flex; align-items: center; gap: 7px; flex: none; height: 40px; padding: 0 14px 0 7px; border-radius: 999px; white-space: nowrap;
+    font-size: 15px; font-weight: 600; color: var(--muted); transition: background .2s, color .2s; }
+  .vtop button:hover { color: var(--text); }
+  .vtop button:active { background: rgba(255,255,255,0.08); }
+  .vtop button[aria-current="page"] { background: rgba(255,255,255,0.16); color: var(--text); }
+  .vtop button:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+  .vtop .vt-ic { display: flex; width: 28px; height: 28px; border-radius: 50%; align-items: center; justify-content: center; background: rgba(255,255,255,0.10); }
+  html.lock .vtop { opacity: 0; pointer-events: none; }   /* not over an open popup */
+  @media (min-width: 700px) {
+    .vtop { position: sticky; top: calc(env(safe-area-inset-top) + 8px); z-index: 8; display: flex; gap: 2px; width: max-content; max-width: 100%;
+      margin: 0 auto 14px; padding: 4px; border-radius: 999px; overflow-x: auto; scrollbar-width: none; transition: opacity .25s; }
+    .vtop::-webkit-scrollbar { display: none; }
+    .vbar { display: none; }
+    body { padding-bottom: calc(env(safe-area-inset-bottom) + 28px); }
+    html { scroll-padding-top: 72px; scroll-padding-bottom: 0; }
+  }
+  @media (min-width: 700px) and (max-width: 1079px) {   /* an iPad upright: the names alone, closer, so every view fits */
+    nav.vtop > button { gap: 0; padding: 0 11px; letter-spacing: .02em; }
+    nav.vtop > button .vt-ic { display: none; }
+  }
+  @media (min-width: 700px) and (max-width: 819px) { nav.vtop > button { padding: 0 8px; font-size: 12.5px; letter-spacing: 0; } }
+  @media (prefers-reduced-transparency: reduce) { .vtop::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   /* ---- top bar ---- */
   .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 6px 4px 14px; }
   .top h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1; }
@@ -599,6 +630,10 @@
     .vbar::before { background: linear-gradient(180deg, rgba(255,255,255,0.56), rgba(255,255,255,0.24)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.176), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.08), 0 12px 30px -6px rgba(30,40,60,0.24); }
     .vbar > button:active { background: rgba(28,32,40,0.09); }
     .vbar .vb-ic { background: rgba(28,32,40,0.09); }
+    .vtop::before { background: linear-gradient(180deg, rgba(255,255,255,0.56), rgba(255,255,255,0.24)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.176), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 12px 30px -10px rgba(30,40,60,0.24); }
+    .vtop button:active { background: rgba(28,32,40,0.06); }
+    .vtop button[aria-current="page"] { background: rgba(28,32,40,0.12); }
+    .vtop .vt-ic { background: rgba(28,32,40,0.075); }
     .chip { background: rgba(28,32,40,0.06); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3); }
     .round { background: rgba(28,32,40,0.075); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4); }
     .banner span { color: rgba(28,32,40,0.8); }
@@ -639,10 +674,10 @@
     .usheet .stat + .stat { border-left-color: rgba(28,32,40,0.104); }
     .grab { background: rgba(28,32,40,0.165); }
     .help b { color: rgba(28,32,40,0.85); }
-    .btn.primary { box-shadow: inset 0 0 0 1px rgba(28,32,40,0.187), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
     #acList .rm.arm { color: var(--text); }
     .dots i { box-shadow: inset 0 0 0 1.5px rgba(28,32,40,0.468); }
     .pad button:active { background: rgba(28,32,40,0.21); }
+    #sheetWrap .sheet h2 button.okbtn { box-shadow: inset 0 0 0 1px rgba(28,32,40,0.187), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
   }
   /* LIGHT-END */
   /* ---- light mode: follows the phone's Appearance setting ----
@@ -766,6 +801,12 @@
   .vbar > button:active { background: rgba(244,236,221,0.14); }
   .vbar .vb-ic { background: var(--mc-mustard); color: var(--mc-on-mustard); }
   .vbar .vb-chev svg { color: #E3A72F; }
+  .vtop::before { background: var(--mc-walnut); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(244,236,221,0.12), 0 10px 22px -10px rgba(43,37,34,0.6); }
+  .vtop button { color: rgba(244,236,221,0.72); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 13px; }
+  .vtop button:hover, .vtop button:active { color: #F4ECDD; background: rgba(244,236,221,0.10); }
+  .vtop .vt-ic { background: rgba(244,236,221,0.12); }
+  .vtop button[aria-current="page"] { background: var(--mc-mustard); color: var(--mc-on-mustard); box-shadow: inset 0 0 0 1px rgba(244,236,221,0.22); }
+  .vtop button[aria-current="page"] .vt-ic { background: rgba(43,37,34,0.14); }
   .viewmenu { border-radius: 24px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px var(--lgs-lift-strong); }
   .viewmenu button { border-radius: 16px; }
   .viewmenu button:active, .viewmenu button[aria-selected="true"] { background: var(--lgs-row); }
@@ -830,6 +871,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 .vbar > button{color:#EBEFF3}
 .vbar > button:active{background:rgba(235,239,243,0.14)}
 .vbar .vb-chev svg{color:#DEB164}
+.vtop::before{box-shadow:inset 0 0 0 1px rgba(235,239,243,0.12), 0 10px 22px -10px rgba(20,25,32,0.6)}
+.vtop button{color:rgba(235,239,243,0.72)}
+.vtop button:hover,.vtop button:active{color:#EBEFF3;background:rgba(235,239,243,0.10)}
+.vtop .vt-ic{background:rgba(235,239,243,0.12)}
+.vtop button[aria-current="page"]{box-shadow:inset 0 0 0 1px rgba(235,239,243,0.22)}
+.vtop button[aria-current="page"] .vt-ic{background:rgba(20,25,32,0.14)}
 .scrim{background:rgba(20,25,32,0.4)}
 .sw{background:rgba(235,239,243,0.24)}
 .sw::after{background:#F7FAFE}
@@ -868,6 +915,12 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 .vbar > button{color:#EEF0F2}
 .vbar > button:active{background:rgba(238,240,242,0.14)}
 .vbar .vb-chev svg{color:#FF8F7F}
+.vtop::before{box-shadow:inset 0 0 0 1px rgba(238,240,242,0.12), 0 10px 22px -10px rgba(9,11,13,0.6)}
+.vtop button{color:rgba(238,240,242,0.72)}
+.vtop button:hover,.vtop button:active{color:#EEF0F2;background:rgba(238,240,242,0.10)}
+.vtop .vt-ic{background:rgba(238,240,242,0.12)}
+.vtop button[aria-current="page"]{box-shadow:inset 0 0 0 1px rgba(238,240,242,0.22)}
+.vtop button[aria-current="page"] .vt-ic{background:rgba(9,11,13,0.14)}
 .scrim{background:rgba(9,11,13,0.4)}
 .sw{background:rgba(238,240,242,0.24)}
 .sw::after{background:#F8FAFC}
@@ -921,6 +974,8 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <rect x="-10" y="143" width="120" height="70" fill="url(#bgSand)"/>
   </g>
 </svg></div>
+<!-- The view bar at the top, on a larger screen: every view a tap away (app.js, drawTopNav); phones use the picker at the bottom. -->
+<nav class="vtop" id="vtop" aria-label="Views"></nav>
 <main>
   <header class="top">
     <h1>Home</h1>
