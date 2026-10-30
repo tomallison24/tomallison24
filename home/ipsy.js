@@ -123,7 +123,7 @@
       body: '<circle cx="100" cy="118" r="48" fill="#E8C58F"/><circle cx="72" cy="80" r="8" fill="#E8C58F"/><circle cx="128" cy="80" r="8" fill="#E8C58F"/>',
       front: '<circle class="h-ink" cx="100" cy="116" r="5"/>' },
     // Nova: no body and no face, just dots (novaSvg, below), drifting round and now and then coming together into a shape
-    nova: { label: 'AI', named: 'Nova', kind: 'Nova, an AI made of ten thousand coloured dots that come together into shapes and tools' },
+    nova: { label: 'AI', named: 'Nova', kind: 'Nova, an AI made of ten thousand colored dots that come together into shapes and tools' },
   };
   const WHO = Object.keys(HELPERS);
   // the robot, the octopus and the otter are retired: whoever picked one has Nova now, with the name they gave it
