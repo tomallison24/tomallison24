@@ -465,6 +465,25 @@ if (want('icons')) {
   await pg.close();
 }
 
+// 10. Icons: Settings is the gear, Orders' drawing, on every app's Settings button in every look
+if (want('gear')) {
+  const apps = ['orders', 'calendar', 'travel', 'fitness', 'notes', 'meals', 'drinks', 'money'];
+  const cells = {};
+  for (const [l] of LOOKS) for (const a of apps) {
+    const p = await phone(a, { look: l });
+    cells[l + a] = 'data:image/png;base64,' + (await crop(p, 'button[aria-label^="Settings"]:visible', { pad: 6 })).toString('base64');
+    await done(p);
+  }
+  const pg = await browser.newPage({ viewport: { width: 900, height: 400 }, deviceScaleFactor: 2 });
+  await pg.setContent(`<!doctype html><style>body{margin:0;font:600 12px/1.2 -apple-system,system-ui,sans-serif;color:#7A8086}
+    table{border-spacing:12px 10px;padding:4px}th{text-align:left;font-weight:700;padding-right:6px}td{text-align:center}img{display:block;height:56px;width:auto;margin:0 auto}
+    thead th{text-align:center;font-weight:600}</style>
+    <table><thead><tr><th></th>${apps.map(a => `<th>${a[0].toUpperCase() + a.slice(1)}</th>`).join('')}</tr></thead>${LOOKS.map(([l, n]) => `<tr><th>${n}</th>${apps.map(a => `<td><img src="${cells[l + a]}"></td>`).join('')}</tr>`).join('')}</table>`);
+  await pg.evaluate(() => Promise.all([...document.images].map(i => i.decode().catch(() => {}))));
+  save('gear', await pg.locator('table').screenshot({ omitBackground: true }));
+  await pg.close();
+}
+
 await browser.close(); server.close();
 const total = made.reduce((s, [, n]) => s + n, 0);
 console.log(made.map(([n, s]) => `docs/design/${n}.png`.padEnd(34) + (s / 1024).toFixed(0).padStart(5) + ' KB').join('\n'));
