@@ -31,7 +31,11 @@ AI first: tell Ipsy what you fancy, and it plans the family's meals. One screen,
   dishes picked (`POST plan` with `picks`), with the shopping list; **New
   options** asks again, **Discard** drops them. The family's plan stays under
   them while you pick. **New options** on a plan waiting starts over the same way.
-  (Ipsy's `make_plan` still writes a plan in one go.)
+  **Something else? Ask Ipsy…** under them opens the chat about them. In the chat,
+  Ipsy plans the same way: `show_options`, then `pick_options` and `set_option`
+  (a dish of its own in place of the one picked) as you say, then
+  `write_recipes`; each with an Undo. `make_plan` writes a plan in one go, only
+  when you ask it to choose everything.
   The choices are kept on the phone (`allison-meals-v1-flow`) until the plan is
   accepted or **Start over**, so they're still there after Try again, Discard or
   closing the app. **Or just tell Ipsy** under the card, and **Change

@@ -431,7 +431,8 @@ await test('ipsy: one step goes to Sonnet 5.5 with Ipsy’s instructions and Mea
   assert.deepEqual(q.body.tools.map(t => t.name), [...IPSY_CLIENT_TOOLS.map(t => t.name), 'get_settings', 'change_setting', 'open_setting', 'web_search', 'web_fetch']);
   assert.deepEqual(q.body.tools.slice(-2).map(t => t.type), ['web_search_20260209', 'web_fetch_20260209']);
   assert.deepEqual(IPSY_CLIENT_TOOLS.map(t => t.name), ['get_meals', 'get_recipes', 'get_past_plans', 'get_shopping_list', 'add_past_meals', 'remove_past_meals', 'tick_items',
-    'set_meal', 'make_plan', 'accept_plan', 'discard_draft', 'show_meal']);
+    'set_meal', 'show_options', 'pick_options', 'set_option', 'write_recipes', 'make_plan', 'accept_plan', 'discard_draft', 'show_meal']);
+  assert.match(IPSY_SYSTEM, /then show_options and tell them the dishes in short/); assert.match(IPSY_SYSTEM, /Use make_plan only when they ask you to choose everything/);
   for (const t of IPSY_CLIENT_TOOLS) { assert.equal(t.input_schema.type, 'object'); assert.ok(t.description.length > 20, t.name); }
   assert.deepEqual(q.body.messages, Q, 'the conversation as the phone sent it');
 });

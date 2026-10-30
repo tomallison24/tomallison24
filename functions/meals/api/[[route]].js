@@ -448,6 +448,17 @@ const MEAL = { type: 'object', additionalProperties: false, required: ['title', 
     item: { type: 'string' }, qty: { type: 'string', description: 'For the whole family, in US measures, like "2 lb"' }, pantry: { type: 'boolean', description: 'A staple most kitchens have (oil, salt, pepper, dried spices, flour, sugar)' } } } },
   steps: { type: 'array', items: { type: 'string' }, description: 'Short steps, in order' },
 } };
+// What a plan (or its options) is asked with: the planner's choices
+const PLAN_ASK = {
+  meals: { type: 'array', items: { type: 'string', enum: SLOTS }, description: 'Which meals of the day (default dinner)' },
+  foods: { type: 'array', items: { type: 'string', enum: [...FOODS, 'surprise'] }, description: 'What the lunches and dinners are built around, in turn; surprise for anything' },
+  days: { type: 'integer', description: '1 to 7 (default 3)' }, people: { type: 'integer', description: '1 to 10 (default: the family\'s usual)' },
+  start: { ...DAY, description: 'The first day (YYYY-MM-DD; default today)' },
+  lunches: { type: 'string', enum: LUNCHES, description: 'leftovers: the night before\'s dinner, cooked double (default); fresh: a new lunch every day; mix: some of each' },
+  courses: { type: 'string', enum: Object.keys(COURSES), description: 'Each dinner\'s courses: main alone (default); starter: a starter and the main; dessert: the main and a dessert; all: starter, main and dessert' },
+  fridge: { type: 'string', description: 'What is in the fridge to use up first (at most 300 characters)' },
+  note: { type: 'string', description: 'Anything else, like "kid-friendly" or "no spice" (at most 200 characters)' },
+};
 export const IPSY_CLIENT_TOOLS = [
   T('get_meals', 'An overview of the family\'s Meals: the plan (each day\'s date and its meals), the new plan waiting to be accepted if there is one, the family\'s rules (vegetables and protein in every meal, how many they cook for, weeknight time, what they never eat), the meals they loved and never want again, and how many past plans there are.', {}),
   T('get_recipes', 'Whole recipes (ingredients, amounts, steps, vegetables, protein) from the current plan, the new plan waiting, or a past plan.', {
@@ -472,15 +483,18 @@ export const IPSY_CLIENT_TOOLS = [
   T('set_meal', 'Change one meal on the current plan or the new plan waiting: give the whole meal. The server checks it against what the family never eats before saving; if it slips, nothing changes and the answer says what it found. Everyone in the family sees the change.', {
     plan: WHICH, day: DAYN, slot: SLOT, meal: MEAL,
   }, ['plan', 'day', 'meal']),
-  T('make_plan', 'Make a new plan the way the app does: the planner writes the meals asked for, checked against what the family never eats and kept to their rules, and it waits as the new plan (not saved yet) until accepted. A day takes about half a minute, a week a minute or so. If a new plan is already waiting, the person is asked first, as it takes its place.', {
-    meals: { type: 'array', items: { type: 'string', enum: SLOTS }, description: 'Which meals of the day (default dinner)' },
-    foods: { type: 'array', items: { type: 'string', enum: [...FOODS, 'surprise'] }, description: 'What the lunches and dinners are built around, in turn; surprise for anything' },
-    days: { type: 'integer', description: '1 to 7 (default 3)' }, people: { type: 'integer', description: '1 to 10 (default: the family\'s usual)' },
-    start: { ...DAY, description: 'The first day (YYYY-MM-DD; default today)' },
-    lunches: { type: 'string', enum: LUNCHES, description: 'leftovers: the night before\'s dinner, cooked double (default); fresh: a new lunch every day; mix: some of each' },
-    courses: { type: 'string', enum: Object.keys(COURSES), description: 'Each dinner\'s courses: main alone (default); starter: a starter and the main; dessert: the main and a dessert; all: starter, main and dessert' },
-    fridge: { type: 'string', description: 'What is in the fridge to use up first (at most 300 characters)' },
-    note: { type: 'string', description: 'Anything else, like "kid-friendly" or "no spice" (at most 200 characters)' },
+  T('show_options', 'Find a few dishes for each meal to pick from, the way Show me options does in the app: three for each meal (a title, a line about it, the time and cuisine, a starter and/or dessert for a dinner of courses), shown on the Plan tab and in your answer, the first of each picked. Nothing is saved: they stay on this phone until write_recipes. About 20 seconds.', PLAN_ASK),
+  T('pick_options', 'Pick dishes from the options being picked: for each meal, by its day and slot, the number of its choice (1 to 3), as get_meals shows them.', {
+    picks: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['day', 'choice'], properties: { day: DAYN, slot: SLOT, choice: { type: 'integer', description: 'The choice\'s number, from 1' } } } },
+  }, ['picks']),
+  T('set_option', 'Put a dish of your own in for one meal of the options being picked (it takes the place of the one picked, and is picked): its title and a line about it. It keeps to the family\'s rules and never has what they avoid; it is checked when the recipes are written.', {
+    day: DAYN, slot: SLOT, title: { type: 'string', description: 'The dish, like "Seared duck breast with cherry sauce and greens"' }, about: { type: 'string', description: 'One short sentence about it' },
+    cuisine: { type: 'string' }, minutes: { type: 'integer', description: 'Total time' },
+    starter: { type: 'string', description: 'Its starter, for a dinner of courses with one' }, dessert: { type: 'string', description: 'Its dessert, for a dinner of courses with one' },
+  }, ['day', 'title']),
+  T('write_recipes', 'Write the recipes for the dishes picked, the way Get the recipes does in the app: they become the new plan waiting (not saved yet), with the shopping list. If a new plan is already waiting, the person is asked first, as this takes its place. A day takes about half a minute, a week a minute or so.', {}),
+  T('make_plan', 'Make a new plan in one go, without options to pick from: use it only when they ask you to choose everything. The planner writes the meals asked for, checked against what the family never eats and kept to their rules, and it waits as the new plan (not saved yet) until accepted. A day takes about half a minute, a week a minute or so. If a new plan is already waiting, the person is asked first, as it takes its place.', {
+    ...PLAN_ASK,
     again: { type: 'boolean', description: 'Make it unlike the new plan already waiting (another go)' },
   }),
   T('accept_plan', 'Accept the new plan waiting, so it becomes the family\'s plan, with its shopping list. It takes the place of the current plan for everyone, so the person is asked first.', {
@@ -497,7 +511,7 @@ export const IPSY_SYSTEM = persona({
     'Read the family\'s Meals: get_meals (the plan, the new plan waiting, the family\'s rules, what they loved, the meals being cooked again), get_recipes (whole recipes), get_past_plans, and get_shopping_list.',
     'Bring back meals from a past plan, one or all of them, to cook again (add_past_meals): their recipes go on the Plan tab and their ingredients into the shopping list. Take them off again with remove_past_meals.',
     'Change one meal on the plan or on the new plan waiting (set_meal): you write the whole meal, and the server checks it before it is saved.',
-    'Make a new plan the way the app does (make_plan), accept it so it becomes the family\'s plan (accept_plan), or discard it (discard_draft).',
+    'Plan the way the app does: find a few dishes for each meal to pick from (show_options), pick them or put in a dish of your own as the person says (pick_options, set_option), then write the recipes (write_recipes). Or make a whole plan in one go (make_plan). Accept the new plan so it becomes the family\'s plan (accept_plan), or discard it (discard_draft).',
     'Tick items off the shopping list on this phone (tick_items), and open a recipe on the screen (show_meal).',
   ],
   rules: [
@@ -507,7 +521,8 @@ export const IPSY_SYSTEM = persona({
     'Meals is the family\'s, not one person\'s: the plan, the new plan waiting and the rules are shared, so everyone in the family sees what you change.',
     'Change one meal when asked, without asking first: it shows in the chat with an Undo. A whole plan is different: make_plan in place of a new plan already waiting, accept_plan and discard_draft ask the person first with a Yes / No card in the chat. If they say no, leave it.',
     'A meal you write is a whole recipe for the plan\'s number of people: US measures, amounts for everyone, staples (oil, salt, pepper, dried spices, flour, sugar) marked pantry, short steps in order, and a different dish and way of cooking from the plan\'s other meals.',
-    '"What can I make with ...": suggest a few meals that keep to the rules; put one on the plan only when asked. When they want a plan, ask what you need to know one short question at a time (which meals, what they fancy, how many days, how many people), then make it.',
+    '"What can I make with ...": suggest a few meals that keep to the rules; put one on the plan only when asked. When they want a plan, ask what you need to know one short question at a time (which meals, what they fancy, how many days, how many people), then show_options and tell them the dishes in short, so they can pick ("Tuesday: the fish tacos") or ask for something else (set_option). When they are happy, write_recipes. Use make_plan only when they ask you to choose everything.',
+    'Options being picked (optionsBeingPicked in get_meals) are on this phone only, not the family\'s: they change without asking first. write_recipes in place of a new plan already waiting asks first.',
     'You can\'t change the family\'s rules or what they never eat (that is Settings, the gear, for the person to do), or add single items to the shopping list (it comes from the plan and the meals cooked again; Copy the list puts it in Notes). Ticks stay on this phone.',
     'Recipes, vegetables and protein are made and estimated by AI: say to check times, temperatures and labels when it matters.',
   ],
