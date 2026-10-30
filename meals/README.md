@@ -11,8 +11,9 @@ AI first: tell Ipsy what you fancy, and it plans the family's meals. One screen,
      main: its recipe shows each course with its own dish, ingredients and steps,
      and every course's ingredients go on the shopping list. The vegetables,
      protein and time count across the courses.
-  3. **Food**: chicken, lamb, beef, pork, turkey, fish, shrimp, vegetarian, or
-     **Surprise me** (none picked is a mix).
+  3. **Food**: a three-by-three grid of equal tiles: **Surprise me** (picked
+     while nothing else is: a mix), chicken, beef, pork, lamb, turkey, fish,
+     shrimp, vegetarian.
   4. **How long**: Just today, 3 days (to start) or A week.
   5. **People**: how many you're cooking for (the last plan's number to start).
   6. **Lunches** (only with both lunch and dinner): Leftovers, Fresh each day or A mix.
@@ -20,7 +21,16 @@ AI first: tell Ipsy what you fancy, and it plans the family's meals. One screen,
      spicy, Budget-friendly, One pan), **In the fridge?** and **Anything else?**.
   Several-at-once steps have **Next**; a one-of choice opens the next step itself.
   Under the steps: what it will plan ("3 days of dinners for 4: 3 meals…") and
-  the family's rules (**Edit** opens Settings). **Make the plan** writes it.
+  the family's rules (**Edit** opens Settings). **Show me options** asks for
+  three dishes for each meal (`POST options`: a title, a line about it, the
+  time and cuisine, and for a dinner of courses its starter and/or dessert),
+  shown on the Plan tab as **Pick your meals**, the first of each picked; tap
+  another to pick it. They're kept on the phone (`allison-meals-v1-options`),
+  not on the family server, until **Get the recipes** writes the plan from the
+  dishes picked (`POST plan` with `picks`), with the shopping list; **New
+  options** asks again, **Discard** drops them. The family's plan stays under
+  them while you pick. **New options** on a plan waiting starts over the same way.
+  (Ipsy's `make_plan` still writes a plan in one go.)
   The choices are kept on the phone (`allison-meals-v1-flow`) until the plan is
   accepted or **Start over**, so they're still there after Try again, Discard or
   closing the app. **Or just tell Ipsy** under the card, and **Change

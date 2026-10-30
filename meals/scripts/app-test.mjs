@@ -64,12 +64,20 @@ let notesSet = true;
 // The stand-in AI (Anthropic's Messages API shape): every meal the prompt asks for, by its key.
 const DISHES = ['Beef bulgogi bowls', 'Beef and bean chili', 'Bolognese with penne', 'Beef kofta wraps', 'Beef and broccoli stir-fry', 'Steak fajitas', 'Beef pho'];
 let coconut = false, asked = 0, made = 0;
+const opted = [];   // what the options were asked with
 const ai = async (url, init) => {
   asked++;
   const b = JSON.parse(init.body), keys = [...String(b.messages[0].content).matchAll(/^- (d\d-\w+) \(/gm)].map(x => x[1]);
   const lines = String(b.messages[0].content).split('\n');
+  if (/^Suggest/.test(b.messages[0].content)) {   // the options: three dishes a meal, each a title and a line
+    opted.push(b.messages[0].content);
+    await new Promise(r => setTimeout(r, 200));
+    return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ meals: keys.map(key => ({ key, options: [1, 2, 3].map(n => ({ title: 'Pick ' + n + ' for ' + key, about: 'Option ' + n + ', nice and easy.',
+      cuisine: 'Greek', minutes: 25 + n * 5, starter: /as \d courses: .*starter/.test(lines.find(l => l.startsWith('- ' + key + ' (')) || '') ? 'Soup ' + n : '', dessert: '' })) })) }) }], stop_reason: 'end_turn' }));
+  }
+  const picked = key => (/: "([^"]+)"/.exec(lines.find(l => l.startsWith('- ' + key + ' (')) || '') || [])[1];
   const meals = keys.map(key => { const cs = /as \d courses: (.*)$/.exec(lines.find(l => l.startsWith('- ' + key + ' (')) || '');
-    const meal = { key, title: DISHES[made++ % DISHES.length], cuisine: 'Korean', method: 'skillet', minutes: 30, why: 'Quick on a weeknight.',
+    const meal = { key, title: picked(key) || DISHES[made++ % DISHES.length], cuisine: 'Korean', method: 'skillet', minutes: 30, why: 'Quick on a weeknight.',
       veg: ['broccoli', 'carrots', 'spring onions'], protein: 38, fridge: [],
       ingredients: [{ item: 'ground beef', qty: '1.5 lb' }, { item: 'broccoli', qty: '1 lb' }, { item: 'olive oil', qty: '1 tbsp', pantry: true }, ...(coconut ? [{ item: 'coconut milk', qty: '1 can' }] : [])],
       steps: ['Brown the beef.', 'Add the rest and simmer.'] };
@@ -142,8 +150,10 @@ const planIt = async (page, { foods = [], days = 3, people = 4 } = {}) => {
   if ((await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) !== 'true') { await page.click('#tabs [data-tab="ipsy"]'); await page.waitForTimeout(200); }
   if (foods.length) { await page.click('[data-step="foods"]'); for (const f of foods) await page.click('[data-food="' + f + '"]'); }
   await page.click('[data-step="days"]'); await page.click('[data-days="' + days + '"]'); await page.click('[data-people="' + people + '"]');
-  await page.click('[data-act="make"]');
+  await page.click('[data-act="make"]'); await recipesNow(page);
 };
+// the options come up on the Plan tab: the first of each is picked; Get the recipes writes the plan
+const recipesNow = async page => { await page.waitForSelector('[data-act="recipes"]', { timeout: 8000 }); await page.click('[data-act="recipes"]'); };
 const toPlan = async page => { if ((await page.getAttribute('#tabs [data-tab="plan"]', 'aria-pressed')) !== 'true') { await page.click('#tabs [data-tab="plan"]'); await page.waitForTimeout(300); } };
 
 { // no key yet
@@ -198,12 +208,28 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await page.fill('#fNote', 'mild for the kids');
   const a0 = asked;
   await page.click('[data-act="make"]');
-  ok('planning shows that it\'s working, on the Plan tab', await page.locator('.busy').isVisible() && (await page.getAttribute('#tabs [data-tab="plan"]', 'aria-pressed')) === 'true');
+  ok('options: it shows that it\'s working, on the Plan tab', await page.locator('.busy').isVisible() && /Finding options for 3 meals/.test(await page.textContent('.busy')) && (await page.getAttribute('#tabs [data-tab="plan"]', 'aria-pressed')) === 'true');
+  await page.waitForSelector('[data-act="recipes"]', { timeout: 5000 });
+  await shot(page, 'options');
+  const oc = await text(page, '#main .optc'), titles = await text(page, '#main .optcard .ot');
+  ok('options: a card for each dinner, three dishes each, each a title and a line about it', oc.length === 3 && titles.length === 9 && titles[0] === 'Pick 1 for d1-dinner'
+    && (await text(page, '#main .optcard .oa'))[0] === 'Option 1, nice and easy.', titles.join(' | '));
+  ok('options: one call, asked with the choices', asked === a0 + 1 && /Suggest 3 dishes for each of these 3 meals for 4 people/.test(opted[opted.length - 1]) && /half a cabbage/.test(opted[opted.length - 1]));
+  ok('options: the first of each is picked to start', (await page.$$eval('#main .optcard', els => els.map(e => e.getAttribute('aria-checked')))).join() === 'true,false,false,true,false,false,true,false,false');
+  ok('options: nothing is a plan yet', !m.get('meals:draft') && (await page.locator('#main [data-meal]').count()) === 0);
+  await page.click('[data-opick="1:2"]');
+  ok('options: tapping another picks it, for that meal only', (await page.getAttribute('[data-opick="1:2"]', 'aria-checked')) === 'true' && (await page.getAttribute('[data-opick="1:0"]', 'aria-checked')) === 'false'
+    && (await page.getAttribute('[data-opick="0:0"]', 'aria-checked')) === 'true');
+  await page.reload(); await page.waitForTimeout(800);
+  ok('options: kept on the phone, with what was picked', (await page.getAttribute('[data-opick="1:2"]', 'aria-checked')) === 'true');
+  await page.click('[data-act="recipes"]');
+  ok('recipes: it shows that it\'s writing them', /Writing 3 recipes/.test(await page.textContent('.busy')));
   await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
   const cards = await text(page, '#main [data-meal] .ct');
   await shot(page, 'plan');
-  ok('3 different dinners, a day a card', cards.length === 3 && new Set(cards).size === 3 && (await page.locator('#main .card.dayc').count()) === 3, cards.join(' | '));
-  ok('one call to the AI, with the picks, the fridge and the note', asked === a0 + 1);
+  ok('3 different dinners, a day a card: the dishes picked', cards.join('|') === 'Pick 1 for d1-dinner|Pick 3 for d2-dinner|Pick 1 for d3-dinner' && (await page.locator('#main .card.dayc').count()) === 3, cards.join(' | '));
+  ok('one more call to the AI, for the recipes', asked === a0 + 2);
+  ok('the options are gone once the recipes are written', !(await page.evaluate(() => localStorage.getItem('allison-meals-v1-options'))) && (await page.locator('#main .optcard').count()) === 0);
   ok('each says its vegetables and protein', (await text(page, '#main [data-meal] .tag.veg')).length === 3 && (await text(page, '#main [data-meal] .tag.pro')).every(t => /38 g/.test(t)), (await text(page, '#main [data-meal] .tags')).join(' | '));
   ok('a new plan is a draft: nothing saved, and the list waits for it', (await page.textContent('#main')).includes('not saved yet') && !m.get('meals:plan'));
   ok('the plan waiting shows every choice it was asked with', (await text(page, '#main .card.accept .chosen .tag')).join('|') === 'Dinner|Beef|3 days|For 4|Use up half a cabbage|“mild for the kids”', (await text(page, '#main .card.accept .chosen .tag')).join('|'));
@@ -211,9 +237,13 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   ok('the draft keeps what was asked', draft.foods.join() === 'beef' && draft.days === 3 && draft.people === 4 && draft.fridge === 'half a cabbage' && draft.note === 'mild for the kids');
   // try again: another plan, the same choices
   const beforeAgain = asked;
+  ok('the plan waiting offers New options', (await page.textContent('[data-act="again"]')) === 'New options');
   await page.click('[data-act="again"]');
+  await page.waitForSelector('[data-act="recipes"]', { timeout: 5000 });
+  ok('New options: options again, with the same choices, the plan waiting out of the way', asked === beforeAgain + 1 && /half a cabbage/.test(opted[opted.length - 1]) && (await page.locator('[data-act="accept"]').count()) === 0);
+  await page.click('[data-act="recipes"]');
   await page.waitForFunction(() => document.querySelectorAll('#main [data-meal]').length === 3, null, { timeout: 5000 });
-  ok('try again asks for another plan with the same choices', asked === beforeAgain + 1 && JSON.parse(m.get('meals:draft')).fridge === 'half a cabbage');
+  ok('and then their recipes', asked === beforeAgain + 2 && JSON.parse(m.get('meals:draft')).fridge === 'half a cabbage');
   // Edit choices: back to the planner, with them
   await page.click('[data-act="edit"]'); await page.waitForTimeout(300);
   ok('Edit choices: the planner, with what the plan was asked with', (await page.getAttribute('#tabs [data-tab="ipsy"]', 'aria-pressed')) === 'true' && await row('foods') === 'Beef'
@@ -300,7 +330,11 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   await page.click('[data-extra="quick"]');
   ok('and plans 21 meals', /21 meals/.test(await page.textContent('#pSum')) && (await page.textContent('[data-val="extras"]')) === 'Quick');
   await page.click('[data-act="make"]');
-  ok('while it plans, the choices show', (await text(page, '.busy .chosen .tag')).join('|') === 'Breakfast, lunch and dinner|Surprise me|A week|For 2|Leftover lunches|Quick', (await text(page, '.busy .chosen .tag')).join('|'));
+  ok('while it looks for options, the choices show', (await text(page, '.busy .chosen .tag')).join('|') === 'Breakfast, lunch and dinner|Surprise me|A week|For 2|Leftover lunches|Quick', (await text(page, '.busy .chosen .tag')).join('|'));
+  await page.waitForSelector('[data-act="recipes"]', { timeout: 8000 });
+  ok('options for every meal but the leftover lunches, which say whose they are', (await page.locator('#main .optc .optlist').count()) === 15 && (await text(page, '#main .optc .hint')).length === 6
+    && /^Leftovers from .+’s dinner\.$/.test((await text(page, '#main .optc .hint'))[0]));
+  await page.click('[data-act="recipes"]');
   await page.waitForSelector('#main [data-meal]', { timeout: 8000 });
   const d = JSON.parse(m.get('meals:draft'));
   ok('a quick note goes with the plan', JSON.parse(m.get('meals:draft')).note === 'quick to make');
@@ -409,9 +443,11 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   const { ctx, page } = await phone();
   const was = m.get('meals:plan');
   await planIt(page);
-  await page.waitForSelector('#toast:not([hidden])', { timeout: 8000 });
+  await page.waitForFunction(() => /something the family avoids/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 }).catch(() => {});
   ok('a plan with coconut, twice: not kept, and it says why', (await page.textContent('#toastMsg')).includes('something the family avoids') && m.get('meals:plan') === was && !m.get('meals:draft'));
-  ok('the last good plan still shows', (await text(page, '#main [data-meal] .ct')).length === 3);
+  ok('the last good plan still shows, under the options (kept, to try again)', (await text(page, '#main [data-meal] .ct')).length === 3 && (await page.locator('[data-act="recipes"]').count()) === 2, 'with Get the recipes at the top and the bottom');
+  await page.click('[data-act="dropopts"]'); await page.waitForTimeout(300);
+  ok('Discard takes the options away', (await page.locator('#main .optcard').count()) === 0 && !(await page.evaluate(() => localStorage.getItem('allison-meals-v1-options'))));
   coconut = false;
   await ctx.close();
 }
@@ -434,7 +470,7 @@ env = { ACCOUNTS: db, ANTHROPIC_API_KEY: 'test' };
   // the next plan is asked for with them
   await page.click('[data-step="days"]'); await page.click('[data-days="1"]'); await page.waitForTimeout(200);
   ok('Ipsy remembers how many were at the table last time', /Last time it was 4\./.test(await page.textContent('#pb-people')));
-  await page.click('[data-people="3"]'); await page.click('[data-act="make"]');
+  await page.click('[data-people="3"]'); await page.click('[data-act="make"]'); await recipesNow(page);
   await page.waitForSelector('[data-act="discard"]', { timeout: 8000 });
   ok('a plan made with the new rules', JSON.parse(m.get('meals:draft')).people === 3);
   await page.click('[data-act="discard"]'); await page.waitForTimeout(400);
@@ -693,6 +729,9 @@ await SHEET_STEP();
   ok('no dinner, no courses step', (await page.locator('[data-step="courses"]').count()) === 0);
   await page.click('[data-slot="dinner"]'); await page.waitForTimeout(200);
   await page.click('[data-act="make"]');
+  await page.waitForSelector('[data-act="recipes"]', { timeout: 5000 });
+  ok('options for a dinner of courses show its starter', /^Starter: Soup 1$/.test((await text(page, '#main .optcard .oc'))[0] || ''), (await text(page, '#main .optcard .oc')).join('|'));
+  await page.click('[data-act="recipes"]');
   await page.waitForSelector('#main [data-meal]', { timeout: 5000 });
   const d = JSON.parse(m.get('meals:draft'));
   ok('the plan is asked with the courses, and its dinner has them', d.courses === 'all' && d.meals[0].courses.map(c => c.course).join() === 'starter,main,dessert', JSON.stringify(d.meals[0].courses));
