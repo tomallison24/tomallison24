@@ -36,7 +36,7 @@
   };
   const TOYS = { ball: { fun: 18, rest: 6, food: 3 }, bubbles: { fun: 20, rest: 4, food: 2 }, ribbon: { fun: 22, rest: 7, food: 3 }, kite: { fun: 26, rest: 9, food: 4 } };
   // the stable shop: foods go in the pantry (one each), toys are hers to keep
-  const SHOP = { carrot: 2, clover: 2, sugar: 3, bubbles: 6, ribbon: 8, kite: 10 };
+  const SHOP = { carrot: 1, clover: 1, sugar: 2, bubbles: 4, ribbon: 6, kite: 7 };
   const clamp = v => Math.max(0, Math.min(100, Math.round(v * 10) / 10));
   const add = (pet, d) => { for (const k of NEEDS) if (d[k]) pet[k] = clamp(pet[k] + d[k]); return pet; };
 

@@ -93,7 +93,7 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
   Her old bedroom pieces and the story's presents carry over.
 - **Castle rooms** (`rooms.js`): a library and a ballroom to decorate, in the dressing room's
   Rooms tab. Each has four places (the wallpaper, a big piece, a rug or dance floor, a small piece),
-  each with a free piece to start, two to buy (20 to 75 coins) and a present from the story. The
+  each with a free piece to start, two to buy (14 to 53 coins) and a present from the story. The
   first tap shows the price and a second buys, as in the Boutique; she can move any piece she has
   back in. Pieces to buy can come as a surprise present too.
 - **Her rank**: Little Princess, Princess (20), Royal Princess (32), Princess of Sparkle Kingdom (45):
