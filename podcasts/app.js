@@ -17,7 +17,7 @@
   // release changes all four; sw.js keeps each release's script with its page). A page from another release
   // lacks what this script draws into, and the app would stop with an empty Library (your shows are safe on the
   // phone and in the Sheet): so the app opens again, once, to get the pair; if that can't (offline), it says so.
-  const PAGE = 'podcasts-v36';
+  const PAGE = 'podcasts-v37';
   if ((document.querySelector('meta[name="aos-build"]') || {}).content !== PAGE) {
     let tried = '';
     try { tried = sessionStorage.getItem(KEY + '-page'); sessionStorage.setItem(KEY + '-page', PAGE); } catch(e) {}

@@ -1369,6 +1369,22 @@ function renderViewHead() {
   for (const x of VIEWS) { const box = $('g-' + x.id); if (box) box.hidden = x.id !== curView; }
   for (const x of SECTIONS) { const h = document.querySelector(`.vsec[data-sec="${x.id}"] .vsec-h small`); if (h) h.textContent = x.sum(); }
   if (!$('viewMenu').hidden) drawViewMenu();
+  drawTopNav();
+}
+// The view bar at the top, on a larger screen (CSS shows it from 700 points wide): every view in the menu, the one
+// you're on marked; drawn again only when the views shown change, so a tap stays where it is.
+function drawTopNav() {
+  const nav = $('vtop'); if (!nav) return;
+  const shown = VIEWS.filter(viewShown), key = shown.map(v => v.id).join();
+  if (nav.dataset.key !== key) {
+    nav.dataset.key = key;
+    put(nav, shown.map(v => `<button type="button" data-view="${v.id}"><span class="vt-ic" aria-hidden="true">${svg(v.icon, 17)}</span>${esc(v.name)}</button>`).join(''));
+  }
+  for (const b of nav.querySelectorAll('[data-view]')) {
+    if (b.dataset.view !== curView) { b.removeAttribute('aria-current'); continue; }
+    b.setAttribute('aria-current', 'page');
+    if (nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2);   // the one you're on, in sight
+  }
 }
 function goView(id) { curView = id; closeViewMenu(); renderViewHead(); window.scrollTo({ top: 0 }); }
 // A view with nothing in it (Labs between ideas) is left out of the menu.
@@ -1391,6 +1407,11 @@ $('viewMenu').addEventListener('click', e => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
+$('vtop').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]'); if (!b || b.dataset.view === curView) return;
+  curView = b.dataset.view; renderViewHead();
+  window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+});
 
 let toastTimer;
 function toast(msg) {
