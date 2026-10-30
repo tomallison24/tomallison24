@@ -103,7 +103,8 @@ from.
 
 - `aOS/` (capital O and S, `/aOS/`) is the home of every app (aOS2): its Home tab
   (`aOS/home-tab.js`) has Ipsy across the apps, Favorites and every app (in Layers, its own grid: every app as
-  a pebble in its own colour with its drawing in white, `aOS/glyphs.js` made by make-looks, the order yours alone, `aos.home.grid`), and each app opens
+  a pebble in its own colour with its drawing in white, `aOS/glyphs.js` made by make-looks, the order yours alone, `aos.home.grid`;
+  every other app icon shown in Layers, in aOS and the apps' own screens, is its `icon-pebble.svg`, made by make-looks too; the Home Screen icon stays `icon-layers-*.png`), and each app opens
   inside aOS, in a frame on this site, sharing aOS's storage (`window.aosHome`: `welcome.js` in
   the app takes aOS's insets and skips the install steps; data an app kept only on its own
   Home Screen copy moves in through the family account, `handoff`). It is also the app store;

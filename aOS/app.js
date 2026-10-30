@@ -10,7 +10,8 @@
   // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-layers-512.png, icon-grid-512.png. aOS shows
   // the one for its own look. The app's own icon (what a Home Screen shows) follows the design picked in the app.
   const lookNow = () => (window.aosLook ? aosLook.get() : 'vintage');
-  const icon = id => `../${id}/icon-${lookNow() === 'vintage' ? '' : lookNow() + '-'}512.png`;
+  const icon = id => lookNow() === 'layers' && window.aosGlyphs && aosGlyphs[id] ? `../${id}/icon-pebble.svg`   // in Layers, its pebble (make-looks.mjs)
+    : `../${id}/icon-${lookNow() === 'vintage' ? '' : lookNow() + '-'}512.png`;
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);

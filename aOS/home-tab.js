@@ -72,7 +72,10 @@
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
-  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} if (d === 'neon') d = 'layers'; return `../${id}/icon${/^(glass|layers|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };   // neon: Night Drive's, which Layers replaced
+  // in Layers, its pebble (icon-pebble.svg, made by make-looks.mjs), as on Layers' grid
+  const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} if (d === 'neon') d = 'layers';
+    if (d === 'layers' && window.aosGlyphs && aosGlyphs[id]) return `../${id}/icon-pebble.svg`;
+    return `../${id}/icon${/^(glass|layers|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };   // neon: Night Drive's, which Layers replaced
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
   // Weather and Calendar are widgets at the top of Favorites, so they're never among its four apps
@@ -296,12 +299,11 @@
   const glyph = id => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[id] || GLYPH.sparkle}</svg>`;
   // Each app as a pebble: its own colour, lighter at the top left, with its drawing in white at 40% of it (aOS/glyphs.js,
   // made by make-looks.mjs from the app's icon.svg); an app without one keeps its line drawing on the round button.
-  // The pebble is a soft superellipse with a little wobble, like sea glass.
-  const PEBBLE = 'M506 256L505 294L503 321L499 344L493 365L485 383L476 400L466 415L454 429L441 441L427 452L412 461L396 470L379 477L360 483L340 487L318 490L292 492L256 493L220 492L194 490L172 487L152 481L134 475L118 467L102 458L89 448L76 436L65 423L55 409L46 394L38 377L31 359L25 340L21 318L17 293L15 256L14 219L14 192L16 169L19 147L25 127L32 109L40 92L51 77L64 64L78 52L94 43L111 35L130 29L150 25L171 23L194 22L220 22L256 24L291 27L315 30L336 35L355 40L373 46L390 52L405 60L420 68L434 78L447 89L459 101L470 115L480 131L489 149L496 169L501 192L504 218Z';
-  const pebble = id => { const g = (window.aosGlyphs || {})[id]; if (!g) return glyph(id);
+  const pebble = id => { const g = (window.aosGlyphs || {})[id], P = window.aosPebble; if (!g || !P) return glyph(id);
     return `<svg class="peb" viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="pg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.top}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`
       + `<radialGradient id="pw-${id}" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
-      + `<path d="${PEBBLE}" fill="url(#pg-${id})"/><path d="${PEBBLE}" fill="url(#pw-${id})"/><path class="edge" d="${PEBBLE}"/></svg>${g.svg}`; };
+      + `<path d="${P}" fill="url(#pg-${id})"/><path d="${P}" fill="url(#pw-${id})"/><path class="edge" d="${P}"/></svg>`
+      + `<svg class="gl" viewBox="${g.vb}" aria-hidden="true">${g.defs ? `<defs>${g.defs}</defs>` : ''}${g.body}</svg>`; };
   function gridOrder() {
     const saved = get(GRID, []).filter(known);
     const top = saved.length ? saved : [...new Set([...pins.filter(known), 'mail', 'calendar', 'weather', 'house'].filter(known))].slice(0, 4);

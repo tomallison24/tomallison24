@@ -504,6 +504,8 @@
   .gapp .orb.pebble .edge { fill: none; stroke: none; }
   .editing .gapp .orb.pebble, .editing .gapp.sel .orb.pebble { box-shadow: none; }
   .editing .gapp.sel .orb.pebble .edge { stroke: var(--sp-every); stroke-width: 44; }
+  /* every other app icon in Layers is its pebble (icon-pebble.svg): its own shape and shadow, not the square icon's */
+  img[src$="icon-pebble.svg"] { border-radius: 0 !important; box-shadow: none !important; background: none !important; }
   .gapp:active .orb { transform: translateY(2px) scale(.96); }
   .gapp > b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 100%; font-weight: 500; }
   .gapp em { position: absolute; top: -3px; left: calc(50% + 14px); min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--sp-every); color: var(--orb-on); font: 700 12px/20px -apple-system, system-ui, sans-serif; font-style: normal; }
@@ -997,12 +999,12 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="../home/redact.js"></script>   <!-- personal details stay on the phone: what goes to Claude has placeholders (before ipsy.js) -->
 <script src="../home/ipsy.js"></script>   <!-- Ipsy, drawn on the Meet Ipsy card and page -->
 <script src="../home/settings.js"></script>   <!-- the rows in Account, the same as in every app's Settings -->
+<script src="glyphs.js"></script>   <!-- Layers' pebbles: each app's drawing in white, and which apps have an icon-pebble.svg (made by make-looks.mjs) -->
 <script src="app.js"></script>
 <script src="../calendar/ical.js"></script>   <!-- Calendar's .ics reader, for what's next on Home -->
 <script src="../weather/data.js"></script>   <!-- Weather's forecast code, so Home's Weather widget is fresh when aOS opens -->
 <script src="home-find.js"></script>
 <script src="prefs-sync.js"></script>   <!-- settings that follow you between your devices -->   <!-- what Home reads from the apps: the widgets, and what's in them -->
-<script src="glyphs.js"></script>   <!-- each app's drawing in white, for its pebble on Layers' grid (made by make-looks.mjs) -->
 <script src="home-tab.js"></script>   <!-- aOS 2's Home: every app inside aOS -->
 </body>
 </html>

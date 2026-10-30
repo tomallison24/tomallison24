@@ -72,7 +72,7 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `home/welcome.js` `OS_TOUR` | the sentence listing every app by name |
 | `home/welcome.js` `DARK_ONLY` | only if it is drawn for dark only |
 | `home/welcome.js` `RELEASES` | a line in the top entry, and the app's id in its `added` so aOS's Today leads with it (see `CLAUDE.md`, "The release log") |
-| `aOS/app.js` | `ROOM_HUE` (its own colour, an RGB triple: see the icon above), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family. Then `node aOS/scripts/make-looks.mjs` adds its drawing to `aOS/glyphs.js`, its pebble on Layers' grid (it needs the icon's note naming its own colour and tint, as the others have) |
+| `aOS/app.js` | `ROOM_HUE` (its own colour, an RGB triple: see the icon above), `CAT` (category), `NEEDS` (what a new person must do: `ok` or `once`), and `SHARED` only if it shares with the family. Then `node aOS/scripts/make-looks.mjs` adds its drawing to `aOS/glyphs.js` and writes its `icon-pebble.svg`, its icon everywhere in Layers (it needs the icon's note naming its own colour and tint, as the others have) |
 | `functions/aOS/api/[[route]].js` `APPS` | the same list, same order, as welcome.js (else "Installed" returns 400) |
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 

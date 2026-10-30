@@ -170,7 +170,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/Layers/.test(await p.locator('#lookSub').innerText())) pr.push('the Appearance line does not say Layers');
   if (await p.evaluate(() => document.documentElement.hasAttribute('data-sky'))) pr.push('the Vintage sky is still drawn in Layers');
   if (await p.evaluate(() => !/gradient/.test(getComputedStyle(document.documentElement).backgroundImage))) pr.push('Layers\' sky is not behind the page');
-  if (await p.locator('#stories .story img').first().getAttribute('src').then(s => !/icon-layers-512/.test(s || ''))) pr.push('the apps\' icons are not Layers\'');
+  if (await p.locator('#stories .story img').first().getAttribute('src').then(s => !/icon-pebble\.svg$/.test(s || ''))) pr.push('the apps\' icons are not Layers\' pebbles');
   await p.reload(); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'layers') pr.push('Layers is not kept over a reload');
   // a phone that had Night Drive (gone): aOS opens in Layers, and every app's choice is moved over

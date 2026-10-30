@@ -154,20 +154,25 @@ if (!check && pngs.length) {
   await browser.close();
 }
 
-// ---- Layers' grid on aOS Home: each app's drawing in white, for its pebble (aOS/glyphs.js, read by aOS/home-tab.js) ----
+// ---- Layers' pebbles: every app's icon inside aOS and its own screens, in Layers ----
 // The drawing from the app's icon.svg (its own colour, named in the icon's note: "own colour (#…) on a pale tint of it
-// (#…)"), without the tile and the Vintage marks, cropped to a square round the drawing so CSS can size every app's the
-// same; and the pebble's gradient, the app's colour (aOS/app.js, ROOM_HUE) lighter at the top left, down to its own,
-// dark enough for the white drawing. Each keeps a hash of what it was made from, so --check needs no browser.
+// (#…)"), in white, without the tile and the Vintage marks, cropped to a square round it so every app's is the same size;
+// and the pebble's gradient: the app's colour (aOS/app.js, ROOM_HUE) lighter at the top left, down to its own, dark
+// enough for the white drawing. Written twice: aOS/glyphs.js (Layers' grid on aOS Home, aOS/home-tab.js) and
+// <app>/icon-pebble.svg (every other place an app's icon shows in Layers: aOS/app.js, home-tab.js, home/welcome.js).
+// The drawing is 40% of the pebble. Each keeps a hash of what it was made from, so --check needs no browser.
 {
   const { createHash } = await import('crypto');
   const file = path.join(ROOT, 'aOS/glyphs.js');
+  // the pebble: a soft superellipse with a little wobble, like sea glass, in a 512 box
+  const PEBBLE = 'M' + Array.from({ length: 72 }, (_, i) => { const t = i / 72 * Math.PI * 2, c = Math.cos(t), s = Math.sin(t), r = 1 + .035 * Math.sin(2 * t + .7) + .02 * Math.sin(3 * t + 2.1);
+    return [Math.round(256 + 240 * r * Math.sign(c) * Math.abs(c) ** (2 / 2.6)), Math.round(256 + 240 * r * Math.sign(s) * Math.abs(s) ** (2 / 2.6))].join(' '); }).join('L') + 'Z';
   const HUE = Function('return ' + /const ROOM_HUE = (\{[^}]*\})/.exec(readFileSync(path.join(ROOT, 'aOS/app.js'), 'utf8'))[1])();
   const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
   const mixc = (a, b, k) => '#' + rgb(a).map((v, i) => Math.round(v + (rgb(b)[i] - v) * k).toString(16).padStart(2, '0')).join('').toUpperCase();
   const lum = h => { const [r, g, b] = rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
   let was = {};
-  try { was = JSON.parse(/window\.aosGlyphs = (\{[\s\S]*\});/.exec(readFileSync(file, 'utf8'))[1]); } catch {}
+  try { was = JSON.parse(/window\.aosGlyphs = (\{[\s\S]*?\});\n/.exec(readFileSync(file, 'utf8'))[1]); } catch {}
   const out = {}, todo = [];
   for (const app of icons.filter(a => HUE[a])) {
     const raw = readFileSync(path.join(ROOT, app, 'icon.svg'), 'utf8'), m = /own colour \((#[0-9A-F]{6})\)[^#]*\((#[0-9A-F]{6})\)/i.exec(raw);
@@ -186,36 +191,51 @@ if (!check && pngs.length) {
     out[app] = { h, top, end: deep, defs: white(defs), body: white(body) };
     if (!was[app] || was[app].h !== h) todo.push(app);
   }
-  const gone = Object.keys(was).filter(a => !out[a]);
-  if (todo.length || gone.length) {
-    stale.push('aOS/glyphs.js' + (todo.length ? ` (${todo.join(', ')})` : ''));
-    if (!check) {
-      const { createRequire } = await import('module');
-      const { execSync } = await import('child_process');
-      const require = createRequire(execSync('npm root -g').toString().trim() + '/');
-      const { chromium } = require('playwright');
-      const browser = await chromium.launch(), page = await browser.newPage({ viewport: { width: 512, height: 512 } });
-      const final = {};
-      for (const app of Object.keys(out)) {
-        const o = out[app];
-        if (!todo.includes(app)) { final[app] = was[app]; continue; }
-        // the drawing's own box: drawn alone, and its pixels scanned
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs>${o.defs}</defs>${o.body}</svg>`;
-        const [x0, y0, x1, y1] = await page.evaluate(async svg => {
-          const img = new Image(); img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))); await img.decode();
-          const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
-          const d = x.getImageData(0, 0, 512, 512).data; let a = 512, b = 512, e = 0, f = 0;
-          for (let y = 0; y < 512; y++) for (let i = 0; i < 512; i++) if (d[(y * 512 + i) * 4 + 3] > 40) { if (i < a) a = i; if (i > e) e = i; if (y < b) b = y; if (y > f) f = y; }
-          return [a, b, e + 1, f + 1];
-        }, svg);
-        const size = Math.max(x1 - x0, y1 - y0), vx = Math.round((x0 + x1 - size) / 2), vy = Math.round((y0 + y1 - size) / 2);
-        final[app] = { h: o.h, top: o.top, end: o.end, svg: `<svg class="gl" viewBox="${vx} ${vy} ${size} ${size}" aria-hidden="true">${o.defs ? `<defs>${o.defs}</defs>` : ''}${o.body}</svg>` };
-      }
-      await browser.close();
-      writeFileSync(file, `// Made by aOS/scripts/make-looks.mjs from each app's icon.svg - don't edit by hand.\n`
-        + `// Layers' grid on aOS Home (aOS/home-tab.js, pebble): each app's drawing in white, cropped to a square round it, and its\n`
-        + `// pebble's gradient, top left to bottom right. h: a hash of what it was made from.\n`
-        + `window.aosGlyphs = ${JSON.stringify(final, null, 1)};\n`);
+  const final = {};
+  for (const app of Object.keys(out)) if (!todo.includes(app)) final[app] = was[app];
+  if (todo.length && !check) {
+    const { createRequire } = await import('module');
+    const { execSync } = await import('child_process');
+    const require = createRequire(execSync('npm root -g').toString().trim() + '/');
+    const { chromium } = require('playwright');
+    const browser = await chromium.launch(), page = await browser.newPage({ viewport: { width: 512, height: 512 } });
+    for (const app of todo) {
+      const o = out[app];
+      // the drawing's own box: drawn alone, and its pixels scanned
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs>${o.defs}</defs>${o.body}</svg>`;
+      const [x0, y0, x1, y1] = await page.evaluate(async svg => {
+        const img = new Image(); img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))); await img.decode();
+        const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+        const d = x.getImageData(0, 0, 512, 512).data; let a = 512, b = 512, e = 0, f = 0;
+        for (let y = 0; y < 512; y++) for (let i = 0; i < 512; i++) if (d[(y * 512 + i) * 4 + 3] > 40) { if (i < a) a = i; if (i > e) e = i; if (y < b) b = y; if (y > f) f = y; }
+        return [a, b, e + 1, f + 1];
+      }, svg);
+      const size = Math.max(x1 - x0, y1 - y0);
+      final[app] = { h: o.h, top: o.top, end: o.end, vb: `${Math.round((x0 + x1 - size) / 2)} ${Math.round((y0 + y1 - size) / 2)} ${size} ${size}`, defs: o.defs, body: o.body };
+    }
+    await browser.close();
+  }
+  if (todo.length) stale.push('aOS/glyphs.js' + ` (${todo.join(', ')})`);
+  if (!todo.length || !check) {
+    const ordered = Object.fromEntries(Object.keys(out).map(a => [a, final[a]]));
+    const text = `// Made by aOS/scripts/make-looks.mjs from each app's icon.svg - don't edit by hand.\n`
+      + `// Layers' pebbles (aOS/home-tab.js, pebble): each app's drawing in white, cropped to a square round it (vb), and its\n`
+      + `// pebble's gradient, top left to bottom right; aosPebble is the pebble's outline in a 512 box. h: a hash of what it was made from.\n`
+      + `window.aosPebble = '${PEBBLE}';\n`
+      + `window.aosGlyphs = ${JSON.stringify(ordered, null, 1)};\n`;
+    if (!existsSync(file) || readFileSync(file, 'utf8') !== text) { if (!todo.length) stale.push('aOS/glyphs.js'); if (!check) writeFileSync(file, text); }
+    // each app's pebble as an icon of its own: the pebble a little inside the box, with a soft shadow under it
+    for (const [app, g] of Object.entries(ordered)) {
+      const [vx, vy, vs] = g.vb.split(' ').map(Number), w = 512 * .92 * .4, at = 256 - w / 2;
+      const peb = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">\n`
+        + `  <!-- Made by aOS/scripts/make-looks.mjs from icon.svg - don't edit by hand. Layers' pebble: the app's colour, lighter at the top left, its drawing in white at 40% of it. ${g.h} -->\n`
+        + `  <defs><linearGradient id="p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.top}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`
+        + `<radialGradient id="w" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
+        + `<filter id="s" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#101828" flood-opacity=".22"/></filter></defs>\n`
+        + `  <g transform="translate(256 256) scale(.92) translate(-256 -256)"><path d="${PEBBLE}" fill="url(#p)" filter="url(#s)"/><path d="${PEBBLE}" fill="url(#w)"/></g>\n`
+        + `  <svg x="${at.toFixed(2)}" y="${at.toFixed(2)}" width="${w.toFixed(2)}" height="${w.toFixed(2)}" viewBox="${vx} ${vy} ${vs} ${vs}">${g.defs ? `<defs>${g.defs}</defs>` : ''}${g.body}</svg>\n</svg>\n`;
+      const f = path.join(ROOT, app, 'icon-pebble.svg');
+      if (!existsSync(f) || readFileSync(f, 'utf8') !== peb) { stale.push(`${app}/icon-pebble.svg`); if (!check) writeFileSync(f, peb); }
     }
   }
 }

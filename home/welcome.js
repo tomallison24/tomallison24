@@ -99,7 +99,7 @@
         'Travel reads Gmail 90 emails at a time, newest first, so your upcoming trips come in first; a longer read (the first one goes back a year) carries on after a minute\'s break, the most Gmail lets an app read without slowing it down. And Ipsy fills in what new bookings are missing by itself (Settings > Smart help turns it off): a booking it completes goes straight to Upcoming instead of waiting in To check, with Undo in Ipsy\'s chat',
         'Travel: on the day you fly in, a trip\'s hotel check-in comes after the flight and the car hire, at about when you\'ll get there: the landing, half an hour for bags, the car, and the drive to the hotel (worked out from OpenStreetMap\'s maps), never before the hotel\'s own check-in time',
         'Your helper dresses for the weather where you are (from Weather\'s forecast on your phone): an umbrella in the rain, a scarf when it\'s chilly, a coat when it\'s cold, a woolly hat in snow, and a sun hat and sunglasses on a warm sunny day. In Tron, Ares keeps his suit and takes an umbrella. Turn it off in Account, Your helper (or ask Ipsy).',
-        'aOS Home in Layers: each app is now a pebble in its own colour, lighter at the top left, with its drawing in white, the same drawing as on its icon (the iPhone Home Screen icons are unchanged)',
+        'In Layers, every app\'s icon is now a pebble in its own colour, lighter at the top left, with its drawing in white: on aOS Home, in search, the morning brief, the app store and each app\'s own screens. The iPhone Home Screen icons are unchanged',
         'aOS Home in Layers is its own: the weather and what\'s next on the sky, then every app on one screen, four across, as raised round buttons with a line drawing in the app\'s own colour. The top row is yours, and nothing moves unless you move it: Edit, then tap two apps to swap them (kept on your other devices too). Thumb arc is still there in Account > Appearance > Home layout',
         'Layers gets an intro too, Skylight: as aOS opens, the sun (the moon in the evening) rises into the top right of the time of day\'s sky, and hundreds of tiny dots, your helpers, swoop in like a flock of birds in your apps\' colours. They come together into your apps\' drawings, and the drawings into a house, walls first and then the roof; a warm light comes on inside with a family standing in it, and "aOS" bounces in letter by letter with Good morning, Good afternoon or Good evening; then "aOS" glides up into the page. Once a launch, with its own sound (a warm chord, a whoosh as the flock swoops in, notes climbing as the house goes up and a sparkle as the light comes on); Account > Appearance > Skylight intro: Sound, Silent or Off, and Play the intro',
         'A new look, Layers, in place of Night Drive, in aOS and every app: a still sky behind the page, its colours by the time of day (sunrise, sea glass, dusk and night), clear behind the title and frosted glass from there down, in the AllisonOS colours, light or dark with your phone. Its own app icons, and your helper dressed for it. A phone that had Night Drive opens in Layers',
@@ -1524,7 +1524,10 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   const DIR = id => id === 'aos' ? 'aOS' : id;   // aOS lives at /aOS/
   // an app's icon in its design here (design.<id>, Clock's set.design; aOS: aos.look): icon-512.png is Vintage
   const lookOf = id => { try { return id === 'aos' ? localStorage.getItem('aos.look') : id === 'clock' ? ((JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {}).design : localStorage.getItem('design.' + id); } catch { return null; } };
-  const icon = id => { let l = lookOf(id); if (l === 'neon') l = 'layers'; return url(`../${DIR(id)}/icon-${/^(glass|layers|grid)$/.test(l || '') ? l + '-' : ''}512.png`); };   // neon: Night Drive's, which Layers replaced
+  const homeIcon = id => { let l = lookOf(id); if (l === 'neon') l = 'layers'; return url(`../${DIR(id)}/icon-${/^(glass|layers|grid)$/.test(l || '') ? l + '-' : ''}512.png`); };   // neon: Night Drive's, which Layers replaced
+  // what the app shows of itself: in Layers, its pebble (icon-pebble.svg, made by aOS/scripts/make-looks.mjs); the Home
+  // Screen icon (homeIcon) is only for adding it to the Home Screen, which shows that one
+  const icon = id => { let l = lookOf(id); return (l === 'layers' || l === 'neon') && APPS.includes(id) ? url(`../${DIR(id)}/icon-pebble.svg`) : homeIcon(id); };
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
 
   const CSS = `
@@ -1668,6 +1671,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-fly img { position: absolute; border-radius: 24%; box-shadow: 0 6px 18px rgba(0,0,0,.22); opacity: 0; transform: rotateY(-90deg) scale(.7);
   transition: transform .55s cubic-bezier(.25,1,.5,1), opacity .4s, left .9s cubic-bezier(.2,.8,.2,1), top .9s cubic-bezier(.2,.8,.2,1), width .9s cubic-bezier(.2,.8,.2,1), height .9s cubic-bezier(.2,.8,.2,1); }
 #aos-welcome .c-fly img.on { opacity: 1; transform: none; }
+#aos-welcome img[src$="icon-pebble.svg"], #aos-off img[src$="icon-pebble.svg"], #aos-moved img[src$="icon-pebble.svg"] { border-radius: 0 !important; box-shadow: none !important; background: none !important; }
 #aos-welcome.tall .c-fly, #aos-welcome.tall .v-wrap, #aos-welcome.tall .a-head, #aos-welcome.tall .c-brand, #aos-welcome.tall .m-power { opacity: 0; }   /* tall cards need the room */
 /* an app's own walkthrough: its icon and name */
 #aos-welcome .a-head { display: flex; flex-direction: column; align-items: center; transition: transform .9s cubic-bezier(.2,.8,.2,1), opacity .5s; }
@@ -2384,7 +2388,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     const name = NAMES[id] || 'aOS';
     return run(`Add ${name} to your Home Screen`, '', () => { try { sessionStorage.setItem(k, '1'); } catch {} }, async o => {
       o.q('.w-skip').hidden = true;
-      const inst = { x: 'install', noart: true, stay, t: `Add ${name} to your Home Screen`, name, icon: icon(id) };
+      const inst = { x: 'install', noart: true, stay, t: `Add ${name} to your Home Screen`, name, icon: homeIcon(id) };
       if (id === 'aos' && ios && window.aosLook) {   // choose the look, then add it
         inst.icon = lookIcon(window.aosLook.get());
         const pick = { x: 'look', noart: true, t: 'Choose your look', d: 'Pick one before you add aOS: its icon on your Home Screen goes with it. You can change it later under your account.', onLook: l => { inst.icon = lookIcon(l); } };
