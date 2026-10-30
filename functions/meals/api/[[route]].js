@@ -156,7 +156,12 @@ const planText = meals => meals.flatMap(m => [m.title, m.why, ...(m.veg || []), 
 export const modelOf = env => str(env && env.MEALS_MODEL, 60) || MODEL;
 export const aiOf = env => env && env.ANTHROPIC_API_KEY ? 'anthropic' : null;
 
-export async function ask(env, { system, prompt, maxTokens = 4000 }, f = fetch) {
+// Claude Haiku 5.5 thinks before it answers (adaptive thinking, on unless turned off), and the thinking
+// counts toward max_tokens: a plan's meals came back cut off mid-way ("That didn't come back right").
+// So a plan part asks for low effort, leaves room for the thinking, and has its answer held to
+// MEALS_SCHEMA (structured outputs: always whole, parseable JSON); an answer that still stops short
+// (stop_reason max_tokens) or is declined says so as ai-format, not as a parse failure.
+export async function ask(env, { system, prompt, maxTokens = 4000, schema, effort }, f = fetch) {
   const ai = aiOf(env), model = modelOf(env);
   if (!ai) throw fail('no-ai', 503);
   const ac = new AbortController(), timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
@@ -165,10 +170,12 @@ export async function ask(env, { system, prompt, maxTokens = 4000 }, f = fetch) 
     try {
       r = await f(ANTHROPIC_URL, { method: 'POST', signal: ac.signal,
         headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: prompt }] }) });
+        body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: prompt }],
+          ...(schema || effort ? { output_config: { ...(effort ? { effort } : {}), ...(schema ? { format: { type: 'json_schema', schema } } : {}) } } : {}) }) });
     } catch { throw fail('ai-unreachable', 502); }
     if (!r.ok) throw await aiFail(r);
     const j = await r.json();
+    if (j.stop_reason === 'max_tokens' || j.stop_reason === 'refusal') throw fail('ai-format', 502);
     return (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
   } finally { clearTimeout(timer); }
 }
@@ -242,6 +249,17 @@ export function specs(o, settings, rnd = Math.random) {
 }
 const MEAL_SHAPE = '{"meals":[{"key":"d1-dinner","title":"Lemon chicken thighs with white beans and greens","cuisine":"Mediterranean","method":"roasted","minutes":35,"why":"one short line on why it suits the day",'
   + '"veg":["spinach","leeks","zucchini"],"protein":42,"fridge":["cabbage"],"ingredients":[{"item":"boneless chicken thighs","qty":"2 lb","pantry":false},{"item":"olive oil","qty":"2 tbsp","pantry":true}],"steps":["..."]}],"tip":"one prep-ahead or money-saving tip"}';
+// The shape every plan part's answer is held to (structured outputs: no numeric or length limits here;
+// cleanMeal checks those).
+const STR = { type: 'string' }, STRS = { type: 'array', items: STR };
+export const MEALS_SCHEMA = { type: 'object', additionalProperties: false, required: ['meals', 'tip'], properties: {
+  meals: { type: 'array', items: { type: 'object', additionalProperties: false,
+    required: ['key', 'title', 'cuisine', 'method', 'minutes', 'why', 'veg', 'protein', 'fridge', 'ingredients', 'steps'], properties: {
+      key: STR, title: STR, cuisine: STR, method: STR, minutes: { type: 'integer' }, why: STR, veg: STRS, protein: { type: 'integer' }, fridge: STRS,
+      ingredients: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['item', 'qty', 'pantry'],
+        properties: { item: STR, qty: STR, pantry: { type: 'boolean' } } } },
+      steps: STRS } } },
+  tip: STR } };
 const FOOD_WORDS = { vegetarian: 'meat-free (vegetarian: beans, lentils, eggs, tofu, cheese)', fish: 'fish (salmon, cod, tuna...)' };
 function specLine(s, o) {
   const what = s.slot === 'breakfast' ? 'breakfast: ' + s.style
@@ -264,7 +282,7 @@ export function chunkAsk(settings, o, part, { history = [], taste = { loved: [],
   if (taste.nope.length) lines.push('Never make these again, or anything much like them: ' + taste.nope.map(t => t.title).join('; ') + '.');
   if (o.note) lines.push('Also: ' + o.note);
   if (why) lines.push(why);
-  return { system, prompt: lines.join('\n\n'), maxTokens: 1400 * part.length + 800 };
+  return { system, prompt: lines.join('\n\n'), maxTokens: Math.min(16000, 1800 * part.length + 4000), schema: MEALS_SCHEMA, effort: 'low' };
 }
 
 // One part of a plan: the meals asked for, by key, checked; sent back once with what was wrong.

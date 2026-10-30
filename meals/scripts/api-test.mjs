@@ -11,7 +11,7 @@
 // Cooking again (POST again): past meals back for two weeks, checked against what the family avoids now.
 //   node meals/scripts/api-test.mjs
 import assert from 'assert/strict';
-import { onRequest, AGAIN_DAYS, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
+import { onRequest, AGAIN_DAYS, avoidHits, ask, json, cleanPlan, specs, chunkAsk, settingsOf, choicesOf, addDays, CHUNK, CUISINES, ANTHROPIC_URL, MEALS_SCHEMA, IPSY_MODEL, IPSY_DAILY, IPSY_SYSTEM, IPSY_CLIENT_TOOLS, AI_DAILY } from '../../functions/meals/api/[[route]].js';
 import { issue, putJSON } from '../../server/auth.js';
 // The month's AI budget used up: Anthropic's answer to every request until the 1st (server/ipsy.js, budgetUntil).
 const back = (d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString())(new Date());
@@ -143,9 +143,21 @@ await test('a plan: 4 dinners for 4, kept as the family\'s draft with what was a
   assert.equal(q.url, ANTHROPIC_URL); assert.equal(q.headers['x-api-key'], 'ak'); assert.equal(q.headers['anthropic-version'], '2023-06-01');
   assert.equal(q.body.model, 'claude-haiku-5-5'); assert.equal(q.body.tools, undefined);
   assert.match(q.body.messages[0].content, /Write these 4 meals for 4 people/);
+  // Haiku 5.5 thinks first, and that counts toward max_tokens: low effort, room to spare, the answer held to the schema
+  assert.equal(q.body.output_config.effort, 'low'); assert.equal(q.body.output_config.format.type, 'json_schema');
+  assert.deepEqual(q.body.output_config.format.schema, MEALS_SCHEMA); assert.ok(q.body.max_tokens >= 11000, 'max_tokens ' + q.body.max_tokens);
   assert.equal(JSON.parse(db.m.get('meals:draft')).meals[0].title, p.meals[0].title);
   assert.equal(db.m.get('meals:plan'), undefined, 'nothing is the family\'s plan until it\'s accepted');
   assert.equal(db.m.get('meals:history'), undefined);
+});
+await test('an answer cut off at max_tokens, or declined, says so (ai-format) and keeps the draft there was', async () => {
+  const before = db.m.get('meals:draft');
+  for (const stop of ['max_tokens', 'refusal']) {
+    answers = [() => new Response(JSON.stringify({ content: [{ type: 'text', text: '{"meals":[{"key":"d1-dinner","title":"Half a' }], stop_reason: stop }))];
+    const r = await call('plan', { token, body: DIN() });
+    assert.equal(r.status, 502, stop); assert.equal(r.body.error, 'ai-format', stop);
+  }
+  answers = []; assert.equal(db.m.get('meals:draft'), before);
 });
 await test('accepting: the draft becomes the family\'s plan, a date a day from the start, in the log', async () => {
   const d = JSON.parse(db.m.get('meals:draft'));
