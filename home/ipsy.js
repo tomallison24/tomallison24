@@ -328,13 +328,15 @@
     const x = cv.getContext('2d', { willReadFrequently: true }); x.scale(K, K); NOVA_ART[name](x);
     const px = x.getImageData(0, 0, 200 * K, 200 * K).data, inside = [];
     for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 160) inside.push(i >> 2);
+    // evenly: every spot of the drawing at most once (shuffled), so there are no clumps or gaps and the edges stay sharp
+    for (let k = inside.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [inside[k], inside[j]] = [inside[j], inside[k]]; }
     const pts = [];
     for (let k = 0; k < NOVA_N; k++) {
-      const p = inside[Math.floor(Math.random() * inside.length)] || 0, X = (p % (200 * K) + Math.random()) / K, Y = (Math.floor(p / (200 * K)) + Math.random()) / K;
+      const p = inside[k % inside.length] || 0, X = (p % (200 * K) + Math.random()) / K, Y = (Math.floor(p / (200 * K)) + Math.random()) / K;
       pts.push([X, Y, px[p * 4], px[p * 4 + 1], px[p * 4 + 2], Math.atan2(Y - CY, X - CX)]);
     }
     pts.sort((a, b) => a[5] - b[5]);   // round the middle, from the left: as the cloud's dots are
-    const s = { x: new Float32Array(NOVA_N), y: new Float32Array(NOVA_N), c: new Uint8Array(NOVA_N * 3), own: NOVA_OWN.has(name) };
+    const s = { x: new Float32Array(NOVA_N), y: new Float32Array(NOVA_N), c: new Uint8Array(NOVA_N * 3), own: NOVA_OWN.has(name), cell: Math.sqrt(inside.length / (K * K) / NOVA_N) };   // cell: each dot's share of the shape, so together they fill it
     pts.forEach(([X, Y, r, g, b], i) => { s.x[i] = X; s.y[i] = Y; s.c[i * 3] = r; s.c[i * 3 + 1] = g; s.c[i * 3 + 2] = b; });
     return (novaShapes[name] = s);
   }
@@ -426,14 +428,14 @@
     // the .h-code group, as the page draws it now (its hops, sweeps and the cross), in the SVG's own units
     let m = null; try { m = st.svg.getScreenCTM().inverse().multiply(st.g.getScreenCTM()); } catch {}
     const ma = m ? m.a : 1, mb = m ? m.b : 0, mc = m ? m.c : 0, md = m ? m.d : 1, me = m ? m.e : 0, mf = m ? m.f : 0;
-    const s = sr.width / 200 * dpr, ox = M * sr.width * dpr, oy = M * sr.height * dpr, size = Math.max(1, Math.round(s * 0.8));
+    const s = sr.width / 200 * dpr, ox = M * sr.width * dpr, oy = M * sr.height * dpr, size = Math.max(1, Math.round(s * (sh ? Math.max(0.8, 1.5 * sh.cell) : 0.8)));   // in a shape, big enough to fill it
     if (sh && !sh.own) st.tint = sh;   // the shape whose colours the dots take on (and fade back from)
     for (let i = 0; i < NOVA_N; i++) {
       let tx, ty;
       if (sh) { tx = sh.x[i]; ty = sh.y[i]; }
       else if (aim === 'whirl') { const a = D.a[i] + (i % 2 ? 1 : -1) * t * (0.6 + D.k[i] * 0.25), r = 14 + D.r[i] * 0.8; tx = CX + r * Math.cos(a); ty = CY + 0.8 * r * Math.sin(a); }
       else { const a = D.a[i] + 0.15 * Math.sin(t * 0.4 + D.ph[i]); tx = CX + D.r[i] * Math.cos(a) + 3 * Math.sin(t * 0.9 + D.ph[i]); ty = CY + 0.9 * D.r[i] * Math.sin(a) + 3 * Math.cos(t * 0.7 + D.ph[i]); }
-      if (!calm) { tx += 0.6 * Math.sin(t * 2.1 + D.ph[i]); ty += 0.6 * Math.cos(t * 1.7 + D.ph[i]); }
+      if (!calm) { const j = sh ? 0.2 : 0.6; tx += j * Math.sin(t * 2.1 + D.ph[i]); ty += j * Math.cos(t * 1.7 + D.ph[i]); }   // a shimmer; slight in a shape, so its edges stay sharp
       const f = calm ? 1 : 1 - Math.exp(-dt * D.k[i] * (sh ? 1.2 : 0.9));
       st.x[i] += (tx - st.x[i]) * f; st.y[i] += (ty - st.y[i]) * f;
       const wt = sh && !sh.own ? 1 : 0; st.w[i] += (wt - st.w[i]) * (calm ? 1 : Math.min(1, f * 1.4));
