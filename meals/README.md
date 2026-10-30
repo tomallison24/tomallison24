@@ -16,10 +16,11 @@ AI first: tell Ipsy what you fancy, and it plans the family's meals. One screen,
      shrimp, vegetarian.
   4. **How long**: Just today, 3 days (to start) or A week.
   5. **People**: how many you're cooking for (the last plan's number to start).
-  6. **Lunches** (only with both lunch and dinner): Leftovers, Fresh each day or A mix.
+  6. **Lunches** (only with both lunch and dinner): Leftovers, Fresh daily or A mix.
   7. **Extras** (optional): quick notes as chips (Quick, Kid-friendly, Not
-     spicy, Budget-friendly, One pan), **In the fridge?** and **Anything else?**.
-  Several-at-once steps have **Next**; a one-of choice opens the next step itself.
+     spicy, Budget, One pan, Make ahead), **In the fridge?** and **Anything else?**.
+  Every step's choices are the same equal tiles in a grid, three across (two
+  for Courses, four for People, 1 to 8). Several-at-once steps have **Next**; a one-of choice opens the next step itself.
   Under the steps: what it will plan ("3 days of dinners for 4: 3 meals…") and
   the family's rules (**Edit** opens Settings). **Show me options** asks for
   three dishes for each meal (`POST options`: a title, a line about it, the
