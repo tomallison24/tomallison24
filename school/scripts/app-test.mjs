@@ -74,7 +74,7 @@ async function test(name, fn) {
   catch (e) { failed++; console.log('not ok -', name); console.log(e && e.stack || e); }
 }
 const texts = (page, sel) => page.$$eval(sel, els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
-const open = async (page, url = '/school/') => { await page.goto(BASE + url); await page.waitForFunction(() => window.__school); await page.waitForTimeout(400); };
+const open = async (page, url = '/school/') => { await page.goto(BASE + url); await page.waitForFunction(() => window.__school); await page.evaluate(() => window.__school.ready); await page.waitForTimeout(300); };
 
 await test('no posts yet: says so, and offers Connect Gmail', async () => {
   const { ctx, page } = await newPage('light');
@@ -324,6 +324,30 @@ await test('Ipsy in aOS: School’s tools read the school day, what needs you an
   assert.equal(r.change, 'Marked done: Week 13 Newsletter_Important Updates (READ)');
   assert.ok(!r.afterDone.includes('s1') && r.afterUndo.includes('s1'));
   assert.equal(r.label, 'Looking through school posts for “pink”');
+  await ctx.close();
+});
+
+await test('the posts are kept when the storage every app shares is full, and come back after a reload', async () => {
+  const { ctx, page } = await newPage('light', seeded());
+  await open(page);
+  // fill the localStorage every app on the site shares (Mail, Orders, Notes…), as on a busy phone
+  await page.evaluate(() => { let i = 0; for (const size of [256 * 1024, 16 * 1024, 1024, 64]) { const chunk = 'x'.repeat(size); for (let k = 0; k < 400; k++) { try { localStorage.setItem('filler.' + i++, chunk); } catch { break; } } } });   // to the brim
+  // then a new email is read: a post that has to be saved into the full storage
+  await page.evaluate(() => { const x = Object.assign({}, window.__school.items()[0], { id: 'new:0', msg: 'new', title: 'Picture Day is Tuesday', at: Date.now() }); window.__school.set(window.__school.items().concat(x)); return window.__school.saving(); });
+  const n = await page.evaluate(() => window.__school.items().length);
+  await page.reload(); await page.waitForFunction(() => window.__school); await page.evaluate(() => window.__school.ready);
+  assert.equal(await page.evaluate(() => window.__school.items().length), n, 'every post, from IndexedDB');
+  assert.ok(await page.evaluate(() => window.__school.items().some(x => x.id === 'new:0')), 'the new one too');
+  assert.ok((await page.evaluate(() => window.__school.items().find(x => x.id === 'n1').body.length)) > 1000, 'with its words');
+  await ctx.close();
+});
+
+await test('a phone that lost its posts reads them again by itself, not only after Read the last year again', async () => {
+  const { ctx, page } = await newPage('light', { 'allison-school-v1-seen': JSON.stringify(['d1', 'n1', 'p1']), 'allison-school-v1-scan': String(Date.now()) });
+  await open(page);
+  const st = await page.evaluate(() => ({ seen: localStorage.getItem('allison-school-v1-seen'), scan: localStorage.getItem('allison-school-v1-scan') }));
+  assert.equal(st.seen, '[]', 'emails whose posts are gone count as unread');
+  assert.equal(st.scan, null, 'and the next read looks back a year');
   await ctx.close();
 });
 
