@@ -65,6 +65,10 @@ export const newsletter = {
   text: 'Maple Grove Times 10/25/2026\n\n## Maple Grove Times\n\n|\nOctober 25, 2026\n |\n\n## Greetings, families!\n\n🎉&nbsp; **Relief Friday – No Classes on October 30!**\n\n## Upcoming Events\n\n📅&nbsp; **Upcoming Events: Please add these important dates to your family calendar:**\n\n**October**\n\n'
     + '- **October 27–29** &nbsp;👻 – Boo Buddies Festivities\n- **October 30** &nbsp;🌟 – Relief Friday (No School)\n\n**November**\n\n'
     + '- **November 6** &nbsp;💼 – STEAM Identity Day Events\n- **November 11** &nbsp;🇺🇸 – Observance of Veterans Day (No School)\n- **November 13** &nbsp;💜 – Observance of Veterans Day / Wear Purple / Kindness Day\n'
-    + '- **November 18** &nbsp;🎶 – Autumn Music Showcase at 6:00 PM\n- **November 23–27** &nbsp;🍂 – Fall Break (No School)\n\n**December**\n\n- **December 1–11 📊 – Winter MAP Testing Window**\n- **Winter Break:&nbsp;** December 21 - January 1\n\nThere are 3 attachments with this post.' + LINK(1601) + FOOT,
+    + '- **November 18** &nbsp;🎶 – Autumn Music Showcase at 6:00 PM\n- **November 23–27** &nbsp;🍂 – Fall Break (No School)\n\n**December**\n\n- **December 1–11 📊 – Winter MAP Testing Window**\n- **Winter Break:&nbsp;** December 21 - January 1\n\n'
+    + '## Book Character Day will be Wednesday, October 28th!\n\nStudents are invited to dress up as their favorite book character and bring the book that represents their character to share!\n\n'
+    + '## 🔬Save the Date – 🚀 STEAM Identity Day – November 6!\n\nWe are excited to announce **STEAM Identity Day on November 6!** Scholars will explore science, technology, engineering, arts and math with real-world professionals.\n\nParents who would like to host a table can contact the front office.\n\nSave the Date: November 6, 2026!\n\n'
+    + '## Autumn Music Showcase\n\nJoin us on November 18 at 6:00 PM in the gym for the choir and band.\n\n'
+    + '## Reading Log\n\nPlease make sure your child reads at least 20 minutes, five days a week.\n\nThere are 3 attachments with this post.' + LINK(1601) + FOOT,
 };
 export const ALL = [digest, post, event, rsvp, rsvpYes, signup, message, receipt, report, clubOff, clubHello, picture, newsletter];

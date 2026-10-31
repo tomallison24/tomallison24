@@ -118,7 +118,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const row = (o) => {
     const tag = o.href ? 'a' : o.open || o.act ? 'button' : 'div';
     const attrs = o.href ? ' href="' + esc(o.href) + '" target="_blank" rel="noopener"' : (tag === 'button' ? ' type="button"' : '')
-      + (o.open ? ' data-open="' + esc(o.open) + '"' : '') + (o.act ? ' data-act="' + esc(o.act) + '"' : '');
+      + (o.open ? ' data-open="' + esc(o.open) + '"' : '') + (o.act ? ' data-act="' + esc(o.act) + '"' : '')
+      + (o.focus ? ' data-ft="' + esc(o.focus.t) + '" data-fd="' + esc(o.focus.d || '') + '"' : '');
     return '<' + tag + ' class="row' + (o.cls ? ' ' + o.cls : '') + '"' + attrs + '>'
       + (o.when != null ? '<span class="when">' + o.when + '</span>' : o.icon ? '<span class="ic" aria-hidden="true">' + ICON[o.icon] + '</span>' : '')
       + '<span class="rt"><b>' + esc(o.title) + '</b>' + (o.sub ? '<small>' + esc(o.sub) + '</small>' : '') + '</span>'
@@ -156,7 +157,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     // 1. the next school day
     const t = s.top, topRows = [];
     for (const g of t.gaps) topRows.push(row({ icon: 'off', title: 'No school ' + span(g.d, g.end), sub: g.why, cls: 'info', tag: 'Day off', tagCls: 'off' }));
-    for (const l of t.lines) topRows.push(row({ icon: KIND_ICON[l.kind] || 'post', title: l.title, sub: [timeWord(l.time), KIND_WORD[l.kind] && l.kind !== 'post' ? KIND_WORD[l.kind] : ''].filter(Boolean).join(' · '), open: l.id, chev: true }));
+    for (const l of t.lines) topRows.push(row({ icon: KIND_ICON[l.kind] || 'post', title: l.title, sub: [timeWord(l.time), KIND_WORD[l.kind] && l.kind !== 'post' ? KIND_WORD[l.kind] : ''].filter(Boolean).join(' · '), open: l.id, focus: { t: l.title, d: t.d }, chev: true }));
     if (!t.lines.length) topRows.push(row({ icon: 'post', title: 'Nothing special from school', sub: 'A regular day.', cls: 'info' }));
     topRows.push(row({ icon: 'car', title: t.pickup.text, cls: 'info' }));
     const w = weatherLine(t.d, m);
@@ -171,7 +172,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     h += sec('Needs you', s.needs.length ? group(needRows) : group([row({ icon: 'tick', title: 'Nothing needs you right now', cls: 'info' })]), i++);
 
     // 3. the next two weeks
-    const comingRows = s.coming.slice(0, 8).map(e => row({ when: whenCell(e.d, e.end), title: e.title, sub: [timeWord(e.time), e.from ? 'From ' + e.from : ''].filter(Boolean).join(' · '), open: e.id, tag: e.kind === 'noschool' ? 'No school' : '', tagCls: 'off' }));
+    const comingRows = s.coming.slice(0, 8).map(e => row({ when: whenCell(e.d, e.end), title: e.title, sub: [timeWord(e.time), e.from ? 'From ' + e.from : ''].filter(Boolean).join(' · '), open: e.id, focus: { t: e.title, d: e.d }, tag: e.kind === 'noschool' ? 'No school' : '', tagCls: 'off' }));
     comingRows.push(row({ title: 'See the rest of the year', act: 'list:year', cls: 'more', chev: true }));
     h += sec('Coming up', s.coming.length ? group(comingRows) : group([row({ icon: 'star', title: 'Nothing in the next two weeks', cls: 'info' }), comingRows.pop()]), i++);
 
@@ -202,8 +203,24 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const gmailWeb = id => 'https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(id);
   const mailApp = thread => '../mail/?thread=' + encodeURIComponent(thread);   // the email in Mail, as Orders opens one
-  function openItem(id) {
+  // A post opened from a date (Coming up, the rest of the year, the top card): when it's a long email (a
+  // newsletter), the part about that date comes first (sort.js excerpt), and Show the whole email opens the rest
+  // at that part, marked.
+  let focusOf = null;
+  function wholeHtml(x, ex) {
+    const b = x.body || '';
+    return ex ? esc(b.slice(0, ex.start)) + '<mark id="focusMark">' + esc(b.slice(ex.start, ex.end)) + '</mark>' + esc(b.slice(ex.end)) : esc(b);
+  }
+  function showWhole() {
+    const box = $('wholeText'), btn = document.querySelector('#itemBody [data-full]');
+    if (!box) return;
+    box.hidden = false; if (btn) btn.remove();
+    const m = $('focusMark');
+    if (m) setTimeout(() => m.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }), 30);
+  }
+  function openItem(id, focus) {
     const x = byId(id); if (!x) return;
+    if (focus !== undefined || st.item !== id) focusOf = focus || null;
     st.item = id; opened[id] = Date.now(); saveMarks();
     $('itemLbl').textContent = KIND_WORD[x.kind] || 'Post';
     const aud = moved[id] || P.audience(x, me());
@@ -213,7 +230,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let h = '<h3 class="ptext" style="font-size:20px;font-weight:600;white-space:normal;margin-top:0">' + esc(x.title) + '</h3>'
       + '<p class="meta">' + esc(meta) + (x.amount ? ' · $' + esc(x.amount) : '') + '</p>';
     if (x.image && /^https:\/\/posts\.parentsquare\.com\//.test(x.image)) h += '<img class="pimg" src="' + esc(x.image) + '" alt="' + esc(x.picture ? 'The newsletter, as a picture' : 'The post’s picture') + '" loading="lazy" referrerpolicy="no-referrer">';
-    if (x.body) h += '<p class="ptext">' + esc(x.body.length > 4000 ? x.body.slice(0, 4000) + '…' : x.body) + '</p>';
+    const f = focusOf, long = (x.body || '').length > 900;
+    const ex = f && long && f.t ? P.excerpt(x.body, f.t, f.d) : null;
+    if (f && long) {
+      h += '<h2 class="sechead">About ' + esc(f.t) + '</h2><div class="rgroup about">'
+        + (f.d ? '<p class="meta">' + esc(day(f.d)) + '</p>' : '')
+        + '<p class="ptext">' + esc(ex ? ex.text : f.t) + '</p>'
+        + (ex ? '' : '<p class="meta">The email lists it without saying more.</p>') + '</div>'
+        + '<button class="btn quiet" type="button" data-full>Show the whole email</button>'
+        + '<p class="ptext" id="wholeText" hidden>' + wholeHtml(x, ex) + '</p>';
+    } else if (x.body) h += '<p class="ptext">' + esc(x.body) + '</p>';
     if (dates.length) h += '<div class="dchips" aria-label="Dates in this post">' + dates.join('') + '</div>';
     if (evs.length) h += '<h2 class="sechead">Dates in this newsletter</h2>' + group(evs);
     h += '<div class="pbtns">'
@@ -237,7 +263,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let rows = [];
     const q = st.q.trim().toLowerCase();
     const hit = x => !q || (x.title + ' ' + (x.body || '') + ' ' + (x.author || '')).toLowerCase().includes(q);
-    if (kind === 'year') rows = s.year.map(e => row({ when: whenCell(e.d, e.end), title: e.title, sub: [timeWord(e.time), e.from ? 'From ' + e.from : ''].filter(Boolean).join(' · '), open: e.id, tag: e.kind === 'noschool' ? 'No school' : '', tagCls: 'off' }));
+    if (kind === 'year') rows = s.year.map(e => row({ when: whenCell(e.d, e.end), title: e.title, sub: [timeWord(e.time), e.from ? 'From ' + e.from : ''].filter(Boolean).join(' · '), open: e.id, focus: { t: e.title, d: e.d }, tag: e.kind === 'noschool' ? 'No school' : '', tagCls: 'off' }));
     if (kind === 'class' || kind === 'rest') rows = (kind === 'class' ? s.cls : s.rest).filter(hit).slice(0, 300).map(x => row({ icon: KIND_ICON[x.kind] || 'post', title: x.title, sub: [x.author, posted(x.at)].filter(Boolean).join(' · '), open: x.id, chev: true }));
     if (kind === 'paid') rows = s.paid.map(x => row({ icon: 'pay', title: x.title, sub: [x.amount ? '$' + x.amount : '', posted(x.at)].filter(Boolean).join(' · '), open: x.id, chev: true }));
     if (kind === 'needs') rows = s.needs.map(x => row({ icon: 'post', title: x.title, sub: x.due ? 'Due ' + day(x.due) : posted(x.at), open: x.id, chev: true }));
@@ -294,7 +320,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const d = e.target.closest('[data-done]'); if (d) { e.preventDefault(); setDone(d.dataset.done, !done[d.dataset.done]); return; }
     const mv = e.target.closest('[data-move]'); if (mv) { move(mv.dataset.move); return; }
     const rm = e.target.closest('[data-remind]'); if (rm) { remind(rm.dataset.remind); return; }
-    const o = e.target.closest('[data-open]'); if (o) { openItem(o.dataset.open); return; }
+    const o = e.target.closest('[data-open]'); if (o) { openItem(o.dataset.open, o.dataset.ft ? { t: o.dataset.ft, d: o.dataset.fd } : null); return; }
+    const full = e.target.closest('[data-full]'); if (full) { showWhole(); return; }
     const a = e.target.closest('[data-act]'); if (!a) return;
     const act = a.dataset.act;
     if (act === 'connect') { signIn(); return; }

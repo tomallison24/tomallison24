@@ -182,7 +182,7 @@
     const title = clean(o.title || '').text.replace(/\s+/g, ' ').trim().slice(0, 200) || 'From school';
     const x = {
       id: base.id + (o.n != null ? ':' + o.n : ''), msg: base.id, thread: base.threadId || base.id,
-      at: o.at || base.date, kind: o.kind || kindOf(title, body + '\n' + c.links.map(l => l.u).join(' '), groups), title, body: body.slice(0, 6000),
+      at: o.at || base.date, kind: o.kind || kindOf(title, body + '\n' + c.links.map(l => l.u).join(' '), groups), title, body: body.slice(0, o.long ? 24000 : 6000),
       author: (o.author || '').trim().slice(0, 80), groups, school: base.school || '',
       url: o.url || linkIn(o.body || '', POST_LINK) || '', image: c.images[0] || '',
       links: c.links.filter(l => !/parentsquare\.com\/(schools\/\d+\/unsubscribe|users\/\d+\/chats)/.test(l.u)).slice(0, 12),
@@ -247,7 +247,8 @@
       return [item(base, { title: r[3], author: r[1], groups: groupsOf(r[2]), body: text.slice(r.index + r[0].length) })];
     }
     // a long newsletter (Tiger Times): its Upcoming Events list, and the rest as it is
-    const x = item(base, { title: subject.replace(/\s*\d{1,2}\/\d{1,2}\/20\d\d\s*$/, '') || 'From school', body: text, kind: /newsletter|times\b|bulletin|update/i.test(subject) ? 'newsletter' : undefined });
+    const isNews = /newsletter|times\b|bulletin|update/i.test(subject);   // kept whole (24,000 letters): each event's own section is read from it
+    const x = item(base, { title: subject.replace(/\s*\d{1,2}\/\d{1,2}\/20\d\d\s*$/, '') || 'From school', body: text, kind: isNews ? 'newsletter' : undefined, long: isNews });
     if (x.kind === 'newsletter') { x.events = eventsList(text, base.date); x.dates = []; }
     return [x];
   }
@@ -452,5 +453,53 @@
     return SITES.map(s => found[s[0]]).filter(Boolean);
   }
 
-  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, child, audience, daysOff, isSchoolDay, focusDay, pickup, wxAt, sections, calendarItems, sites, WEEKDAYS, MONTHS };
+
+  // ---------------------------------------------------------------------
+  // The part of a long email about one thing on it: a newsletter's section on "STEAM Identity Day", not
+  // the whole newsletter. The paragraph that shares the most of the thing's words (and its date), its
+  // heading just above it, and what follows up to the next heading; never the newsletter's list of dates
+  // when a section says more. -> { text, start, end } (where it is in the body), or null when nothing fits.
+  // ---------------------------------------------------------------------
+  const STOP = new Set(['the', 'and', 'for', 'with', 'from', 'your', 'our', 'are', 'will', 'this', 'that', 'you', 'all', 'day', 'days', 'event', 'events', 'school', 'no', 'not', 'due', 'grade', 'grades']);
+  const wordsOf = s => [...new Set(String(s || '').toLowerCase().replace(/[’']/g, '').match(/[a-z0-9]+/g) || [])]
+    .filter(w => w.length > 2 && !STOP.has(w) && !MON[w.slice(0, 3)] && !/^(mon|tue|wed|thu|fri|sat|sun)/.test(w) && !/^\d+(st|nd|rd|th)?$/.test(w));
+  const isHeading = b => b.length <= 110 && !/\n/.test(b.trim()) && !/[.,:;]$/.test(b.trim());
+  function excerpt(body, title, d) {
+    const text = String(body || ''); if (text.length < 400) return null;
+    const want = wordsOf(title); if (!want.length) return null;
+    const blocks = []; const re = /[^\n](?:[\s\S]*?)(?=\n\s*\n|$)/g; let m;
+    while ((m = re.exec(text))) blocks.push({ t: m[0], start: m.index, end: m.index + m[0].length });
+    const dateRe = d ? new RegExp('\\b' + MONTH_RE + '\\s+' + (+d.slice(8)) + '(?:st|nd|rd|th)?\\b', 'i') : null;
+    const lead = new RegExp('^[\\s\\-•*]*' + MONTH_RE + '\\s+\\d', 'i');
+    let best = -1, top = 0, inList = null;
+    blocks.forEach((b, i) => {
+      const lw = b.t.toLowerCase(), hits = want.filter(w => new RegExp('\\b' + w).test(lw)).length;
+      if (!hits) return;
+      const lines = b.t.split('\n').filter(l => l.trim());
+      const list = lines.filter(l => lead.test(l)).length >= 2 || (lines.length === 1 && lead.test(lines[0]) && b.t.length < 140);   // the dates list, or one line of it
+      let score = hits / want.length + (dateRe && dateRe.test(b.t) ? 0.25 : 0) + (isHeading(b.t) ? 0.1 : 0);
+      if (list) {
+        // in the list of dates: its own line, kept in case no section says more
+        let off = b.start;
+        for (const l of b.t.split('\n')) {
+          const lh = want.filter(w => new RegExp('\\b' + w).test(l.toLowerCase())).length / want.length;
+          if (lh >= 0.5 && (!inList || lh > inList.h)) { const lo = text.indexOf(l, off); inList = { h: lh, start: lo, end: lo + l.length }; }
+          off += l.length + 1;
+        }
+        score *= 0.3;
+      }
+      if (score > top + 1e-9) { top = score; best = i; }
+    });
+    if (best < 0 || top < 0.5) return inList ? { text: text.slice(inList.start, inList.end).replace(/^[\s\-•*]+/, '').trim(), start: inList.start, end: inList.end } : null;
+    // start at its heading (the block itself, or a short line just above it), then on to the next heading
+    let a = best;
+    if (!isHeading(blocks[a].t) && a > 0 && isHeading(blocks[a - 1].t)) a--;
+    let z = a, len = blocks[a].t.length;
+    while (z + 1 < blocks.length && !isHeading(blocks[z + 1].t) && len + blocks[z + 1].t.length < 1800) { z++; len += blocks[z].t.length; }
+    if (z === a && isHeading(blocks[a].t) && a + 1 < blocks.length && !lead.test(blocks[a + 1].t)) { z = a + 1; while (z + 1 < blocks.length && !isHeading(blocks[z + 1].t) && len + blocks[z + 1].t.length < 1800) z++; }
+    const start = blocks[a].start, end = blocks[z].end;
+    return { text: text.slice(start, end).trim(), start, end };
+  }
+
+  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, child, audience, daysOff, isSchoolDay, focusDay, pickup, wxAt, sections, calendarItems, sites, excerpt, WEEKDAYS, MONTHS };
 })(typeof window !== 'undefined' ? window : globalThis);

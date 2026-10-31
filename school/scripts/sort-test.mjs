@@ -211,4 +211,20 @@ test('the weather at drop-off and pickup, from the hourly forecast', () => {
   assert.equal(S.wxAt(h, '2026-10-30', '07:45'), null, 'no forecast for that day');
 });
 
+test('the part of a newsletter about one of its dates, not the whole newsletter', () => {
+  const x = S.readEmail(F.newsletter)[0];
+  const steam = S.excerpt(x.body, 'STEAM Identity Day Events', '2026-11-06');
+  assert.ok(steam, 'found');
+  assert.match(steam.text, /^🔬Save the Date – 🚀 STEAM Identity Day – November 6!/, 'from its heading');
+  assert.match(steam.text, /host a table/, 'and the paragraphs under it');
+  assert.ok(!/Autumn Music Showcase/.test(steam.text), 'up to the next heading');
+  assert.ok(!/Boo Buddies/.test(steam.text), 'not the list of dates');
+  assert.equal(x.body.slice(steam.start, steam.end).trim(), steam.text, 'where it is, to scroll to');
+  const show = S.excerpt(x.body, 'Autumn Music Showcase at 6:00 PM', '2026-11-18');
+  assert.match(show.text, /^Autumn Music Showcase\n\nJoin us on November 18/);
+  assert.equal(S.excerpt(x.body, 'Kindness Day', '2026-11-13').text.split('\n').length, 1, 'only in the list: its own line');
+  assert.equal(S.excerpt(x.body, 'Pumpkin Patch Trip', '2026-11-02'), null, 'nothing about it');
+  assert.equal(S.excerpt('Short post.', 'Short post', '2026-11-02'), null, 'a short post needs none');
+});
+
 console.log(n + ' tests passed');
