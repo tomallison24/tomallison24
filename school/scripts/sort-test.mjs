@@ -126,6 +126,10 @@ test('pickup: the usual carpool, or the club on that weekday', () => {
   assert.equal(S.pickup('2026-10-26', ME).text, 'Pickup 3:15 pm–3:40 pm, Lane 1.');
   assert.equal(S.pickup('2026-10-27', ME).text, 'Calm Kids Club until 3:50 pm, Room 12. Pickup at 3:50 pm.');
   assert.equal(S.clock('08:00'), '8:00 am');
+  const care = Object.assign({}, ME, { care: true, careUntil: '18:00' });
+  assert.equal(S.pickup('2026-10-26', care).text, 'After-school care until 6:00 pm. Pickup by 6:00 pm.');
+  assert.equal(S.pickup('2026-10-27', care).text, 'Calm Kids Club until 3:50 pm, Room 12, then after-school care until 6:00 pm. Pickup by 6:00 pm.');
+  assert.equal(S.child([], { care: 'on' }).care, true, 'from Settings');
 });
 
 test('the sections, on a Wednesday evening', () => {

@@ -48,7 +48,7 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
   `scripts/make-icons.mjs` (copy Fitness's). Every app has **one colour of its
   own, the same in every look** (Tron aside): a shade of its room's on aOS Home
   (Family warm clay to amber, Every day blues, Out and about greens, You rose,
-  Games violet), clearly different from the apps beside it. The icon is a
+  Kids violet, though School keeps its brick red), clearly different from the apps beside it. The icon is a
   tinted tile: a full-bleed pale tint of that colour, one glyph in a deep shade
   of it (3:1 or more on the tint), and in Vintage the small mustard sun (`<circle
   cx="424" cy="88" r="44">`) and burnt-orange pill as the mark (see the other

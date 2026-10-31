@@ -180,6 +180,12 @@ await test('Settings: the standard sections, and a club changes that day’s pic
   const top = await texts(page, '#main .rgroup.focus .row');
   assert.ok(top.some(t => /Chess Club until 3:50 pm\. Pickup at 3:50 pm\./.test(t)), top.join(' | '));
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-school-v1-prefs')).club4), 'Chess Club');
+  await page.click('#moreBtn');
+  await page.click('#cCare');
+  assert.ok(await page.$('#cCareTo'), 'Care ends, once care is on');
+  await page.click('#moreSheet .okbtn');
+  const top2 = await texts(page, '#main .rgroup.focus .row');
+  assert.ok(top2.some(t => /Chess Club until 3:50 pm, then after-school care until 6:00 pm\. Pickup by 6:00 pm\./.test(t)), top2.join(' | '));
   await ctx.close();
 });
 

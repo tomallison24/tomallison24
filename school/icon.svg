@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Mid-century modern, as a tinted tile: the pencil in School's own colour (#9C2B1F) on a pale tint of it (#FFDCD3); every app has its own, a shade of its room's (Family: aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
+  <!-- Mid-century modern, as a tinted tile: the pencil in School's own colour (#9C2B1F) on a pale tint of it (#FFDCD3); every app has its own, its room is Kids, with Sparkle Kingdom, and it keeps the brick red picked for it (aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
   <defs>
     <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
       <g transform="rotate(-45 256 256)">

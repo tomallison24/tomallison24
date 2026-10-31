@@ -278,6 +278,7 @@
       name: p.name || '', grade: set(p.grade) ? +p.grade : d.grade, teacher: p.teacher || d.teacher || '',
       homeroom: set(p.homeroom) ? p.homeroom : d.homeroom, school: d.school,
       ends: p.ends || '15:15', pickupBy: p.pickupBy || '15:40', lane: p.lane || '',
+      care: p.care === 'on', careUntil: p.careUntil || '18:00',
       clubs: Object.fromEntries([1, 2, 3, 4, 5].map(i => [i, p['club' + i] ? { name: p['club' + i], until: p.clubUntil || '15:50' } : null])),
     };
   }
@@ -350,10 +351,13 @@
   }
   // The pickup line for a day: the club on that weekday (Settings) or the usual carpool.
   const clock = hhmm => { let [h, m] = String(hhmm).split(':').map(Number); const pm = h >= 12; h = h % 12 || 12; return h + ':' + pad(m || 0) + (pm ? ' pm' : ' am'); };
+  // With after-school care (Settings > After school), pickup is any time until care ends, after that day's club.
   function pickup(d, me) {
     const club = (me.clubs || {})[dow(d)];
     const lane = me.lane ? ', ' + me.lane : '';
-    if (club && club.name) return { club: club.name, text: club.name + ' until ' + clock(club.until || '15:50') + (club.room ? ', ' + club.room : '') + '. Pickup at ' + clock(club.until || '15:50') + '.' };
+    const care = me.care ? 'after-school care until ' + clock(me.careUntil || '18:00') : '';
+    if (club && club.name) return { club: club.name, care: !!care, text: club.name + ' until ' + clock(club.until || '15:50') + (club.room ? ', ' + club.room : '') + (care ? ', then ' + care + '. Pickup by ' + clock(me.careUntil || '18:00') + '.' : '. Pickup at ' + clock(club.until || '15:50') + '.') };
+    if (care) return { club: '', care: true, text: 'After-school care until ' + clock(me.careUntil || '18:00') + '. Pickup by ' + clock(me.careUntil || '18:00') + '.' };
     return { club: '', text: 'Pickup ' + clock(me.ends || '15:15') + (me.pickupBy ? '–' + clock(me.pickupBy).replace(/ pm$/, ' pm') : '') + lane + '.' };
   }
 

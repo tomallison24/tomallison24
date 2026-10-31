@@ -60,11 +60,11 @@
   showTab('home');   // (the apps along the bottom are drawn with Home, below)
 
   const SPACES = [
-    ['Family', ['calendar', 'meals', 'notes', 'house', 'orders', 'school']],
+    ['Family', ['calendar', 'meals', 'notes', 'house', 'orders']],
     ['Every day', ['weather', 'news', 'mail', 'clock', 'podcasts']],
     ['Out and about', ['travel', 'places']],
     ['You', ['fitness', 'drinks', 'money']],
-    ['Games', ['sparkle']],
+    ['Kids', ['sparkle', 'school']],
   ].map(([t, ids]) => [t, ids.filter(id => D.APPS.includes(id))]);
   const ALL = SPACES.flatMap(s => s[1]);
   const known = id => ALL.includes(id);

@@ -16,7 +16,7 @@
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
   const v = D.shown(), live = D.RELEASES.filter(r => !r.silent);
   // every app's own colour, the same in Vintage, Sea glass and Layers: a shade of its room's (Family warm clay to amber, Every
-  // day blues, Out and about greens, You rose, Games violet), as its icon is drawn: a pale tint of it with the drawing in a
+  // day blues, Out and about greens, You rose, Kids violet; School keeps its brick red), as its icon is drawn: a pale tint of it with the drawing in a
   // deep shade of it (each app's icon.svg; aOS/index.html, --ink-<app>, for Layers' grid). Neighbours on Home differ clearly.
   const ROOM_HUE = { calendar: '176,102,84', meals: '238,140,60', notes: '234,220,150', house: '240,182,72', orders: '122,71,2', weather: '100,195,226', news: '69,93,118', mail: '66,105,182', clock: '52,61,114', podcasts: '128,149,214', travel: '18,147,144', places: '117,181,103', fitness: '210,96,136', drinks: '220,162,174', money: '116,47,72', sparkle: '153,112,213', school: '196,72,56' };
   const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33', money: '120,58,54', school: '200,58,44' };   // and in Tron

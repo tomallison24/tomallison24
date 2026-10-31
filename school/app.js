@@ -330,6 +330,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.input({ id: 'cLane', title: 'Carpool lane', value: prefs.lane || '', placeholder: 'Lane 1' }),
         ...['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((w, i) => S.input({ id: 'club' + (i + 1), title: w + ' club', value: prefs['club' + (i + 1)] || '', placeholder: 'None' })),
         timeSel('cClub', 'Clubs end', prefs.clubUntil || '15:50', 15 * 60, 18 * 60),
+        S.toggle({ id: 'cCare', title: 'After-school care', sub: 'Pickup is any time until care ends, every school day.', on: prefs.care === 'on' }),
+        prefs.care === 'on' ? timeSel('cCareTo', 'Care ends', prefs.careUntil || '18:00', 15 * 60 + 30, 19 * 60) : '',
         S.toggle({ id: 'cWx', title: 'Weather at drop-off and pickup', sub: 'Uses Weather’s place, or where this phone is.', on: prefs.weather !== 'off' }),
       ], { hint: 'A club on a weekday changes that day’s pickup time.' })
       + S.section('Connected accounts', hasGmail() ? [
@@ -350,7 +352,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); };
   if (window.aosDesign) aosDesign.bind(more);
-  const PREF = { cDrop: 'dropoff', cName: 'name', cGrade: 'grade', cTeacher: 'teacher', cRoom: 'homeroom', cEnds: 'ends', cBy: 'pickupBy', cLane: 'lane', cClub: 'clubUntil', club1: 'club1', club2: 'club2', club3: 'club3', club4: 'club4', club5: 'club5' };
+  const PREF = { cCareTo: 'careUntil', cDrop: 'dropoff', cName: 'name', cGrade: 'grade', cTeacher: 'teacher', cRoom: 'homeroom', cEnds: 'ends', cBy: 'pickupBy', cLane: 'lane', cClub: 'clubUntil', club1: 'club1', club2: 'club2', club3: 'club3', club4: 'club4', club5: 'club5' };
   more.addEventListener('change', e => {
     const k = PREF[e.target.id]; if (!k) return;
     const v = String(e.target.value || '').trim().slice(0, 80);
@@ -360,6 +362,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   more.addEventListener('click', async e => {
     const S = AllisonOS.settings;
     if (e.target.closest('#gIn')) { signIn({ choose: true }); return; }
+    const cb = e.target.closest('#cCare');
+    if (cb) { if (S.flip(cb)) prefs.care = 'on'; else delete prefs.care; savePrefs(); render(); renderMore(); return; }
     const wxb = e.target.closest('#cWx');
     if (wxb) { const on = S.flip(wxb); if (on) delete prefs.weather; else prefs.weather = 'off'; savePrefs(); render(); if (on) loadWeather(true); return; }
     if (e.target.closest('#scanBtn')) { closeSheet('moreSheet'); scan({ loud: true }); return; }
@@ -560,7 +564,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const useF = () => /^en-(US|LR|MM)|^(my|en)$/i.test(navigator.language || 'en-US') || /-US$/i.test(navigator.language || '');
   function weatherLine(d, m) {
     if (prefs.weather === 'off' || !wx || !wx.hourly) return '';
-    const p = P.pickup(d, m), at = p.club ? (prefs.clubUntil || '15:50') : m.ends;
+    const p = P.pickup(d, m), at = p.care ? m.careUntil : p.club ? (prefs.clubUntil || '15:50') : m.ends;
     const a = P.wxAt(wx.hourly, d, prefs.dropoff || '07:45', useF()), b = P.wxAt(wx.hourly, d, at, useF());
     if (!a && !b) return '';
     return [a ? 'Drop-off ' + a.text : '', b ? 'Pickup ' + b.text : ''].filter(Boolean).join(' · ') + '.';
