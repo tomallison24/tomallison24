@@ -107,6 +107,14 @@ window.aosGlyphs = {
   "defs": "",
   "body": "<g> <g transform=\"scale(.5)\"><g fill=\"none\" stroke=\"#FFFFFF\" stroke-linecap=\"round\" stroke-width=\"56\"> <path d=\"M358 648a220 220 0 1 1 308 0\"/> <path d=\"M256 752a364 364 0 1 1 512 0\" stroke-opacity=\"0.55\"/> </g> <circle cx=\"512\" cy=\"492\" r=\"86\" fill=\"#FFFFFF\"/> <rect x=\"478\" y=\"600\" width=\"68\" height=\"236\" rx=\"34\" fill=\"#FFFFFF\"/></g> </g>"
  },
+ "school": {
+  "h": "15e580ede0b1",
+  "top": "#CB5E50",
+  "end": "#9C2B1F",
+  "vb": "119 133 261 261",
+  "defs": "<mask id=\"g-school-cut\" maskUnits=\"userSpaceOnUse\" x=\"0\" y=\"0\" width=\"512\" height=\"512\">\n      <g transform=\"rotate(-45 256 256)\">\n        <rect x=\"92\" y=\"212\" width=\"64\" height=\"88\" rx=\"24\" fill=\"#fff\"/>\n        <rect x=\"144\" y=\"212\" width=\"194\" height=\"88\" fill=\"#fff\"/>\n        <path d=\"M336 212L424 256L336 300Z\" fill=\"#fff\" stroke=\"#fff\" stroke-width=\"8\" stroke-linejoin=\"round\"/>\n      </g>\n      <g transform=\"rotate(-45 256 256)\">\n        <path d=\"M150 200V312\" stroke=\"#000\" stroke-width=\"14\"/>\n        <path d=\"M178 200V312\" stroke=\"#000\" stroke-width=\"9\"/>\n        <path d=\"M338 200V312\" stroke=\"#000\" stroke-width=\"12\"/>\n        <path d=\"M206 256H318\" stroke=\"#000\" stroke-width=\"10\" stroke-linecap=\"round\"/>\n        <path d=\"M388 238L424 256L388 274Z\" fill=\"#000\"/>\n      </g>\n    </mask>",
+  "body": "<rect width=\"512\" height=\"512\" fill=\"#FFFFFF\" mask=\"url(#g-school-cut)\"/>"
+ },
  "sparkle": {
   "h": "abd5d1970848",
   "top": "#A581DA",

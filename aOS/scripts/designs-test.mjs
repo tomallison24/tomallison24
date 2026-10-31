@@ -41,7 +41,7 @@ async function open(apps = {}, scheme = 'light', look = 'glass') {   // the Sea 
 const text = (p, sel) => p.locator(sel).first().innerText().catch(() => '');
 const attr = (p, sel, a) => p.locator(sel).first().getAttribute(a).catch(() => null);
 
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'money', 'house', 'sparkle'];
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'school', 'money', 'house', 'sparkle'];
 const OLD = APPS.filter(a => a !== 'clock').map(a => a + 'vintage');
 
 // 1. one row per app, no old Vintage rows, no Design tag; searching "vintage" finds every app

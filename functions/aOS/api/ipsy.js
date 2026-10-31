@@ -12,7 +12,7 @@
 // Not Fitness: Ipsy in aOS searches the web, and Fitness keeps health data out of web searches (its
 // own Ipsy has no web search at all). Asked about it, Ipsy says so and points to Fitness's own Ipsy.
 // Not Money either: its data is shared only with whom its reader picks, and stays in Money's own Ipsy.
-// Weather (and Home) have no chat of their own: their tools come from server/ipsy-<app>.js, and run
+// Weather, Home and School have no chat of their own: their tools come from server/ipsy-<app>.js, and run
 // inside the app, offered as AllisonOS.ipsyTools (aOS/home-tab.js).
 //
 // Claude Sonnet 5.5, as in the apps (AOS_IPSY_MODEL, a Pages secret, names another). Signed-in family
@@ -29,13 +29,14 @@ import * as travel from '../../travel/api/[[route]].js';
 import * as news from '../../news/api/[[route]].js';
 import * as weather from '../../../server/ipsy-weather.js';   // no chat of their own: tools for this one only
 import * as house from '../../../server/ipsy-house.js';
+import * as school from '../../../server/ipsy-school.js';
 
 // the apps Ipsy works across in aOS, in the order Claude reads about them
-export const IPSY_APPS = { calendar: ['Calendar', calendar], notes: ['Notes', notes], meals: ['Meals', meals], orders: ['Orders', orders], travel: ['Travel', travel], news: ['News', news], weather: ['Weather', weather], house: ['Home', house] };
+export const IPSY_APPS = { calendar: ['Calendar', calendar], notes: ['Notes', notes], meals: ['Meals', meals], orders: ['Orders', orders], travel: ['Travel', travel], news: ['News', news], weather: ['Weather', weather], house: ['Home', house], school: ['School', school] };
 export const SEP = '__';
 
 // search_apps is aOS's own (aOS/home-tab.js): one look across what's on the phone, before an app's own tools.
-export const SEARCH_APPS = T('search_apps', 'Search every app on this phone at once (Calendar, Notes and reminders, Travel, Orders, Meals, Places, Podcasts) for a word or name: each match\'s app, title and a line about it. Use it first when a question names something and you don\'t know which app has it; then the app\'s own tools for details. Anything marked Private is never searched.', {
+export const SEARCH_APPS = T('search_apps', 'Search every app on this phone at once (Calendar, Notes and reminders, Travel, Orders, Meals, Places, Podcasts, School) for a word or name: each match\'s app, title and a line about it. Use it first when a question names something and you don\'t know which app has it; then the app\'s own tools for details. Anything marked Private is never searched.', {
   query: { type: 'string', description: 'A word or two, e.g. "Sophie", "dentist", "Lisbon", "costco"' },
 }, ['query']);
 export const IPSY_CLIENT_TOOLS = [SEARCH_APPS, ...Object.entries(IPSY_APPS).flatMap(([id, [name, m]]) =>

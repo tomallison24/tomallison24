@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Mid-century modern, as a tinted tile: the pencil in School's own colour (#9C2B1F) on a pale tint of it (#FFDCD3); every app has its own, its room is Kids, with Sparkle Kingdom, and it keeps the brick red picked for it (aOS/app.js, ROOM_HUE). A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <g transform="rotate(-45 256 256)">
+        <rect x="92" y="212" width="64" height="88" rx="24" fill="#fff"/>
+        <rect x="144" y="212" width="194" height="88" fill="#fff"/>
+        <path d="M336 212L424 256L336 300Z" fill="#fff" stroke="#fff" stroke-width="8" stroke-linejoin="round"/>
+      </g>
+      <g transform="rotate(-45 256 256)">
+        <path d="M150 200V312" stroke="#000" stroke-width="14"/>
+        <path d="M178 200V312" stroke="#000" stroke-width="9"/>
+        <path d="M338 200V312" stroke="#000" stroke-width="12"/>
+        <path d="M206 256H318" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+        <path d="M388 238L424 256L388 274Z" fill="#000"/>
+      </g>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#FFDCD3"/>
+  <circle cx="424" cy="88" r="44" fill="#E3A72F"/>
+  <rect x="46" y="432" width="88" height="24" rx="12" fill="#D8572A" transform="rotate(-18 90 444)"/>
+  <rect width="512" height="512" fill="#9C2B1F" mask="url(#cut)"/>
+</svg>

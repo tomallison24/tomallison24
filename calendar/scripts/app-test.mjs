@@ -180,8 +180,16 @@ await test('Notes, Travel and Fitness in this storage show as layers', async () 
 
 await test('the month grid shows the Family events, the layers and a holiday', async () => {
   const grid = await page.textContent('#mgrid');
-  assert.ok(grid.includes('+2'), 'four things today: two shown and “+2”: ' + grid);
-  assert.ok(grid.includes('Grandma visiting'), 'the all-day event');
+  // today's own things (four) and whatever the day itself adds (a holiday: Halloween on Oct 31): two shown, the rest "+n"
+  const today = await page.evaluate(() => window.__calendar.eventsOn(window.__calendar.st.sel).length);
+  assert.ok(today >= 4 && grid.includes('+' + (today - 2)), today + ' things today: two shown and “+' + (today - 2) + '”: ' + grid);
+  // it starts tomorrow: on the last day of a month that is next month's grid
+  if (TOMORROW.slice(0, 7) === TODAY.slice(0, 7)) assert.ok(grid.includes('Grandma visiting'), 'the all-day event');
+  else {
+    await page.evaluate(d => window.__calendar.goTo(d), TOMORROW);
+    assert.ok((await page.textContent('#mgrid')).includes('Grandma visiting'), 'the all-day event, on next month’s grid');
+    await page.evaluate(d => window.__calendar.goTo(d), TODAY);
+  }
   assert.ok(grid.includes('Swimming (late)'), 'the changed occurrence of the weekly swim');
   const sel = await page.textContent('#main');
   assert.ok(sel.includes('Dentist') && sel.includes('Bins out') && sel.includes('Call the plumber'), 'today’s list under the grid: ' + sel.slice(0, 300));

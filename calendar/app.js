@@ -73,6 +73,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     glass: '<svg viewBox="0 0 24 24"><path d="M7.2 3.6h9.6c.4 3.8.3 6.2-.6 7.8-.9 1.6-2.4 2.6-4.2 2.6s-3.3-1-4.2-2.6c-.9-1.6-1-4-.6-7.8z"/><path d="M12 14v6.2M8.6 20.4h6.8"/></svg>',
     fork: '<svg viewBox="0 0 24 24"><path d="M7 3.4v5.2a2.6 2.6 0 0 0 5.2 0V3.4"/><path d="M9.6 3.4v17.2"/><path d="M17.4 3.4c-1.6 1.2-2.4 3.2-2.4 6v3.4h2.4"/><path d="M17.4 3.4v17.2"/></svg>',
     box: '<svg viewBox="0 0 24 24"><path d="M3.6 7.6L12 3.4l8.4 4.2v8.8L12 20.6l-8.4-4.2z"/><path d="M3.6 7.6L12 11.8l8.4-4.2"/><path d="M12 11.8v8.8"/><path d="M7.8 5.5l8.4 4.2"/></svg>',
+    pencil: '<svg viewBox="0 0 24 24"><path d="M15.6 4.4l4 4L9 19H5v-4z"/><path d="M13.2 6.8l4 4"/></svg>',
     ball: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.2l3.4 2.5-1.3 4h-4.2l-1.3-4z"/><path d="M12 7.2V3.4M15.4 9.7l3.6-1.2M14.1 13.7l2.2 3.2M9.9 13.7l-2.2 3.2M8.6 9.7L5 8.5"/></svg>',
     flag: '<svg viewBox="0 0 24 24"><path d="M5.5 21V4.2"/><path d="M5.5 4.6c3.6-1.8 6.2 1.6 9.8-.2v9.2c-3.6 1.8-6.2-1.6-9.8.2"/></svg>',
     sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
@@ -89,9 +90,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const settings = Object.assign({
     weekStart: 0, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
-    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, news: true, weather: true, drinks: false },
+    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false },
   }, ls.json(K.settings, {}));
-  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, news: true, weather: true, drinks: false }, settings.layers || {});
+  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false }, settings.layers || {});
   // Weeks start on Sunday, the US way. Settings saved before that kept Monday only as the
   // old default; unless the week start was picked here (weekStartPicked), it moves to Sunday.
   if (!settings.weekStartPicked && settings.weekStart !== 0) { settings.weekStart = 0; try { if (ls.json(K.settings, null)) ls.set(K.settings, JSON.stringify(settings)); } catch {} }
@@ -131,7 +132,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const dayLetter = s => { const d = shortDay(s); return /^[A-Za-z]/.test(d) ? d.slice(0, 1) : d.slice(0, 1).toUpperCase() + d.slice(1, 2); };
   // What the family wrote (titles, places, notes, names) and what came from elsewhere (bookings) stays as it is
   // (translate="no"), but not the words the app writes itself.
-  const KEEP_KINDS = { family: 1, note: 1, travel: 1, meals: 1, orders: 1, news: 1 }, APP_WORDS = new Set(['Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking', 'Meals', 'Orders', 'News']);
+  const KEEP_KINDS = { family: 1, note: 1, travel: 1, meals: 1, orders: 1, school: 1, news: 1 }, APP_WORDS = new Set(['Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking', 'Meals', 'Orders', 'News']);
   // a title the app starts ("Pick up · Hertz", "Dinner: Lasagna", "Arrives: Target") is translated up to the colon; the rest stays
   const APP_START = { travel: /^(Pick up|Return) · /, meals: /^(Breakfast|Lunch|Dinner): /, orders: /^(Arrives|Delivery window ends|Pick up by|Return by): / };
   const keep = (x, s) => KEEP_KINDS[x.kind] && !APP_WORDS.has(s) && !(APP_START[x.kind] && APP_START[x.kind].test(s)) ? ' translate="no"' : '';
@@ -162,6 +163,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'Workouts logged in Fitness' },
     meals: { name: 'Meals', color: 'var(--mls)', sub: 'Breakfasts, lunches and dinners from the family’s plan in Meals' },
     orders: { name: 'Orders', color: 'var(--ord)', sub: 'Deliveries, pickups and returns from Orders' },
+    school: { name: 'School', color: 'var(--sch)', sub: 'Days off, events and what’s due, from School' },
     news: { name: 'News', color: 'var(--nws)', sub: 'Fixtures of the teams you follow in News' },
     drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your drinks and alcohol-free days, seen only by you' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast on each day' },
@@ -299,6 +301,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (settings.layers.fitness) out.push(...fitnessItems(w));
     if (settings.layers.meals) out.push(...mealsItems(w));
     if (settings.layers.orders) out.push(...ordersItems(w));
+    if (settings.layers.school) out.push(...schoolItems(w));
     if (settings.layers.news) out.push(...newsItems(w));
     if (settings.layers.drinks) out.push(...drinksItems(w));
     if (settings.layers.mail && st.mail && Array.isArray(st.mail.items)) out.push(...st.mail.items.filter(x => x.start >= w.from - 31 * D && x.start < w.to).map(x => Object.assign({}, x, { color: LAYER.mail.color })));
@@ -346,7 +349,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // theirs. Each keeps a copy of just what Calendar shows in your family account
   // (AllisonOS.layer in home/welcome.js; functions/aOS/api, GET layer), read here.
   // Where this browser does share their storage (a computer), that comes first.
-  const LAYER_APPS = ['notes', 'travel', 'fitness', 'mail', 'meals', 'orders', 'news'];
+  const LAYER_APPS = ['notes', 'travel', 'fitness', 'mail', 'meals', 'orders', 'school', 'news'];
   async function loadLayers(force) {
     if (!LAYER_APPS.some(k => settings.layers[k])) return;
     const acct = window.AllisonOS && AllisonOS.account, tok = acct && acct.token();
@@ -528,6 +531,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function ordersItems(w) {
     return layerItems('orders').filter(x => inDays(w, x.date) && ORDER_KIND[x.kind])
       .map(x => allDayItem('orders', 'ord|' + x.id + '|' + x.kind, ORDER_KIND[x.kind] + ': ' + (x.store || 'Order'), x.date, null, { sub: x.what ? String(x.what).slice(0, 120) : 'Orders', link: '../orders/?open=' + encodeURIComponent(x.id), icon: 'box' }));
+  }
+  // School: days off, events and what's due ("No school · Relief Friday", "Due: Book Buddies"), all-day unless
+  // the post gave a time (then an hour); the post opens in School
+  const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  function schoolItems(w) {
+    const out = [];
+    for (const x of layerItems('school')) {
+      if (!isDay(x.date) || !x.title) continue;
+      const end = isDay(x.end) && x.end > x.date ? x.end : x.date;
+      if (dayMs(end) < w.from - D || dayMs(x.date) >= w.to) continue;
+      const extra = { sub: 'School', link: '../school/' + (x.item ? '?item=' + encodeURIComponent(x.item) : ''), icon: 'pencil' }, title = String(x.title).slice(0, 120);
+      const t = HHMM.exec(x.time || '');
+      if (t && end === x.date) { const s = dayMs(x.date) + (+t[1] * 60 + +t[2]) * MIN; out.push(timedItem('school', 'sch|' + x.id, title, s, s + H, extra)); }
+      else out.push(allDayItem('school', 'sch|' + x.id, title, x.date, addDays(end, 1), extra));
+    }
+    return out;
   }
   // News: fixtures of the teams you follow, two hours each; the match page in News when it names one on this site, else Scores
   const samePath = u => typeof u === 'string' && /^(\.\.\/|\/(?!\/))[^\s]*$/.test(u);
@@ -1478,7 +1497,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const wxNote = !settings.layers.weather ? LAYER.weather.sub : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
     // each calendar's name with its colour beside it, as on the page
     const named = (name, color, id) => '<i class="st-dot"' + (id ? ' id="' + id + '"' : '') + ' style="--c:' + esc(color) + '" aria-hidden="true"></i><span translate="no">' + esc(name) + '</span>';
-    const layers = ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'news', 'drinks', 'weather'].map(k => {
+    const layers = ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'school', 'news', 'drinks', 'weather'].map(k => {
       const key = { holiday: 'holidays', note: 'notes' }[k] || k;
       const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k);
       return S.toggle({ html: true, title: named(LAYER[k].name, LAYER[k].color), sub: esc(sentence(note)), on: !!settings.layers[key], data: { layer: key } });

@@ -12,6 +12,7 @@ globalThis.window = globalThis;
 globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
 const load = f => vm.runInThisContext(fs.readFileSync(new URL('../../' + f, import.meta.url), 'utf8'), { filename: f });
 load('calendar/ical.js');
+load('school/sort.js');
 load('aOS/home-find.js');
 
 let n = 0;
@@ -105,5 +106,29 @@ test('the trip card: the next trip within a week, with what happens while away, 
 test('an empty phone: no lines, no trip', () => {
   store.clear();
   assert.deepEqual(aosFind.brief(), { lines: [], trip: null });
+});
+// ---- School: its posts in the search, its next school day and what's due in the brief ----
+test('School: its posts are found, and open in School', () => {
+  put('allison-school-v1-items', [{ id: 'd1:4', msg: 'd1', at: Date.now() - 3600e3, kind: 'post', title: '4th and 5th grade Basketball', body: 'Season starts soon.', author: 'Chris Lane', groups: ['Maple Grove Academy'], dates: [] }]);
+  const r = aosFind.search('basketball', {});
+  assert.deepEqual(r.map(x => x.app + ':' + x.title + ':' + x.at), ['school:4th and 5th grade Basketball:?item=d1%3A4']);
+});
+test('School in the brief: the next school day when it is today or tomorrow, and what is due by tomorrow (any day of the week)', () => {
+  const S = globalThis.SchoolSort, ymdOf = d => S.ymd(d), now = new Date();
+  const week = Array.from({ length: 8 }, (_, i) => ({ d: S.addDays(ymdOf(now), i), end: '', time: '' }));
+  const tomorrow = S.addDays(ymdOf(now), 1);
+  const items = [
+    { id: 'w', msg: 'w', at: Date.now() - 864e5, kind: 'wear', title: 'Wear blue for Spirit Day', body: '', groups: ['Maple Grove Academy'], dates: week },
+    { id: 'f', msg: 'f', at: Date.now() - 864e5, kind: 'form', title: 'Book Buddies sign-up', body: '', groups: ['Kindergarten'], dates: [{ d: tomorrow, end: '', time: '' }] },
+  ];
+  put('allison-school-v1-items', items);
+  put('allison-school-v1-prefs', { grade: 0 });
+  const lines = aosFind.brief().lines.filter(l => l.app === 'school').map(l => l.text);
+  const s = S.sections(items, { now, me: S.child(items, { grade: 0 }) });
+  const near = s.top.d === ymdOf(now) || s.top.d === tomorrow;
+  assert.equal(lines.some(l => /at school: Wear blue for Spirit Day/.test(l)), near, lines.join(' | '));
+  assert.ok(lines.includes('Book Buddies sign-up due tomorrow'), lines.join(' | '));
+  put('allison-school-v1-done', { f: Date.now() });
+  assert.ok(!aosFind.brief().lines.some(l => /Book Buddies/.test(l.text)), 'done: gone from the brief');
 });
 console.log(n + ' find tests passed');
