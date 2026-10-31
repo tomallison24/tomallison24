@@ -39,7 +39,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const H = 36e5, DAY = 864e5;
   const KEY = 'allison-school-v1';
   const K = {
-    items: KEY + '-items', seen: KEY + '-seen', done: KEY + '-done', moved: KEY + '-moved', opened: KEY + '-opened', prefs: KEY + '-prefs', lastScan: KEY + '-scan', loc: KEY + '-loc', wx: KEY + '-wx',
+    items: KEY + '-items', seen: KEY + '-seen', done: KEY + '-done', moved: KEY + '-moved', opened: KEY + '-opened', prefs: KEY + '-prefs', bare: KEY + '-bare', lastScan: KEY + '-scan', loc: KEY + '-loc', wx: KEY + '-wx',
     token: 'school.token', state: 'school.state', silent: 'school.silent', silentFail: 'school.silentFail', lastAuth: 'school.lastAuth', hint: 'school.hint', me: 'school.me',
   };
   // Mail's OAuth client (not a secret: see mail/app.js). School's own address must be added to it as a
@@ -71,22 +71,70 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Data, all on this phone: the items read from the emails (sort.js readEmail), which emails were
   // read, what you marked done, moved or opened, and your settings.
   // ---------------------------------------------------------------------
-  let items = ls.json(K.items, []);
+  let items = [];   // from IndexedDB, at the start (loadItems)
   let seen = new Set(ls.json(K.seen, []));
   let done = ls.json(K.done, {}), moved = ls.json(K.moved, {}), opened = ls.json(K.opened, {});
   let prefs = ls.json(K.prefs, {});
   const st = { scanning: false, item: null, list: null, q: '' };
+  // The posts live in this app's IndexedDB (allison-school, kv 'items'): localStorage is one small space (about
+  // 5 MB) that aOS and every app on this site share, and a year of newsletters didn't fit in what was left, so the
+  // posts were lost while the list of emails read was kept, and School showed nothing until it read again. The rest
+  // (what was read, done, moved, opened, settings) is small and stays in localStorage. A short copy of the posts
+  // (no words, the last 120 days) stays in localStorage too, for aOS Home's brief and search (aOS/home-find.js).
+  const idb = (() => {
+    let db = null;
+    const open = () => db || (db = new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('no-idb'));
+      const r = indexedDB.open('allison-school', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked'));
+    }));
+    const run = (mode, fn) => open().then(d => new Promise((res, rej) => { const tx = d.transaction('kv', mode), st = tx.objectStore('kv'), req = fn(st); tx.oncomplete = () => res(req && req.result); tx.onerror = tx.onabort = () => rej(tx.error); }));
+    return { get: k => run('readonly', st => st.get(k)), set: (k, v) => run('readwrite', st => st.put(v, k)) };
+  })();
+  const short = x => { const o = {}; for (const k of ['id', 'msg', 'thread', 'at', 'kind', 'title', 'author', 'groups', 'school', 'dates', 'events', 'rsvp', 'needs', 'amount', 'child']) if (x[k] != null) o[k] = x[k]; return o; };
+  function saveShort() {
+    const cut = Date.now() - 120 * DAY;
+    let list = items.filter(x => x.at > cut).map(short);
+    while (!ls.set(K.items, JSON.stringify(list)) && list.length > 20) list = list.slice(0, Math.floor(list.length * 0.7));
+  }
+  let idbOk = true;
+  async function loadItems() {
+    let got = null;
+    try { got = await idb.get('items'); } catch { idbOk = false; }
+    if (!Array.isArray(got)) {
+      // before this, the posts were in localStorage (with their words): moved over once
+      const old = ls.json(K.items, []);
+      got = Array.isArray(old) ? old : [];
+      if (idbOk && got.length) { try { await idb.set('items', got); } catch { idbOk = false; } }
+    }
+    items = got;
+    // An email counts as read only while its posts are here: one read but lost is read again, by itself.
+    const have = new Set(items.map(x => x.msg).concat(ls.json(K.bare, [])));   // and the emails that had no posts in them
+    const kept = [...seen].filter(id => have.has(id));
+    if (kept.length !== seen.size) { seen = new Set(kept); saveSeen(); if (!items.length) ls.del(K.lastScan); else ls.set(K.lastScan, String(Math.min(+ls.get(K.lastScan, 0), Math.min(...items.map(x => x.at))))); }
+    if (idbOk) saveShort();
+  }
   function load() {
-    items = ls.json(K.items, []); seen = new Set(ls.json(K.seen, []));
+    seen = new Set(ls.json(K.seen, []));
     done = ls.json(K.done, {}); moved = ls.json(K.moved, {}); opened = ls.json(K.opened, {}); prefs = ls.json(K.prefs, {});
   }
-  // Kept to about a year; if the phone runs out of room, the oldest posts go first.
+  // Kept to about a year. Resolves true once the posts are saved; only then is what was read saved too (saveSeen).
+  let saving = Promise.resolve(true);
   function saveItems() {
     const cut = Date.now() - KEEP;
     items = items.filter(x => x && x.at > cut).sort((a, b) => b.at - a.at);
-    let list = items;
-    while (!ls.set(K.items, JSON.stringify(list)) && list.length > 50) list = list.slice(0, Math.floor(list.length * 0.8));
-    if (list !== items) items = list;
+    const snap = items;
+    saving = saving.then(async () => {
+      if (idbOk) { try { await idb.set('items', snap); saveShort(); return true; } catch { idbOk = false; } }
+      // no IndexedDB (a private window): as much as fits in localStorage, newest first
+      let list = snap;
+      while (!ls.set(K.items, JSON.stringify(list)) && list.length > 50) list = list.slice(0, Math.floor(list.length * 0.8));
+      const kept = new Set(list.map(x => x.msg));
+      if (list.length < snap.length) seen = new Set([...seen].filter(id => kept.has(id)));
+      return ls.get(K.items, '') !== '';
+    });
+    return saving;
   }
   const saveSeen = () => { const a = [...seen]; ls.set(K.seen, JSON.stringify(a.slice(-6000))); };
   const saveMarks = () => { ls.set(K.done, JSON.stringify(done)); ls.set(K.moved, JSON.stringify(moved)); ls.set(K.opened, JSON.stringify(opened)); };
@@ -394,7 +442,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const wxb = e.target.closest('#cWx');
     if (wxb) { const on = S.flip(wxb); if (on) delete prefs.weather; else prefs.weather = 'off'; savePrefs(); render(); if (on) loadWeather(true); return; }
     if (e.target.closest('#scanBtn')) { closeSheet('moreSheet'); scan({ loud: true }); return; }
-    if (e.target.closest('#rereadBtn')) { seen = new Set(); ls.del(K.lastScan); saveSeen(); closeSheet('moreSheet'); scan({ loud: true }); return; }
+    if (e.target.closest('#rereadBtn')) { seen = new Set(); ls.del(K.lastScan); ls.del(K.bare); saveSeen(); closeSheet('moreSheet'); scan({ loud: true }); return; }
     const out = e.target.closest('#gOut'); if (out) { if (S.armed(out, 'Tap again to disconnect')) signOut(); return; }
     if (e.target.closest('#exportBtn')) { backup(); return; }
     if (e.target.closest('#importBtn')) { $('importFile').value = ''; $('importFile').click(); return; }
@@ -407,7 +455,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (w && S.armed(w, 'Tap again to delete everything')) {
       const n = items.length;
       items = []; seen = new Set(); done = {}; moved = {}; opened = {}; prefs = {};
-      [K.items, K.seen, K.done, K.moved, K.opened, K.prefs, K.lastScan].forEach(ls.del);
+      [K.items, K.seen, K.done, K.moved, K.opened, K.prefs, K.lastScan, K.bare].forEach(ls.del);
+      saveItems();
       render(); renderMore();
       toast('Deleted ' + plural(n, 'post') + ' and your settings.');
     }
@@ -429,7 +478,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     for (const x of b.items) if (x && x.id && x.title && !have.has(x.id)) { items.push(x); seen.add(x.msg); added++; }
     done = Object.assign({}, b.done, done); moved = Object.assign({}, b.moved, moved); opened = Object.assign({}, b.opened, opened);
     if (b.prefs && typeof b.prefs === 'object') prefs = Object.assign({}, b.prefs, prefs);
-    saveItems(); saveSeen(); saveMarks(); savePrefs(); render(); renderMore();
+    saveItems().then(saveSeen); saveMarks(); savePrefs(); render(); renderMore();
     toast(added ? 'Brought in ' + plural(added, 'post') + '.' : 'Nothing new: it’s all here already.', null, 6000);
   });
 
@@ -562,15 +611,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         const { html, text } = bodies(msg.payload);
         const got = P.readEmail({ id: msg.id, threadId: msg.threadId, subject: header(msg, 'subject'), date: +msg.internalDate || Date.now(), text: text && text.length > 40 ? text : '', html });
         items = items.filter(x => x.msg !== msg.id).concat(got);
+        if (!got.length) { const b = ls.json(K.bare, []); if (!b.includes(msg.id)) ls.set(K.bare, JSON.stringify(b.concat(msg.id).slice(-2000))); }
         added += got.length; seen.add(m.id); doneN++;
         if (doneN % 10 === 0) busyPill('Reading Gmail · ' + doneN + ' of ' + todo.length);
-        if (doneN % 40 === 0) { saveItems(); saveSeen(); }
+        if (doneN % 40 === 0) saveItems().then(saveSeen);
       });
       if (!more) ls.set(K.lastScan, String(startedAt));
     } catch (e) {
       scanErr = e instanceof AuthError ? 'auth' : e.message;
     } finally {
-      saveItems(); saveSeen();
+      await saveItems().then(ok => { if (ok) saveSeen(); });
       st.scanning = false;
       if (scanErr || !more) updating('gmail', false);
       render();
@@ -711,17 +761,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Start
   // ---------------------------------------------------------------------
   const back = consumeRedirect();
-  render();
-  animateIn(main);
-  if (back && back.ok) setTimeout(() => scan({ loud: true }), 100);
-  else if (back && back.error && !back.silent) toast(back.error === 'access_denied' ? 'Gmail wasn’t connected.' : 'Couldn’t connect Gmail. Try again.', null, 6000);
-  else if (getToken() && scanDue()) setTimeout(() => scan({ loud: false }), 600);
-  else if (!getToken() && mayRenew() && scanDue()) setTimeout(() => signIn({ silent: true }), 800);
-  // Opened from Calendar's School layer: ?item=<id> opens that post.
-  const q = new URLSearchParams(location.search).get('item');
-  if (q && byId(q)) openItem(q);
+  const ready = loadItems().catch(() => {}).then(() => {
+    render();
+    animateIn(main);
+    if (back && back.ok) setTimeout(() => scan({ loud: true }), 100);
+    else if (back && back.error && !back.silent) toast(back.error === 'access_denied' ? 'Gmail wasn’t connected.' : 'Couldn’t connect Gmail. Try again.', null, 6000);
+    else if (getToken() && scanDue()) setTimeout(() => scan({ loud: false }), 600);
+    else if (!getToken() && mayRenew() && scanDue()) setTimeout(() => signIn({ silent: true }), 800);
+    // Opened from Calendar's School layer: ?item=<id> opens that post.
+    const q = new URLSearchParams(location.search).get('item');
+    if (q && byId(q)) openItem(q);
+  });
   window.addEventListener('load', () => { setTimeout(shareLayer, 1500); setTimeout(() => loadWeather(false), 900); });
-  window.addEventListener('storage', e => { if (e.key && e.key.startsWith(KEY)) { load(); render(); } });
+  // Another frame or tab of School changed something: the small parts at once, the posts from IndexedDB
+  window.addEventListener('storage', e => { if (!e.key || !e.key.startsWith(KEY)) return; load(); if (e.key === K.items && idbOk) loadItems().then(render); else render(); });
   // Back to the app: the time of day moves the top card (3:15), and there may be new mail.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
@@ -739,5 +792,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     P, items: () => items, me, done: () => done, moved: () => moved, setDone, weatherLine, openItem }) };
 
   // For the tests (school/scripts/app-test.mjs) only.
-  window.__school = { st, items: () => items, set: list => { items = list; saveItems(); render(); }, render, openItem, openList, me, done: () => done };
+  window.__school = { st, ready, items: () => items, set: list => { items = list; saveItems(); render(); }, render, openItem, openList, me, done: () => done, saving: () => saving, idb };
 })();

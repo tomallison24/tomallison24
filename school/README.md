@@ -51,9 +51,12 @@ each weekday (its name), with the time clubs end. A club changes that weekday's 
 
 ## Where the data lives
 
-Everything is on the phone, in this app's storage (`allison-school-v1-*`): the posts read from the
-emails (about a year, oldest dropped first if the phone runs short of room), which emails were read,
-what you marked done, moved or opened, and your settings. **Back up everything** saves it all as a
+Everything is on the phone. The posts read from the emails (about a year) are in School's own
+IndexedDB (`allison-school`): localStorage is one small space (about 5 MB) that aOS and every app on
+the site share, and a year of newsletters didn't fit in what was left. The rest is small and stays in
+localStorage (`allison-school-v1-*`): which emails were read, what you marked done, moved or opened,
+your settings, and a short copy of the last 120 days' posts (no words) for aOS Home's brief and search.
+An email counts as read only while its posts are saved, so one whose posts were lost is read again by itself. **Back up everything** saves it all as a
 file; **Import a backup** brings one back.
 
 **Calendar's School layer**: signed in to your family account, School sends Calendar a short list:

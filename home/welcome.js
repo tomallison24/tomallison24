@@ -91,6 +91,7 @@
       notes: ['School reads the school\'s ParentSquare emails in Gmail, read-only, on your phone. At the top, the next school day: what to wear or bring, days off on the way to it, and pickup (the usual carpool, or that weekday\'s club). Then what needs you (sign-ups, RSVPs, forms, surveys and payments, soonest due first, with Mark done), the next two weeks and the rest of the year, her class\'s posts and messages to you first, everything else from school below (searchable), and the school\'s other sites, report cards and payments',
         'Calendar has a School layer: days off, events and what\'s due, from School (Settings > Calendars)',
         'On aOS Home, School and Sparkle Kingdom share a new Kids group',
+        'School keeps what it read: its posts are saved in its own storage on the phone, not the small space every app shares, so a full phone no longer loses them and makes School read Gmail again from the start; a phone that had lost them reads them again by itself',
         'School: tapping a date from a newsletter opens at its own part of the email (its heading and paragraphs), with Show the whole email to read the rest, scrolled to that part and marked',
         'School works with your other apps: Open in Mail on every post, Remind me in Notes, the weather at drop-off and pickup, School\'s day and what\'s due in aOS Home\'s morning brief and search, and Ipsy in aOS can answer "What\'s on at school tomorrow?"'],
       apps: {
