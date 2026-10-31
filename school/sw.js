@@ -1,8 +1,8 @@
 // Offline shell for the School app. Same-origin files load network-first, so a new deploy shows up on the
 // next open and the cache is only the fallback. What School reads lives in this phone's storage; Gmail and
 // the family account's calls (../aOS/api/) are left alone.
-const CACHE = 'school-v1';
-const SHELL = ['./', 'index.html', 'app.js', 'sort.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/settings.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/names.js'];
+const CACHE = 'school-v2';
+const SHELL = ['./', 'index.html', 'app.js', 'sort.js', 'ipsy-tools.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/settings.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/names.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

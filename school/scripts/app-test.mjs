@@ -258,6 +258,43 @@ await test('the weather at drop-off and pickup on the top card; off in Settings'
   await ctx.close();
 });
 
+await test('Ipsy in aOS: School’s tools read the school day, what needs you and the posts, and mark done with Undo', async () => {
+  const { ctx, page } = await newPage('light', seeded());
+  await open(page);
+  const r = await page.evaluate(async () => {
+    const T = window.AllisonOS.ipsyTools, out = {};
+    out.app = T.app;
+    out.day = (await T.tools.get_school_day({})).content;
+    out.needs = (await T.tools.get_needs({})).content.needs.map(x => x.title);
+    out.coming = (await T.tools.get_coming_up({ from: '2026-11-20', to: '2026-11-30' })).content.dates.map(d => d.date + ' ' + d.title);
+    out.find = (await T.tools.find_posts({ query: 'basketball' })).content.posts.map(p => p.title + ' / ' + p.whose);
+    out.read = (await T.tools.read_post({ id: 'd1:2' })).content;
+    out.report = (await T.tools.read_post({ id: 'rep1' })).content;
+    const ch = await T.tools.mark_done({ id: 's1' });
+    out.change = ch.change.text;
+    out.afterDone = (await T.tools.get_needs({})).content.needs.map(x => x.id);
+    ch.change.undo();
+    out.afterUndo = (await T.tools.get_needs({})).content.needs.map(x => x.id);
+    out.label = T.label('find_posts', { query: 'pink' });
+    return out;
+  });
+  assert.equal(r.app, 'school');
+  assert.equal(r.day.date, '2026-10-29');
+  assert.equal(r.day.school, 'yes');
+  assert.ok(r.day.on_that_day.some(e => e.title === 'Wear Pink on THURSDAY'));
+  assert.match(r.day.pickup, /Pickup 3:15 pm/);
+  assert.ok(r.needs.includes('Kindergarten Book Buddies'));
+  assert.ok(r.coming.some(c => /^2026-11-23 Fall Break/.test(c)) || r.coming.some(c => /2026-11-23 No school: Fall Break/.test(c)), r.coming.join(' | '));
+  assert.deepEqual(r.find, ['4th and 5th grade Basketball / another grade']);
+  assert.match(r.read.text, /final "Wear Pink"/);
+  assert.ok(!JSON.stringify(r.read).includes('parentsquare.com'), 'no sign-in links go to Claude');
+  assert.ok(!('text' in r.report), 'a report card’s words stay out');
+  assert.equal(r.change, 'Marked done: Week 13 Newsletter_Important Updates (READ)');
+  assert.ok(!r.afterDone.includes('s1') && r.afterUndo.includes('s1'));
+  assert.equal(r.label, 'Looking through school posts for “pink”');
+  await ctx.close();
+});
+
 await test('both designs, light and dark: Vintage by default, Standard (Sea glass) when picked', async () => {
   for (const scheme of ['light', 'dark']) {
     const V = await newPage(scheme, seeded());

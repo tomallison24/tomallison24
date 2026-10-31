@@ -275,12 +275,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!res.ok) { toast(NOTES_SAY[res.why] || 'Couldn’t reach the Notes Sheet. Try again later.', null, 6000); return; }
     toast(res.added ? 'Reminder set in Notes for ' + dayWord(date) + '.' : 'It’s in Notes already.', null, 5000);
   }
-  function setDone(id, on) {
+  function setDone(id, on, quiet) {   // quiet: Ipsy's change, whose Undo is in its chat
     const x = byId(id); if (!x) return;
     if (on) done[id] = Date.now(); else delete done[id];
     saveMarks(); render();
     if (st.item === id) openItem(id);
-    if (on) toast('Marked done.', () => setDone(id, false));
+    if (on && !quiet) toast('Marked done.', () => setDone(id, false));
   }
   function move(id) {
     const x = byId(id); if (!x) return;
@@ -701,6 +701,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   setInterval(() => { if (document.visibilityState === 'visible' && !st.item && !st.list) render(); }, 5 * 6e4);
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // Ipsy in aOS (../aOS/home-tab.js) reads the school day, what needs you and the posts, and marks an ask
+  // done: ipsy-tools.js, offered as AllisonOS.ipsyTools (School has no chat of its own).
+  if (window.SchoolIpsy) (window.AllisonOS = window.AllisonOS || {}).ipsyTools = { app: 'school', name: 'School', ...window.SchoolIpsy({
+    P, items: () => items, me, done: () => done, moved: () => moved, setDone, weatherLine, openItem }) };
 
   // For the tests (school/scripts/app-test.mjs) only.
   window.__school = { st, items: () => items, set: list => { items = list; saveItems(); render(); }, render, openItem, openList, me, done: () => done };

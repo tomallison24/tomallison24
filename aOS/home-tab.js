@@ -712,10 +712,10 @@
   // ---- Ipsy in aOS: one helper across the apps that have Ipsy (functions/aOS/api/ipsy.js) ----
   // Claude names a tool with its app in front ("travel__search_gmail"). aOS opens that app out of
   // sight if it isn't open (../home/ipsy.js keeps the tools an app mounted, AllisonOS.ipsy.mounted;
-  // Weather and Home have no chat of their own, only tools for this one: AllisonOS.ipsyTools, from their
+  // Weather, Home and School have no chat of their own, only tools for this one: AllisonOS.ipsyTools, from their
   // ipsy-tools.js) and runs the tool there, with the app's own data, rules and sign-ins. Not Fitness or
   // Money (see the route).
-  const IPSY_APPS = ['calendar', 'notes', 'meals', 'orders', 'travel', 'news', 'weather', 'house'].filter(known);
+  const IPSY_APPS = ['calendar', 'notes', 'meals', 'orders', 'travel', 'news', 'weather', 'house', 'school'].filter(known);
   const SEP = '__';
   const working = new Set();   // apps Ipsy is using right now: not put away to open another
   // Claude turned off for an app on this phone (AllisonOS.claude, ../home/account.js): Ipsy here doesn't use it either

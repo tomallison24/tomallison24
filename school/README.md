@@ -93,20 +93,41 @@ the email's text part, or its HTML when there's none. Then, when the page draws:
   or Closed;
 - **the next school day** (`focusDay`): a weekday that isn't a day off.
 
+## Working with the other apps
+
+- **Calendar**: the School layer (above).
+- **Mail**: every post has **Open in Mail** (its email's thread in Mail) beside **Open in Gmail**.
+- **aOS Home**: the morning brief has School's line when the school day is today or tomorrow ("Tomorrow
+  at school: Wear Pink on THURSDAY and 2 more"), a day off, and what's due by tomorrow; the Ipsy bar's
+  "In your apps" finds School's posts (`aOS/home-find.js`, which loads `sort.js` and asks
+  `SchoolSort.child` who the child is, as School does).
+- **Notes**: **Remind me in Notes** on a post puts a dated reminder in the family's Notes (the Family
+  list), through the Notes Sheet as Orders' return reminder does (`../home/sheet.js`
+  `AllisonOS.sheet.notes.addTodos`): the day before it's due or happens (today when that's today or
+  tomorrow), once per post. Signed in and with the Notes Sheet set up; otherwise the toast says what's missing.
+- **Weather**: the top card has the weather at drop-off and at pickup (or the club's end), from
+  Open-Meteo's hourly forecast for Weather's saved place (as Calendar finds it) or this phone's location,
+  asked once and kept on the phone. **Settings > After school**: Drop-off, and a switch to turn it off.
+- **Ipsy in aOS**: School has no chat of its own (as Weather and Home); its tools run inside it for Ipsy
+  in aOS (`ipsy-tools.js`, offered as `AllisonOS.ipsyTools`; `server/ipsy-school.js` describes them):
+  the school day, what needs you, what's coming up, finding and reading posts, Mark done (with Undo in
+  the chat) and opening a post. Report cards' words and ParentSquare's links (they carry a sign-in
+  token) never go to Claude.
+
 ## Not in this version
 
-- **Claude** isn't used yet. Next: posts the rules can't place, Tiger Times-style newsletters summed
-  up, and the dates read out of a teacher's newsletter that is only a picture (through a
-  `functions/school/api` route, with what's sent redacted on the phone).
+- **Claude** reading what the rules can't: posts the rules can't place, Tiger Times-style newsletters
+  summed up, and the dates read out of a teacher's newsletter that is only a picture (through a
+  `functions/school/api` route, with what's sent redacted on the phone), and School's own Ipsy chat.
 - **Done on both parents' phones**: Mark done is kept on this phone for now; sharing it needs the
   family account (next).
-- **Ipsy** ("What's on tomorrow?") and aOS Today's line for School; notifications.
+- Notifications.
 
 ## Tests
 
 ```
 node school/scripts/sort-test.mjs      # the reading: digests, kinds, whose, dates, school days, sections, Calendar's layer
-node school/scripts/app-test.mjs       # the page at iPhone size: the sections, a post, Mark done and Undo, Settings, both designs
+node school/scripts/app-test.mjs       # the page at iPhone size: the sections, a post, Mark done and Undo, Remind me, the weather, Ipsy's tools, Settings, both designs
 ```
 
 Every fixture in `scripts/fixtures.mjs` is made up, shaped like the real emails. Icons:

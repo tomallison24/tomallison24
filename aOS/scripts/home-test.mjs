@@ -50,9 +50,10 @@ const check = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (
 {
   const route = await import(path.join(R, 'functions/aOS/api/ipsy.js'));
   const names = route.IPSY_CLIENT_TOOLS.map(t => t.name);
-  check(names.length > 40 && new Set(names).size === names.length && names[0] === 'search_apps' && names.slice(1).every(n => /^(calendar|notes|meals|orders|travel|news|weather|house)__[a-z_]+$/.test(n)), `search_apps, then every Ipsy app's tools but Fitness's and Money's, and Weather's and Home's, each named with its app (${names.length})`);
+  check(names.length > 40 && new Set(names).size === names.length && names[0] === 'search_apps' && names.slice(1).every(n => /^(calendar|notes|meals|orders|travel|news|weather|house|school)__[a-z_]+$/.test(n)), `search_apps, then every Ipsy app's tools but Fitness's and Money's, and Weather's, Home's and School's, each named with its app (${names.length})`);
   check(names.includes('travel__search_gmail') && names.includes('orders__search_gmail') && !names.some(n => /^fitness__/.test(n)), 'the same tool in two apps stays two tools; none from Fitness');
   check(/Fitness/.test(route.IPSY_SYSTEM) && /never put health details in a web search/.test(route.IPSY_SYSTEM), 'Ipsy is told why Fitness stays out, and to keep health out of web searches');
+  check(names.includes('school__get_needs') && names.includes('school__mark_done'), 'School\'s tools, for the school day, what needs you and the posts');
   check(names.includes('weather__get_forecast') && names.includes('house__control') && !names.some(n => /^money__/.test(n)) && /Money \(the family's spending\)/.test(route.IPSY_SYSTEM), 'Weather\'s and Home\'s tools, none from Money, and Ipsy is told why Money stays out');
   check(/Never the alarm, cameras, the doorbell or locks/.test(route.IPSY_SYSTEM), 'Ipsy is told it never changes the alarm, cameras or locks');
   const head = route.ipsyRequestHead({});
