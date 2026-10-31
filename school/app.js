@@ -39,7 +39,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const H = 36e5, DAY = 864e5;
   const KEY = 'allison-school-v1';
   const K = {
-    items: KEY + '-items', seen: KEY + '-seen', done: KEY + '-done', moved: KEY + '-moved', opened: KEY + '-opened', prefs: KEY + '-prefs', lastScan: KEY + '-scan',
+    items: KEY + '-items', seen: KEY + '-seen', done: KEY + '-done', moved: KEY + '-moved', opened: KEY + '-opened', prefs: KEY + '-prefs', lastScan: KEY + '-scan', loc: KEY + '-loc', wx: KEY + '-wx',
     token: 'school.token', state: 'school.state', silent: 'school.silent', silentFail: 'school.silentFail', lastAuth: 'school.lastAuth', hint: 'school.hint', me: 'school.me',
   };
   // Mail's OAuth client (not a secret: see mail/app.js). School's own address must be added to it as a
@@ -63,6 +63,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     link: '<svg viewBox="0 0 24 24"><path d="M10 14a4.2 4.2 0 0 0 6 0l3-3a4.2 4.2 0 0 0-6-6l-1 1"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3 3a4.2 4.2 0 0 0 6 6l1-1"/></svg>',
     doc: '<svg viewBox="0 0 24 24"><path d="M7 3.6h7l4 4v12.8H7z"/><path d="M14 3.6v4h4M9.6 12.4h5M9.6 15.8h5"/></svg>',
     pay: '<svg viewBox="0 0 24 24"><rect x="3.4" y="6" width="17.2" height="12" rx="2.6"/><path d="M3.4 10h17.2M7 14.6h3"/></svg>',
+    sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4"/></svg>',
     search: '<svg viewBox="0 0 24 24"><circle cx="10.6" cy="10.6" r="6"/><path d="M15.2 15.2 20 20"/></svg>',
   };
 
@@ -94,19 +95,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // What we know about the child: your settings, and what the emails say for anything not set.
   const GRADES = [[0, 'Kindergarten'], ...Array.from({ length: 8 }, (_, i) => [i + 1, ['1st', '2nd', '3rd'][i] ? ['1st', '2nd', '3rd'][i] + ' grade' : (i + 1) + 'th grade'])];
   const gradeName = g => (GRADES.find(x => x[0] === +g) || [0, ''])[1];
-  function me() {
-    const d = P.detect(items);
-    const set = v => v != null && v !== '';
-    return {
-      name: prefs.name || '',
-      grade: set(prefs.grade) ? +prefs.grade : d.grade,
-      teacher: prefs.teacher || d.teacher || '',
-      homeroom: set(prefs.homeroom) ? prefs.homeroom : d.homeroom,
-      school: d.school,
-      ends: prefs.ends || '15:15', pickupBy: prefs.pickupBy || '15:40', lane: prefs.lane || '',
-      clubs: Object.fromEntries([1, 2, 3, 4, 5].map(i => [i, prefs['club' + i] ? { name: prefs['club' + i], until: prefs.clubUntil || '15:50' } : null])),
-    };
-  }
+  const me = () => P.child(items, prefs);
 
   // ---------------------------------------------------------------------
   // Dates and words
@@ -170,6 +159,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     for (const l of t.lines) topRows.push(row({ icon: KIND_ICON[l.kind] || 'post', title: l.title, sub: [timeWord(l.time), KIND_WORD[l.kind] && l.kind !== 'post' ? KIND_WORD[l.kind] : ''].filter(Boolean).join(' · '), open: l.id, chev: true }));
     if (!t.lines.length) topRows.push(row({ icon: 'post', title: 'Nothing special from school', sub: 'A regular day.', cls: 'info' }));
     topRows.push(row({ icon: 'car', title: t.pickup.text, cls: 'info' }));
+    const w = weatherLine(t.d, m);
+    if (w) topRows.push(row({ icon: 'sun', title: w, cls: 'info' }));
     h += sec(esc(t.label) + (t.label === 'Today' || t.label === 'Tomorrow' ? ' · ' + esc(day(t.d)) : ', ' + esc(fmt(t.d, { month: 'short', day: 'numeric' }))), group(topRows, 'focus'), i++);
 
     // 2. what needs you
@@ -203,12 +194,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
     main.innerHTML = h;
     shareLayer();
+    loadWeather(false);
   }
 
   // ---------------------------------------------------------------------
   // A post, opened; a whole list
   // ---------------------------------------------------------------------
   const gmailWeb = id => 'https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(id);
+  const mailApp = thread => '../mail/?thread=' + encodeURIComponent(thread);   // the email in Mail, as Orders opens one
   function openItem(id) {
     const x = byId(id); if (!x) return;
     st.item = id; opened[id] = Date.now(); saveMarks();
@@ -225,7 +218,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (evs.length) h += '<h2 class="sechead">Dates in this newsletter</h2>' + group(evs);
     h += '<div class="pbtns">'
       + (x.url ? '<a class="btn" href="' + esc(x.url) + '" target="_blank" rel="noopener">Open in ParentSquare</a>' : '')
+      + '<a class="btn quiet" href="' + esc(mailApp(x.thread || x.msg)) + '">Open in Mail</a>'
       + '<a class="btn quiet" href="' + esc(gmailWeb(x.msg)) + '" target="_blank" rel="noopener">Open in Gmail</a>'
+      + (ASKS.has(x.kind) || (x.dates || []).length ? '<button class="btn quiet" type="button" data-remind="' + esc(x.id) + '"' + (remindBusy ? ' disabled' : '') + '>Remind me in Notes</button>' : '')
       + (ASKS.has(x.kind) ? '<button class="btn quiet" type="button" data-done="' + esc(x.id) + '">' + (done[x.id] ? 'Not done' : 'Mark done') + '</button>' : '')
       + (x.kind !== 'report' && x.kind !== 'paid' && x.kind !== 'message' ? '<button class="btn quiet" type="button" data-move="' + esc(x.id) + '">' + (aud === 'class' ? 'Move to Everything else' : 'Move to From the class') + '</button>' : '')
       + '</div>';
@@ -252,6 +247,34 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('listBody').addEventListener('input', e => { if (e.target.id !== 'listQ') return; st.q = e.target.value; const pos = e.target.selectionStart; openList(st.list); const q = $('listQ'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch {} } });
 
+  // Remind me in Notes: a dated reminder in the family's Notes (through its Sheet: ../home/sheet.js
+  // AllisonOS.sheet.notes, signed in), the day before it's due or happens (today when that's today, tomorrow
+  // or past; today for an ask with no date). Its id comes from the post, so tapping again adds nothing twice.
+  // Extra, if you use Notes: with no sign-in or Notes Sheet the toast says so (as Orders' return reminder).
+  let remindBusy = false;
+  const NOTES_SAY = {
+    signin: 'Sign in with Face ID in Settings to set a reminder in Notes.',
+    'no-sheet': 'Set up the Notes Sheet in aOS first (Account → Google Sheets).',
+    offline: 'Offline. Try again when you’re back online.',
+  };
+  const remindDay = x => {
+    const today = P.ymd(new Date()), when = x.due || ((x.dates || []).find(d => (d.end || d.d) >= today) || {}).d;
+    return !when || P.between(today, when) <= 1 ? today : P.addDays(when, -1);
+  };
+  const dayWord = d => d === P.ymd(new Date()) ? 'today' : d === P.addDays(P.ymd(new Date()), 1) ? 'tomorrow' : day(d);
+  async function remind(id) {
+    const x = byId(id), SN = window.AllisonOS && AllisonOS.sheet && AllisonOS.sheet.notes;
+    if (!x || remindBusy) return;
+    if (!SN) { toast(NOTES_SAY.signin); return; }
+    const s = last || P.sections(items, { now: new Date(), me: me(), done, moved }), ask = s.needs.find(n => n.id === id) || x;
+    const date = remindDay(ask), when = ask.due ? 'Due ' + day(ask.due) : (x.dates || [])[0] ? day(x.dates[0].d) : '';
+    const notes = ['From School' + (x.author ? ', ' + x.author : ''), when].filter(Boolean).join('\n');
+    remindBusy = true; if (st.item === id) openItem(id);
+    const res = await SN.addTodos({ list: 'Family', items: [{ key: 'school:' + x.id, title: x.title.slice(0, 200), date, notes }] });
+    remindBusy = false; if (st.item === id) openItem(id);
+    if (!res.ok) { toast(NOTES_SAY[res.why] || 'Couldn’t reach the Notes Sheet. Try again later.', null, 6000); return; }
+    toast(res.added ? 'Reminder set in Notes for ' + dayWord(date) + '.' : 'It’s in Notes already.', null, 5000);
+  }
   function setDone(id, on) {
     const x = byId(id); if (!x) return;
     if (on) done[id] = Date.now(); else delete done[id];
@@ -270,6 +293,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   document.addEventListener('click', e => {
     const d = e.target.closest('[data-done]'); if (d) { e.preventDefault(); setDone(d.dataset.done, !done[d.dataset.done]); return; }
     const mv = e.target.closest('[data-move]'); if (mv) { move(mv.dataset.move); return; }
+    const rm = e.target.closest('[data-remind]'); if (rm) { remind(rm.dataset.remind); return; }
     const o = e.target.closest('[data-open]'); if (o) { openItem(o.dataset.open); return; }
     const a = e.target.closest('[data-act]'); if (!a) return;
     const act = a.dataset.act;
@@ -300,11 +324,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.select({ id: 'cRoom', title: 'Her class in ParentSquare', value: prefs.homeroom != null ? prefs.homeroom : '', options: [['', d.homeroom ? 'From the emails: ' + d.homeroom : 'Not set'], ...groups.map(g => [g, g])] }),
       ], { hint: 'Anything left empty comes from the school’s emails.' })
       + S.section('After school', [
+        timeSel('cDrop', 'Drop-off', prefs.dropoff || '07:45', 6 * 60 + 30, 9 * 60),
         timeSel('cEnds', 'School ends', m.ends, 13 * 60, 16 * 60 + 30),
         timeSel('cBy', 'Pick up by', m.pickupBy, 13 * 60, 17 * 60),
         S.input({ id: 'cLane', title: 'Carpool lane', value: prefs.lane || '', placeholder: 'Lane 1' }),
         ...['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((w, i) => S.input({ id: 'club' + (i + 1), title: w + ' club', value: prefs['club' + (i + 1)] || '', placeholder: 'None' })),
         timeSel('cClub', 'Clubs end', prefs.clubUntil || '15:50', 15 * 60, 18 * 60),
+        S.toggle({ id: 'cWx', title: 'Weather at drop-off and pickup', sub: 'Uses Weather’s place, or where this phone is.', on: prefs.weather !== 'off' }),
       ], { hint: 'A club on a weekday changes that day’s pickup time.' })
       + S.section('Connected accounts', hasGmail() ? [
         S.info({ id: 'gState', title: 'Gmail', sub: tok ? (who ? 'Signed in as ' + who + '.' : 'Signed in.') : 'Signed out; it signs in again when School opens.' }),
@@ -324,7 +350,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); };
   if (window.aosDesign) aosDesign.bind(more);
-  const PREF = { cName: 'name', cGrade: 'grade', cTeacher: 'teacher', cRoom: 'homeroom', cEnds: 'ends', cBy: 'pickupBy', cLane: 'lane', cClub: 'clubUntil', club1: 'club1', club2: 'club2', club3: 'club3', club4: 'club4', club5: 'club5' };
+  const PREF = { cDrop: 'dropoff', cName: 'name', cGrade: 'grade', cTeacher: 'teacher', cRoom: 'homeroom', cEnds: 'ends', cBy: 'pickupBy', cLane: 'lane', cClub: 'clubUntil', club1: 'club1', club2: 'club2', club3: 'club3', club4: 'club4', club5: 'club5' };
   more.addEventListener('change', e => {
     const k = PREF[e.target.id]; if (!k) return;
     const v = String(e.target.value || '').trim().slice(0, 80);
@@ -334,6 +360,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   more.addEventListener('click', async e => {
     const S = AllisonOS.settings;
     if (e.target.closest('#gIn')) { signIn({ choose: true }); return; }
+    const wxb = e.target.closest('#cWx');
+    if (wxb) { const on = S.flip(wxb); if (on) delete prefs.weather; else prefs.weather = 'off'; savePrefs(); render(); if (on) loadWeather(true); return; }
     if (e.target.closest('#scanBtn')) { closeSheet('moreSheet'); scan({ loud: true }); return; }
     if (e.target.closest('#rereadBtn')) { seen = new Set(); ls.del(K.lastScan); saveSeen(); closeSheet('moreSheet'); scan({ loud: true }); return; }
     const out = e.target.closest('#gOut'); if (out) { if (S.armed(out, 'Tap again to disconnect')) signOut(); return; }
@@ -523,6 +551,45 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const scanDue = () => Date.now() - +ls.get(K.lastScan, 0) > 30 * 6e4;
 
+  // ---------------------------------------------------------------------
+  // The weather at drop-off and pickup (Settings > After school), from Open-Meteo's hourly forecast for
+  // where you are: Weather's saved place if it left one in this storage (as Calendar does), else this
+  // phone's location, asked once and kept on the phone. Fetched at most once an hour; °F on a US phone.
+  // ---------------------------------------------------------------------
+  let wx = ls.json(K.wx, null), wxBusy = false;
+  const useF = () => /^en-(US|LR|MM)|^(my|en)$/i.test(navigator.language || 'en-US') || /-US$/i.test(navigator.language || '');
+  function weatherLine(d, m) {
+    if (prefs.weather === 'off' || !wx || !wx.hourly) return '';
+    const p = P.pickup(d, m), at = p.club ? (prefs.clubUntil || '15:50') : m.ends;
+    const a = P.wxAt(wx.hourly, d, prefs.dropoff || '07:45', useF()), b = P.wxAt(wx.hourly, d, at, useF());
+    if (!a && !b) return '';
+    return [a ? 'Drop-off ' + a.text : '', b ? 'Pickup ' + b.text : ''].filter(Boolean).join(' · ') + '.';
+  }
+  function savedPlace() {
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!k.startsWith('wx.')) continue; const v = JSON.parse(localStorage.getItem(k)); const o = v && typeof v === 'object' ? (Array.isArray(v) ? v[0] : v) : null; if (o && isFinite(o.lat) && isFinite(o.lon)) return { lat: +o.lat, lon: +o.lon }; } } catch {}
+    return null;
+  }
+  async function loadWeather(force) {
+    if (prefs.weather === 'off' || wxBusy || !items.length) return;
+    if (!force && wx && wx.hourly && Date.now() - wx.at < H) return;
+    let loc = ls.json(K.loc, null) || savedPlace();
+    if (!loc && navigator.geolocation && !ls.get(K.loc + '-denied', '')) {
+      wxBusy = true;
+      try { const p = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 6 * H })); loc = { lat: p.coords.latitude, lon: p.coords.longitude }; }
+      catch { ls.set(K.loc + '-denied', '1'); }
+      wxBusy = false;
+    }
+    if (!loc) return;
+    ls.set(K.loc, JSON.stringify({ lat: +(+loc.lat).toFixed(3), lon: +(+loc.lon).toFixed(3) }));
+    wxBusy = true;
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'auto';
+      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + (+loc.lat).toFixed(3) + '&longitude=' + (+loc.lon).toFixed(3) + '&hourly=temperature_2m,precipitation_probability,weather_code&timezone=' + encodeURIComponent(tz) + '&forecast_days=7', { referrerPolicy: 'no-referrer' });
+      const j = await r.json();
+      if (j && j.hourly && Array.isArray(j.hourly.time)) { wx = { at: Date.now(), hourly: j.hourly }; ls.set(K.wx, JSON.stringify(wx)); if (!st.item && !st.list) render(); }
+    } catch {} finally { wxBusy = false; }
+  }
+
   // Calendar's School layer: days off, events and what's due, in your own family account
   // (../home/welcome.js AllisonOS.layer; sent only when it changed, and only signed in).
   function shareLayer() {
@@ -622,13 +689,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Opened from Calendar's School layer: ?item=<id> opens that post.
   const q = new URLSearchParams(location.search).get('item');
   if (q && byId(q)) openItem(q);
-  window.addEventListener('load', () => setTimeout(shareLayer, 1500));
+  window.addEventListener('load', () => { setTimeout(shareLayer, 1500); setTimeout(() => loadWeather(false), 900); });
   window.addEventListener('storage', e => { if (e.key && e.key.startsWith(KEY)) { load(); render(); } });
   // Back to the app: the time of day moves the top card (3:15), and there may be new mail.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (!st.item && !st.list) render();
     if (getToken() && scanDue()) scan({ loud: false });
+    loadWeather(false);
   });
   setInterval(() => { if (document.visibilityState === 'visible' && !st.item && !st.list) render(); }, 5 * 6e4);
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

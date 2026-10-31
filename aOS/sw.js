@@ -1,7 +1,7 @@
 // Offline shell for aOS. Same-origin requests load network-first, so a new
 // deploy shows on the next open; the cache is only the fallback offline.
-const CACHE = 'aos-v57';
-const SHELL = ['./', 'index.html', 'app.js', 'home-tab.js', 'glyphs.js', 'home-find.js', 'prefs-sync.js', '../calendar/ical.js', '../weather/data.js', 'look.js', 'tron-intro.js', 'vintage-intro.js', 'glass-intro.js', 'layers-intro.js', 'tron-shots.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/sky.js', '../home/welcome.js', '../home/account.js', '../home/redact.js', '../home/ipsy.js', '../home/settings.js', '../home/names.js'];
+const CACHE = 'aos-v58';
+const SHELL = ['./', 'index.html', 'app.js', 'home-tab.js', 'glyphs.js', 'home-find.js', '../school/sort.js', 'prefs-sync.js', '../calendar/ical.js', '../weather/data.js', 'look.js', 'tron-intro.js', 'vintage-intro.js', 'glass-intro.js', 'layers-intro.js', 'tron-shots.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png', '../home/sky.js', '../home/welcome.js', '../home/account.js', '../home/redact.js', '../home/ipsy.js', '../home/settings.js', '../home/names.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

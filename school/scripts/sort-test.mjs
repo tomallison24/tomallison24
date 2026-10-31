@@ -198,4 +198,13 @@ test('the school’s other sites, from the links in its emails', () => {
   assert.deepEqual(s, ['Infinite Campus https://example.org/campus/portal/x.jsp', 'Lunch menu https://madeup.nutrislice.com/menu', 'Academic calendar https://example.org/academic-calendar']);
 });
 
+test('the weather at drop-off and pickup, from the hourly forecast', () => {
+  const h = { time: ['2026-10-29T07:00', '2026-10-29T15:00'], temperature_2m: [10, 20], precipitation_probability: [5, 60], weather_code: [0, 61] };
+  assert.equal(S.wxAt(h, '2026-10-29', '07:45').text, '50°, clear');
+  assert.equal(S.wxAt(h, '2026-10-29', '15:15').text, '68°, rain, 60%');
+  assert.equal(S.wxAt(h, '2026-10-29', '15:15').wet, true);
+  assert.equal(S.wxAt(h, '2026-10-29', '15:15', false).text, '20°, rain, 60%', 'Celsius');
+  assert.equal(S.wxAt(h, '2026-10-30', '07:45'), null, 'no forecast for that day');
+});
+
 console.log(n + ' tests passed');

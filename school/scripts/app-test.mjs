@@ -139,6 +139,7 @@ await test('a post: what it says, its dates, ParentSquare and Gmail; moving it',
   assert.match(body, /Thu, Oct 29/);
   assert.match(await page.getAttribute('#itemBody a:has-text("Open in ParentSquare")', 'href'), /^https:\/\/www\.parentsquare\.com\/feeds\/1004/);
   assert.match(await page.getAttribute('#itemBody a:has-text("Open in Gmail")', 'href'), /^https:\/\/mail\.google\.com\/mail\/u\/0\/#all\/d1/);
+  assert.equal(await page.getAttribute('#itemBody a:has-text("Open in Mail")', 'href'), '../mail/?thread=d1', 'the email in Mail');
   assert.equal(await page.getAttribute('#itemSheet [role="dialog"]', 'aria-modal'), 'true');
   await page.click('#itemBody [data-move]');
   await page.waitForTimeout(100);
@@ -201,6 +202,59 @@ await test('Calendar’s School layer goes to your family account, signed in, wi
   assert.ok(got, 'sent');
   assert.ok(got.data.items.some(x => x.kind === 'off' && x.date === '2026-10-30'));
   assert.ok(!JSON.stringify(got).includes('parentsquare.com'));
+  await ctx.close();
+});
+
+await test('Remind me in Notes: a reminder the day before it’s due, in the family’s Notes, once', async () => {
+  const { ctx, page } = await newPage('light', seeded({ 'aos.session': JSON.stringify({ token: 'made-up-session', user: { id: 'u1', name: 'Pat' } }) }));
+  const sent = [];
+  let todos = [];
+  await ctx.route('**/sheet/api/notes', async route => {
+    const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
+    todos = todos.concat(b.todos || []);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ app: 'allison-notes-sync', aos: true, todos, lists: [] }) });
+  });
+  await open(page);
+  await page.click('#main [data-open]:has-text("Kindergarten Book Buddies")');
+  await page.click('#itemBody [data-remind]');
+  await page.waitForFunction(() => (window.__toasts || []).some(t => /Notes/.test(t)));
+  const t = sent.flatMap(b => b.todos || []);
+  assert.equal(t.length, 1);
+  assert.equal(t[0].title, 'Kindergarten Book Buddies');
+  assert.equal(t[0].date, '2026-11-05', 'the day before it’s due');
+  assert.match(t[0].notes, /From School, Sam Ortiz\nDue Fri, Nov 6/);
+  assert.ok((await page.evaluate(() => window.__toasts)).includes('Reminder set in Notes for Thu, Nov 5.'));
+  await page.click('#itemBody [data-remind]');
+  await page.waitForFunction(() => (window.__toasts || []).includes('It’s in Notes already.'));
+  await ctx.close();
+});
+
+await test('Remind me, signed out: says how, and sends nothing', async () => {
+  const { ctx, page } = await newPage('light', seeded());
+  let calls = 0;
+  await ctx.route('**/sheet/api/**', route => { calls++; return route.fulfill({ status: 401, body: '{}' }); });
+  await open(page);
+  await page.click('#main [data-open]:has-text("Kindergarten Book Buddies")');
+  await page.click('#itemBody [data-remind]');
+  await page.waitForFunction(() => (window.__toasts || []).some(t => /Sign in/.test(t)));
+  assert.equal(calls, 0);
+  await ctx.close();
+});
+
+await test('the weather at drop-off and pickup on the top card; off in Settings', async () => {
+  const { ctx, page } = await newPage('light', seeded({ 'allison-school-v1-loc': JSON.stringify({ lat: 40.0, lon: -75.0 }) }));
+  let asked = '';
+  await ctx.route('https://api.open-meteo.com/**', route => { asked = route.request().url(); return route.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify({ hourly: { time: ['2026-10-29T07:00', '2026-10-29T15:00'], temperature_2m: [10, 20], precipitation_probability: [5, 60], weather_code: [0, 61] } }) }); });
+  await open(page);
+  await page.waitForFunction(() => /Drop-off/.test(document.querySelector('#main .rgroup.focus').textContent));
+  assert.match(asked, /latitude=40\.000&longitude=-75\.000&hourly=temperature_2m,precipitation_probability,weather_code/);
+  const top = await texts(page, '#main .rgroup.focus .row');
+  assert.ok(top.includes('Drop-off 50°, clear · Pickup 68°, rain, 60%.'), top.join(' | '));
+  await page.click('#moreBtn');
+  await page.click('#cWx');
+  await page.click('#moreSheet .okbtn');
+  assert.ok(!(await texts(page, '#main .rgroup.focus .row')).some(t => /Drop-off/.test(t)), 'off');
   await ctx.close();
 });
 

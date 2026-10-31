@@ -13,7 +13,7 @@
 //                        apps"), best first; at: where to open the app ('?open=note:…'), when it has one
 //   aosFind.brief()    -> { lines: [{ app, text }], trip } the morning brief on aOS Home: today, in a line an app,
 //                        from what the apps keep (the day's events, rain, deliveries due, tonight's dinner,
-//                        reminders due), at most six, worked out here every time Home is drawn. Nothing is sent anywhere and no AI
+//                        reminders due, and School's next school day and what's due), at most six, worked out here every time Home is drawn. Nothing is sent anywhere and no AI
 //                        is asked. trip: the next trip, when it starts within a week or is under way:
 //                        { name, dates, starts, days, deliveries: [store], dinners, events, ask } (ask: the words
 //                        for Ipsy's "Get ready" button, aOS/home-tab.js), else null
@@ -152,6 +152,12 @@
       const d = get('allison-places-v1'); if (!Array.isArray(d)) return [];
       return d.filter(p => p && p.name).map(p => ({ title: p.name, also: [p.city, p.address, p.category, p.notes, ...(p.tags || [])].join(' '), sub: [p.city, p.status === 'been' ? 'Been' : 'Want to go'].filter(Boolean).join(' · '), when: -(p.updated || 0) }));
     },
+    // School: the posts read from the school's emails (school/app.js); a post opens in School
+    school(q) {
+      const d = get('allison-school-v1-items'); if (!Array.isArray(d)) return [];
+      return d.filter(x => x && x.title && x.kind !== 'paid').map(x => ({ title: x.title, also: [x.author, (x.groups || []).join(' '), String(x.body || '').slice(0, 1500)].join(' '),
+        sub: [x.author, day(x.at)].filter(Boolean).join(' · ') || 'School', at: '?item=' + encodeURIComponent(x.id), when: -(x.at || 0) }));
+    },
     podcasts(q) {
       const d = get('allison-podcasts-v1'); if (!d) return [];
       return (d.follows || []).filter(f => f && f.title).map(f => ({ title: f.title, also: [f.author, f.genre].join(' '), sub: f.author || 'Show', at: f.feed ? '?feed=' + encodeURIComponent(f.feed) : '', when: -(f.at || 0) }));
@@ -200,6 +206,20 @@
     }
     return null;
   }
+  // School's lines for the brief, from what School keeps (school/sort.js works out the next school day, as School does)
+  function schoolLines(now) {
+    const S = window.SchoolSort, items = get('allison-school-v1-items');
+    if (!S || !Array.isArray(items) || !items.length) return [];
+    let s; try { s = S.sections(items, { now: new Date(), me: S.child(items, get('allison-school-v1-prefs')), done: get('allison-school-v1-done') || {}, moved: get('allison-school-v1-moved') || {} }); } catch { return []; }
+    const today = ymd(now), tomorrow = ymd(new Date(now.getTime() + 864e5 + 3600e3)), out = [];
+    const wd = now.getDay() > 0 && now.getDay() < 6;
+    if (wd && s.off.has(today)) out.push({ app: 'school', text: 'No school today: ' + s.off.get(today) });
+    else if ((s.top.d === today || s.top.d === tomorrow) && s.top.lines.length)
+      out.push({ app: 'school', text: (s.top.d === today ? 'Today' : 'Tomorrow') + ' at school: ' + s.top.lines[0].title + (s.top.lines.length > 1 ? ' and ' + (s.top.lines.length - 1) + ' more' : '') });
+    const due = s.needs.filter(x => x.due && x.due <= tomorrow);
+    if (due.length) out.push({ app: 'school', text: due[0].title + ' due ' + (due[0].due < today ? 'already' : due[0].due === today ? 'today' : 'tomorrow') + (due.length > 1 ? ', and ' + (due.length - 1) + ' more for school' : '') });
+    return out;
+  }
   function brief() {
     const now = Date.now(), t = new Date(); t.setHours(0, 0, 0, 0);
     const today = ymd(t), sod = t.getTime(), eod = sod + 864e5, lines = [];
@@ -223,6 +243,8 @@
     // reminders due today or late
     const n = get('allison-notes-v1'), rem = n && Array.isArray(n.todos) ? n.todos.filter(x => x && !x.done && x.date && x.date <= today) : [];
     if (rem.length) { const late = rem.filter(x => x.date < today).length; lines.push({ app: 'notes', text: plural(rem.length, 'reminder') + ' due' + (late ? ' (' + late + ' late)' : ' today') + ': ' + (rem[0].title || 'Reminder') + (rem.length > 1 ? ' and more' : '') }); }
+    // School: today's or tomorrow's school day (what to wear or bring, events, a day off), and what's due by tomorrow
+    lines.push(...schoolLines(t));
     // the next trip, within a week or under way
     let trip = null;
     const tr = nextTrip(now);

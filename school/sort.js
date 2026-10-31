@@ -269,6 +269,19 @@
     return out.filter((e, i, a) => a.findIndex(y => y.d === e.d && norm(y.what) === norm(e.what)) === i);
   }
 
+
+  // Who the child is: what Settings > Your child and After school say, and what the emails say for the
+  // rest (detect). app.js and aOS Home (aOS/home-find.js) both ask this.
+  function child(items, prefs) {
+    const d = detect(items), p = prefs || {}, set = v => v != null && v !== '';
+    return {
+      name: p.name || '', grade: set(p.grade) ? +p.grade : d.grade, teacher: p.teacher || d.teacher || '',
+      homeroom: set(p.homeroom) ? p.homeroom : d.homeroom, school: d.school,
+      ends: p.ends || '15:15', pickupBy: p.pickupBy || '15:40', lane: p.lane || '',
+      clubs: Object.fromEntries([1, 2, 3, 4, 5].map(i => [i, p['club' + i] ? { name: p['club' + i], until: p.clubUntil || '15:50' } : null])),
+    };
+  }
+
   // ---------------------------------------------------------------------
   // Whose it is: her class, her grade, the whole school, or someone else's
   // ---------------------------------------------------------------------
@@ -342,6 +355,20 @@
     const lane = me.lane ? ', ' + me.lane : '';
     if (club && club.name) return { club: club.name, text: club.name + ' until ' + clock(club.until || '15:50') + (club.room ? ', ' + club.room : '') + '. Pickup at ' + clock(club.until || '15:50') + '.' };
     return { club: '', text: 'Pickup ' + clock(me.ends || '15:15') + (me.pickupBy ? '–' + clock(me.pickupBy).replace(/ pm$/, ' pm') : '') + lane + '.' };
+  }
+
+
+  // The weather at a time of a school day, from Open-Meteo's hourly forecast (app.js fetches it): the hour
+  // it falls in. hourly: { time: ['2026-10-29T07:00', ...], temperature_2m, precipitation_probability, weather_code }.
+  const WX_WORDS = c => c === 0 ? 'clear' : c <= 2 ? (c === 1 ? 'mostly clear' : 'partly cloudy') : c === 3 ? 'cloudy' : c <= 48 ? 'fog' : c <= 67 ? (c >= 56 && c <= 57 || c >= 66 ? 'freezing rain' : 'rain') : c <= 77 ? 'snow' : c <= 82 ? 'showers' : c <= 86 ? 'snow showers' : 'thunderstorms';
+  function wxAt(hourly, d, hhmm, f = true) {
+    if (!hourly || !Array.isArray(hourly.time)) return null;
+    const i = hourly.time.indexOf(d + 'T' + String(hhmm).slice(0, 2) + ':00'); if (i < 0) return null;
+    const c = (hourly.temperature_2m || [])[i], code = (hourly.weather_code || [])[i], pop = (hourly.precipitation_probability || [])[i];
+    if (!Number.isFinite(c)) return null;
+    const words = Number.isFinite(code) ? WX_WORDS(code) : '';
+    const wet = Number.isFinite(pop) && pop >= 30 && !/rain|showers|snow|thunder/.test(words) ? pop + '% rain' : Number.isFinite(pop) && pop >= 30 ? words + ', ' + pop + '%' : words;
+    return { t: Math.round(f ? c * 9 / 5 + 32 : c), text: Math.round(f ? c * 9 / 5 + 32 : c) + '°' + (wet ? ', ' + wet : ''), wet: Number.isFinite(pop) && pop >= 30 };
   }
 
   // ---------------------------------------------------------------------
@@ -421,5 +448,5 @@
     return SITES.map(s => found[s[0]]).filter(Boolean);
   }
 
-  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, audience, daysOff, isSchoolDay, focusDay, pickup, sections, calendarItems, sites, WEEKDAYS, MONTHS };
+  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, child, audience, daysOff, isSchoolDay, focusDay, pickup, wxAt, sections, calendarItems, sites, WEEKDAYS, MONTHS };
 })(typeof window !== 'undefined' ? window : globalThis);

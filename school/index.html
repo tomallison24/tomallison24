@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://posts.parentsquare.com; font-src 'self'; connect-src 'self' https://gmail.googleapis.com https://oauth2.googleapis.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://posts.parentsquare.com; font-src 'self'; connect-src 'self' https://gmail.googleapis.com https://oauth2.googleapis.com https://api.open-meteo.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>School</title>
 <meta name="description" content="Your child's school in one place: what's on tomorrow, what needs you, what's coming up and what the class says, read from the school's ParentSquare emails.">
@@ -499,6 +499,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="../home/slide.js"></script>
 <script src="../home/settings.js"></script>
 <script src="../home/account.js"></script>   <!-- family accounts: signing in, for Calendar's School layer -->
+<script src="../home/sheet.js"></script>   <!-- Remind me: a reminder in the family's Notes, through its Sheet (aOS/SHEETS.md) -->
 <script src="sort.js"></script>
 <script src="app.js"></script>
 <script src="../home/welcome.js" data-app="school" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
