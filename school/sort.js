@@ -39,7 +39,7 @@
     return ENT[e.toLowerCase()] != null ? ENT[e.toLowerCase()] : m;
   });
   function htmlToText(html) {
-    return decode(String(html || '')
+    return decode(String(html || '').replace(/\r\n?/g, '\n')
       .replace(/<(script|style|head|title)[\s\S]*?<\/\1>/gi, ' ')
       .replace(/<!--[\s\S]*?-->/g, ' ')
       .replace(/<img\b[^>]*\bsrc="([^"]+)"[^>]*>/gi, (m, u) => ' ![](' + u + ') ')
@@ -50,7 +50,8 @@
       .replace(/<\/(p|div|tr|li|h[1-6]|table|ul|ol|blockquote|section)>/gi, '\n')
       .replace(/<(p|div|tr|h[1-6]|table|ul|ol|blockquote|section)\b[^>]*>/gi, '\n')
       .replace(/<[^>]+>/g, ''))
-      .replace(/[ \t ]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+      .replace(/[ \t ]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+      .replace(/^- *\n+/gm, '- ').replace(/(^- [^\n]*)\n\n(?=- )/gm, '$1\n').replace(/(^- [^\n]*)\n\n(?=- )/gm, '$1\n');   // a list's items, one under another
   }
   // What a post says, readable: links and pictures taken out (kept on the side), emphasis marks gone.
   function clean(text) {
@@ -182,7 +183,7 @@
     const title = clean(o.title || '').text.replace(/\s+/g, ' ').trim().slice(0, 200) || 'From school';
     const x = {
       id: base.id + (o.n != null ? ':' + o.n : ''), msg: base.id, thread: base.threadId || base.id,
-      at: o.at || base.date, kind: o.kind || kindOf(title, body + '\n' + c.links.map(l => l.u).join(' '), groups), title, body: body.slice(0, 6000),
+      at: o.at || base.date, kind: o.kind || kindOf(title, body + '\n' + c.links.map(l => l.u).join(' '), groups), title, body: body.slice(0, o.long ? 24000 : 6000),
       author: (o.author || '').trim().slice(0, 80), groups, school: base.school || '',
       url: o.url || linkIn(o.body || '', POST_LINK) || '', image: c.images[0] || '',
       links: c.links.filter(l => !/parentsquare\.com\/(schools\/\d+\/unsubscribe|users\/\d+\/chats)/.test(l.u)).slice(0, 12),
@@ -247,19 +248,21 @@
       return [item(base, { title: r[3], author: r[1], groups: groupsOf(r[2]), body: text.slice(r.index + r[0].length) })];
     }
     // a long newsletter (Tiger Times): its Upcoming Events list, and the rest as it is
-    const x = item(base, { title: subject.replace(/\s*\d{1,2}\/\d{1,2}\/20\d\d\s*$/, '') || 'From school', body: text, kind: /newsletter|times\b|bulletin|update/i.test(subject) ? 'newsletter' : undefined });
+    const isNews = /newsletter|times\b|bulletin|update/i.test(subject);   // kept whole (24,000 letters): each event's own section is read from it
+    const x = item(base, { title: subject.replace(/\s*\d{1,2}\/\d{1,2}\/20\d\d\s*$/, '') || 'From school', body: text, kind: isNews ? 'newsletter' : undefined, long: isNews });
     if (x.kind === 'newsletter') { x.events = eventsList(text, base.date); x.dates = []; }
     return [x];
   }
   // A newsletter's list of dates: lines that start with a date ("October 27–29 👻 – Boo Buddies"), or
   // "Winter Break: December 21 - January 1".
+  const DATE_LEAD = new RegExp('^' + MONTH_RE + '\\s+\\d{1,2}(?:st|nd|rd|th)?(?:\\s*(?:[–—-]|to)\\s*(?:' + MONTH_RE + '\\s+)?\\d{1,2}(?:st|nd|rd|th)?)?(?:,?\\s*20\\d\\d)?', 'i');
   function eventsList(text, ref) {
     const out = [], t = clean(text).text;
     for (const line of t.split('\n')) {
       const s = line.replace(/^[\s\-•*]+/, '').trim(); if (!s || s.length > 220) continue;
       let what = '', ds = [];
       const lead = new RegExp('^' + MONTH_RE + '\\s+\\d', 'i');
-      if (lead.test(s)) { ds = parseDates(s, ref, { relative: false }); what = s.replace(/^[^–—-]*?\d(?:st|nd|rd|th)?\b[^A-Za-z]*[–—-]\s*/, ''); }
+      if (lead.test(s)) { ds = parseDates(s, ref, { relative: false }); what = s.replace(DATE_LEAD, '').replace(/^[^\p{L}\p{N}]+/u, ''); }
       else { const m = /^([A-Z][\w' ]{2,40}?):\s*(.+)$/.exec(s); if (m && new RegExp('^' + MONTH_RE + '\\s+\\d', 'i').test(m[2])) { ds = parseDates(m[2], ref, { relative: false }); what = m[1]; } }
       if (!ds.length || !what || what === s) continue;
       what = what.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').replace(/^\s*[–—-]\s*/, '').replace(/\s+/g, ' ').trim();
@@ -452,5 +455,64 @@
     return SITES.map(s => found[s[0]]).filter(Boolean);
   }
 
-  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, child, audience, daysOff, isSchoolDay, focusDay, pickup, wxAt, sections, calendarItems, sites, WEEKDAYS, MONTHS };
+
+  // ---------------------------------------------------------------------
+  // The part of a long email about one thing on it: a newsletter's section on "STEAM Identity Day", not
+  // the whole newsletter. The paragraph that shares the most of the thing's words (and its date), its
+  // heading just above it, and what follows up to the next heading; never the newsletter's list of dates
+  // when a section says more. -> { text, start, end } (where it is in the body), or null when nothing fits.
+  // ---------------------------------------------------------------------
+  const STOP = new Set(['the', 'and', 'for', 'with', 'from', 'your', 'our', 'are', 'will', 'this', 'that', 'you', 'all', 'day', 'days', 'event', 'events', 'school', 'no', 'not', 'due', 'grade', 'grades']);
+  const wordsOf = s => [...new Set(String(s || '').toLowerCase().replace(/[’']/g, '').match(/[a-z0-9]+/g) || [])]
+    .filter(w => w.length > 2 && !STOP.has(w) && !MON[w.slice(0, 3)] && !/^(mon|tue|wed|thu|fri|sat|sun)/.test(w) && !/^\d+(st|nd|rd|th)?$/.test(w));
+  const isHeading = b => b.length <= 110 && !/\n/.test(b.trim()) && !/[.,:;?]$/.test(b.trim()) && !/^[-•*]\s/.test(b.trim());
+  function excerpt(body, title, d) {
+    const text = String(body || ''); if (text.length < 400) return null;
+    const want = wordsOf(title); if (!want.length) return null;
+    const blocks = []; const re = /[^\n](?:[\s\S]*?)(?=\n\s*\n|$)/g; let m;
+    while ((m = re.exec(text))) blocks.push({ t: m[0], start: m.index, end: m.index + m[0].length });
+    const dateRe = d ? new RegExp('\\b' + MONTH_RE + '\\s+' + (+d.slice(8)) + '(?:st|nd|rd|th)?\\b', 'i') : null;
+    const lead = new RegExp('^[\\s\\-•*]*(?:[A-Z][\\w\' ]{1,40}:\\s*)?' + MONTH_RE + '\\s+\\d', 'i');
+    const MONTH_LINE = new RegExp('^\\s*' + MONTH_RE + '\\s*$', 'i');
+    const isList = t => { const ls = t.split('\n').filter(l => l.trim()); return MONTH_LINE.test(ls[0] || '') || ls.filter(l => lead.test(l) || /^\s*[-•*]\s/.test(l)).length >= Math.min(2, ls.length); };
+    // Sections are scored on the words that are in some section (a word only the list has says nothing about
+    // which section), a rare one (Check-In) counting for more than a common one (testing); a section needs
+    // half the thing's words (two at least), or its date, to count. The list of dates gives the thing's own line, kept in
+    // case no section says more.
+    const has = (w, t) => new RegExp('\\b' + w).test(t);
+    const low = blocks.map(b => b.t.toLowerCase()), listy = blocks.map(b => isList(b.t));
+    const wantS = want.filter(w => low.some((t, i) => !listy[i] && has(w, t)));
+    const weight = Object.fromEntries(wantS.map(w => [w, 1 / Math.max(1, low.filter((t, i) => !listy[i] && has(w, t)).length)]));
+    const all = wantS.reduce((n, w) => n + weight[w], 0) || 1;
+    let best = -1, top = 0, inList = null;
+    blocks.forEach((b, i) => {
+      if (listy[i]) {
+        let off = b.start;
+        for (const l of b.t.split('\n')) {
+          const lh = want.filter(w => has(w, l.toLowerCase())).length / want.length;
+          if (lh >= 0.5 && (!inList || lh > inList.h)) { const lo = text.indexOf(l, off); inList = { h: lh, start: lo, end: lo + l.length }; }
+          off += l.length + 1;
+        }
+        return;
+      }
+      const hitW = wantS.filter(w => has(w, low[i]));
+      if (!hitW.length) return;
+      const dated = !!(dateRe && dateRe.test(b.t));
+      if (!((hitW.length * 2 >= want.length && hitW.length >= Math.min(2, want.length)) || dated)) return;   // one shared word ("break") isn't enough
+      const score = 0.5 * hitW.length / wantS.length + 0.5 * hitW.reduce((n, w) => n + weight[w], 0) / all + (dated ? 0.25 : 0) + (isHeading(b.t) ? 0.1 : 0);
+      if (score > top + 1e-9) { top = score; best = i; }
+    });
+    if (best < 0 || top < 0.5) return inList ? { text: text.slice(inList.start, inList.end).replace(/^[\s\-•*]+/, '').trim(), start: inList.start, end: inList.end } : null;
+    // start at its heading (the block itself, or a short line just above it), then on to the next heading or list
+    let a = best;
+    if (!isHeading(blocks[a].t) && a > 0 && isHeading(blocks[a - 1].t) && !MONTH_LINE.test(blocks[a - 1].t)) a--;
+    const more = i => i < blocks.length && !isHeading(blocks[i].t) && !isList(blocks[i].t);
+    let z = a, len = blocks[a].t.length;
+    if (isHeading(blocks[a].t) && a + 1 < blocks.length && !isList(blocks[a + 1].t)) { z = a + 1; len += blocks[z].t.length; }
+    while (more(z + 1) && len + blocks[z + 1].t.length < 1800) { z++; len += blocks[z].t.length; }
+    const start = blocks[a].start, end = blocks[z].end;
+    return { text: text.slice(start, end).trim(), start, end };
+  }
+
+  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, child, audience, daysOff, isSchoolDay, focusDay, pickup, wxAt, sections, calendarItems, sites, excerpt, WEEKDAYS, MONTHS };
 })(typeof window !== 'undefined' ? window : globalThis);

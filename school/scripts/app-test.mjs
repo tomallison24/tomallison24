@@ -149,6 +149,32 @@ await test('a post: what it says, its dates, ParentSquare and Gmail; moving it',
   await ctx.close();
 });
 
+await test('a date from a newsletter opens at its own part, and Show the whole email scrolls to it, marked', async () => {
+  const { ctx, page } = await newPage('light', seeded());
+  await open(page);
+  await page.click('#main .rgroup:nth-of-type(3) [data-open]:has-text("STEAM Identity Day Events")');
+  await page.waitForSelector('#itemSheet:not([hidden])');
+  assert.equal((await page.textContent('#itemBody .sechead')).trim(), 'About STEAM Identity Day Events');
+  const about = await page.textContent('#itemBody .rgroup.about');
+  assert.match(about, /Fri, Nov 6/);
+  assert.match(about, /STEAM Identity Day – November 6!/);
+  assert.match(about, /host a table/);
+  assert.ok(!/Boo Buddies|Reading Log/.test(about), 'only its own part: ' + about);
+  assert.equal(await page.isVisible('#wholeText'), false, 'the rest waits behind a button');
+  await page.click('#itemBody [data-full]');
+  await page.waitForTimeout(600);
+  assert.equal(await page.isVisible('#wholeText'), true);
+  assert.match(await page.textContent('#focusMark'), /^🔬Save the Date/);
+  const box = await page.$eval('#focusMark', m => { const r = m.getBoundingClientRect(), b = m.closest('.sheetbody').getBoundingClientRect(); return r.top >= b.top - 2 && r.top < b.bottom; });
+  assert.ok(box, 'scrolled to it');
+  // a short post opens as it is
+  await page.click('#itemSheet .okbtn');
+  await page.click('#main .rgroup:nth-of-type(3) [data-open]:has-text("Character Dress Up")');
+  assert.equal(await page.$('#itemBody .rgroup.about'), null);
+  assert.match(await page.textContent('#itemBody'), /dress up as their favorite character/);
+  await ctx.close();
+});
+
 await test('Everything else: other grades are there, and search finds them', async () => {
   const { ctx, page } = await newPage('light', seeded());
   await open(page);

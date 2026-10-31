@@ -211,4 +211,32 @@ test('the weather at drop-off and pickup, from the hourly forecast', () => {
   assert.equal(S.wxAt(h, '2026-10-30', '07:45'), null, 'no forecast for that day');
 });
 
+test('the part of a newsletter about one of its dates, not the whole newsletter', () => {
+  const x = S.readEmail(F.newsletter)[0];
+  const steam = S.excerpt(x.body, 'STEAM Identity Day Events', '2026-11-06');
+  assert.ok(steam, 'found');
+  assert.match(steam.text, /^🔬Save the Date – 🚀 STEAM Identity Day – November 6!/, 'from its heading');
+  assert.match(steam.text, /host a table/, 'and the paragraphs under it');
+  assert.ok(!/Autumn Music Showcase/.test(steam.text), 'up to the next heading');
+  assert.ok(!/Boo Buddies/.test(steam.text), 'not the list of dates');
+  assert.equal(x.body.slice(steam.start, steam.end).trim(), steam.text, 'where it is, to scroll to');
+  const show = S.excerpt(x.body, 'Autumn Music Showcase at 6:00 PM', '2026-11-18');
+  assert.match(show.text, /^Autumn Music Showcase\n\nJoin us on November 18/);
+  assert.equal(S.excerpt(x.body, 'Kindness Day', '2026-11-13').text.split('\n').length, 1, 'only in the list: its own line');
+  assert.equal(S.excerpt(x.body, 'Pumpkin Patch Trip', '2026-11-02'), null, 'nothing about it');
+  assert.equal(S.excerpt('Short post.', 'Short post', '2026-11-02'), null, 'a short post needs none');
+});
+
+test('a newsletter in HTML: its list read as a list, line endings and all', () => {
+  const html = '<table><tr><td><h2>Upcoming Events</h2>\r\n<p><b>November</b></p>\r\n<ul>\r\n<li><p>November 9–20 📝 – NC Check-In A Testing Window</p></li>\r\n<li><p>November 30 📊 – Beginning of MAP Testing Window</p></li>\r\n</ul></td></tr>'
+    + '<tr><td><h2>📚 NC Check-Ins Prep Made Easy with IXL!</h2><p>The NC Check-Ins are coming November 9–20! A little practice each day can make a difference.</p></td></tr>'
+    + '<tr><td><h2>Science Fair</h2><ul><li><p>October 2: Procedure Section due for Grades 5–7</p></li><li><p>November 16–20: Classroom-Level Preliminary Round</p></li></ul></td></tr></table>'
+    + '<p>' + 'More news. '.repeat(40) + '</p>';
+  const x = S.readEmail({ id: 'h2', threadId: 'h2', subject: 'Maple Grove Times 10/25/2026', date: at('2026-10-25').getTime(), html })[0];
+  assert.match(x.body, /^- November 9–20 📝 – NC Check-In A Testing Window\n- November 30/m, 'each item on its own line, under the one before');
+  assert.deepEqual(x.events.map(e => e.what), ['NC Check-In A Testing Window', 'Beginning of MAP Testing Window', 'Procedure Section due for Grades 5–7', 'Classroom-Level Preliminary Round'], 'named by the words after the date');
+  assert.match(S.excerpt(x.body, 'NC Check-In A Testing Window', '2026-11-09').text, /^📚 NC Check-Ins Prep Made Easy with IXL!\n\nThe NC Check-Ins are coming/, 'its section, not the list');
+  assert.equal(S.excerpt(x.body, 'Beginning of MAP Testing Window', '2026-11-30').text, 'November 30 📊 – Beginning of MAP Testing Window', 'only in the list: its own line');
+});
+
 console.log(n + ' tests passed');
