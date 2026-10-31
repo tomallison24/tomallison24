@@ -60,7 +60,7 @@
   showTab('home');   // (the apps along the bottom are drawn with Home, below)
 
   const SPACES = [
-    ['Family', ['calendar', 'meals', 'notes', 'house', 'orders']],
+    ['Family', ['calendar', 'meals', 'notes', 'house', 'orders', 'school']],
     ['Every day', ['weather', 'news', 'mail', 'clock', 'podcasts']],
     ['Out and about', ['travel', 'places']],
     ['You', ['fitness', 'drinks', 'money']],

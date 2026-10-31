@@ -49,7 +49,7 @@ window.CalendarIpsy = function (app) {
   const hm = ms => { const w = I.utcToZoned(ms, TZ); return pad(w.h) + ':' + pad(w.mi); };
   const wallStr = ms => app.ymd(ms) + ' ' + hm(ms);
   const calName = () => app.calendarName();
-  const KIND_KEY = { family: 'family', holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', meals: 'meals', orders: 'orders', news: 'news' };
+  const KIND_KEY = { family: 'family', holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', meals: 'meals', orders: 'orders', school: 'school', news: 'news' };
   const fileOf = id => String(id || '').split('|')[0];
 
   // ---- what Ipsy may read: the Family calendar and the layers that are on (never Drinks) ----
@@ -425,7 +425,7 @@ window.CalendarIpsy = function (app) {
     show_day: () => 'Opening the day',
     search_gmail: () => 'Searching Gmail', read_email: () => 'Reading an email',
   };
-  const ON = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', meals: 'meals', orders: 'orders', news: 'news' };
+  const ON = { holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', meals: 'meals', orders: 'orders', school: 'school', news: 'news' };
 
   return {
     tools,

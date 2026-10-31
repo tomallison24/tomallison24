@@ -14,7 +14,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 
-const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'money', 'house', 'sparkle'];
+const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'school', 'money', 'house', 'sparkle'];
 // tests that open every app: any app's change needs them
 const ALWAYS = ['aOS/scripts/apps-smoke-test.mjs', 'aOS/scripts/standalone-test.mjs', 'aOS/scripts/design-check.mjs'];   // design-check: DESIGN.md, in every app
 // changes no browser test can see

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Made by aOS/scripts/make-looks.mjs from icon.svg - don't edit by hand. Layers' pebble: the app's colour, lighter at the top left, its drawing in white at 40% of it. 15e580ede0b1 -->
+  <defs><linearGradient id="p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#CB5E50"/><stop offset="1" stop-color="#9C2B1F"/></linearGradient><radialGradient id="w" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><filter id="s" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#101828" flood-opacity=".22"/></filter></defs>
+  <g transform="translate(256 256) scale(.92) translate(-256 -256)"><path d="M506 256L505 294L503 321L499 344L493 365L485 383L476 400L466 415L454 429L441 441L427 452L412 461L396 470L379 477L360 483L340 487L318 490L292 492L256 493L220 492L194 490L172 487L152 481L134 475L118 467L102 458L89 448L76 436L65 423L55 409L46 394L38 377L31 359L25 340L21 318L17 293L15 256L14 219L14 192L16 169L19 147L25 127L32 109L40 92L51 77L64 64L78 52L94 43L111 35L130 29L150 25L171 23L194 22L220 22L256 24L291 27L315 30L336 35L355 40L373 46L390 52L405 60L420 68L434 78L447 89L459 101L470 115L480 131L489 149L496 169L501 192L504 218Z" fill="url(#p)" filter="url(#s)"/><path d="M506 256L505 294L503 321L499 344L493 365L485 383L476 400L466 415L454 429L441 441L427 452L412 461L396 470L379 477L360 483L340 487L318 490L292 492L256 493L220 492L194 490L172 487L152 481L134 475L118 467L102 458L89 448L76 436L65 423L55 409L46 394L38 377L31 359L25 340L21 318L17 293L15 256L14 219L14 192L16 169L19 147L25 127L32 109L40 92L51 77L64 64L78 52L94 43L111 35L130 29L150 25L171 23L194 22L220 22L256 24L291 27L315 30L336 35L355 40L373 46L390 52L405 60L420 68L434 78L447 89L459 101L470 115L480 131L489 149L496 169L501 192L504 218Z" fill="url(#w)"/></g>
+  <svg x="161.79" y="161.79" width="188.42" height="188.42" viewBox="119 133 261 261"><defs><mask id="g-school-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <g transform="rotate(-45 256 256)">
+        <rect x="92" y="212" width="64" height="88" rx="24" fill="#fff"/>
+        <rect x="144" y="212" width="194" height="88" fill="#fff"/>
+        <path d="M336 212L424 256L336 300Z" fill="#fff" stroke="#fff" stroke-width="8" stroke-linejoin="round"/>
+      </g>
+      <g transform="rotate(-45 256 256)">
+        <path d="M150 200V312" stroke="#000" stroke-width="14"/>
+        <path d="M178 200V312" stroke="#000" stroke-width="9"/>
+        <path d="M338 200V312" stroke="#000" stroke-width="12"/>
+        <path d="M206 256H318" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+        <path d="M388 238L424 256L388 274Z" fill="#000"/>
+      </g>
+    </mask></defs><rect width="512" height="512" fill="#FFFFFF" mask="url(#g-school-cut)"/></svg>
+</svg>

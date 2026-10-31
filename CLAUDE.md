@@ -36,7 +36,7 @@ requests skips its steps rather than itself.
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- By default, add to the top entry (aOS2.2 now): each merge releases it again,
+- By default, add to the top entry (aOS2.3 now): each merge releases it again,
   moving its tag; phones get the change with no update screen. A change worth
   announcing with update screens gets a new entry above it, when the owner
   wants one; the merge that adds it releases it:
