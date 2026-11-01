@@ -97,7 +97,8 @@
         'Drinks: Cocktails… in a day lists 29 cocktails by their spirit (Margarita, Espresso Martini, Negroni, Mojito, Old Fashioned, Aperol Spritz and more): one tap logs it at the classic recipe\'s standard drinks (the International Bartenders Association\'s), so a Margarita counts 1.6 and a Long Island Iced Tea 1.7, not the 1 a plain "Cocktail" did. Picking Cocktail in Something else… offers them too, to change the size or log two',
         'Drinks: its chips are Meals\' tiles now, equal tiles three across: your usual drinks, the cocktails and the kinds of drink in Something else…',
         'Money: a transaction\'s merchant, amount, date and card change right on its page: type the name or the amount, pick the day, or pick one of your cards (or type another), with Undo and Put back Monarch\'s. Your fix is shared with the family and stays when the emails are read again',
-        'Money: a test of Monarch\'s own connector, for whoever reads Monarch\'s emails: Settings, Connect Monarch (read-only), then Test reading Monarch puts its last 14 days beside Money\'s'],
+        'Money: a test of Monarch\'s own connector, for whoever reads Monarch\'s emails: Settings, Connect Monarch (read-only), then Test reading Monarch puts its last 14 days beside Money\'s',
+        'Home on iPhone: the views (Favorites, Climate, Lights, Media, Security, Around the house, Automations) are a floating bar of icons at the bottom, one tap to each, the one you\'re on lit, instead of a drop-down; the view\'s name is the title at the top'],
       apps: {
         calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
       } },
@@ -398,7 +399,7 @@
           ] },
         house: { highlights: ['Heaters show their wattage and mode, as in the Tuya app', 'Set a heater to turn itself off in 1 to 8 hours', 'An on heater no longer says Unavailable'],
           notes: ['Air Purifiers: in Auto the speed says Auto and is greyed out (a Dyson reports no speed of its own then), instead of showing an old speed'],
-          tour: [{ sel: ['[data-dv^="heat:"]', '#viewBtn'], t: 'Heaters, like the Tuya app', d: 'On Climate (pick it here), each heater has its wattage, Eco, Comfort or Boost, and a timer that turns it off in 1, 2, 4 or 8 hours.', g: 'tap' }] },
+          tour: [{ sel: ['[data-dv^="heat:"]', '#vtop [data-view="climate"]'], t: 'Heaters, like the Tuya app', d: 'On Climate (tap it here), each heater has its wattage, Eco, Comfort or Boost, and a timer that turns it off in 1, 2, 4 or 8 hours.', g: 'tap' }] },
         calendar: { highlights: ['Mark an event Private to hide it from Ipsy', 'Connect Gmail so Ipsy can find appointment emails', 'Turn Ipsy\'s Gmail off any time in Settings'],
           tour: [{ sel: '#fab', t: 'Private events', d: 'Open or add an event and switch on Private: Ipsy can\'t see it, and when it looks for free time it only knows the time is taken.', g: 'tap' },
             { sel: '#setBtn', t: 'Gmail for Ipsy', d: 'In Settings, connect Gmail so Ipsy can search appointment emails (read-only), or turn it off any time.', g: 'tap' }, { sel: '.ipsy-btn', t: 'Ipsy, bigger', d: 'Tap Ipsy to chat. It breathes and glances now while it waits for you.', g: 'tap' }] },
@@ -2220,8 +2221,8 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: ['#v-fav .autos', '#v-fav .ag'], t: 'Routines in one tap', d: 'Run Goodnight, Evening Lights and your other routines straight from Favorites.', g: 'tap' },
     { sel: '#v-fav .dg.tc', t: 'Heat and cool', d: 'Set thermostats, heaters, air purifiers and dehumidifiers. Tap any card for all of its controls.', g: 'tap' },
     { sel: ['#v-fav [data-dv="lights:house"]', '#v-fav .lp'], t: 'Lights by room', d: 'Switch a whole room on or off, dim each light with a slider, or use All on and All off.', g: 'tap' },
-    { sel: ['#v-fav [data-dv^="cams:"]', '#viewBtn'], t: 'Cameras and security', d: 'Arm or disarm Blink, see each camera’s latest still, take a snapshot or pause motion detection.', g: 'tap' },
-    { sel: '#viewBtn', t: 'Every room and system', d: 'Tap here for Climate, Lights, Media and Security, each on its own page.', g: 'tap' },
+    { sel: ['#v-fav [data-dv^="cams:"]', '#vtop [data-view="security"]'], t: 'Cameras and security', d: 'Arm or disarm Blink, see each camera’s latest still, take a snapshot or pause motion detection.', g: 'tap' },
+    { sel: '#vtop', t: 'Every room and system', d: 'Tap an icon in the bar for Climate, Lights, Media and Security, each on its own page.', g: 'tap' },
     { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
   ] };
   // Sparkle Kingdom opens on who's playing: its tour says what the game is there, and where the grown-ups go

@@ -76,7 +76,7 @@ async function phone({ ha = null } = {}) {
     });
   });
   await page.goto(BASE + '/house/');
-  await page.waitForSelector('#viewBtn');
+  await page.waitForSelector('#vtop [data-view]');
   if (ha) await page.waitForFunction(() => document.getElementById('chip').dataset.s === 'live', null, { timeout: 10000 });
   // a tool, as Ipsy in aOS runs it: ctx.confirm answers the Yes / No (yes: true, false, or null for none asked)
   const run = (name, input, yes = true) => page.evaluate(async ([name, input, yes]) => {

@@ -2,11 +2,6 @@
    shared pieces - cards, skies, steppers, switches, the popup - are in
    index.html; these build on them. */
 
-/* ---- the drop-down's groups ---- */
-.viewmenu { max-height: min(68vh, 560px); overflow-y: auto; overscroll-behavior: contain; }
-.viewmenu .vgrp { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .55; padding: 12px 12px 4px; }
-.viewmenu .vgrp:first-child { padding-top: 6px; }
-
 /* ---- shared bits ---- */
 .rowi .k small { display: block; font-size: 12px; font-weight: 500; opacity: .6; margin-top: 1px; }
 .rowi.warnrow .k { color: #FF9F8F; font-weight: 600; }

@@ -5,9 +5,9 @@ directly, instead of Lovelace and its community cards. It is called **Home**
 on the screen; the folder is `house/` because `home/` was the AllisonOS
 launcher (retired; it now holds the scripts every app shares), and its
 `localStorage` keys are `house.*`. It has every device on the Signal
-dashboard in six views, and every automation in a seventh, picked from a floating Liquid Glass pill at the
-bottom of the screen, in reach of a thumb (the view's icon and name; the
-menu opens upwards). The view's name is the title at the top. It has two
+dashboard in six views, and every automation in a seventh, picked from a floating Liquid Glass bar at the
+bottom of the screen, in reach of a thumb: one icon per view, one tap to each,
+the one you're on lit. The view's name is the title at the top. It has two
 designs (**Settings → Design**; see "The two designs" below): **Vintage**,
 mid-century modern over the Vintage sky, the default, and **Standard**, Sea
 glass. In Standard, behind it all, the page is a quiet tone (dark, or pale in light mode) - Slate, a blue-grey as Google Home's,
@@ -35,13 +35,14 @@ hand just after the block in `index.html`.
 - **Around the house**: Vacuums, Blinds, Nursery (Olivia's Hatch), Printer, Energy
 - **Automations**: every Home Assistant automation, what it does and whether it is on, with a switch to turn each on or off (see "Automations" below)
 
-On a phone the views are in the drop-down on the glass pill at the bottom, in reach of a thumb. On a larger
-screen (700 points wide or more: an iPad, a computer) every view is in one pill at the top instead, a tap
-away, the one you're on lit by a pill that slides across to each view you tap; it stays at the top as you scroll
-(iPad upright: the names alone, so all fit).
+On a phone the views are a floating glass bar of icons at the bottom, in reach of a thumb: one tap to each,
+no menu to open, the one you're on lit by a circle that slides across to each view you tap (VoiceOver reads each
+icon's name). On a larger screen (700 points wide or more: an iPad, a computer) the same bar is at the top instead,
+with names, and stays there as you scroll (iPad upright: the names alone, so all fit). Both are `#vtop`
+(`drawTopNav` in `app.js`); hidden under a popup.
 
 A view with several kinds of device has a small heading over each, with
-what that part is doing. Each view says in the drop-down what is running or needs you ("4 running",
+what that part is doing. Each view says beside its name at the top what is running or needs you ("4 running",
 "3 playing · TV on", "Toner low"). Every family works the same way: a compact card with
 the controls used every day, everything else in its popup (tap the card),
 taps shown at once and held until Home Assistant confirms them, and sample
@@ -90,8 +91,8 @@ is drawn. Every tap, popup, connection and setting works the same in both.
   draw (heat is orange, cooling teal, a full tank orange, a light with no
   colour of its own mustard, a switch that is on teal); the lights' colour
   swatches stay true colours. A mustard sun behind the title and three little
-  bars under it; a walnut pill at the bottom for the view picker, with a
-  mustard disc; outlined and solid-orange buttons; Futura (built into iOS,
+  bars under it; a walnut bar at the bottom for the views, a
+  mustard disc behind the one you're on; outlined and solid-orange buttons; Futura (built into iOS,
   nothing downloaded).
 - **Standard**: Sea glass, as described above and below: the DG1 glass,
   the card and popup skies, and the background picked in **Settings →
@@ -231,8 +232,8 @@ The dashboard's landing view (`views_signal/favorites.yaml`), in its order:
   a button. It appears five minutes after the last person leaves (Home
   Assistant waits that long, in case a phone only flickered out of the home
   zone), not at once; and not at all while the Babysitter hold is on, which stops
-  Home Assistant putting the Nests in Eco. The drop-down says "Away" under
-  Favorites meanwhile. Nothing in the app decides who is home: change the
+  Home Assistant putting the Nests in Eco. Favorites says "Away" beside its
+  name meanwhile. Nothing in the app decides who is home: change the
   automations in Home Assistant (`away_everyone_out`, `thermostat_someone_home`)
   and the pill follows.
 - **Running Now**: every device that is doing something (heating, cooling,
@@ -408,7 +409,7 @@ to turn it on or off. Nothing here runs one - that stays in Home Assistant.
 
 - **The view is the names and their switches**, by group, so it stays
   uncluttered: "Off" or "Running now" under a name only when it is. The
-  drop-down line says how many are running, ran today and are off.
+  line beside its name says how many are running, ran today and are off.
 - **The switch** (on the row, and **On** in the popup) calls
   `automation.turn_on` / `turn_off`. It shows the tap at once and holds it
   until Home Assistant reports it (or 20 s), as every device's switch does.
@@ -460,7 +461,7 @@ the row; its details are Home Assistant's own dialog, not a popup like this.
 ## Labs
 
 **Labs** is a view for trying ideas live before they replace anything; it
-is left out of the drop-down while it has none - as now. From here so far:
+is left out of the view bar while it has none - as now. From here so far:
 the thermostat cards (design B of the second round, after G of the first),
 the automation tiles (design D of four) and the backgrounds.
 
@@ -669,8 +670,8 @@ the one for the design picked on the page.
 
 `node house/scripts/app-test.mjs` (CI runs it, `apps-check.yml`) opens Home in
 its preview at iPhone size, light and dark: it opens on Favorites, the lamps'
-night moon (1%) and sun (100%) chips work, every view in the drop-down opens
-with something in it, and nothing errors or trips the page's policy. It also
+night moon (1%) and sun (100%) chips work, every view in the bar at the bottom opens
+in one tap with something in it, and nothing errors or trips the page's policy. It also
 covers both designs: Vintage by default (Futura, flat cream or walnut cards,
 the sky's ground, the mustard sun, the Retro colours the scripts draw, no
 Background row), Standard (the Vintage block off, no sky, the Sea glass ground

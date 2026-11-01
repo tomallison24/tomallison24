@@ -111,43 +111,21 @@
     background: linear-gradient(180deg, rgba(8,9,12,0.80) 0%, rgba(8,9,12,0.66) 38%, rgba(8,9,12,0.58) 62%, rgba(8,9,12,0.66) 100%); }
   @media (prefers-reduced-motion: reduce) { .bgfx .surf { animation: none; } }
   @supports not (overflow: clip) { html { overflow-x: hidden; } }
-  html { scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }   /* what's scrolled to lands above the view picker */
+  html { scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }   /* what's scrolled to lands above the view bar */
   html.lock, html.lock body { overflow: hidden; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
-    padding: calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 92px);   /* room for the view picker at the bottom */
+    padding: calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 92px);   /* room for the view bar at the bottom */
   }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   svg { display: block; }
   main { max-width: 520px; margin: 0 auto; overflow-x: clip; }   /* nothing a device draws (a long name, a picture) can make the page wider than the phone: on an iPhone that let it slide side to side */
 
-  /* ---- the view picker: a glass pill at the bottom, in reach of a thumb ----
-     Always there, centred over the home indicator: the view's icon, its name
-     and a chevron; the menu opens upwards from it. Clear glass: a light tint,
-     a strong blur and a bright rim, the glass a layer behind (::before) so
-     the menu's own glass still blurs the page. Hidden under a popup. */
-  .vbar { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 8; translate: -50% 0;
-    display: flex; align-items: center; padding: 4px; border-radius: 999px; transition: opacity .25s, transform .3s cubic-bezier(.2,.8,.2,1); }
-  .vbar::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
-    -webkit-backdrop-filter: blur(18px) saturate(190%); backdrop-filter: blur(18px) saturate(190%);
-    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.32), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.08), 0 12px 30px -6px rgba(0,0,0,0.6); }
-  html.lock .vbar { opacity: 0; transform: translateY(12px); pointer-events: none; }   /* not over an open popup */
-  .vbar > button { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 14px 0 12px; border-radius: 999px; white-space: nowrap;
-    font-size: 16px; font-weight: 700; letter-spacing: -0.2px; transition: background .2s; }
-  .vbar > button:active { background: rgba(255,255,255,0.12); }
-  .vbar .vb-ic { display: flex; width: 30px; height: 30px; border-radius: 50%; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); }
-  .vbar .vb-chev { display: flex; opacity: .7; margin-left: -2px; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
-  .vbar button[aria-expanded="true"] .vb-chev { transform: rotate(180deg); }
-  .vbar .viewmenu { top: auto; bottom: calc(100% + 10px); left: 50%; translate: -50% 0; width: max-content; transform-origin: 50% 100%; animation-name: menu-up; }
-  @keyframes menu-up { from { opacity: 0; transform: scale(.92) translateY(6px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-transparency: reduce) { .vbar::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
-  /* ---- the view bar at the top, on a larger screen (an iPad, a computer): every view in one glass pill, a
-     tap away, the one you're on lit; it stays at the top as you scroll. Phones keep the picker at the bottom.
+  /* ---- the view bar: every view in one glass pill, a tap away, the one you're on lit. At the top on a larger
+     screen (an iPad, a computer), where it stays as you scroll; on a phone it floats at the bottom (below).
      Its colours are top-level rules, so tools/lightgen.py makes their light twins; the layout is in the
      min-width query below. ---- */
-  .vtop { display: none; }
   .vtop::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
     background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
     -webkit-backdrop-filter: blur(18px) saturate(190%); backdrop-filter: blur(18px) saturate(190%);
@@ -171,7 +149,6 @@
     .vtop { position: sticky; top: calc(env(safe-area-inset-top) + 8px); z-index: 8; display: flex; gap: 2px; width: max-content; max-width: 100%;
       margin: 0 auto 14px; padding: 4px; border-radius: 999px; overflow-x: auto; scrollbar-width: none; transition: opacity .25s; }
     .vtop::-webkit-scrollbar { display: none; }
-    .vbar { display: none; }
     body { padding-bottom: calc(env(safe-area-inset-bottom) + 28px); }
     html { scroll-padding-top: 72px; scroll-padding-bottom: 0; }
   }
@@ -191,7 +168,6 @@
     nav.vtop > button[data-view] .vt-ic { width: 30px; height: 30px; background: none; }
     nav.vtop > button .vt-ic svg { width: 23px; height: 23px; }
     html.lock .vtop { transform: translateY(12px); }
-    .vbar { display: none; }
   }
   @media (prefers-reduced-transparency: reduce) { .vtop::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   /* ---- top bar ---- */
@@ -235,25 +211,7 @@
   .units { display: flex; flex-direction: column; gap: 14px; }
   .units[hidden] { display: none; }
 
-  /* ---- the view drop-down: Dehumidifiers / Thermostats ---- */
   .sec { position: relative; }
-  .viewmenu {
-    position: absolute; left: -4px; top: calc(100% + 6px); z-index: 5; min-width: 250px; padding: 6px; border-radius: 22px;
-    background: linear-gradient(180deg, var(--lgs-top), var(--lgs-bottom)); backdrop-filter: var(--lgs-filter); -webkit-backdrop-filter: var(--lgs-filter);
-    box-shadow: inset 0 0 0 1px var(--lgs-edge), inset 0 1.5px 1px var(--lgs-rim), 0 18px 40px var(--lgs-lift-strong);
-    transform-origin: 20px 0; animation: menu-in .22s cubic-bezier(.2,.8,.2,1) both;
-  }
-  .viewmenu[hidden] { display: none; }
-  @keyframes menu-in { from { opacity: 0; transform: scale(.92) translateY(-4px); } to { opacity: 1; transform: none; } }
-  .viewmenu button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border-radius: 16px; text-align: left; font-size: 16px; font-weight: 600; }
-  .viewmenu button:active { background: var(--lgs-field); }
-  .viewmenu button[aria-selected="true"] { background: var(--lgs-row); }
-  .viewmenu .ic { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); flex: none; }
-  .viewmenu .k { flex: 1; min-width: 0; }
-  .viewmenu small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 1px; }
-  .viewmenu .tick { opacity: 0; }
-  .viewmenu button[aria-selected="true"] .tick { opacity: 1; }
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .viewmenu { background: var(--lgs-solid); } }
 
   /* ---- thermostats: the targets as the hero (Labs' B) ----
      Each target a big thin number in its own light, a soft chevron above to
@@ -647,9 +605,6 @@
   @media (prefers-reduced-transparency: reduce) { .sheet, .toast { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   /* LIGHT-BEGIN (generated by tools/lightgen.py; edit the dark rules, then re-run) */
   @media (prefers-color-scheme: light) {
-    .vbar::before { background: linear-gradient(180deg, rgba(255,255,255,0.56), rgba(255,255,255,0.24)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.176), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.08), 0 12px 30px -6px rgba(30,40,60,0.24); }
-    .vbar > button:active { background: rgba(28,32,40,0.09); }
-    .vbar .vb-ic { background: rgba(28,32,40,0.09); }
     .vtop::before { background: linear-gradient(180deg, rgba(255,255,255,0.56), rgba(255,255,255,0.24)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.176), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 12px 30px -10px rgba(30,40,60,0.24); }
     .vtop button:active { background: rgba(28,32,40,0.06); }
     .vtop .vt-thumb { background: rgba(28,32,40,0.12); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3); }
@@ -658,7 +613,6 @@
     .round { background: rgba(28,32,40,0.075); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4); }
     .banner span { color: rgba(28,32,40,0.8); }
     .banner button { box-shadow: inset 0 0 0 1px rgba(28,32,40,0.187), inset 0 1px 1px rgba(255,255,255,0.5), 0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent); }
-    .viewmenu .ic { background: rgba(28,32,40,0.09); }
     .tb-chev:active { background: rgba(28,32,40,0.075); }
     .tg-ruler { background: linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.099), inset 0 1px 0 rgba(255,255,255,0.22); }
     .tg-rt { background: rgba(28,32,40,0.262); }
@@ -744,7 +698,6 @@
     .scrim { background: rgba(30,40,60,0.18); }
     .en.big { background: linear-gradient(160deg, #FAF4DC, #F2EACB); box-shadow: inset 0 0 0 1px rgba(190,150,0,0.22); }
     .snap, .camv { color: #fff; --text: #fff; --muted: rgba(235,235,245,0.6); }   /* camera pictures stay dark, their labels white */
-    .vbar::before { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.12), inset 0 1px 0.5px rgba(255,255,255,0.9), 0 10px 26px -8px rgba(30,40,60,0.28); }
   }
 
 /* 44-point tap targets: the smaller controls take taps a little way round them
@@ -815,12 +768,7 @@
   .round { color: var(--accent); }
   .chip { letter-spacing: .06em; text-transform: uppercase; font-size: 12px; }
 
-  /* the view picker: a walnut pill with a mustard disc, as the design's tab bar */
-  .vbar::before { background: var(--mc-walnut); box-shadow: inset 0 0 0 1px rgba(244,236,221,0.12), 0 10px 22px -10px rgba(43,37,34,0.6); }
-  .vbar > button { color: #F4ECDD; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 14px; }
-  .vbar > button:active { background: rgba(244,236,221,0.14); }
-  .vbar .vb-ic { background: var(--mc-mustard); color: var(--mc-on-mustard); }
-  .vbar .vb-chev svg { color: #E3A72F; }
+  /* the view bar: a walnut pill with a mustard disc behind the view you're on, as the design's tab bar */
   .vtop::before { background: var(--mc-walnut); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(244,236,221,0.12), 0 10px 22px -10px rgba(43,37,34,0.6); }
   .vtop button { color: rgba(244,236,221,0.72); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 13px; }
   .vtop button:hover, .vtop button:active { color: #F4ECDD; background: rgba(244,236,221,0.10); }
@@ -828,12 +776,6 @@
   .vtop button[aria-current="page"], .vtop button[aria-current="page"]:hover { background: none; color: var(--mc-on-mustard); }
   .vtop .vt-thumb { background: var(--mc-mustard); box-shadow: inset 0 0 0 1px rgba(244,236,221,0.22); }
   .vtop button[aria-current="page"] .vt-ic { background: rgba(43,37,34,0.14); }
-  .viewmenu { border-radius: 24px; background: var(--mc-card); box-shadow: inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px var(--lgs-lift-strong); }
-  .viewmenu button { border-radius: 16px; }
-  .viewmenu button:active, .viewmenu button[aria-selected="true"] { background: var(--lgs-row); }
-  .viewmenu .ic { background: color-mix(in srgb, var(--mc-mustard) 30%, transparent); border-radius: 50%; color: var(--text); }
-  .viewmenu button:nth-child(2n) .ic { background: color-mix(in srgb, var(--mc-teal) 28%, transparent); }
-  .viewmenu button:nth-child(3n) .ic { background: color-mix(in srgb, var(--mc-orange) 26%, transparent); }
 
   /* the banner, buttons and the one thing to tap */
   .banner { background: color-mix(in srgb, var(--mc-mustard) 22%, var(--mc-card)); box-shadow: none; border-radius: 20px; }
@@ -888,10 +830,6 @@
 }
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
 .top h1::after{background:none}
-.vbar::before{box-shadow:inset 0 0 0 1px rgba(235,239,243,0.12), 0 10px 22px -10px rgba(20,25,32,0.6)}
-.vbar > button{color:#EBEFF3}
-.vbar > button:active{background:rgba(235,239,243,0.14)}
-.vbar .vb-chev svg{color:#DEB164}
 .vtop::before{box-shadow:inset 0 0 0 1px rgba(235,239,243,0.12), 0 10px 22px -10px rgba(20,25,32,0.6)}
 .vtop button{color:rgba(235,239,243,0.72)}
 .vtop button:hover,.vtop button:active{color:#EBEFF3;background:rgba(235,239,243,0.10)}
@@ -932,10 +870,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 }
 body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 .top h1::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23CB504C'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FF8F7F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23F93433'/%3E%3C/svg%3E") no-repeat}
-.vbar::before{box-shadow:inset 0 0 0 1px rgba(238,240,242,0.12), 0 10px 22px -10px rgba(9,11,13,0.6)}
-.vbar > button{color:#EEF0F2}
-.vbar > button:active{background:rgba(238,240,242,0.14)}
-.vbar .vb-chev svg{color:#FF8F7F}
 .vtop::before{box-shadow:inset 0 0 0 1px rgba(238,240,242,0.12), 0 10px 22px -10px rgba(9,11,13,0.6)}
 .vtop button{color:rgba(238,240,242,0.72)}
 .vtop button:hover,.vtop button:active{color:#EEF0F2;background:rgba(238,240,242,0.10)}
@@ -1011,11 +945,6 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <small id="secSum"></small>
   </div>
 
-  <!-- The view picker, at the bottom in reach of a thumb; the menu opens upwards. -->
-  <nav class="vbar" id="vbar">
-    <button id="viewBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Show a view"><span class="vb-ic" id="vbIcon"></span><span id="vbName">Favorites</span><span class="vb-chev"></span></button>
-    <div class="viewmenu" id="viewMenu" role="listbox" aria-label="Show" hidden></div>
-  </nav>
 
   <div class="banner" id="banner" hidden>
     <span><b>Preview</b>Sample readings.</span>
