@@ -313,7 +313,7 @@ await test('a category’s transactions, and one transaction', async () => {
   assert.match(await p.locator('#txBody').innerText(), /\d+ transactions?/);
   await p.click('#txSheet .okbtn');
 });
-await test('a transaction’s amount, date and card change in place, with Undo; Put back Monarch’s; shared with the family', async () => {
+await test('a transaction’s merchant, amount, date and card change in place, with Undo; Put back Monarch’s; shared with the family', async () => {
   await view(p, 'activity');
   await p.fill('#q', 'mortgage'); await p.waitForTimeout(100);
   await p.locator('#main [data-tx]').first().click();
@@ -322,14 +322,19 @@ await test('a transaction’s amount, date and card change in place, with Undo; 
   const raw = await p.evaluate(i => window.__money.raw().find(x => x.id === i), id);
   assert.equal(await p.inputValue('#edAmt'), '1000.00'); assert.equal(await p.inputValue('#edDate'), raw.date);
   assert.match(await p.locator('#edAcct option:checked').innerText(), /Shared Checking ···0001/);
+  // the merchant
+  assert.equal(await p.inputValue('#edMerch'), 'Mortgage Co');
+  await p.fill('#edMerch', 'Rocket Mortgage'); await p.press('#edMerch', 'Enter');
+  await p.waitForFunction(() => document.querySelector('#txLbl').textContent === 'Rocket Mortgage');
+  assert.match(await p.locator('#txBody').innerText(), /Monarch said: Merchant Mortgage Co/);
   // the amount
   await p.fill('#edAmt', '$1,012.5'); await p.press('#edAmt', 'Enter');
   await p.waitForFunction(() => document.querySelector('#txBody .bigamt').textContent.includes('1,012.50'));
   assert.match(await p.locator('#toastMsg').innerText(), /Amount changed to \$1,012\.50/);
-  assert.match(await p.locator('#txBody').innerText(), /Monarch said: Amount \$1,000\.00/);
+  assert.match(await p.locator('#txBody').innerText(), /Monarch said: Merchant Mortgage Co; Amount \$1,000\.00/);
   await p.click('#toastAct');
   await p.waitForFunction(() => document.querySelector('#txBody .bigamt').textContent.includes('1,000.00'));
-  assert.equal(await p.locator('#txBody [data-unedit]').count(), 0, 'Undo: as Monarch said');
+  assert.doesNotMatch(await p.locator('#txBody .note').innerText(), /Amount/, 'Undo: the amount as Monarch said');
   await p.fill('#edAmt', 'abc'); await p.press('#edAmt', 'Enter');
   assert.match(await p.locator('#toastMsg').innerText(), /isn’t an amount/); assert.equal(await p.inputValue('#edAmt'), '1000.00');
   await p.fill('#edAmt', '1012.50'); await p.press('#edAmt', 'Enter');
@@ -348,19 +353,19 @@ await test('a transaction’s amount, date and card change in place, with Undo; 
   await p.fill('#edAcctNew', 'Apple Card'); await p.click('#edAcctGo');
   await p.waitForFunction(() => /Apple Card/.test(document.querySelector('#edAcct option:checked').textContent));
   let v = await p.evaluate(i => window.__money.view().find(x => x.id === i), id);
-  assert.deepEqual([v.amt, v.date, v.account], [1012.5, day, 'Apple Card']);
+  assert.deepEqual([v.merchant, v.amt, v.date, v.account], ['Rocket Mortgage', 1012.5, day, 'Apple Card']);
   assert.equal((await p.evaluate(i => window.__money.raw().find(x => x.id === i), id)).amt, 1000, 'what was read is kept');
   // shared: the family's settings in aOS carry the fix
   await p.waitForFunction(() => !window.__money.D.setDirty, null, { timeout: 10000 });
   const shared = JSON.parse(kv.get('money:meta')).settings.edits[id];
-  assert.deepEqual([shared.amt, shared.date, shared.acct], [1012.5, day, 'Apple Card']);
+  assert.deepEqual([shared.merch, shared.amt, shared.date, shared.acct], ['Rocket Mortgage', 1012.5, day, 'Apple Card']);
   // the month it moved to shows it; Search still finds it
   await snap(p, 'transaction-edited');
   // Put back Monarch's
   await p.click('#txBody [data-unedit]');
   await p.waitForFunction(() => !document.querySelector('#txBody [data-unedit]'));
   v = await p.evaluate(i => window.__money.view().find(x => x.id === i), id);
-  assert.deepEqual([v.amt, v.date, v.account], [1000, raw.date, 'Shared Checking']);
+  assert.deepEqual([v.merchant, v.amt, v.date, v.account], ['Mortgage Co', 1000, raw.date, 'Shared Checking']);
   assert.match(await p.locator('#toastMsg').innerText(), /Back to what Monarch said/);
   await p.click('#txSheet .okbtn');
   await p.fill('#q', ''); await view(p, 'month');

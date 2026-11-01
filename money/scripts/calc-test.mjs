@@ -286,6 +286,11 @@ test('your own fixes: amount, date and card on top of what Monarch said; put bac
   assert.deepEqual(C.setEdit(edits, a, { amt: 40 }, 12)[a.id], { date: '2026-10-25', acct: 'Apple Card', at: 12 });
   const back = C.setEdit(edits, a, { amt: null, date: null, acct: null, l4: null }, 13);
   assert.deepEqual(back[a.id], { at: 13 }); assert.equal(C.edited(list, { edits: back })[1], a);
+  // the merchant: a new name, its own category's rule follows it
+  const r = C.edited(list, { edits: C.setEdit({}, b, { merch: '  Book Nook Cafe ' }, 20) });
+  assert.deepEqual([r[0].merchant, r[0].ed.merchant], ['Book Nook Cafe', 'Book Nook']);
+  assert.deepEqual(C.setEdit({}, b, { merch: 'Book Nook' }, 21)[b.id], { at: 21 }, 'the same name is no fix');
+  assert.equal(C.recat(r, { recat: { m: { 'book nook cafe': { c: 'Coffee', e: '☕', at: 1 } } } })[0].cat, 'Coffee');
   // two phones: the newer of each wins
   const m = C.mergeSettings({ at: 1, edits: { [a.id]: { amt: 1, at: 5 }, [b.id]: { amt: 2, at: 9 } } }, { at: 2, edits: { [a.id]: { amt: 3, at: 7 }, [b.id]: { amt: 4, at: 8 } } });
   assert.deepEqual([m.edits[a.id].amt, m.edits[b.id].amt], [3, 2]);

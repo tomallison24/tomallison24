@@ -569,8 +569,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const opts = (cur < 0 ? '<option value="" selected>' + esc(x.account ? card({ name: x.account, last4: x.last4 }) : a.name ? 'Probably ' + a.name : 'Not known') + '</option>' : '')
       + cards.map((c, i) => '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + esc(i === cur ? card({ name: c.name, last4: x.last4 }) : card(c)) + '</option>').join('')
       + '<option value="other">Another card…</option>';
-    const said = [ed.amt != null ? 'Amount ' + no(usd2(ed.amt)) : '', ed.date ? 'Date ' + esc(dayName(ed.date)) : '', ed.account != null ? (x.dir === 'in' ? 'Into ' : 'Card ') + no(ed.account ? card({ name: ed.account, last4: ed.last4 }) : 'not known') : ''].filter(Boolean);
+    const said = [ed.merchant != null ? 'Merchant ' + no(ed.merchant) : '', ed.amt != null ? 'Amount ' + no(usd2(ed.amt)) : '', ed.date ? 'Date ' + esc(dayName(ed.date)) : '', ed.account != null ? (x.dir === 'in' ? 'Into ' : 'Card ') + no(ed.account ? card({ name: ed.account, last4: ed.last4 }) : 'not known') : ''].filter(Boolean);
     return '<div class="rgroup" id="txEdit">'
+      + '<div class="frow"><label for="edMerch">Merchant</label><input class="amt merch" id="edMerch" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" translate="no" value="' + esc(x.merchant) + '"></div>'
       + '<div class="frow"><label for="edAmt">Amount</label><input class="amt" id="edAmt" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" value="' + esc(x.amt.toFixed(2)) + '"></div>'
       + '<div class="frow"><label for="edDate">Date</label><input id="edDate" type="date" min="' + esc(C.keepFrom(today())) + '-01" max="' + esc(today()) + '" value="' + esc(x.date) + '"></div>'
       + '<div class="frow"><label for="edAcct">' + (x.dir === 'in' ? 'Into' : 'Card') + '</label><select id="edAcct" translate="no">' + opts + '</select></div>'
@@ -590,7 +591,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function onEdit(t) {
     const x = byId(st.txId); if (!x) return;
-    if (t.id === 'edAmt') {
+    if (t.id === 'edMerch') {
+      const v = String(t.value).replace(/\s+/g, ' ').trim().slice(0, 120);
+      if (!v) { t.value = x.merchant; toast('Give it a name.'); return; }
+      if (v !== x.merchant) editTx(x.id, { merch: v }, 'Now ' + v + '.');
+    } else if (t.id === 'edAmt') {
       const n = Math.round(parseFloat(String(t.value).replace(/[$,\s]/g, '')) * 100) / 100;
       if (!isFinite(n) || n < 0 || n > 1e7) { t.value = x.amt.toFixed(2); toast('That isn’t an amount.'); return; }
       if (Math.abs(n - x.amt) >= 0.005) editTx(x.id, { amt: n }, 'Amount changed to ' + usd2(n) + '.');
@@ -614,7 +619,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   $('txBody').addEventListener('change', e => { if (e.target.closest('#txEdit')) onEdit(e.target); });
   $('txBody').addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
-    if (e.target.id === 'edAmt') { e.preventDefault(); e.target.blur(); }
+    if (e.target.id === 'edAmt' || e.target.id === 'edMerch') { e.preventDefault(); e.target.blur(); }
     else if (e.target.id === 'edAcctNew') { e.preventDefault(); newCard(); }
   });
   const FIELD_NAME = { amount: 'Amount', direction: 'In or out', merchant: 'Merchant', account: 'Card', category: 'Category' };
@@ -765,7 +770,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (e.target.closest('[data-back]') && st.list) { view(); openList(st.list.title, st.list.ids.map(byId).filter(Boolean)); return; }
     const rb = e.target.closest('[data-recat]'); if (rb) { recatOpen(rb.dataset.recat); return; }
     if (e.target.closest('#edAcctGo')) { newCard(); return; }
-    if (e.target.closest('[data-unedit]')) { editTx(st.txId, { amt: null, date: null, acct: null, l4: null }, 'Back to what Monarch said.'); return; }
+    if (e.target.closest('[data-unedit]')) { editTx(st.txId, { merch: null, amt: null, date: null, acct: null, l4: null }, 'Back to what Monarch said.'); return; }
     const pk = e.target.closest('[data-pick]'); if (pk) { setCat(st.txId, pk.dataset.pick, pk.dataset.emoji || ''); return; }
     if (e.target.closest('#newCatGo')) { setCat(st.txId, $('newCat').value, ''); return; }
     if (e.target.closest('#recatAll')) { AllisonOS.settings.flip($('recatAll')); return; }

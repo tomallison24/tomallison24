@@ -404,10 +404,11 @@
     return [...by.values()].sort((a, b) => b.total - a.total || b.n - a.n);
   }
   // ---------------------------------------------------------------------
-  // Your own fixes to a transaction's amount, date and card (shared settings, edits):
-  //   edits: { txId: { amt, date, acct, l4, at } }   any of amt, date, acct (with its last 4, l4)
+  // Your own fixes to a transaction's merchant, amount, date and card (shared settings, edits):
+  //   edits: { txId: { merch, amt, date, acct, l4, at } }   any of them (acct with its last 4, l4)
   // What Monarch's email said stays on the transaction, as its category does; the fix sits on top of it,
-  // and the copy says what it was (ed: { amt, date, account, last4 }). An entry with none of them is a
+  // and the copy says what it was (ed: { merchant, amt, date, account, last4 }). A new merchant takes
+  // that merchant's own category, if the family gave it one. An entry with none of them is a
   // fix taken back (kept, with its time, so it wins over an older copy on another phone). A new date
   // moves it to that day (its at, which orders the lists, becomes noon that day).
   // ---------------------------------------------------------------------
@@ -419,6 +420,7 @@
     const out = txs.map(x => {
       const e = ed[x.id]; if (!e) return x;
       const y = Object.assign({}, x), was = {};
+      if (typeof e.merch === 'string' && e.merch.trim() && e.merch.trim() !== x.merchant) { was.merchant = x.merchant; y.merchant = e.merch.trim(); }
       if (typeof e.amt === 'number' && isFinite(e.amt) && e.amt >= 0 && Math.abs(e.amt - x.amt) >= 0.005) { was.amt = x.amt; y.amt = r2(e.amt); }
       if (typeof e.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.date !== x.date) { was.date = x.date; y.date = e.date; y.at = Date.parse(e.date + 'T12:00:00Z'); moved = true; }
       if (typeof e.acct === 'string' && e.acct.trim() && (e.acct !== (x.account || '') || (e.l4 || '') !== (x.last4 || ''))) { was.account = x.account || ''; was.last4 = x.last4 || ''; y.account = e.acct.trim(); y.last4 = e.l4 || ''; }
@@ -433,6 +435,7 @@
     const o = Object.assign({}, edits), e = Object.assign({}, o[x.id] || {});
     delete e.at;
     for (const [k, v] of Object.entries(patch)) { if (v == null) delete e[k]; else e[k] = v; }
+    if (e.merch != null && (!String(e.merch).trim() || String(e.merch).trim() === x.merchant)) delete e.merch;
     if (e.amt != null && Math.abs(e.amt - x.amt) < 0.005) delete e.amt;
     if (e.date != null && e.date === x.date) delete e.date;
     if (e.acct != null && e.acct === (x.account || '') && (e.l4 || '') === (x.last4 || '')) { delete e.acct; delete e.l4; }

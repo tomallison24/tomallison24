@@ -182,7 +182,7 @@ function cleanRecat(r) {
   }
   return out;
 }
-// The family's own fixes to a transaction's amount, date and card (money/calc.js, edited): an entry
+// The family's own fixes to a transaction's merchant, amount, date and card (money/calc.js, edited): an entry
 // with none of them is a fix taken back.
 const EDITS_MAX = 400;
 function cleanEdits(e) {
@@ -191,7 +191,8 @@ function cleanEdits(e) {
   for (const [id, v] of Object.entries(e).slice(-EDITS_MAX)) {
     const key = str(id, 120);
     if (!key || !v || typeof v !== 'object' || num(v.at) == null) continue;
-    const o = { at: v.at }, amt = num(v.amt);
+    const o = { at: v.at }, amt = num(v.amt), merch = str(v.merch, 120).trim();
+    if (merch) o.merch = merch;
     if (amt != null && amt >= 0 && amt <= 1e7) o.amt = Math.round(amt * 100) / 100;
     if (ISO.test(str(v.date, 10)) && v.date.length === 10) o.date = v.date;
     const acct = str(v.acct, 80).trim();
