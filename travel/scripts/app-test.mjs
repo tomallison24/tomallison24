@@ -51,7 +51,7 @@ const long = d => d.toLocaleDateString('en-US', { weekday: 'long', month: 'long'
 const med = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const soon = new Date(Date.now() + 5 * 3600e3);                      // the first flight leaves in 5 hours
 const hm = d => { let h = d.getHours(), m = d.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + pad(m) + ' ' + ap; };
-const arrive = new Date(soon.getTime() + 4 * 3600e3);
+const arrive = new Date(soon.getTime() + 4 * 3600e3);              // the hotel's check-in day: after about 3 pm the flight lands tomorrow
 const EMAILS = [
   { id: 'm1', threadId: 't1', from: 'United Airlines <unitedairlines@united.com>', subject: 'Your trip confirmation - KQ7T2M', html:
     `<html><body><table><tr><td>Confirmation number:</td><td>KQ7T2M</td></tr>
@@ -64,7 +64,7 @@ const EMAILS = [
     `<html><head><script type="application/ld+json">${JSON.stringify({ '@context': 'http://schema.org', '@type': 'LodgingReservation', reservationNumber: '81234567',
       reservationStatus: 'http://schema.org/ReservationConfirmed', reservationFor: { '@type': 'LodgingBusiness', name: 'Courtyard Boston Downtown',
       address: { streetAddress: '275 Tremont St', addressLocality: 'Boston', addressRegion: 'MA', postalCode: '02116', addressCountry: 'US' } },
-      checkinDate: iso(soon), checkoutDate: iso(day(4)) })}</script></head><body>See you soon.</body></html>` },
+      checkinDate: iso(arrive), checkoutDate: iso(day(4)) })}</script></head><body>See you soon.</body></html>` },
   { id: 'm3', threadId: 't3', from: 'National Car Rental <nationalcar@nationalcar.com>', subject: 'National Car Rental Reservation Confirmation', text:
     `Confirmation Number: 1234567890\nPick-Up\n${long(day(1))} 10:00 AM\nBoston Logan International Airport (BOS)\nReturn\n${long(day(4))} 3:00 PM\nBoston Logan International Airport (BOS)\nVehicle Class: Midsize` },
   { id: 'm4', threadId: 't4', from: 'Deals <deals@example.com>', subject: 'Your booking deals', text: 'Fares from $49. Book by Friday.' },
