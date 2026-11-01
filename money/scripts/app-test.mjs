@@ -689,7 +689,12 @@ await test('Monarch won’t take this site’s address: it’s explained, Monarc
   await p.fill('#setBody #monarchPaste', 'not an address');
   await p.click('#setBody #monarchPasteGo');
   assert.match(await p.locator('#toastMsg').innerText(), /code= and state=/);
-  await p.fill('#setBody #monarchPaste', 'http://127.0.0.1:53280/callback?code=code-1&state=' + opened.searchParams.get('state'));
+  assert.match(await p.locator('#toastMsg').innerText(), /touch and hold Safari’s address bar/);
+  await p.fill('#setBody #monarchPaste', 'https://api.monarch.com/oauth/authorize?client_id=x');
+  await p.click('#setBody #monarchPasteGo');
+  assert.match(await p.locator('#toastMsg').innerText(), /it’s api\.monarch\.com/, 'says which page it was');
+  // the code after a # (a fragment) is found too
+  await p.fill('#setBody #monarchPaste', 'http://127.0.0.1:53280/callback#code=code-1&state=' + opened.searchParams.get('state'));
   await p.press('#setBody #monarchPaste', 'Enter');
   await p.waitForFunction(() => !!localStorage.getItem('money.monarch.test'), null, { timeout: 15000 });
   assert.ok(JSON.parse(kv.get('money:monarch')).access, 'connected');

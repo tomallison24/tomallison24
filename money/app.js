@@ -869,12 +869,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const monarchPasting = () => { try { const p = JSON.parse(ls.get(K.mPaste, 'null')); return p && Date.now() - p.at < 30 * 60e3 ? p : null; } catch { return null; } };
   // The address Monarch opened, pasted: its code and state go to aOS's server, which holds the verifier.
   function monarchPasted() {
-    const i = $('monarchPaste'), t = String(i ? i.value : '').trim();
-    let p; try { p = new URL(t).searchParams; } catch { p = new URLSearchParams(t.replace(/^[^?]*\?/, '')); }
-    if (p.get('error')) { ls.del(K.mPaste); toast(p.get('error') === 'access_denied' ? 'Monarch access was declined.' : 'Monarch sign-in didn’t work (' + p.get('error') + ').', null, 6000); renderSettings(); return; }
-    if (!p.get('code') || !p.get('state')) { toast('That isn’t the address Monarch opened: it has code= and state= in it.', null, 6000); return; }
+    const i = $('monarchPaste'), raw = String(i ? i.value : '').trim();
+    // Its code and state, wherever they are: after ? or # (a fragment), or the whole address encoded once (%3D)
+    let t = raw; try { if (/(?:code|state|error)%3D/i.test(t)) t = decodeURIComponent(t); } catch {}
+    const get = k => { const m = new RegExp('(?:^|[?&#\\s])' + k + '=([^&#\\s]+)').exec(t); if (!m) return ''; try { return decodeURIComponent(m[1]); } catch { return m[1]; } };
+    const code = get('code'), state = get('state'), error = get('error');
+    if (error) { ls.del(K.mPaste); toast(error === 'access_denied' ? 'Monarch access was declined.' : 'Monarch sign-in didn’t work (' + error + ').', null, 6000); renderSettings(); return; }
+    if (!code || !state) {
+      const host = ((/^(?:[a-z]+:\/\/)?([^/?#\s]+)/i.exec(t) || [])[1] || '').replace(/^(?![\w-]+(?:\.[\w-]+)+(?::\d+)?$).*$/, '');   // a site's name, or nothing
+      toast((t ? 'That address has no code= and state= in it' + (host ? ' (it’s ' + host + ')' : '') : 'Paste the address first')
+        + '. On the page that won’t load (127.0.0.1), touch and hold Safari’s address bar, tap Copy, and paste it here.', null, 9000);
+      return;
+    }
     ls.del(K.mPaste);
-    ls.set(K.mCode, JSON.stringify({ code: p.get('code'), state: p.get('state'), error: '' }));
+    ls.set(K.mCode, JSON.stringify({ code, state, error: '' }));
     monarchFinish();
   }
   // Back from Monarch: the code is kept at once (welcome.js sends the page back into aOS as soon as it loads).
