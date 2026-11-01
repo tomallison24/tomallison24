@@ -8,7 +8,8 @@
 //     "Away from the house", and since when the thermostats have been in Eco.
 //     Home Assistant decides who is home; this only listens.
 //   - Running Now: every device that is doing something, as chips; a tap
-//     takes you to it and opens its popup. A speaker playing music is one of
+//     takes you to it and opens its popup, and closing the popup brings you
+//     back to Favorites (app.js, backView). A speaker playing music is one of
 //     them, every one that plays (grouped ones too), rather than a big card
 //     of its own above them (Now Playing, until Tom asked)
 //   - Automations: Goodnight, Evening Lights, Mom's Awake, Report a Bug,
@@ -269,7 +270,7 @@ family({
   },
   act(id, a, b) {
     if (id === FAV_PAUSE && a === 'pause') return famOf('cams').act(FAV_PAUSE, 'pause', b);
-    if (a === 'go') { const x = this.run[Number(b.dataset.v)]; if (x) { goView(x.view); x.open(); } return; }
+    if (a === 'go') { const x = this.run[Number(b.dataset.v)]; if (x) { const from = curView; goView(x.view); x.open(); backView = from; } return; }   // closing the card comes back here
     if (a === 'activity') return openDev(this, 'activity');
     if (a === 'auto') {
       const au = FAV_AUTOS.find(x => x.id === b.dataset.v), s = this.autoState(au);

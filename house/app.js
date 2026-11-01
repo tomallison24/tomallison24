@@ -803,11 +803,14 @@ function showSheet(wrap) {
   mainEl.inert = true; document.documentElement.classList.add('lock');
   const sh = wrap.querySelector('.sheet'); sh.tabIndex = -1; sh.focus({ preventScroll: true });
 }
+// A card opened from another view (Favorites' Running Now chips) goes back there when it closes.
+let backView = null;
 function closeSheets() {
   sheetWrap.classList.remove('open'); unitWrap.classList.remove('open'); thermoWrap.classList.remove('open'); devWrap.classList.remove('open');
   if (openD && openD.f.close) openD.f.close(openD.id);
   openId = null; openTId = null; openD = null;
   mainEl.inert = false; document.documentElement.classList.remove('lock');
+  if (backView) { const v = backView; backView = null; goView(v); }
   if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
   lastFocus = null;
 }
