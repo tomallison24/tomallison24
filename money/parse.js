@@ -68,6 +68,11 @@
   const ONE = /We noticed an? ([a-z][a-z ]{1,24}?) of (-?\$\s?[\d,]+(?:\.\d{1,2})?) (?:from|at|to) (.+?),? which was ([a-z]+(?: [a-z]+)?) (?:from|to|into|in|on|at) (.+?) and has been categori[sz]ed as (.+?)\.(?=\s|$)/i;
   const ONE_SHORT = /We noticed an? ([a-z][a-z ]{1,24}?) of (-?\$\s?[\d,]+(?:\.\d{1,2})?) (?:from|at|to) (.+?),? (?:and )?(?:which )?(?:has been|was) categori[sz]ed as (.+?)\.(?=\s|$)/i;
   // One of a summary's alerts.
+  // A deposit, in Monarch's words as they are in its summaries (October 2026): "You've received $313.60
+  // from Robinhood, which has been categorized as 💸 Interest." Its own alert may name the account
+  // too ("which was deposited into Joint Checking (...0001) and has been categorized as ..."): that
+  // part is open, as in ONE.
+  const RECEIVED = /You(?:'|’)ve received (-?\$\s?[\d,]+(?:\.\d{1,2})?) (?:from|at) (.+?),? which (?:was [a-z]+(?: [a-z]+)? (?:into|to|in|on|at) (.+?) and )?(?:has been|was) categori[sz]ed as (.+?)\.(?=\s|$)/i;
   const MANY = /A new ([a-z][a-z ]{1,24}?) of (-?\$\s?[\d,]+(?:\.\d{1,2})?) (?:from|at|to) (.+?) (?:has been|was) categori[sz]ed as (.+?)\.(?=\s|$)/gim;
   // A bank Monarch can't sync, in each of the wordings seen so far, and a catch-all.
   const INST = [
@@ -108,17 +113,32 @@
       const amt = money(m[2]), c = category(m[4]);
       if (isFinite(amt) && okName(squeeze(m[3]))) return { kind: 'tx', items: [{ id: msg.id, at, date, amt: Math.abs(amt), dir: amt < 0 ? 'in' : dirOf(m[1]), merchant: squeeze(m[3]), account: '', last4: '', cat: c.cat, emoji: c.emoji, mid, src: 'alert', min }] };
     }
-    // A summary: one line each (the HTML has each in its own paragraph; the plain text too)
+    // One deposit alert (not a summary, which says how many updates it has)
+    m = RECEIVED.exec(flat);
+    if (m && !/new updates? in Monarch|A new [a-z ]+ of \$/i.test(subject + ' ' + flat) && flat.split(/You(?:'|’)ve received /i).length === 2) {
+      const amt = money(m[1]), c = category(m[4]), a = account(m[3] || '');
+      if (isFinite(amt) && okName(squeeze(m[2]))) return { kind: 'tx', items: [{ id: msg.id, at, date, amt: Math.abs(amt), dir: 'in', merchant: squeeze(m[2]), account: a.account, last4: a.last4, cat: c.cat, emoji: c.emoji, mid, src: 'alert', min }] };
+    }
+    // A summary: one line each (the HTML has each in its own paragraph; the plain text too), an
+    // expense ("A new expense of ...") or a deposit ("You've received ...")
     const items = [];
     MANY.lastIndex = 0;
-    let i = 0;
+    let i = 0, j = 0;
     for (const line of text.split('\n')) {
       MANY.lastIndex = 0;
       const k = MANY.exec(squeeze(line));
-      if (!k) continue;
-      const amt = money(k[2]), c = category(k[4]);
-      if (!isFinite(amt) || !okName(squeeze(k[3]))) continue;
-      items.push({ id: msg.id + ':' + i++, at, date, amt: Math.abs(amt), dir: amt < 0 ? 'in' : dirOf(k[1]), merchant: squeeze(k[3]), account: '', last4: '', cat: c.cat, emoji: c.emoji, mid: '', src: 'summary' });
+      if (k) {
+        const amt = money(k[2]), c = category(k[4]);
+        if (!isFinite(amt) || !okName(squeeze(k[3]))) continue;
+        items.push({ id: msg.id + ':' + i++, at, date, amt: Math.abs(amt), dir: amt < 0 ? 'in' : dirOf(k[1]), merchant: squeeze(k[3]), account: '', last4: '', cat: c.cat, emoji: c.emoji, mid: '', src: 'summary' });
+        continue;
+      }
+      const r = RECEIVED.exec(squeeze(line));
+      if (!r) continue;
+      const amt = money(r[1]), c = category(r[4]), a = account(r[3] || '');
+      if (!isFinite(amt) || !okName(squeeze(r[2]))) continue;
+      // numbered on their own (:in0, :in1), so a summary's expenses keep the ids they had before deposits were read
+      items.push({ id: msg.id + ':in' + j++, at, date, amt: Math.abs(amt), dir: 'in', merchant: squeeze(r[2]), account: a.account, last4: a.last4, cat: c.cat, emoji: c.emoji, mid: '', src: 'summary' });
     }
     if (items.length) return { kind: 'tx', items };
 

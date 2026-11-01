@@ -19,6 +19,7 @@
 //   same months, and no Gmail;
 // - Ipsy, the helper you chat with: there for whoever sees Money, its tools on the family's own view;
 // - kept in IndexedDB (moved from localStorage), five years of it, and read back after a reload;
+// - when parse.js learns something new, every email read again, once;
 // - back from Google's sign-in inside aOS: the token kept before the page goes back into aOS;
 // - Mail's Gmail sign-in (inside aOS, the same storage) used first: no trip to Google while Mail is
 //   signed in; without it, Money's own quiet renewal as before; Mail's token refused by Gmail: Money's
@@ -212,7 +213,7 @@ const mainText = p => p.locator('#main').innerText();
 
 // The reader's phone: signed in, Gmail connected, three months already read, and the made-up Rocket card's
 // 3% set in Settings (the rates Money starts with are Robinhood's and Customized Cash's).
-const A = await phone({ sess: PAT, token: true, data: JSON.stringify({ tx: SEED, alerts: [], hints: [{ name: 'Stream Box', freq: 'Monthly' }], settings: { cards: { 'rocket credit card': { base: 3, online: 0, grocery: 0, cap: 0 } }, dismissed: [], at: 1 }, setDirty: true, mAt: {}, dirty: [ym(-3), ym(-2), ym(-1), ym(0)], seen: ['m5'], lastScan: Date.now() - 2 * 3600e3, readAt: 0 }) });
+const A = await phone({ sess: PAT, token: true, data: JSON.stringify({ tx: SEED, alerts: [], hints: [{ name: 'Stream Box', freq: 'Monthly' }], settings: { cards: { 'rocket credit card': { base: 3, online: 0, grocery: 0, cap: 0 } }, dismissed: [], at: 1 }, setDirty: true, mAt: {}, dirty: [ym(-3), ym(-2), ym(-1), ym(0)], seen: ['m5'], lastScan: Date.now() - 2 * 3600e3, readAt: 0, reads: 2 }) });
 const { p } = A;
 
 await test('reads Monarch’s emails: the alert, the summary’s new one (not its repeat), the can’t-sync email; the newsletter is nothing; one that can’t be fetched stops nothing', async () => {
@@ -734,6 +735,15 @@ await test('the spouse sees nothing until it’s shared, then the same months, a
   await B.ctx.close();
 });
 
+await test('when Money learns to read something new, it reads every email again, once', async () => {
+  const before = gmailCalls.length;
+  const G = await phone({ token: true, data: JSON.stringify({ tx: [], seen: ['m1', 'm2'], lastScan: Date.now() - 2 * 3600e3, reads: 1 }) });
+  await G.p.waitForFunction(() => window.__money && window.__money.D.seen.length >= 5 && !window.__money.st.reading, null, { timeout: 15000 });
+  assert.ok(gmailCalls.slice(before).some(c => /q=newer_than%3A5y/.test(c)), 'from the start: ' + gmailCalls.slice(before)[0]);
+  assert.equal(await G.p.evaluate(() => window.__money.D.reads), 2);
+  assert.ok(await G.p.evaluate(() => window.__money.D.tx.some(x => x.merchant === 'Book Nook')), 'what it had passed over comes in');
+  await G.ctx.close();
+});
 await test('back from Google’s sign-in inside aOS: the token is kept before the page goes back into aOS', async () => {
   const G = await phone({});
   await G.p.evaluate(() => { localStorage.setItem('money.state', 'n1'); localStorage.setItem('aos.away', 'money|' + Date.now()); });

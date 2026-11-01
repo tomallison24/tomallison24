@@ -1,6 +1,7 @@
 // Checks money/parse.js on made-up emails in Monarch's templates (as of October 2026): one
 // expense alert (read from the HTML, since the plain text drops the merchant and the account), a
-// card with its number twice, an account with no number, a deposit, a summary of several, the
+// card with its number twice, an account with no number, a deposit (as an alert, and in a summary:
+// "You've received"), a summary of several, the
 // three kinds of "can't sync" email, new recurring merchants, and what isn't Monarch's at all.
 //   node money/scripts/parse-test.mjs
 import assert from 'assert/strict';
@@ -61,6 +62,22 @@ test('a summary: each alert in it, with no account, numbered after the email', (
   // its plain text works too
   const t = P.parse({ id: 's2', at: AT, subject: 's', text: 'Hi Pat,\n\nHere&#x27;s a quick summary.\n\n💲 New expense from Big Box\nA new expense of $9.99 from Big Box has been categorized as 🛍 Shopping.\nhttps://email.example/x\n' });
   assert.equal(t.items[0].amt, 9.99);
+});
+test('a deposit in a summary, as Monarch words it there ("You\u2019ve received"), and in an alert of its own', () => {
+  const html = `<html><body><p>Hi Pat,</p><p>Here&#x27;s a quick summary of recent activity you asked to stay on top of.</p>
+<p><b>💲 New deposit from Acme Payroll</b></p><p class="activity-body">You&#x27;ve received $2,400.00 from Acme Payroll, which has been categorized as 💵 Paychecks.</p>
+<p><b>💲 New expense from Corner Diner</b></p><p class="activity-body">A new expense of $23.74 from Corner Diner has been categorized as 🍽 Restaurants &amp; Bars.</p>
+<p><b>💲 New deposit from Example Bank</b></p><p class="activity-body">You&#x27;ve received $3.10 from Example Bank, which has been categorized as 💸 Interest.</p></body></html>`;
+  const r = P.parse({ id: 's9', at: AT, subject: '✨ You have 3 new updates in Monarch', html });
+  assert.deepEqual(r.items.map(x => [x.id, x.merchant, x.amt, x.dir, x.cat, x.emoji, x.src]),
+    [['s9:in0', 'Acme Payroll', 2400, 'in', 'Paychecks', '💵', 'summary'], ['s9:0', 'Corner Diner', 23.74, 'out', 'Restaurants & Bars', '🍽', 'summary'], ['s9:in1', 'Example Bank', 3.1, 'in', 'Interest', '💸', 'summary']],
+    'deposits numbered on their own: the expenses keep the ids they had before deposits were read');
+  // the same in the plain text, when there's no HTML
+  const t = P.parse({ id: 's10', at: AT, subject: '✨ You have 1 new update in Monarch', text: 'Hi Pat,\n\n💲 New deposit from Acme Payroll\nYou&#x27;ve received $2,400.00 from Acme Payroll, which has been categorized as 💵 Paychecks.\nhttps://email.example/x\n' });
+  assert.deepEqual(t.items.map(x => [x.merchant, x.amt, x.dir]), [['Acme Payroll', 2400, 'in']]);
+  // an alert of its own, naming the account
+  const a = P.parse({ id: 'd2', at: AT, subject: '💲 New deposit from Acme Payroll in Monarch', html: one('You&#x27;ve received $2,400.00 from Acme Payroll, which was deposited into Shared Checking (...0001) and has been categorized as 💵 Paychecks.') }).items;
+  assert.deepEqual(a.map(x => [x.id, x.amt, x.dir, x.account, x.last4, x.cat, x.src]), [['d2', 2400, 'in', 'Shared Checking', '0001', 'Paychecks', 'alert']]);
 });
 test('“can’t sync” emails: which bank, and what Monarch says', () => {
   const a = P.parse({ id: 'a1', at: AT, subject: '🛠️ Access Expired', text: 'Hi Pat,\n\nRocket Bank only grants Monarch access for a limited time. To continue syncing, reauthorize the connection.\n\nOpen Monarch to update' });
