@@ -22,7 +22,7 @@
   const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
   // The kinds of drink: a typical size and strength for each, used to fill
-  // the form in when you pick one. A cocktail is logged as the spirit in it.
+  // the form in when you pick one. A plain Cocktail is logged as the spirit in it; COCKTAILS (below) are by name.
   const CATS = [
     { id: 'beer', name: 'Beer', vol: 12, unit: 'oz', abv: 5 },
     { id: 'wine', name: 'Wine', vol: 5, unit: 'oz', abv: 13 },
@@ -44,6 +44,51 @@
     { name: 'Hard seltzer', cat: 'seltzer', vol: 12, unit: 'oz', abv: 5 },
     { name: 'Cider', cat: 'cider', vol: 12, unit: 'oz', abv: 4.5 },
   ];
+  // Cocktails by name: the International Bartenders Association's official
+  // recipes (iba-world.com), in ml, as [ml, ABV %] for each part (0 for juice,
+  // syrup and mixers). Where IBA says "top with" or "a splash", it's taken as 60
+  // ml (30 ml for a splash); an espresso as 30 ml. Bottle strengths are the US
+  // ones: spirits, triple sec (Cointreau) and curaçao 40%, Campari 24%, Kahlúa
+  // 20%, sweet vermouth 16%, dry 18%, Aperol, Prosecco 11%, Champagne 12%. The
+  // highballs with no IBA recipe are a US single, 1.5 oz (44 ml), and 120 ml
+  // of mixer. A cocktail is logged as the whole drink, in oz, at the strength
+  // that gives the recipe's own alcohol, so its standard drinks are the recipe's.
+  const COCKTAIL_PARTS = [
+    ['Tequila', 'Margarita', [[50, 40], [20, 40], [15, 0]]],
+    ['Tequila', 'Paloma', [[50, 40], [5, 0], [100, 0]]],
+    ['Tequila', 'Tequila Sunrise', [[45, 40], [90, 0], [15, 0]]],
+    ['Vodka', 'Moscow Mule', [[45, 40], [120, 0], [10, 0]]],
+    ['Vodka', 'Cosmopolitan', [[40, 40], [15, 40], [15, 0], [30, 0]]],
+    ['Vodka', 'Espresso Martini', [[50, 40], [30, 20], [10, 0], [30, 0]]],
+    ['Vodka', 'Bloody Mary', [[45, 40], [90, 0], [15, 0]]],
+    ['Vodka', 'Lemon Drop', [[30, 40], [20, 40], [15, 0]]],
+    ['Vodka', 'Vodka soda', [[44, 40], [120, 0]]],
+    ['Gin', 'Gin & tonic', [[44, 40], [120, 0]]],
+    ['Gin', 'Martini', [[60, 40], [10, 18]]],
+    ['Gin', 'Negroni', [[30, 40], [30, 24], [30, 16]]],
+    ['Gin', 'Tom Collins', [[45, 40], [30, 0], [15, 0], [60, 0]]],
+    ['Gin', 'French 75', [[30, 40], [15, 0], [15, 0], [60, 12]]],
+    ['Rum', 'Mojito', [[45, 40], [20, 0], [60, 0]]],
+    ['Rum', 'Daiquiri', [[60, 40], [20, 0]]],
+    ['Rum', 'Piña Colada', [[50, 40], [30, 0], [50, 0]]],
+    ['Rum', 'Mai Tai', [[30, 40], [30, 40], [15, 40], [15, 0], [30, 0], [7.5, 0]]],
+    ['Rum', 'Rum & Coke', [[50, 40], [120, 0], [10, 0]]],
+    ['Rum', 'Dark ’n’ Stormy', [[60, 40], [100, 0]]],
+    ['Whiskey', 'Old Fashioned', [[45, 40]]],
+    ['Whiskey', 'Manhattan', [[50, 40], [20, 16]]],
+    ['Whiskey', 'Whiskey Sour', [[45, 40], [25, 0], [20, 0]]],
+    ['Whiskey', 'Mint Julep', [[60, 40]]],
+    ['Whiskey', 'Irish Coffee', [[50, 40], [120, 0], [50, 0]]],
+    ['Whiskey', 'Whiskey & Coke', [[44, 40], [120, 0]]],
+    ['Bubbles', 'Aperol Spritz', [[60, 11], [90, 11], [30, 0]]],
+    ['Bubbles', 'Mimosa', [[75, 0], [75, 11]]],
+    ['Mixed spirits', 'Long Island Iced Tea', [[15, 40], [15, 40], [15, 40], [15, 40], [15, 40], [25, 0], [30, 0], [60, 0]]],
+  ];
+  const COCKTAILS = COCKTAIL_PARTS.map(([base, name, parts]) => {
+    const ml = parts.reduce((a, p) => a + p[0], 0), alc = parts.reduce((a, p) => a + p[0] * p[1] / 100, 0);
+    const vol = Math.round(ml / OZ_ML * 10) / 10;
+    return { name, base, cat: 'cocktail', vol, unit: 'oz', abv: Math.round(alc / (vol * OZ_ML) * 1000) / 10 };
+  });
   // Sizes and strengths offered in the pickers (anything else you had stays as it was).
   const SIZES = {
     oz: [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 9, 10, 12, 14, 16, 19.2, 20, 22, 24, 25.4, 32, 40, 64],
@@ -300,5 +345,5 @@
     return { entries: [...out.entries.values()], days: [...out.days].map(([id, status]) => ({ id, status })), goals: out.goals, skipped: out.skipped };
   }
 
-  root.DrinksCalc = { OZ_ML, ETHANOL, STD_G, CATS, CAT, PRESETS, SIZES, ABVS, GOALS, grams, std, round, add, okEntry, byDay, marks, statusOf, stats, overDays, compare, streaks, weeks, weekGoals, topDrinks, weekdays, parseCSV, fromAbvTracker };
+  root.DrinksCalc = { OZ_ML, ETHANOL, STD_G, CATS, CAT, PRESETS, COCKTAILS, SIZES, ABVS, GOALS, grams, std, round, add, okEntry, byDay, marks, statusOf, stats, overDays, compare, streaks, weeks, weekGoals, topDrinks, weekdays, parseCSV, fromAbvTracker };
 })(typeof window !== 'undefined' ? window : globalThis);

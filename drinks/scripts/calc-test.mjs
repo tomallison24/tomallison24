@@ -140,6 +140,25 @@ test('the presets and kinds fill in sensible numbers', () => {
   for (const c of C.CATS) { assert.ok(C.SIZES[c.unit].includes(c.vol), c.id); assert.ok(C.ABVS.includes(c.abv), c.id); }
 });
 
+test('cocktails by name: each is its recipe’s own alcohol, as a whole drink in oz', () => {
+  assert.ok(C.COCKTAILS.length >= 25);
+  assert.equal(new Set(C.COCKTAILS.map(c => c.name)).size, C.COCKTAILS.length, 'no name twice');
+  for (const c of C.COCKTAILS) {
+    assert.equal(c.cat, 'cocktail', c.name); assert.equal(c.unit, 'oz', c.name);
+    assert.ok(c.base && c.vol > 1 && c.vol < 10 && c.abv > 0 && c.abv < 45, c.name);
+    assert.ok(C.okEntry(Object.assign({ id: 'x', date: TODAY, qty: 1 }, c)), c.name + ' is a drink the log keeps');
+  }
+  const sd = name => C.std(Object.assign({ qty: 1 }, C.COCKTAILS.find(c => c.name === name)));
+  // IBA: 50 ml tequila and 20 ml triple sec at 40% → 28 ml of alcohol → 22.1 g → 1.58
+  assert.ok(Math.abs(sd('Margarita') - 28 * 0.789 / 14) < 0.01, 'Margarita');
+  // 30 ml each of gin 40%, Campari 24%, sweet vermouth 16% → 24 ml → 1.35
+  assert.ok(Math.abs(sd('Negroni') - 24 * 0.789 / 14) < 0.01, 'Negroni');
+  // five 15 ml spirits at 40% → 30 ml → 1.69
+  assert.ok(Math.abs(sd('Long Island Iced Tea') - 30 * 0.789 / 14) < 0.01, 'Long Island');
+  // a single in a highball is one standard drink
+  assert.ok(Math.abs(sd('Gin & tonic') - 1) < 0.02, 'G&T');
+});
+
 // ---- Trends: the 12-week page ----
 test('Trends: a week at a time, with its limits, strength and a 4-week average of finished weeks', () => {
   const beer = (date, qty = 1) => E(date, 12, 'oz', 5, qty);

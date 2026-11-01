@@ -55,7 +55,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const f1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
   const sizeOf = x => (+x.vol).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + x.unit;
   const catName = c => (C.CAT[c] || C.CAT.other).name;
-  const KNOWN = new Set(C.CATS.map(c => c.name).concat(C.PRESETS.map(p => p.name)));
+  const KNOWN = new Set(C.CATS.map(c => c.name).concat(C.PRESETS.map(p => p.name), C.COCKTAILS.map(c => c.name)));
   const nameHtml = n => KNOWN.has(n) ? esc(n) : '<span translate="no">' + esc(n) + '</span>';
   const nameTxt = n => KNOWN.has(n) ? n : n;
 
@@ -140,7 +140,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
-  const st = { week: weekStartOf(today()), day: null, form: null, period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
+  const st = { week: weekStartOf(today()), day: null, form: null, cocktails: false, period: ls.get(K.period, 'week') === 'month' ? 'month' : 'week' };
 
   // ---------------------------------------------------------------------
   // The week: its one number (tap it for Analysis), and seven days
@@ -218,7 +218,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // A day: what you had, your usual drinks, the form
   // ---------------------------------------------------------------------
   function openDay(day) {
-    st.day = day; st.form = null;
+    st.day = day; st.form = null; st.cocktails = false;
     $('dayLbl').textContent = day === today() ? 'Today · ' + fmt(day, { weekday: 'long' }) : fmt(day, { weekday: 'long', day: 'numeric', month: 'long', year: sameYear(day) ? undefined : 'numeric' });
     renderDay(); loadOlder(weekStartOf(day), addDays(weekStartOf(day), 6));   // a day past the 90 days here: its week, from the Sheet
     if ($('daySheet').hidden) openSheet('daySheet');
@@ -256,11 +256,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       html += '<button class="btn quiet afbtn" type="button" data-mark="af" aria-pressed="' + (mark === 'af') + '">' + (mark === 'af' ? ICON.tick + 'Alcohol-free day' : 'Alcohol-free day') + '</button>';
     }
     if (f) html += formHtml();
+    else if (st.cocktails) html += cocktailsHtml();
     else {
       html += '<p class="label">' + (list.length ? 'Add another' : 'Had a drink?') + '</p><div class="usual" id="usual">' + usual().map((u, i) => '<button class="utile" type="button" data-usual="' + i + '" data-c="' + esc(u.cat) + '" aria-label="Add ' + esc(u.name + ', ' + sizeOf(u) + ', ' + u.abv + '%') + '"><i class="cdot"></i><span class="ut">' + nameHtml(u.name) + '<small>' + esc(sizeOf(u) + ' · ' + u.abv + '%') + '</small></span>' + ICON.plus + '</button>').join('') + '</div>'
-        + '<button class="linkbtn" type="button" id="somethingElse">Something else…</button>';
+        + '<div class="links"><button class="linkbtn" type="button" id="cocktails">Cocktails…</button><button class="linkbtn" type="button" id="somethingElse">Something else…</button></div>';
     }
     $('dayBody').innerHTML = html;
+  }
+  // Cocktails by name (calc.js), by the spirit in them: one tap logs the recipe's own standard drinks.
+  function cocktailsHtml() {
+    const bases = [...new Set(C.COCKTAILS.map(c => c.base))];
+    return '<p class="label">Cocktails</p><p class="cknote">Each one is the classic recipe’s standard drinks. A bigger pour? Tap it in your list to change it.</p>'
+      + bases.map(b => '<p class="label">' + esc(b) + '</p><div class="usual ck">' + C.COCKTAILS.map((c, i) => c.base !== b ? '' : '<button class="utile" type="button" data-cocktail="' + i + '" data-c="cocktail" aria-label="Add ' + esc(c.name + ', ' + f1(C.std(Object.assign({ qty: 1 }, c))) + ' standard drinks') + '"><i class="cdot"></i><span class="ut">' + esc(c.name) + '<small>' + esc(f1(C.std(Object.assign({ qty: 1 }, c))) + ' standard ' + (C.round(C.std(Object.assign({ qty: 1 }, c)), 1) === 1 ? 'drink' : 'drinks')) + '</small></span>' + ICON.plus + '</button>').join('') + '</div>').join('')
+      + '<div class="links"><button class="linkbtn" type="button" id="ckBack">Back</button><button class="linkbtn" type="button" id="somethingElse">Something else…</button></div>';
   }
   function blankForm(cat) {
     const c = C.CAT[cat] || C.CAT.beer;
@@ -272,6 +280,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return '<p class="label">' + (f.editing ? 'Change this drink' : 'Something else') + '</p>'
       + '<div class="opts" role="radiogroup" aria-label="Kind of drink">' + C.CATS.map(c => '<button class="opt" type="button" role="radio" data-c="' + c.id + '" data-cat="' + c.id + '" aria-checked="' + (f.cat === c.id) + '"><i class="cdot"></i>' + esc(c.name) + '</button>').join('') + '</div>'
       + '<div class="rgroup">'
+      + (f.cat === 'cocktail' ? '<div class="frow"><label for="fCocktail">Cocktail</label><select id="fCocktail"><option value="">Pick one</option>'
+        + [...new Set(C.COCKTAILS.map(c => c.base))].map(b => '<optgroup label="' + esc(b) + '">' + C.COCKTAILS.map((c, i) => c.base !== b ? '' : '<option value="' + i + '"' + (f.name === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</optgroup>').join('')
+        + '</select></div>' : '')
       + '<div class="frow"><input class="txt" id="fName" type="text" maxlength="60" autocomplete="off" placeholder="' + esc(catName(f.cat)) + ' (or its name)" aria-label="Name" value="' + esc(f.name) + '"></div>'
       + '<div class="frow"><label for="fVol">Size</label><select id="fVol">' + opts(sizes, f.vol, v => (+v).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ' + f.unit) + '</select>'
       + '<span class="unit" role="group" aria-label="Unit">' + ['oz', 'ml'].map(u => '<button type="button" data-unit="' + u + '" aria-pressed="' + (f.unit === u) + '">' + u + '</button>').join('') + '</span></div>'
@@ -306,7 +317,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       toast('Added ' + (x.name || catName(x.cat)), () => { data.entries = data.entries.filter(y => y.id !== x.id); save(); if (st.day) renderDay(); render(); });
       return;
     }
-    if (e.target.closest('#somethingElse')) { st.form = blankForm(); renderDay(); $('fName').focus({ preventScroll: true }); return; }
+    const ck = e.target.closest('[data-cocktail]');
+    if (ck) {
+      const d = C.COCKTAILS[+ck.dataset.cocktail]; if (!d) return;
+      st.cocktails = false;
+      const x = addDrink(d);
+      toast('Added ' + x.name + ', ' + f1(C.std(x)) + ' standard ' + (C.round(C.std(x), 1) === 1 ? 'drink' : 'drinks'), () => { data.entries = data.entries.filter(y => y.id !== x.id); save(); if (st.day) renderDay(); render(); });
+      return;
+    }
+    if (e.target.closest('#cocktails')) { st.cocktails = true; renderDay(); const l = $('dayBody').querySelector('.label'); if (l) l.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+    if (e.target.closest('#ckBack')) { st.cocktails = false; renderDay(); return; }
+    if (e.target.closest('#somethingElse')) { st.cocktails = false; st.form = blankForm(); renderDay(); $('fName').focus({ preventScroll: true }); return; }
     const c = e.target.closest('[data-cat]');
     if (c && f) {
       // Picking a kind fills in its usual size and strength.
@@ -340,6 +361,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   });
   body.addEventListener('change', e => {
     const f = st.form, t = e.target; if (!f) return;
+    if (t.id === 'fCocktail') {
+      // A cocktail by name fills in its name, size and strength.
+      const c = C.COCKTAILS[+t.value]; if (!c || t.value === '') return;
+      f.name = c.name; f.vol = c.vol; f.unit = c.unit; f.abv = c.abv;
+      renderDay(); return;
+    }
     if (t.id === 'fVol') f.vol = +t.value;
     else if (t.id === 'fAbv') f.abv = +t.value;
     else if (t.id === 'fQty') f.qty = +t.value;
@@ -655,7 +682,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const lockPage = () => document.documentElement.classList.toggle('locked', [...document.querySelectorAll('.sheetwrap')].some(w => !w.hidden));
   function openSheet(id) { focusStack.push(document.activeElement); $(id).hidden = false; lockPage(); }
   function closeSheet(id) { $(id).hidden = true; lockPage(); const f = focusStack.pop(); if (f && f.focus && document.contains(f)) f.focus(); }
-  const closers = { daySheet: () => { closeSheet('daySheet'); st.day = null; st.form = null; } };
+  const closers = { daySheet: () => { closeSheet('daySheet'); st.day = null; st.form = null; st.cocktails = false; } };
   const closeWrap = w => (closers[w.id] || (() => closeSheet(w.id)))();
   document.querySelectorAll('.sheetwrap').forEach(w => w.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeWrap(w); }));
   if (window.visualViewport) {

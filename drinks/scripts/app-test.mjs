@@ -226,6 +226,30 @@ await test('Something else…: the kind fills in size and strength; oz and ml; t
   assert.match(await page.textContent('#dList'), /dinner at <b>Ana’s<\/b>/);
 });
 
+await test('Cocktails…: one tap logs a cocktail by name, its recipe’s standard drinks; the form picks one too', async () => {
+  await page.click('#cocktails');
+  assert.ok(await page.$$eval('[data-cocktail]', e => e.length) >= 25, 'the cocktails, by spirit');
+  assert.match(await page.textContent('#dayBody'), /Tequila.*Margarita.*Vodka.*Espresso Martini.*Gin.*Negroni/);
+  await shot(page, '03b-cocktails');
+  await page.click('[data-cocktail] >> text=Margarita');
+  assert.match(await page.textContent('#toastMsg'), /Added Margarita, 1\.6 standard drinks/);
+  let d = await local(page);
+  const m = d.entries.find(x => x.name === 'Margarita');
+  assert.deepEqual({ cat: m.cat, vol: m.vol, unit: m.unit, abv: m.abv, qty: m.qty }, { cat: 'cocktail', vol: 2.9, unit: 'oz', abv: 32.6, qty: 1 });
+  assert.equal(await page.$('[data-cocktail]'), null, 'back to the day');
+  assert.match(await page.textContent('#dList'), /Margarita.*1\.6/);
+  // the form: Cocktail, then one by name, fills in its name, size and strength
+  await page.click('#somethingElse');
+  await page.click('.opt[data-cat="cocktail"]');
+  const neg = await page.$eval('#fCocktail', s => [...s.options].find(o => o.textContent === 'Negroni').value);
+  await page.selectOption('#fCocktail', neg);
+  assert.equal(await page.inputValue('#fName'), 'Negroni'); assert.equal(await page.inputValue('#fVol'), '3'); assert.equal(await page.inputValue('#fAbv'), '27.1');
+  assert.match(await page.textContent('#fCalc'), /^1\.4 standard drinks$/);
+  await page.click('#fCancel');
+  await page.click('[data-del="' + m.id + '"]');   // as it was, for the tests after
+  d = await local(page); assert.ok(!d.entries.some(x => x.name === 'Margarita' || x.name === 'Negroni'));
+});
+
 await test('change a drink, delete one with Undo; the week row and total follow', async () => {
   await page.click('[data-edit] >> text=Beer');
   assert.equal(await page.inputValue('#fQty'), '1');
