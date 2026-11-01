@@ -72,6 +72,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // due: an hour since the last read, or one was cut off (Money closed, the phone): it goes on as soon as Money is back
   const scanDue = () => !!ls.get(K.cut, '') || Date.now() - D.lastScan > H;
   const FIRST_SCAN = 'newer_than:5y';   // as much as Money keeps (calc.js, KEEP_MONTHS)
+  // parse.js's reading, numbered: when it learns Monarch's words for something new, every email is read
+  // again once (seen and lastScan cleared), so what it missed comes in. 2: deposits in summaries ("You've received").
+  const READS = 2;
   const API = '../money/api/';
 
   const I = {
@@ -151,6 +154,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     D.seen = Array.isArray(d.seen) ? d.seen : [];
     D.lastScan = +d.lastScan || 0; D.readAt = +d.readAt || 0; D.reader = d.reader || '';
     D.checkDay = d.checkDay || ''; D.lastCheck = d.lastCheck && typeof d.lastCheck === 'object' ? d.lastCheck : null;
+    D.reads = +d.reads || 1;
+    if (D.reads < READS) { D.seen = []; D.lastScan = 0; D.reads = READS; }   // read every email again, once (merge keeps what's there)
   }
   let warned = false, saving = null, again = false;
   const full = () => { if (!warned) { warned = true; toast('This phone couldn’t save Money: its storage is full.'); } };

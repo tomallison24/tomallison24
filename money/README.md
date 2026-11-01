@@ -45,7 +45,8 @@ What parse.js reads (the templates as of October 2026):
 | Email | What Money takes |
 |---|---|
 | An alert: "We noticed an expense of $52.10 from Big Box, which was spent from Travel Rewards Visa Signature (...1234) and has been categorized as 🛍 Shopping." | the amount, the merchant, the card and its last four, the category and its emoji, Monarch's id for the transaction (its View Transaction link), and the alert's threshold ("notified about expenses over $200") |
-| A deposit alert ("We noticed a deposit of …"): the same, as money in | the same |
+| A deposit alert ("We noticed a deposit of …", or "You've received $2,400.00 from Acme Payroll, which was deposited into … and has been categorized as 💵 Paychecks."): the same, as money in | the same |
+| A deposit in a summary (seen October 2026): "You've received $313.60 from Robinhood, which has been categorized as 💸 Interest." | as money in, with no card; numbered on its own (`:in0`), so the summary's expenses keep their ids |
 | A summary: "✨ You have 2 new updates in Monarch", each "A new expense of $209.68 from Amazon has been categorized as 🛍 Shopping." | each one, with no card (the summary doesn't say) |
 | "🛠️ Access Expired" and the other can't-sync emails | the bank and what Monarch said |
 | "🗓 New recurring merchant found" | the names and how often |
@@ -273,6 +274,8 @@ reader's Gmail and add it, with these safety nets (`ipsy-tools.js`: `search_gmai
 ## Not yet
 
 - No notifications: a bank that stops syncing shows when Money is opened, not on the lock screen.
-- Monarch's deposit alert wording hasn't been seen yet: parse.js reads "deposit", "income",
-  "credit" and "refund" alerts in the expense alert's shape, and its test has made-up ones. Check
-  the first real one.
+- Monarch's deposits so far came only inside summaries ("You've received …"); a deposit alert of
+  its own hasn't been seen yet: parse.js reads one in the expense alert's shape or the summary's
+  words, and its test has made-up ones. Check the first real one.
+- When parse.js learns Monarch's words for something new, `READS` in app.js goes up by one: every
+  email is then read again once (the merge keeps what's there), so what it missed comes in.
