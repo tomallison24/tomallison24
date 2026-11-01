@@ -65,7 +65,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
-  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open', cut: KEY + '-scan-cut' };
+  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', mState: 'money.monarch.state', mCode: 'money.monarch.code', mTest: 'money.monarch.test', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open', cut: KEY + '-scan-cut' };
   // Inside aOS, reading Gmail, sending it to the family's copy and the daily check count as an update under way: aOS
   // doesn't put Money away or start it again until it's done (../home/welcome.js AllisonOS.updating).
   const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
@@ -840,6 +840,96 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ls.set(K.token + '.ever', '1'); ls.del(K.silentFail);
     return { ok: true };
   }
+  // ---------------------------------------------------------------------
+  // Monarch's own connector, read-only (server/monarch.js): a test for now. aOS's server signs the
+  // reader in to Monarch and keeps the sign-in; the test reads the last 14 days from Monarch and puts
+  // them beside what Money read from the emails.
+  // ---------------------------------------------------------------------
+  const MONARCH_BACK = () => location.origin + '/money/';
+  async function monarchIn() {
+    try {
+      const r = await api('monarch/start', { redirect: MONARCH_BACK() }, true);
+      ls.set(K.mState, r.state);
+      toGoogle(r.url);
+    } catch (err) { toast(monarchSay(err), null, 8000); }
+  }
+  // Back from Monarch: the code is kept at once (welcome.js sends the page back into aOS as soon as it loads).
+  function consumeMonarch() {
+    const p = new URLSearchParams(location.search);
+    if (!p.get('state') || (!p.get('code') && !p.get('error')) || p.get('state') !== ls.get(K.mState, '')) return;
+    ls.del(K.mState);
+    ls.set(K.mCode, JSON.stringify({ code: p.get('code') || '', state: p.get('state'), error: p.get('error') || '' }));
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+  async function monarchFinish() {
+    let b; try { b = JSON.parse(ls.get(K.mCode, 'null')); } catch {}
+    ls.del(K.mCode);
+    if (!b) return;
+    if (b.error) { toast(b.error === 'access_denied' ? 'Monarch access was declined.' : 'Monarch sign-in didn’t work (' + b.error + ').', null, 6000); return; }
+    try { await api('monarch/finish', { code: b.code, state: b.state }, true); st.monarch = null; toast('Monarch connected, read-only. Testing it…'); monarchTest(); }
+    catch (err) { toast(monarchSay(err), null, 8000); }
+  }
+  function monarchSay(err) {
+    const m = err && err.message, d = err && err.detail ? ' (' + err.detail + ')' : '';
+    return m === 'monarch-signin' ? 'Monarch needs you to connect again: Settings, Connect Monarch.'
+      : m === 'monarch-limit' ? 'Monarch says that’s enough for now. Try again later.'
+      : m === 'monarch-no-registration' ? 'Monarch doesn’t let new apps register themselves, so aOS can’t connect yet' + d + '.'
+      : /^monarch-/.test(m || '') ? 'Monarch didn’t answer as expected: ' + m + d + '.' : 'Couldn’t reach Monarch just now (' + (m || 'error') + ').';
+  }
+  async function monarchStatus() {
+    try { st.monarch = await api('monarch/status'); } catch { st.monarch = { error: true }; }
+    if (!$('setSheet').hidden) renderSettings();
+  }
+  // The test: Monarch's last 14 days beside Money's. Matched by Monarch's own id (in each alert's link),
+  // else by the same amount, in or out, within 3 days; then what differs.
+  async function monarchTest() {
+    const to = today(), from = new Date(Date.parse(to + 'T12:00:00Z') - 13 * 864e5).toISOString().slice(0, 10);
+    busyPill('Reading Monarch');
+    try {
+      const r = await api('monarch/test', { from, to }, true);
+      const mine = base().filter(x => x.date >= from && x.date <= to), used = new Set();
+      let byId = 0, byCharge = 0, differ = 0, pending = 0;
+      const diffs = [];
+      for (const m of r.items) {
+        if (m.pending) pending++;
+        let x = m.id && mine.find(y => y.mid && y.mid === m.id && !used.has(y.id));
+        if (x) byId++;
+        else if ((x = mine.find(y => !used.has(y.id) && y.dir === m.dir && Math.abs(y.amt - m.amt) < 0.005 && Math.abs(Date.parse(y.date) - Date.parse(m.date)) <= 3 * 864e5))) byCharge++;
+        if (!x) continue;
+        used.add(x.id);
+        const d = [];
+        if (Math.abs(x.amt - m.amt) >= 0.005) d.push('amount');
+        if (x.date !== m.date) d.push('date');
+        if (m.merchant && C.norm(m.merchant) !== C.norm(x.merchant)) d.push('merchant');
+        if (m.account && x.account && C.cardKey(m.account) !== C.cardKey(x.account)) d.push('card');
+        if (!x.account && m.account) d.push('card (Money had none)');
+        if (d.length) { differ++; if (diffs.length < 3) diffs.push(x.merchant + ': ' + d.join(', ')); }
+      }
+      const res = { at: Date.now(), tool: r.tool, tools: r.tools.length, server: (r.server && r.server.name) || '', count: r.count, shape: r.shape, mine: mine.length, byId, byCharge, differ, diffs,
+        onlyMonarch: r.items.length - byId - byCharge, onlyMoney: mine.length - used.size, pending };
+      ls.set(K.mTest, JSON.stringify(res));
+      pillDone(r.tool ? 'Read ' + plural(r.count, 'transaction') : 'No transactions tool');
+    } catch (err) { busyPill(null); toast(monarchSay(err), null, 8000); }
+    finally { st.monarch = null; monarchStatus(); }
+  }
+  function monarchRows(S) {
+    const m = st.monarch;
+    if (!m) { monarchStatus(); return [S.info({ title: 'Monarch', sub: 'Checking…' })]; }
+    if (m.error) return [S.info({ title: 'Monarch', sub: 'Couldn’t check just now.' })];
+    if (!m.connected) return [S.action({ id: 'monarchIn', icon: 'link', title: 'Connect Monarch', sub: 'A read-only test: Money reads your transactions straight from Monarch.' })];
+    let t = null; try { t = JSON.parse(ls.get(K.mTest, 'null')); } catch {}
+    return [
+      S.info({ id: 'monarchWho', title: 'Monarch', sub: 'Read-only, connected ' + ago(m.at) + '.' }),
+      S.action({ id: 'monarchTest', icon: 'refresh', title: 'Test reading Monarch', sub: t ? 'Last tested ' + ago(t.at) + '.' : 'Reads the last 14 days and puts them beside Money’s.' }),
+      ...(t ? [
+        S.info({ title: t.tool ? 'Read ' + plural(t.count, 'transaction') + ' from Monarch' : 'Monarch has no transactions tool', sub: t.tool ? 'With ' + t.tool + ', one of its ' + t.tools + ' tools, for the last 14 days.' : 'It has ' + t.tools + ' tools.' }),
+        t.tool ? S.info({ title: (t.byId + t.byCharge) + ' of Money’s ' + t.mine + ' match', sub: t.byId + ' by Monarch’s own id, ' + t.byCharge + ' by amount and day; ' + t.differ + ' differ' + (t.diffs.length ? ' (' + t.diffs.join('; ') + ')' : '') + '.' }) : '',
+        t.tool ? S.info({ title: plural(t.onlyMonarch, 'transaction') + ' only in Monarch', sub: plural(t.onlyMoney, 'transaction') + ' only in Money, and ' + t.pending + ' still pending in Monarch.' }) : '',
+        t.shape && t.shape.length ? S.info({ title: 'What Monarch gives', sub: t.shape.join(', ') + '.' }) : '',
+      ] : []),
+      S.danger({ id: 'monarchOut', icon: 'out', title: 'Disconnect Monarch' }),
+    ];
+  }
   async function gmail(path, params, tries = 0) {
     const tok = getToken();
     if (!tok) throw new AuthError('signed out');
@@ -976,7 +1066,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (loud) r = await A().fetch(API + path, opts);
     else { const t = A() && A().token(); if (t) opts.headers.Authorization = 'Bearer ' + t; r = await fetch(API + path, opts); }
     let j = {}; try { j = await r.json(); } catch {}
-    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { status: r.status, until: j.until });
+    if (!r.ok) throw Object.assign(new Error(j.error || 'http-' + r.status), { status: r.status, until: j.until, detail: j.detail || '' });
     return j;
   }
   let syncing = null, syncTimer = null;
@@ -1105,7 +1195,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.action({ id: 'readNow', icon: 'refresh', title: 'Check now', sub: D.readAt ? 'Last checked ' + ago(D.readAt) + '.' : 'Not checked yet.' }),
         S.action({ id: 'readAgain', icon: 'mail', title: 'Read the last 5 years again', sub: 'Every Monarch email, from the start.' }),
         own ? S.danger({ id: 'gmailOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
-      ] : S.action({ id: 'gmailIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Money reads only Monarch’s emails, and can’t change or send anything.' }),
+        ...(reader ? monarchRows(S) : []),
+      ] : [S.action({ id: 'gmailIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Money reads only Monarch’s emails, and can’t change or send anything.' }), ...(reader ? monarchRows(S) : [])],
       { hint: 'In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.' });
     }
     const lc = D.lastCheck, ideas = sees && signed && s && s.can;
@@ -1136,6 +1227,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       return;
     }
     if (t.closest('#gmailIn')) { signIn(); return; }
+    if (t.closest('#monarchIn')) { monarchIn(); return; }
+    if (t.closest('#monarchTest')) { monarchTest(); return; }
+    const mo = t.closest('#monarchOut');
+    if (mo) { if (!AllisonOS.settings.armed(mo, 'Tap again to disconnect')) return; try { await api('monarch/disconnect', {}, true); ls.del(K.mTest); toast('Monarch disconnected.'); } catch (err) { toast(monarchSay(err)); } st.monarch = null; renderSettings(); return; }
     const go = t.closest('#gmailOut'); if (go) { if (AllisonOS.settings.armed(go, 'Tap again to disconnect')) signOutGmail(); return; }
     if (t.closest('#readNow')) { closeSheet('setSheet'); scan({ loud: true }); return; }
     if (t.closest('#readAgain')) { closeSheet('setSheet'); scan({ loud: true, again: true }); return; }
@@ -1274,6 +1369,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Back from Google's sign-in: the token is taken from the address at once, before anything waits,
   // since welcome.js sends the page straight back into aOS (backToAOS) as soon as it has loaded.
   const back = consumeRedirect();
+  consumeMonarch();
   // Start once this phone's copy is read (IndexedDB).
   const ready = load().catch(() => {});
   ready.then(start);
@@ -1286,6 +1382,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     // The family's copy first (it says whether this phone reads Gmail), then Gmail: always after a
     // sign-in, else when it's been over an hour.
+    if (ls.get(K.mCode, '')) monarchFinish();
     (signedIn() ? sync() : Promise.resolve()).then(() => {
       if (getToken() && (back && back.ok || scanDue())) scan({ loud: !!(back && back.ok) });
       else if (getToken()) dailyCheck();

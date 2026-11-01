@@ -55,6 +55,10 @@
 //                    today, and the steps they took (server/ipsy.js); gone after two days
 //   money:ideas:<id>:<day>   how many times that person asked Ipsy for category ideas today
 //                    (functions/money/api, POST ideas); gone after two days
+//   money:monarch, money:monarch:client, money:monarch:meta, money:monarch:test, money:monarch:auth:<state>
+//                    Money's reader's sign-in to Monarch's own connector, read-only (server/monarch.js):
+//                    the tokens, aOS's registration, Monarch's endpoints, the last test's counts, and a
+//                    sign-in under way (10 minutes); deleted with the rest of Money
 //   sparkle:<id>, sparkle:clips:<id>   that account's Sparkle Kingdom players (their progress, coins
 //                    and treasures) and the letter sounds its grown-up recorded (functions/sparkle/api)
 //   <app>:ipsy:<id>:<day>   how many questions that person asked Ipsy in that app today

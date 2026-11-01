@@ -29,6 +29,14 @@
 //   GET  people                         (the reader) the family, first names and ids, to pick from
 //   POST share  { with: [ids] }         (the reader) who else sees Money
 //   POST forget                         (the reader) everything here deleted: Settings > Delete all data
+//   Monarch's own connector, read-only (server/monarch.js), the reader only; a test for now:
+//   GET  monarch/status                 -> { connected, at, scope, test }
+//   POST monarch/start  { redirect }    -> { url } Monarch's sign-in, to send the reader to (redirect:
+//                                        this site's /money/, where Monarch sends them back)
+//   POST monarch/finish { code, state } -> { ok } the sign-in's code becomes the tokens, kept here
+//   POST monarch/test   { from, to }    -> { tool, tools, count, shape, items } Monarch's transactions
+//                                        for those days (at most 31), in Money's words; nothing kept but the counts
+//   POST monarch/disconnect             the tokens deleted
 //
 // Kept in the accounts' Workers KV (server/auth.js lists the keys):
 //   money:share        { by: the reader's id, with: [ids], at }
@@ -44,6 +52,7 @@
 
 import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.js';
 import { T, DAY, persona, modelOf, requestHead, ipsyStep, budgetOf, today } from '../../../server/ipsy.js';
+import * as monarch from '../../../server/monarch.js';
 
 // ---- Ipsy, the helper you chat with: its tools in Money (money/ipsy-tools.js runs them, read only) ----
 const MONTH = { type: 'string', description: 'YYYY-MM' };
@@ -362,6 +371,11 @@ export async function onRequest({ request, params, env }) {
       return ideas(request, env, db, me);
     }
 
+    if (route.startsWith('monarch/')) {
+      if (!reader) return reply({ error: 'not-reader' }, 403);
+      return monarchRoute(route.slice(8), method, request, db, me);
+    }
+
     if (route === 'forget' && method === 'POST') {
       if (!reader) return reply({ error: 'not-reader' }, 403);
       await forgetMoney(db);
@@ -374,10 +388,51 @@ export async function onRequest({ request, params, env }) {
   }
 }
 
+// ---- Monarch's own connector (server/monarch.js): signing in, and a test read ----
+async function monarchRoute(sub, method, request, db, me) {
+  try {
+    if (sub === 'status' && method === 'GET') {
+      const t = await getJSON(db, 'money:monarch');
+      return reply({ connected: !!t, at: t ? t.at : 0, scope: t ? t.scope : '', test: await getJSON(db, 'money:monarch:test') });
+    }
+    if (sub === 'start' && method === 'POST') {
+      const b = await body(request), here = new URL(request.url);
+      let redirect; try { redirect = new URL(String(b.redirect || '')); } catch { return reply({ error: 'redirect' }, 400); }
+      if (redirect.origin !== here.origin || redirect.pathname !== '/money/' || redirect.search || redirect.hash) return reply({ error: 'redirect' }, 400);
+      return reply(await monarch.start(db, me, redirect.toString()));
+    }
+    if (sub === 'finish' && method === 'POST') {
+      const b = await body(request);
+      if (!str(b.code, 2000) || !str(b.state, 200)) return reply({ error: 'code' }, 400);
+      return reply(await monarch.finish(db, me, b.code, b.state));
+    }
+    if (sub === 'test' && method === 'POST') {
+      const b = await body(request), from = str(b.from, 10), to = str(b.to, 10);
+      if (!ISO.test(from) || !ISO.test(to) || from > to || (Date.parse(to) - Date.parse(from)) / 864e5 > 31) return reply({ error: 'range' }, 400);
+      const ses = await monarch.session(db), list = await monarch.tools(ses), tool = monarch.txTool(list);
+      const out = { server: ses.server, tools: list.map(t => t.name).slice(0, 80), tool: tool ? tool.name : '', count: 0, shape: [], items: [] };
+      if (tool) {
+        const args = monarch.txArgs(tool, from, to, 300), raw = monarch.findTx(await monarch.call(ses, tool.name, args));
+        Object.assign(out, { args, count: raw.length, shape: monarch.shape(raw[0]), items: raw.slice(0, 300).map(monarch.normTx) });
+      }
+      await putJSON(db, 'money:monarch:test', { at: Date.now(), from, to, tool: out.tool, tools: out.tools.length, count: out.count, shape: out.shape });
+      return reply(out);
+    }
+    if (sub === 'disconnect' && method === 'POST') {
+      await db.delete('money:monarch'); await db.delete('money:monarch:test');
+      return reply({ ok: true });
+    }
+    return reply({ error: 'not-found' }, 404);
+  } catch (e) {
+    return reply({ error: e.status ? e.message : 'server', detail: e.detail || '' }, e.status || 500);
+  }
+}
+
 // Everything Money keeps here (the reader asked, or the reader left the family: functions/aOS/api, forget).
 export async function forgetMoney(db) {
   const keys = ['money:share', 'money:meta'];
   let cursor;
+  { const page = await db.list({ prefix: 'money:monarch' }); keys.push(...page.keys.map(k => k.name)); }   // the sign-in to Monarch's connector (server/monarch.js)
   do { const page = await db.list({ prefix: 'money:tx:', cursor }); keys.push(...page.keys.map(k => k.name)); cursor = page.list_complete ? null : page.cursor; } while (cursor);
   for (const k of keys) await db.delete(k);
 }
