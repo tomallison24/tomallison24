@@ -944,6 +944,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch (err) { busyPill(null); toast(monarchSay(err), null, 8000); }
     finally { st.monarch = null; monarchStatus(); }
   }
+  // Monarch's own connector is put away for now (Nov 2026): Monarch's sign-in said "could not authorize"
+  // for aOS on the owner's phone (it seems to finish only for the AI apps it lists), so Money stays
+  // with the emails. Its dropdown shows only with localStorage money.monarch.on = '1', or while a sign-in
+  // is being finished; the code and the routes stay, for when Monarch lets apps like aOS in.
+  const monarchOn = () => ls.get('money.monarch.on', '') === '1' || !!monarchPasting();
   // Monarch's own dropdown in Settings: how it stands, the test and what it found, Disconnect.
   function monarchRows(S) {
     const m = st.monarch;
@@ -1226,7 +1231,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         one ? S.info({ title: plural(one, 'transaction') + ' changed on its own' }) : '',
       ], F({ value: rules.length ? plural(rules.length, 'change') : 'Monarch’s', hint: 'Shared with whoever sees Money.' }));
     }
-    if (reader) { const m = st.monarch; html += S.section('Monarch', monarchRows(S), F({ id: 'monarchSec', open: !!monarchPasting(), value: !m ? '' : m.connected ? 'Connected' : monarchPasting() ? 'Finish connecting' : 'Not connected', hint: 'A read-only test: nothing changes in Monarch.' })); }
+    if (reader && monarchOn()) { const m = st.monarch; html += S.section('Monarch', monarchRows(S), F({ id: 'monarchSec', open: !!monarchPasting(), value: !m ? '' : m.connected ? 'Connected' : monarchPasting() ? 'Finish connecting' : 'Not connected', hint: 'A read-only test: nothing changes in Monarch.' })); }
     if (!viewer) {
       const tok = getToken(), own = !!ls.get(K.token + '.ever', '');   // Mail's sign-in, or Money's own (ever: there's one to disconnect)
       const who = tok && tok.mail ? 'Mail’s sign-in' : ls.get(K.hint, '') || 'Connected';

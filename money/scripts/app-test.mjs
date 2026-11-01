@@ -434,7 +434,7 @@ await test('a card’s rate in Settings changes what it earned', async () => {
   // every section a dropdown, closed, with how it stands on its row
   assert.ok(await p.locator('#setBody details.st-fold').count() >= 6);
   assert.equal(await p.locator('#setBody details.st-fold[open]').count(), 0, 'all closed at first, signed in');
-  assert.equal(await p.locator('#setBody #monarchSec > summary').getAttribute('data-value') !== null, true, 'Monarch is a dropdown of its own');
+  assert.equal(await p.locator('#setBody #monarchSec').count(), 0, 'Monarch’s own connector is put away: Money reads the emails');
   if (SHOTS) await p.screenshot({ path: path.join(SHOTS, pad(++shot) + '-settings-folded.png') });
   await unfold(p);
   const s = await p.locator('#setBody').innerText();
@@ -635,7 +635,8 @@ await test('kept in IndexedDB, five years of it: moved from localStorage, read b
   assert.equal(await p.evaluate(() => window.__money.D.tx.length), n);
   assert.equal(await p.evaluate(saved), n);
 });
-await test('Monarch’s own connector, a test: Connect Monarch, signed in and back, its transactions beside Money’s; Disconnect', async () => {
+await test('Monarch’s own connector, a test (put away; shown with money.monarch.on): Connect Monarch, signed in and back, its transactions beside Money’s; Disconnect', async () => {
+  await p.evaluate(() => localStorage.setItem('money.monarch.on', '1'));
   // aOS's route sees this site as https://site.example (as api() does): Money's own address is sent as that
   await p.route('**/money/api/monarch/start', async route => {
     const req = route.request();
@@ -703,6 +704,7 @@ await test('Monarch won’t take this site’s address: it’s explained, Monarc
   await p.click('#setBody #monarchOut'); await p.click('#setBody #monarchOut');
   await p.waitForSelector('#setBody #monarchIn');
   await p.click('#setSheet .okbtn');
+  await p.evaluate(() => localStorage.removeItem('money.monarch.on'));
   await p.unroute('**/money/api/monarch/start');
   monarchOpt.rejectWeb = false;
 });
