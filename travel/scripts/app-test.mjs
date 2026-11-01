@@ -51,7 +51,7 @@ const long = d => d.toLocaleDateString('en-US', { weekday: 'long', month: 'long'
 const med = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const soon = new Date(Date.now() + 5 * 3600e3);                      // the first flight leaves in 5 hours
 const hm = d => { let h = d.getHours(), m = d.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + pad(m) + ' ' + ap; };
-const arrive = new Date(soon.getTime() + 4 * 3600e3);
+const arrive = new Date(soon.getTime() + 4 * 3600e3);              // the hotel's check-in day: after about 3 pm the flight lands tomorrow
 const EMAILS = [
   { id: 'm1', threadId: 't1', from: 'United Airlines <unitedairlines@united.com>', subject: 'Your trip confirmation - KQ7T2M', html:
     `<html><body><table><tr><td>Confirmation number:</td><td>KQ7T2M</td></tr>
