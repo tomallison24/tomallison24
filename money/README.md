@@ -100,7 +100,14 @@ the usual, Trends, cards and rewards, Recurring, search, Export) reads the fixed
 it to that day and month, and a new merchant takes that merchant's own category if the family gave it one. Ipsy's daily check still compares the email with what Money read, not with
 your fix. aOS keeps the newest 400 fixes (`functions/money/api`, `cleanEdits`).
 
-## Monarch's own connector (a test)
+## Monarch's own connector (a test, put away)
+
+**Put away for now (Nov 2026):** on the owner's phone Monarch's sign-in page said "could not authorize,
+please try again" after Allow: it seems to finish only for the AI apps it lists (Claude, ChatGPT,
+Cursor, Gemini CLI). So Money stays with the emails, and the Monarch dropdown in Settings shows only with
+`localStorage['money.monarch.on'] = '1'` (or while a sign-in is being finished). The code and the routes
+below stay, for when Monarch lets apps like aOS in.
+
 
 Monarch has its own MCP connector (`https://api.monarch.com/mcp`), the one its help pages give to Claude,
 ChatGPT and the rest. Money is testing it as a better source than the emails: Monarch's own record of

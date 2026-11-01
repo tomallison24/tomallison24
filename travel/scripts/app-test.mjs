@@ -64,7 +64,7 @@ const EMAILS = [
     `<html><head><script type="application/ld+json">${JSON.stringify({ '@context': 'http://schema.org', '@type': 'LodgingReservation', reservationNumber: '81234567',
       reservationStatus: 'http://schema.org/ReservationConfirmed', reservationFor: { '@type': 'LodgingBusiness', name: 'Courtyard Boston Downtown',
       address: { streetAddress: '275 Tremont St', addressLocality: 'Boston', addressRegion: 'MA', postalCode: '02116', addressCountry: 'US' } },
-      checkinDate: iso(soon), checkoutDate: iso(day(4)) })}</script></head><body>See you soon.</body></html>` },
+      checkinDate: iso(arrive), checkoutDate: iso(day(4)) })}</script></head><body>See you soon.</body></html>` },
   { id: 'm3', threadId: 't3', from: 'National Car Rental <nationalcar@nationalcar.com>', subject: 'National Car Rental Reservation Confirmation', text:
     `Confirmation Number: 1234567890\nPick-Up\n${long(day(1))} 10:00 AM\nBoston Logan International Airport (BOS)\nReturn\n${long(day(4))} 3:00 PM\nBoston Logan International Airport (BOS)\nVehicle Class: Midsize` },
   { id: 'm4', threadId: 't4', from: 'Deals <deals@example.com>', subject: 'Your booking deals', text: 'Fares from $49. Book by Friday.' },
