@@ -136,6 +136,16 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.match(await page.textContent('#g-fav .run-h span'), new RegExp('^' + chips.length + '$'));
   });
 
+  await test(`${label}: a Running Now chip opens its card on its own view, and closing it comes back to Favorites`, async () => {
+    await page.locator('#g-fav .runchip', { hasText: 'Kitchen' }).first().click();
+    await page.waitForSelector('#devWrap.open', { state: 'attached' });
+    assert.equal((await page.textContent('#viewName')).trim(), 'Media', 'the card opens on its own view');
+    await page.locator('#devWrap [data-close]').first().click();
+    await page.waitForFunction(() => !document.querySelector('#devWrap.open'));
+    assert.equal((await page.textContent('#viewName')).trim(), 'Favorites', 'closed: back to Favorites');
+    assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), 'fav');
+  });
+
   await test(`${label}: the 1% chip is the night moon and the 100% chip the sun`, async () => {
     const night = page.locator('#g-fav .chip2.night').first(), full = page.locator('#g-fav .chip2.full').first();
     assert.equal(await night.getAttribute('aria-label'), 'Night, 1%');
