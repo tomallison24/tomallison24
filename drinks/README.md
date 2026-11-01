@@ -14,14 +14,27 @@ standard drinks or "alcohol-free".
   or Alcohol-free, or Not logged. Arrows (or a sideways swipe)
   move a week at a time; the calendar button comes back to this week.
 - **A day**: tap it (or **+** for today) and its sheet opens.
-  - **Your usual drinks** sit there as six tiles: the ones you've had most in
+  - **Your usual drinks** sit there as six tiles (Meals' chips: equal tiles
+    three across, `.opts.tiles`, as are the cocktails and the kinds of drink): the ones you've had most in
     the last four months, then the ABV Tracker's presets (beer, IPA, wine,
     large wine, a shot, a cocktail). One tap logs one, at the time you tapped
     it, with **Undo**.
+  - **Cocktails…** lists cocktails by name, by the spirit in them (Tequila,
+    Vodka, Gin, Rum, Whiskey, Bubbles, Mixed spirits): 29 of them, each with its
+    standard drinks. One tap logs it, with **Undo**. Each is the International
+    Bartenders Association's official recipe (iba-world.com), summed part by
+    part at US bottle strengths, and logged as the whole drink in oz at the
+    strength that gives the recipe's own alcohol (a Margarita: 2.9 oz at 32.6%,
+    1.6 standard drinks). A "top with" is taken as 60 ml, a splash as 30 ml, an
+    espresso as 30 ml; the highballs IBA has no recipe for (gin & tonic, vodka
+    soda, whiskey & coke) are a US single, 1.5 oz, with 4 oz of mixer. The list
+    is `COCKTAILS` in `calc.js`. A bigger pour: tap the drink to change it.
+    Picking **Cocktail** in Something else… offers the same list, to fill the
+    form in.
   - **Something else…** for anything new: pick the kind (it fills in a
     typical size and strength), then the size in oz or ml, the strength, how
     many, and optionally a time, a name and a note. It shows the standard
-    drinks as you go. A cocktail is logged as the spirit in it.
+    drinks as you go. A plain Cocktail is logged as the spirit in it.
   - Tap a drink to change it, or its ✕ to delete it (with **Undo**).
   - A day with nothing logged has **Alcohol-free day**, one tap (tap again to
     take it back). Logging a drink on an alcohol-free day makes it a drinks day.
