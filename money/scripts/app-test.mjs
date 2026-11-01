@@ -124,13 +124,13 @@ async function gmail(route) {
 const aiCalls = [], ideasCalls = [];
 const IDEAS = { ideas: [{ kind: 'move', from: '', merchant: 'Costco', to: 'Groceries', why: 'Costco is mostly groceries: $120 a month.' }, { kind: 'merge', from: 'Auto Maintenance', merchant: '', to: 'Car', why: 'One category for the car.' }] };
 // ---- Monarch's own connector, as the route sees it (server/monarch.js): a stand-in, read-only ----
-const monarchCalls = [];
+const monarchCalls = [], monarchOpt = { rejectWeb: false };
 const MJ = (o, st = 200, h = {}) => new Response(JSON.stringify(o), { status: st, headers: Object.assign({ 'Content-Type': 'application/json' }, h) });
 async function monarchFetch(url, o = {}) {
   const u = String(url);
   if (u === 'https://api.monarch.com/.well-known/oauth-protected-resource/mcp') return MJ({ resource: 'https://api.monarch.com/mcp', authorization_servers: ['https://auth.monarch.test'] });
   if (u === 'https://auth.monarch.test/.well-known/oauth-authorization-server') return MJ({ authorization_endpoint: 'https://auth.monarch.test/authorize', token_endpoint: 'https://auth.monarch.test/token', registration_endpoint: 'https://auth.monarch.test/register' });
-  if (u === 'https://auth.monarch.test/register') return MJ({ client_id: 'aos-client' }, 201);
+  if (u === 'https://auth.monarch.test/register') return monarchOpt.rejectWeb && !JSON.parse(o.body).redirect_uris[0].startsWith('http://127.0.0.1') ? MJ({ error: 'invalid_redirect_uri', error_description: 'Redirect URI is not supported' }, 400) : MJ({ client_id: 'aos-client' }, 201);
   if (u === 'https://auth.monarch.test/token') return new URLSearchParams(o.body).get('code') === 'code-1' ? MJ({ access_token: 'tok-1', refresh_token: 'ref-1', expires_in: 3600, scope: 'read' }) : MJ({ error: 'invalid_grant' }, 400);
   if (u === 'https://api.monarch.com/mcp') {
     const m = JSON.parse(o.body); monarchCalls.push(m.method);
@@ -660,6 +660,37 @@ await test('Monarch’s own connector, a test: Connect Monarch, signed in and ba
   assert.equal(kv.has('money:monarch'), false, 'disconnected: the sign-in is gone from aOS');
   await p.click('#setSheet .okbtn');
   await p.unroute('**/money/api/monarch/start'); await p.unroute('https://auth.monarch.test/**');
+});
+await test('Monarch won’t take this site’s address: it’s explained, Monarch opens, and the address it lands on is pasted back', async () => {
+  monarchOpt.rejectWeb = true; kv.delete('money:monarch:client');
+  await p.route('**/money/api/monarch/start', async route => {
+    const request = new Request('https://site.example/money/api/monarch/start', { method: 'POST', headers: route.request().headers(), body: JSON.stringify({ redirect: 'https://site.example/money/' }) });
+    const res = await onRequest({ request, params: { route: ['monarch', 'start'] }, env: { ACCOUNTS: KV } });
+    return route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
+  });
+  await p.evaluate(() => { window.__opened = []; window.open = u => { window.__opened.push(u); return {}; }; });   // Safari, as far as Money knows
+  await p.click('#setBtn');
+  await p.click('#setBody #monarchIn');
+  await p.waitForSelector('.st-ask');
+  assert.match(await p.locator('.st-ask').innerText(), /won’t load \(127\.0\.0\.1\)/);
+  await p.click('.st-ask .st-yes');
+  const opened = new URL(await p.evaluate(() => window.__opened[0]));
+  assert.equal(opened.searchParams.get('redirect_uri'), 'http://127.0.0.1:53280/callback');
+  await p.waitForSelector('#setBody #monarchPaste');
+  await p.fill('#setBody #monarchPaste', 'not an address');
+  await p.click('#setBody #monarchPasteGo');
+  assert.match(await p.locator('#toastMsg').innerText(), /code= and state=/);
+  await p.fill('#setBody #monarchPaste', 'http://127.0.0.1:53280/callback?code=code-1&state=' + opened.searchParams.get('state'));
+  await p.press('#setBody #monarchPaste', 'Enter');
+  await p.waitForFunction(() => !!localStorage.getItem('money.monarch.test'), null, { timeout: 15000 });
+  assert.ok(JSON.parse(kv.get('money:monarch')).access, 'connected');
+  await p.waitForSelector('#setBody #monarchTest');
+  assert.equal(await p.locator('#setBody #monarchPaste').count(), 0, 'the paste box goes');
+  await p.click('#setBody #monarchOut'); await p.click('#setBody #monarchOut');
+  await p.waitForSelector('#setBody #monarchIn');
+  await p.click('#setSheet .okbtn');
+  await p.unroute('**/money/api/monarch/start');
+  monarchOpt.rejectWeb = false;
 });
 assert.deepEqual(A.errs, []);
 

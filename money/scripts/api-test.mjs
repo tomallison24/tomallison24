@@ -270,16 +270,22 @@ await test('Monarch’s own connector: found, registered, signed in with PKCE, r
   const was = globalThis.fetch;
   const J = (o, st = 200, h = {}) => new Response(JSON.stringify(o), { status: st, headers: Object.assign({ 'Content-Type': 'application/json' }, h) });
   const sha = async v => btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v))))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  let access = 'tok-1';
+  let access = 'tok-1', rejectWeb = false;
   globalThis.fetch = async (url, o = {}) => {
     const u = new URL(String(url));
     if (u.href === 'https://api.monarch.com/.well-known/oauth-protected-resource/mcp') return J({ resource: 'https://api.monarch.com/mcp', authorization_servers: ['https://auth.monarch.test'] });
     if (u.href === 'https://auth.monarch.test/.well-known/oauth-authorization-server') return J({ authorization_endpoint: 'https://auth.monarch.test/authorize', token_endpoint: 'https://auth.monarch.test/token', registration_endpoint: 'https://auth.monarch.test/register', token_endpoint_auth_methods_supported: ['none'], scopes_supported: ['read', 'write'] });
-    if (u.href === 'https://auth.monarch.test/register') { seen.reg = JSON.parse(o.body); return J({ client_id: 'aos-client' }, 201); }
+    if (u.href === 'https://auth.monarch.test/register') {
+      const reg = JSON.parse(o.body);
+      // as the real Monarch answered for this site's own address (Nov 2026): only loopback ones are taken
+      if (rejectWeb && !/^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(reg.redirect_uris[0])) return J({ error: 'invalid_redirect_uri', error_description: 'Redirect URI is not supported' }, 400);
+      seen.reg = reg; return J({ client_id: 'aos-client' }, 201);
+    }
     if (u.href === 'https://auth.monarch.test/token') {
       const p = new URLSearchParams(o.body); seen.tokens++;
       assert.equal(p.get('client_id'), 'aos-client'); assert.equal(p.get('resource'), 'https://api.monarch.com/mcp');
       if (p.get('grant_type') === 'authorization_code') {
+        assert.equal(p.get('redirect_uri'), seen.reg.redirect_uris[0], 'the address it was registered with');
         assert.equal(p.get('code'), 'code-1'); assert.equal(await sha(p.get('code_verifier')), seen.challenge, 'PKCE: the verifier matches the challenge');
         return J({ access_token: 'tok-1', refresh_token: 'ref-1', expires_in: 3600, scope: 'read' });
       }
@@ -335,6 +341,22 @@ await test('Monarch’s own connector: found, registered, signed in with PKCE, r
     assert.ok(!JSON.stringify(status).includes('Book Nook'), 'no transactions kept');
     assert.equal((await call('monarch/disconnect', { token: pat, body: {} })).body.ok, true);
     assert.equal((await call('monarch/test', { token: pat, body: { from: '2026-10-01', to: '2026-10-14' } })).body.error, 'monarch-signin');
+    // Monarch won't take this site's address: aOS registers a loopback one, and the reader pastes the code back
+    db.m.delete('money:monarch:client'); rejectWeb = true; access = 'tok-1';
+    const st2 = (await call('monarch/start', { token: pat, body: { redirect: 'https://site.example/money/' } })).body;
+    assert.equal(st2.paste, true);
+    const au2 = new URL(st2.url);
+    assert.equal(au2.searchParams.get('redirect_uri'), 'http://127.0.0.1:53280/callback');
+    assert.deepEqual([seen.reg.redirect_uris, seen.reg.application_type], [['http://127.0.0.1:53280/callback'], 'native']);
+    seen.challenge = au2.searchParams.get('code_challenge');
+    assert.deepEqual((await call('monarch/finish', { token: pat, body: { code: 'code-1', state: st2.state } })).body, { ok: true, scope: 'read' });
+    assert.equal((await call('monarch/test', { token: pat, body: { from: '2026-10-01', to: '2026-10-14' } })).body.count, 2);
+    // Monarch down: one try, and the error said
+    db.m.delete('money:monarch:client'); let tries = 0;
+    const real = globalThis.fetch; globalThis.fetch = async (url, o) => String(url) === 'https://auth.monarch.test/register' ? (tries++, new Response('', { status: 503 })) : real(url, o);
+    assert.equal((await call('monarch/start', { token: pat, body: { redirect: 'https://site.example/money/' } })).body.error, 'monarch-registration');
+    assert.equal(tries, 1);
+    await call('monarch/disconnect', { token: pat, body: {} });
   } finally { globalThis.fetch = was; }
 });
 await test('removing someone it was shared with takes them off the list; removing the reader deletes it all', async () => {

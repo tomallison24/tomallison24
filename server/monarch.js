@@ -12,7 +12,7 @@
 //
 // Kept in the accounts' Workers KV (server/auth.js lists the keys):
 //   money:monarch          { access, refresh, exp, scope, at, by, client, ep } the sign-in
-//   money:monarch:client   { id, secret, method, redirect, at } aOS's registration with Monarch
+//   money:monarch:client   { id, secret, method, redirect, site, paste, at } aOS's registration with Monarch
 //   money:monarch:meta     { auth, token, register, resource, scopes, at } the endpoints, for a day
 //   money:monarch:auth:<state>  { verifier, by, redirect } a sign-in under way, for 10 minutes
 //   money:monarch:test     the last test's result (counts and field names, no transactions)
@@ -59,30 +59,46 @@ export async function discover(db, f = fetch) {
   return meta;
 }
 
-// aOS registers itself once for its redirect address (Monarch shows the name on its consent screen).
-async function client(db, meta, redirect, f) {
+// aOS registers itself once (Monarch shows the name on its consent screen). Monarch takes only the
+// return addresses of the AI apps it supports and a computer's own (loopback) address, the one
+// desktop apps listen on ("Redirect URI is not supported" for this site's own, Nov 2026). So aOS asks
+// with its own address first, then a loopback one: Monarch then sends the browser to a page that
+// can't open, and the reader pastes that page's address into Money (paste). The code in it is no use
+// to anyone without the PKCE verifier, which never leaves aOS's server.
+export const LOOPBACK = ['http://127.0.0.1:53280/callback', 'http://localhost:53280/callback'];
+async function client(db, meta, site, f) {
   const have = await getJSON(db, 'money:monarch:client');
-  if (have && have.redirect === redirect && have.id) return have;
+  if (have && have.site === site && have.id) return have;
   if (!meta.register) throw fail('monarch-no-registration', 'the authorization server takes no registrations');
   const method = meta.methods.length && !meta.methods.includes('none') ? (meta.methods.includes('client_secret_post') ? 'client_secret_post' : 'client_secret_basic') : 'none';
-  const r = await f(meta.register, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({
-    client_name: 'aOS Money', redirect_uris: [redirect], grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], token_endpoint_auth_method: method, scope: 'read' }) });
-  const j = await json(r);
-  if (!r.ok || !j || !j.client_id) throw fail('monarch-registration', (j && (j.error_description || j.error)) || 'HTTP ' + r.status);
-  const c = { id: j.client_id, secret: j.client_secret || '', method: j.token_endpoint_auth_method || method, redirect, at: Date.now() };
-  await putJSON(db, 'money:monarch:client', c);
-  return c;
+  let last = '';
+  for (const redirect of [site, ...LOOPBACK]) {
+    const loop = redirect !== site;
+    const r = await f(meta.register, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({
+      client_name: 'aOS Money', redirect_uris: [redirect], grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], token_endpoint_auth_method: method, scope: 'read',
+      application_type: loop ? 'native' : 'web' }) });
+    const j = await json(r);
+    if (r.ok && j && j.client_id) {
+      const c = { id: j.client_id, secret: j.client_secret || '', method: j.token_endpoint_auth_method || method, redirect, site, paste: loop, at: Date.now() };
+      await putJSON(db, 'money:monarch:client', c);
+      return c;
+    }
+    last = (j && (j.error_description || j.error)) || 'HTTP ' + r.status;
+    if (r.status >= 500) break;   // Monarch itself is down: no use trying another address
+  }
+  throw fail('monarch-registration', last);
 }
 
-// Step 1: where to send the reader to sign in to Monarch, read-only.
-export async function start(db, me, redirect, f = fetch) {
-  const meta = await discover(db, f), c = await client(db, meta, redirect, f);
+// Step 1: where to send the reader to sign in to Monarch, read-only (paste: they'll bring the address back by hand,
+// so the sign-in waits 30 minutes, not 10).
+export async function start(db, me, site, f = fetch) {
+  const meta = await discover(db, f), c = await client(db, meta, site, f), redirect = c.redirect;
   const verifier = rand(48), state = rand(24);
   const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
-  await putJSON(db, 'money:monarch:auth:' + state, { verifier, by: me.id, redirect }, 600);
+  await putJSON(db, 'money:monarch:auth:' + state, { verifier, by: me.id, redirect }, c.paste ? 1800 : 600);
   const u = new URL(meta.auth);
   u.search = new URLSearchParams({ response_type: 'code', client_id: c.id, redirect_uri: redirect, scope: 'read', state, code_challenge: challenge, code_challenge_method: 'S256', resource: meta.resource }).toString();
-  return { url: u.toString(), state };
+  return { url: u.toString(), state, paste: !!c.paste };
 }
 
 async function tokenCall(meta, c, params, f) {

@@ -65,7 +65,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
-  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', mState: 'money.monarch.state', mCode: 'money.monarch.code', mTest: 'money.monarch.test', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open', cut: KEY + '-scan-cut' };
+  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', mState: 'money.monarch.state', mCode: 'money.monarch.code', mTest: 'money.monarch.test', mPaste: 'money.monarch.paste', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open', cut: KEY + '-scan-cut' };
   // Inside aOS, reading Gmail, sending it to the family's copy and the daily check count as an update under way: aOS
   // doesn't put Money away or start it again until it's done (../home/welcome.js AllisonOS.updating).
   const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
@@ -850,8 +850,27 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try {
       const r = await api('monarch/start', { redirect: MONARCH_BACK() }, true);
       ls.set(K.mState, r.state);
-      toGoogle(r.url);
+      if (!r.paste) { ls.del(K.mPaste); toGoogle(r.url); return; }
+      // Monarch sends apps like aOS back only to a computer's own address: the reader brings it back by hand
+      // (server/monarch.js, LOOPBACK). Monarch opens in Safari, so its address bar is there to copy from.
+      ls.set(K.mPaste, JSON.stringify({ state: r.state, at: Date.now() }));
+      renderSettings();
+      const ok = await AllisonOS.settings.ask({ title: 'Copy the address Monarch opens', yes: 'Open Monarch',
+        text: 'After you say yes in Monarch, it opens a page that won’t load (127.0.0.1). That’s expected: copy that page’s whole address, come back to Money, and paste it under Connected accounts.' });
+      if (!ok) return;
+      if (!window.open(r.url, '_blank')) toGoogle(r.url);
     } catch (err) { toast(monarchSay(err), null, 8000); }
+  }
+  const monarchPasting = () => { try { const p = JSON.parse(ls.get(K.mPaste, 'null')); return p && Date.now() - p.at < 30 * 60e3 ? p : null; } catch { return null; } };
+  // The address Monarch opened, pasted: its code and state go to aOS's server, which holds the verifier.
+  function monarchPasted() {
+    const i = $('monarchPaste'), t = String(i ? i.value : '').trim();
+    let p; try { p = new URL(t).searchParams; } catch { p = new URLSearchParams(t.replace(/^[^?]*\?/, '')); }
+    if (p.get('error')) { ls.del(K.mPaste); toast(p.get('error') === 'access_denied' ? 'Monarch access was declined.' : 'Monarch sign-in didn’t work (' + p.get('error') + ').', null, 6000); renderSettings(); return; }
+    if (!p.get('code') || !p.get('state')) { toast('That isn’t the address Monarch opened: it has code= and state= in it.', null, 6000); return; }
+    ls.del(K.mPaste);
+    ls.set(K.mCode, JSON.stringify({ code: p.get('code'), state: p.get('state'), error: '' }));
+    monarchFinish();
   }
   // Back from Monarch: the code is kept at once (welcome.js sends the page back into aOS as soon as it loads).
   function consumeMonarch() {
@@ -916,6 +935,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const m = st.monarch;
     if (!m) { monarchStatus(); return [S.info({ title: 'Monarch', sub: 'Checking…' })]; }
     if (m.error) return [S.info({ title: 'Monarch', sub: 'Couldn’t check just now.' })];
+    if (!m.connected && monarchPasting()) return [
+      S.info({ title: 'Finish connecting Monarch', sub: 'Paste the whole address of the page Monarch opened.' }),
+      S.raw('<div class="frow"><input class="txt" id="monarchPaste" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="http://127.0.0.1:53280/callback?code=…" aria-label="The address Monarch opened"><button class="chip" type="button" id="monarchPasteGo">Use it</button></div>', { id: 'monarchPasteRow' }),
+      S.action({ id: 'monarchIn', icon: 'link', title: 'Start again', sub: 'Opens Monarch’s sign-in again.' }),
+    ];
     if (!m.connected) return [S.action({ id: 'monarchIn', icon: 'link', title: 'Connect Monarch', sub: 'A read-only test: Money reads your transactions straight from Monarch.' })];
     let t = null; try { t = JSON.parse(ls.get(K.mTest, 'null')); } catch {}
     return [
@@ -1219,6 +1243,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); sync(); };
   const setBody = $('setBody');
   if (window.aosDesign) aosDesign.bind(setBody);
+  setBody.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'monarchPaste') { e.preventDefault(); monarchPasted(); } });
   setBody.addEventListener('click', async e => {
     const t = e.target;
     if (t.closest('#signIn')) {
@@ -1228,6 +1253,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     if (t.closest('#gmailIn')) { signIn(); return; }
     if (t.closest('#monarchIn')) { monarchIn(); return; }
+    if (t.closest('#monarchPasteGo')) { monarchPasted(); return; }
     if (t.closest('#monarchTest')) { monarchTest(); return; }
     const mo = t.closest('#monarchOut');
     if (mo) { if (!AllisonOS.settings.armed(mo, 'Tap again to disconnect')) return; try { await api('monarch/disconnect', {}, true); ls.del(K.mTest); toast('Monarch disconnected.'); } catch (err) { toast(monarchSay(err)); } st.monarch = null; renderSettings(); return; }
