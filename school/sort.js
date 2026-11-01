@@ -89,7 +89,7 @@
   function parseDates(text, ref, { relative = true } = {}) {
     const out = [], seen = new Set(), s = String(text || '');
     const push = (d, end, at) => { if (!d || seen.has(d + (end || ''))) return; seen.add(d + (end || '')); out.push({ d, end: end && end > d ? end : '', time: '', at }); };
-    const re = new RegExp('\\b' + MONTH_RE + '\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s*(20\\d\\d))?(?:\\s*(?:[–—-]|to|through|thru)\\s*(?:' + MONTH_RE + '\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s*(20\\d\\d))?)?', 'gi');
+    const re = new RegExp('\\b' + MONTH_RE + '\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s*(20\\d\\d))?(?:\\s*(?:[–—-]|to|through|thru)\\s*(?:' + MONTH_RE + '\\s+)?(\\d{1,2})(?!(?:st|nd|rd|th)?\\s*(?:(?:[–-]|to|and|&)\\s*\\d{1,2}(?:st|nd|rd|th)?\\s*)?grade)(?:st|nd|rd|th)?\\b(?:,?\\s*(20\\d\\d))?)?', 'gi');   // "Nov 4 – 3rd grade …" is Nov 4, not a range
     for (const m of s.matchAll(re)) {
       const mo = MON[m[1].toLowerCase().slice(0, m[1].toLowerCase().startsWith('sept') ? 4 : 3)], d1 = +m[2];
       if (mo == null || d1 < 1 || d1 > 31) continue;
@@ -121,12 +121,19 @@
   // ---------------------------------------------------------------------
   // Grades: "Kindergarten" is 0; which grades a post or a group names
   // ---------------------------------------------------------------------
+  // Pre-K (and TK, preschool) is -1: not Kindergarten, though "Pre-Kindergarten" has the word in it.
+  // "Middle school" is 6 to 8. A post or a line that names no grade names none (it's kept for everyone).
   const ORD = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8 };
+  const PREK = /\b(?:pre[- ]?k(?:inder(?:garten)?)?|t-?k|transitional kindergarten|pre[- ]?school(?:ers?)?)\b/i, PREK_ALL = new RegExp(PREK.source, 'gi');
   function gradesIn(s) {
-    const g = new Set(), t = String(s || '');
+    const g = new Set();
+    let t = String(s || '');
     const range = (a, b) => { for (let i = Math.min(a, b); i <= Math.max(a, b) && i <= 12; i++) g.add(i); };
+    if (PREK.test(t)) { g.add(-1); t = t.replace(PREK_ALL, ' '); }
     for (const m of t.matchAll(/\bK\s*[–-]\s*(\d{1,2})\b/g)) range(0, +m[1]);
-    if (/\bkinder(garten)?\b/i.test(t)) g.add(0);
+    for (const m of t.matchAll(/\bK\s*(?:\/|&|and)\s*(\d{1,2})(?:st|nd|rd|th)?\b/g)) { g.add(0); g.add(+m[1]); }
+    if (/\bkinder(?:gart(?:en|ner|ener))?s?\b/i.test(t) || /\b[Gg]rades?\s+K\b|\bK\s+(?:students|families|parents|class(?:es|rooms?)?|teachers|friends|kids|scholars)\b/.test(t)) g.add(0);
+    if (/\bmiddle[- ]school(?:ers?)?\b/i.test(t)) range(6, 8);
     for (const m of t.matchAll(/\bgrades?\s*(\d{1,2})(?:\s*(?:[–-]|to)\s*(\d{1,2}))?/gi)) m[2] ? range(+m[1], +m[2]) : g.add(+m[1]);
     for (const m of t.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)\s*(?:[–-]|to)\s*(\d{1,2})(?:st|nd|rd|th)\b/gi)) range(+m[1], +m[2]);
     for (const m of t.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)\b(?!\s*(?:of|day|annual|place|percentile))/gi)) {
@@ -135,6 +142,21 @@
     }
     for (const [w, n] of Object.entries(ORD)) if (new RegExp('\\b' + w + '[- ]grade', 'i').test(t)) g.add(n);
     return g;
+  }
+  // Whether something naming these grades is for this grade: yes when it names none, or no grade is known.
+  const forGrade = (named, grade) => grade == null || !named.size || named.has(grade);
+  // The dates a post gives for this grade: "Picture day: Kindergarten Nov 3, 1st grade Nov 4" keeps Nov 3. A
+  // date said only on lines that name other grades is left out; one said anywhere else is kept.
+  function datesFor(x, grade) {
+    const ds = x.dates || [];
+    if (grade == null || ds.length < 2 || !gradesIn(x.body || '').size) return ds;
+    const theirs = new Set(), ours = new Set();
+    for (const line of String(x.body || '').split(/\n|[.!?;]\s+/)) {
+      const on = parseDates(line, x.at); if (!on.length) continue;
+      const to = forGrade(gradesIn(line), grade) ? ours : theirs;
+      for (const d of on) to.add(d.d);
+    }
+    return ds.filter(d => !theirs.has(d.d) || ours.has(d.d));
   }
   const isGradeGroup = name => /^(kindergarten|\d{1,2}(st|nd|rd|th) grade|grade \d{1,2})$/i.test(String(name).trim());
   const gradeOfGroup = name => { const s = String(name).trim(); if (/^kindergarten$/i.test(s)) return 0; const m = /(\d{1,2})/.exec(s); return m ? +m[1] : null; };
@@ -250,24 +272,29 @@
     // a long newsletter (Tiger Times): its Upcoming Events list, and the rest as it is
     const isNews = /newsletter|times\b|bulletin|update/i.test(subject);   // kept whole (24,000 letters): each event's own section is read from it
     const x = item(base, { title: subject.replace(/\s*\d{1,2}\/\d{1,2}\/20\d\d\s*$/, '') || 'From school', body: text, kind: isNews ? 'newsletter' : undefined, long: isNews });
-    if (x.kind === 'newsletter') { x.events = eventsList(text, base.date); x.dates = []; }
+    if (x.kind === 'newsletter') { x.events = eventsList(text, base.date); x.dates = []; x.evv = 2; }
     return [x];
   }
   // A newsletter's list of dates: lines that start with a date ("October 27–29 👻 – Boo Buddies"), or
   // "Winter Break: December 21 - January 1".
-  const DATE_LEAD = new RegExp('^' + MONTH_RE + '\\s+\\d{1,2}(?:st|nd|rd|th)?(?:\\s*(?:[–—-]|to)\\s*(?:' + MONTH_RE + '\\s+)?\\d{1,2}(?:st|nd|rd|th)?)?(?:,?\\s*20\\d\\d)?', 'i');
+  const DATE_LEAD = new RegExp('^' + MONTH_RE + '\\s+\\d{1,2}(?:st|nd|rd|th)?(?:\\s*(?:[–—-]|to)\\s*(?:' + MONTH_RE + '\\s+)?\\d{1,2}(?!(?:st|nd|rd|th)?\\s*(?:(?:[–-]|to|and|&)\\s*\\d{1,2}(?:st|nd|rd|th)?\\s*)?grade)(?:st|nd|rd|th)?)?(?:,?\\s*20\\d\\d)?', 'i');
+  // Each date keeps the grades it's for (g): the ones its own line names, else the ones a short heading
+  // over it names ("**5th Grade**", until the next heading or paragraph); none when nothing says.
   function eventsList(text, ref) {
     const out = [], t = clean(text).text;
+    let ctx = [];
     for (const line of t.split('\n')) {
-      const s = line.replace(/^[\s\-•*]+/, '').trim(); if (!s || s.length > 220) continue;
+      const s = line.replace(/^[\s\-•*]+/, '').trim(); if (!s) continue;
+      if (s.length > 220) { ctx = []; continue; }
       let what = '', ds = [];
       const lead = new RegExp('^' + MONTH_RE + '\\s+\\d', 'i');
       if (lead.test(s)) { ds = parseDates(s, ref, { relative: false }); what = s.replace(DATE_LEAD, '').replace(/^[^\p{L}\p{N}]+/u, ''); }
       else { const m = /^([A-Z][\w' ]{2,40}?):\s*(.+)$/.exec(s); if (m && new RegExp('^' + MONTH_RE + '\\s+\\d', 'i').test(m[2])) { ds = parseDates(m[2], ref, { relative: false }); what = m[1]; } }
-      if (!ds.length || !what || what === s) continue;
+      if (!ds.length || !what || what === s) { ctx = s.length <= 80 ? [...gradesIn(s)] : []; continue; }
       what = what.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').replace(/^\s*[–—-]\s*/, '').replace(/\s+/g, ' ').trim();
       if (!what) continue;
-      out.push({ d: ds[0].d, end: ds[0].end, time: timeOf(what), what: what.slice(0, 140) });
+      const own = [...gradesIn(what)], g = own.length ? own : ctx;
+      out.push(Object.assign({ d: ds[0].d, end: ds[0].end, time: timeOf(what), what: what.slice(0, 140) }, g.length ? { g } : {}));
     }
     return out.filter((e, i, a) => a.findIndex(y => y.d === e.d && norm(y.what) === norm(e.what)) === i);
   }
@@ -320,7 +347,7 @@
   // School days, and the day the top card is about
   // ---------------------------------------------------------------------
   const OFF_WORDS = /\bno school\b|\bbreak\b|relief friday|\bclosed\b|\bno classes\b|teacher work ?day/i;
-  function daysOff(items) {
+  function daysOff(items, grade = null) {
     const off = new Map();
     const add = (d, end, why) => { let x = d; for (let i = 0; i < 40; i++) { if (!off.has(x)) off.set(x, why); if (!end || x >= end) break; x = addDays(x, 1); } };
     for (const x of items) {
@@ -329,11 +356,20 @@
         const why = shortWhy(x.title);
         for (const d of x.dates || []) add(d.d, d.end, why);
       }
-      for (const e of x.events || []) if (OFF_WORDS.test(e.what)) add(e.d, e.end, shortWhy(e.what));
+      for (const e of eventsOf(x)) if (OFF_WORDS.test(e.what) && forGrade(gradesOfEvent(e), grade)) add(e.d, e.end, shortWhy(e.what));
     }
     return off;
   }
   const shortWhy = s => String(s).replace(/\(?\bno school\b\)?/ig, '').replace(new RegExp('\\b' + MONTH_RE + '\\s+\\d{1,2}(?:st|nd|rd|th)?\\b', 'gi'), '').replace(/^[\s\-–—:·,!]+|[\s\-–—:·,!]+$/g, '').replace(/\s+/g, ' ').slice(0, 60) || 'No school';
+  // A newsletter's dates; one read before they kept their grades (evv 2) is read again from its words, once
+  const relisted = new Map();
+  function eventsOf(x) {
+    if (x.kind !== 'newsletter' || x.evv === 2 || !x.body) return x.events || [];
+    const key = x.id + '|' + x.body.length;
+    if (!relisted.has(key)) relisted.set(key, eventsList(x.body, x.at));
+    return relisted.get(key);
+  }
+  const gradesOfEvent = e => e.g ? new Set(e.g) : gradesIn(e.what);
   const isSchoolDay = (d, off) => dow(d) > 0 && dow(d) < 6 && !off.has(d);
   const mins = hhmm => { const [h, m] = String(hhmm || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
   // The day the top card is about: today until school is out, then the next school day; and the days
@@ -389,7 +425,8 @@
     const today = ymd(now), soon = addDays(today, 14);
     const all = items.map(x => Object.assign({}, x, { aud: moved[x.id] || audience(x, me) }));
     const mine = all.filter(x => x.aud !== 'other');
-    const off = daysOff(mine);
+    const grade = me.grade == null || me.grade === '' ? null : +me.grade;
+    const off = daysOff(mine, grade);
     const focus = focusDay(now, off, me);
     // RSVPs already answered (a "You RSVP'd" email for the same event) leave Needs you
     const answered = new Set(all.filter(x => x.rsvp).map(x => norm(x.title)));
@@ -404,8 +441,8 @@
     const dated = [];
     for (const x of mine) {
       if (x.aud === 'record' || x.kind === 'message') continue;
-      if (DATED[x.kind]) for (const d of x.dates || []) dated.push({ id: x.id, d: d.d, end: d.end, time: d.time, title: x.title, kind: x.kind });
-      for (const e of x.events || []) dated.push({ id: x.id, d: e.d, end: e.end, time: e.time, title: e.what, kind: OFF_WORDS.test(e.what) ? 'noschool' : WEAR.test(e.what) ? 'wear' : 'event', from: x.title });
+      if (DATED[x.kind]) for (const d of datesFor(x, grade)) dated.push({ id: x.id, d: d.d, end: d.end, time: d.time, title: x.title, kind: x.kind });
+      for (const e of eventsOf(x)) if (forGrade(gradesOfEvent(e), grade)) dated.push({ id: x.id, d: e.d, end: e.end, time: e.time, title: e.what, kind: OFF_WORDS.test(e.what) ? 'noschool' : WEAR.test(e.what) ? 'wear' : 'event', from: x.title });
     }
     const uniq = list => list.filter((e, i, a) => a.findIndex(y => y.d === e.d && norm(y.title) === norm(e.title)) === i);
     const coming = uniq(dated.filter(e => (e.end || e.d) >= today && e.d <= soon && e.kind !== 'post' || (e.kind === 'post' && e.d >= today && e.d <= soon && !/newsletter/i.test(e.title))))
