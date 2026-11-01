@@ -210,18 +210,19 @@ svg.b{stroke-width:2.2}
 .dtotal b{color:var(--text)}
 .dtotal.over b{color:var(--flag)}
 .dempty{padding:16px;font-size:14px;color:var(--faint);text-align:center}
-.usual{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.utile{display:flex;align-items:center;gap:10px;min-height:60px;padding:10px 12px;border-radius:18px;text-align:left;color:var(--text);
-  background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
-.utile:active{transform:scale(.96)}
-.utile .ut{flex:1;min-width:0;font-size:15px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.utile .ut small{display:block;font-size:12px;font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums}
-.utile svg{width:18px;height:18px;color:var(--icon)}
 .label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:4px 8px -6px}
 .opts{display:flex;flex-wrap:wrap;gap:8px;padding:0 4px}
 .opt{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);
   background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);transition:transform .18s var(--ease)}
 .opt:active{transform:scale(.93)}
+/* Meals' tiles: every choice an equal tile, three across */
+.opts.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.opts.tiles .opt{justify-content:center;height:auto;min-height:44px;padding:6px;border-radius:14px;text-align:center;line-height:1.2}
+/* a drink to log: its name (with the kind's dot) over its size, or its standard drinks */
+.opts.tiles .opt:has(small){flex-direction:column;gap:2px;min-height:56px;color:var(--text);font-weight:600}
+.opts.tiles .opt .on{display:block;max-width:100%}
+.opts.tiles .opt .on .cdot{display:inline-block;width:8px;height:8px;margin-right:5px;vertical-align:.1em}
+.opts.tiles .opt small{font-size:12px;font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:0}
 .opt[aria-checked="true"]{color:var(--text);font-weight:600;background:var(--gb-shine),color-mix(in srgb,hsl(var(--h) 80% 55%) 26%,transparent);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,hsl(var(--h) 80% 55%) 60%,transparent),inset 0 1px 1px var(--lgs-rim)}
 .frow{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--hair-2);font-size:15px;min-height:52px}
@@ -243,8 +244,6 @@ svg.b{stroke-width:2.2}
 .calc b{color:var(--text)}
 .linkbtn{align-self:center;min-height:44px;padding:0 14px;color:var(--accent-text);font-weight:600;font-size:15px}
 .links{display:flex;justify-content:center;flex-wrap:wrap;gap:4px}
-.usual.ck{grid-template-columns:minmax(0,1fr)}
-.usual.ck .utile{min-height:54px}
 .cknote{font-size:13px;color:var(--muted);margin:0 8px;line-height:1.35}
 
 /* ---- Analysis ---- */
@@ -557,9 +556,7 @@ body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-se
 
 /* a day's sheet: usual drinks, the form */
 .erow.editing{background:color-mix(in srgb,var(--mc-mustard) 24%,transparent)}
-.utile,.opt{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
-.utile .ut{font-weight:600}
-.utile svg{color:var(--icon)}
+.opt{background:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
 .opt{font-weight:600;letter-spacing:.02em}
 .opt[aria-checked="true"]{color:var(--text);background:color-mix(in srgb,var(--kc,var(--faint)) 26%,var(--mc-card));box-shadow:inset 0 0 0 2px var(--kc,var(--faint))}
 .sheet .rgroup{background:var(--lgs-field);border-radius:20px}

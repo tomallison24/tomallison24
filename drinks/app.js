@@ -258,16 +258,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (f) html += formHtml();
     else if (st.cocktails) html += cocktailsHtml();
     else {
-      html += '<p class="label">' + (list.length ? 'Add another' : 'Had a drink?') + '</p><div class="usual" id="usual">' + usual().map((u, i) => '<button class="utile" type="button" data-usual="' + i + '" data-c="' + esc(u.cat) + '" aria-label="Add ' + esc(u.name + ', ' + sizeOf(u) + ', ' + u.abv + '%') + '"><i class="cdot"></i><span class="ut">' + nameHtml(u.name) + '<small>' + esc(sizeOf(u) + ' · ' + u.abv + '%') + '</small></span>' + ICON.plus + '</button>').join('') + '</div>'
+      html += '<p class="label">' + (list.length ? 'Add another' : 'Had a drink?') + '</p><div class="opts tiles" id="usual">' + usual().map((u, i) => chip('data-usual', i, u.cat, nameHtml(u.name), sizeOf(u) + ' · ' + u.abv + '%', 'Add ' + u.name + ', ' + sizeOf(u) + ', ' + u.abv + '%')).join('') + '</div>'
         + '<div class="links"><button class="linkbtn" type="button" id="cocktails">Cocktails…</button><button class="linkbtn" type="button" id="somethingElse">Something else…</button></div>';
     }
     $('dayBody').innerHTML = html;
   }
+  // A chip, as Meals' planner has them: an .opt in .opts.tiles, three across; here the name (with the kind's dot, unless they're all one kind) over one line.
+  const chip = (attr, i, cat, name, sub, label, dot = true) => '<button class="opt" type="button" ' + attr + '="' + i + '" data-c="' + esc(cat) + '" aria-label="' + esc(label) + '"><span class="on">' + (dot ? '<i class="cdot"></i>' : '') + name + '</span><small>' + esc(sub) + '</small></button>';
   // Cocktails by name (calc.js), by the spirit in them: one tap logs the recipe's own standard drinks.
   function cocktailsHtml() {
     const bases = [...new Set(C.COCKTAILS.map(c => c.base))];
+    const drinks = c => { const n = C.round(C.std(Object.assign({ qty: 1 }, c)), 1); return f1(n) + (n === 1 ? ' drink' : ' drinks'); };
     return '<p class="label">Cocktails</p><p class="cknote">Each one is the classic recipe’s standard drinks. A bigger pour? Tap it in your list to change it.</p>'
-      + bases.map(b => '<p class="label">' + esc(b) + '</p><div class="usual ck">' + C.COCKTAILS.map((c, i) => c.base !== b ? '' : '<button class="utile" type="button" data-cocktail="' + i + '" data-c="cocktail" aria-label="Add ' + esc(c.name + ', ' + f1(C.std(Object.assign({ qty: 1 }, c))) + ' standard drinks') + '"><i class="cdot"></i><span class="ut">' + esc(c.name) + '<small>' + esc(f1(C.std(Object.assign({ qty: 1 }, c))) + ' standard ' + (C.round(C.std(Object.assign({ qty: 1 }, c)), 1) === 1 ? 'drink' : 'drinks')) + '</small></span>' + ICON.plus + '</button>').join('') + '</div>').join('')
+      + bases.map(b => '<p class="label">' + esc(b) + '</p><div class="opts tiles">' + C.COCKTAILS.map((c, i) => c.base !== b ? '' : chip('data-cocktail', i, 'cocktail', esc(c.name), drinks(c), 'Add ' + c.name + ', ' + drinks(c).replace('drink', 'standard drink'), false)).join('') + '</div>').join('')
       + '<div class="links"><button class="linkbtn" type="button" id="ckBack">Back</button><button class="linkbtn" type="button" id="somethingElse">Something else…</button></div>';
   }
   function blankForm(cat) {
@@ -278,7 +281,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const f = st.form, sizes = withVal(C.SIZES[f.unit], f.vol), abvs = withVal(C.ABVS, f.abv);
     const sd = C.std({ vol: f.vol, unit: f.unit, abv: f.abv, qty: f.qty });
     return '<p class="label">' + (f.editing ? 'Change this drink' : 'Something else') + '</p>'
-      + '<div class="opts" role="radiogroup" aria-label="Kind of drink">' + C.CATS.map(c => '<button class="opt" type="button" role="radio" data-c="' + c.id + '" data-cat="' + c.id + '" aria-checked="' + (f.cat === c.id) + '"><i class="cdot"></i>' + esc(c.name) + '</button>').join('') + '</div>'
+      + '<div class="opts tiles" role="radiogroup" aria-label="Kind of drink">' + C.CATS.map(c => '<button class="opt" type="button" role="radio" data-c="' + c.id + '" data-cat="' + c.id + '" aria-checked="' + (f.cat === c.id) + '"><i class="cdot"></i>' + esc(c.name) + '</button>').join('') + '</div>'
       + '<div class="rgroup">'
       + (f.cat === 'cocktail' ? '<div class="frow"><label for="fCocktail">Cocktail</label><select id="fCocktail"><option value="">Pick one</option>'
         + [...new Set(C.COCKTAILS.map(c => c.base))].map(b => '<optgroup label="' + esc(b) + '">' + C.COCKTAILS.map((c, i) => c.base !== b ? '' : '<option value="' + i + '"' + (f.name === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</optgroup>').join('')

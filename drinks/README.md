@@ -14,7 +14,8 @@ standard drinks or "alcohol-free".
   or Alcohol-free, or Not logged. Arrows (or a sideways swipe)
   move a week at a time; the calendar button comes back to this week.
 - **A day**: tap it (or **+** for today) and its sheet opens.
-  - **Your usual drinks** sit there as six tiles: the ones you've had most in
+  - **Your usual drinks** sit there as six tiles (Meals' chips: equal tiles
+    three across, `.opts.tiles`, as are the cocktails and the kinds of drink): the ones you've had most in
     the last four months, then the ABV Tracker's presets (beer, IPA, wine,
     large wine, a shot, a cocktail). One tap logs one, at the time you tapped
     it, with **Undo**.

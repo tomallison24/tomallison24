@@ -187,11 +187,11 @@ await test('today’s sheet: your usual drinks as tiles; one tap logs one, now, 
   await page.click('#fab');
   await page.waitForSelector('#daySheet:not([hidden])');
   assert.match(await page.textContent('#dayLbl'), /^Today/);
-  assert.equal(await page.$$eval('.utile', e => e.length), 6, 'the presets until you have usuals');
-  assert.match(await page.textContent('.utile[data-usual="0"]'), /Beer12 oz · 5%/);
+  assert.equal(await page.$$eval('[data-usual]', e => e.length), 6, 'the presets until you have usuals');
+  assert.match(await page.textContent('[data-usual="0"]'), /Beer12 oz · 5%/);
   await shot(page, '02-day-empty');
   const before = await page.evaluate(() => new Date().getHours() * 60 + new Date().getMinutes());
-  await page.click('.utile[data-usual="0"]');
+  await page.click('[data-usual="0"]');
   assert.match(await page.textContent('#toastMsg'), /Added Beer/);
   let d = await local(page);
   assert.equal(d.entries.length, 1);
@@ -199,8 +199,8 @@ await test('today’s sheet: your usual drinks as tiles; one tap logs one, now, 
   assert.ok(Math.abs(h * 60 + m - before) <= 1, 'logged at the time it was tapped');
   await page.click('#toastAct');
   d = await local(page); assert.equal(d.entries.length, 0, 'Undo takes it back');
-  await page.click('.utile[data-usual="0"]');
-  await page.click('.utile[data-usual="2"]');   // Wine
+  await page.click('[data-usual="0"]');
+  await page.click('[data-usual="2"]');   // Wine
   assert.match(await page.textContent('#dList'), /Beer.*Wine.*Total2\.1 standard drinks/);
 });
 
@@ -283,7 +283,7 @@ await test('a day with nothing logged: alcohol-free in one tap (tap again to und
   assert.deepEqual(d.days.map(x => x.id + ':' + x.status).sort(), [TWO_AGO + ':af', YESTERDAY + ':af']);
   // Logging a drink on an alcohol-free day makes it a drinks day.
   await page.evaluate(d => window.__drinks.openDay(d), TWO_AGO);
-  await page.click('.utile[data-usual="0"]');
+  await page.click('[data-usual="0"]');
   assert.ok(!(await local(page)).days.some(x => x.id === TWO_AGO));
   await page.click('#toastAct');   // undo the drink; the mark stays gone
   await page.click('[data-mark="af"]');
@@ -353,7 +353,7 @@ await test('a second phone, signed in: gets the log; a delete there reaches the 
   await sp.page.goto(BASE + '/drinks/');
   await sp.page.waitForFunction(() => window.__drinks && window.__drinks.state() === 'ok');
   assert.deepEqual((await local(sp.page)).entries, [], 'Sam’s phone gets none of Tom’s');
-  await sp.page.click('#fab'); await sp.page.click('.utile[data-usual="5"]'); await sp.page.click('#daySheet .okbtn');
+  await sp.page.click('#fab'); await sp.page.click('[data-usual="5"]'); await sp.page.click('#daySheet .okbtn');
   await syncNow(sp.page);
   assert.equal(mine(SAMQ).entries.length, 1); assert.equal(mine().entries.length, 2, 'Tom’s are still his two');
   await syncNow(page);
@@ -436,7 +436,7 @@ await test('signed out: works on the phone, says so, and offers Face ID; nothing
   const before = sheetCalls.length;
   await p.page.goto(BASE + '/drinks/');
   await p.page.waitForFunction(() => window.__drinks && window.__drinks.state() === 'signin');
-  await p.page.click('#fab'); await p.page.click('.utile[data-usual="4"]'); await p.page.click('#daySheet .okbtn');
+  await p.page.click('#fab'); await p.page.click('[data-usual="4"]'); await p.page.click('#daySheet .okbtn');
   assert.equal((await local(p.page)).entries.length, 1);
   await p.page.click('#moreBtn');
   assert.match(await p.page.textContent('#acct'), /On this phone only.*Sign in to sync your log\./);
@@ -454,7 +454,7 @@ await test('the owner hasn’t set the Sheet up yet: says so, and the log stays 
   const p = await newPage('light', { 'aos.session': SAM_SESSION, 'allison-drinks-v1-who': 'KID1' });
   await p.page.goto(BASE + '/drinks/');
   await p.page.waitForFunction(() => window.__drinks && window.__drinks.state() === 'error');
-  await p.page.click('#fab'); await p.page.click('.utile[data-usual="4"]');
+  await p.page.click('#fab'); await p.page.click('[data-usual="4"]');
   assert.ok((await local(p.page)).entries.length >= 1);
   slowNoSheet = true;   // More opened while the next sync is still on its way: the last outcome, and why
   await p.page.click('#daySheet .okbtn');
@@ -727,7 +727,7 @@ await test('the family’s Google Sheet: syncs by itself, with no Sheet row or s
   await sp.click('#moreSheet .iconbtn[data-close]'); await sp.waitForSelector('#moreSheet', { state: 'hidden' });
   await sp.click('#fab'); await sp.waitForSelector('#daySheet:not([hidden])');
   const known = new Set(sheet.tab('Log').slice(1).map(r => r[COL.EntryID]));
-  await sp.click('.utile[data-usual="0"]');
+  await sp.click('[data-usual="0"]');
   await until(() => sheet.tab('Log').slice(1).some(r => !known.has(r[COL.EntryID])), 'the new drink in the Sheet');
   const fresh = sheet.tab('Log').slice(1).filter(r => !known.has(r[COL.EntryID]));
   assert.equal(fresh.length, 1, 'the drink logged here shows up in the Sheet by itself'); assert.equal(fresh[0][COL.Who], 'Tom');
@@ -945,7 +945,7 @@ await test('from the old address, signed in: every key is Drinks’ own, the syn
   const P = await newPage('light', { 'aos.session': SESSION, 'aos.seen': JSON.stringify({ drinks: '999' }) });
   apiCalls.length = 0; const s0 = sheetCalls.length;
   await P.page.goto(BASE + '/drinksvintage/'); await P.page.waitForFunction(() => window.__drinks && window.__drinks.state() === 'ok');
-  await P.page.click('#fab'); await P.page.click('.utile[data-usual="1"]'); await P.page.click('#daySheet .okbtn');
+  await P.page.click('#fab'); await P.page.click('[data-usual="1"]'); await P.page.click('#daySheet .okbtn');
   await syncNow(P.page);
   const keys = await P.page.evaluate(() => Object.keys(localStorage));
   assert.ok(keys.includes('allison-drinks-v1'), keys.join());
