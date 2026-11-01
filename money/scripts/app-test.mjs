@@ -124,13 +124,13 @@ async function gmail(route) {
 const aiCalls = [], ideasCalls = [];
 const IDEAS = { ideas: [{ kind: 'move', from: '', merchant: 'Costco', to: 'Groceries', why: 'Costco is mostly groceries: $120 a month.' }, { kind: 'merge', from: 'Auto Maintenance', merchant: '', to: 'Car', why: 'One category for the car.' }] };
 // ---- Monarch's own connector, as the route sees it (server/monarch.js): a stand-in, read-only ----
-const monarchCalls = [];
+const monarchCalls = [], monarchOpt = { rejectWeb: false };
 const MJ = (o, st = 200, h = {}) => new Response(JSON.stringify(o), { status: st, headers: Object.assign({ 'Content-Type': 'application/json' }, h) });
 async function monarchFetch(url, o = {}) {
   const u = String(url);
   if (u === 'https://api.monarch.com/.well-known/oauth-protected-resource/mcp') return MJ({ resource: 'https://api.monarch.com/mcp', authorization_servers: ['https://auth.monarch.test'] });
   if (u === 'https://auth.monarch.test/.well-known/oauth-authorization-server') return MJ({ authorization_endpoint: 'https://auth.monarch.test/authorize', token_endpoint: 'https://auth.monarch.test/token', registration_endpoint: 'https://auth.monarch.test/register' });
-  if (u === 'https://auth.monarch.test/register') return MJ({ client_id: 'aos-client' }, 201);
+  if (u === 'https://auth.monarch.test/register') return monarchOpt.rejectWeb && !JSON.parse(o.body).redirect_uris[0].startsWith('http://127.0.0.1') ? MJ({ error: 'invalid_redirect_uri', error_description: 'Redirect URI is not supported' }, 400) : MJ({ client_id: 'aos-client' }, 201);
   if (u === 'https://auth.monarch.test/token') return new URLSearchParams(o.body).get('code') === 'code-1' ? MJ({ access_token: 'tok-1', refresh_token: 'ref-1', expires_in: 3600, scope: 'read' }) : MJ({ error: 'invalid_grant' }, 400);
   if (u === 'https://api.monarch.com/mcp') {
     const m = JSON.parse(o.body); monarchCalls.push(m.method);
@@ -176,6 +176,8 @@ async function api(route) {
 // ---- the browser ----
 const browser = await chromium.launch();
 let shot = 0;
+// Settings' sections are dropdowns (home/settings.js, fold): opened, to read and tap what's in them
+const unfold = pg => pg.evaluate(() => document.querySelectorAll('#setBody details.st-fold:not([open]) > summary').forEach(x => x.click()));
 const snap = async (p, name) => { if (SHOTS) await p.screenshot({ path: path.join(SHOTS, pad(++shot) + '-' + name + '.png'), fullPage: true }); };
 async function phone({ sess, data, token, look = 'vintage', scheme = 'light', ls = {} } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, timezoneId: TZ, colorScheme: scheme, serviceWorkers: 'block' });
@@ -428,6 +430,12 @@ await test('a card’s rate in Settings changes what it earned', async () => {
   const before = await p.evaluate(() => window.__money.D.tx.length);
   await p.click('#setBtn');
   await p.waitForSelector('#setSheet:not([hidden])');
+  // every section a dropdown, closed, with how it stands on its row
+  assert.ok(await p.locator('#setBody details.st-fold').count() >= 6);
+  assert.equal(await p.locator('#setBody details.st-fold[open]').count(), 0, 'all closed at first, signed in');
+  assert.equal(await p.locator('#setBody #monarchSec > summary').getAttribute('data-value') !== null, true, 'Monarch is a dropdown of its own');
+  if (SHOTS) await p.screenshot({ path: path.join(SHOTS, pad(++shot) + '-settings-folded.png') });
+  await unfold(p);
   const s = await p.locator('#setBody').innerText();
   assert.match(s, /You read Monarch’s emails for the family/); assert.match(s, /Gmail\n.*, read-only\./); assert.match(s, /Card rewards/i);
   await snap(p, 'settings');
@@ -501,7 +509,7 @@ await test('Ipsy’s ideas: once a month on its own; Accept, No thanks, asked ag
   assert.doesNotMatch(await mainText(p), /Ipsy’s ideas/i, 'both answered');
   assert.ok((await asSeen()).some(x => x.cat === 'Auto Maintenance'), 'said no: nothing changed');
   // asked again, from Settings: what it learns from goes with it, and what was answered isn't suggested again
-  await p.click('#setBtn');
+  await p.click('#setBtn'); await unfold(p);
   await p.waitForSelector('#setBody #ideasNow');
   const s = await p.locator('#setBody').innerText();
   assert.match(s, /Corner Diner → Eating out/); assert.match(s, /Costco → Groceries/);
@@ -511,7 +519,7 @@ await test('Ipsy’s ideas: once a month on its own; Accept, No thanks, asked ag
   assert.equal(ideasCalls.length, 2);
   assert.ok(last.includes('Eating out') && last.includes('merge:automaintenance>car'), 'your changes, and what you said no to');
   // a rule removed: Monarch's category is back for Costco
-  await p.click('#setBtn');
+  await p.click('#setBtn'); await unfold(p);
   await p.click('#setBody [data-unrule="m:costco"]');
   assert.ok((await asSeen()).filter(x => x.merchant === 'Costco').every(x => x.cat === 'Shopping'));
   await p.click('#setSheet [data-close].iconbtn');
@@ -640,7 +648,7 @@ await test('Monarch’s own connector, a test: Connect Monarch, signed in and ba
     assert.equal(u.searchParams.get('scope'), 'read', 'read-only');
     return route.fulfill({ status: 302, headers: { Location: BASE + '/money/?code=code-1&state=' + u.searchParams.get('state') } });
   });
-  await p.click('#setBtn');
+  await p.click('#setBtn'); await unfold(p);
   await p.waitForSelector('#setBody #monarchIn');
   assert.match(await p.locator('#setBody').innerText(), /Connect Monarch/);
   await Promise.all([p.waitForURL(/\/money\/\?code=|\/money\/$/), p.click('#setBody #monarchIn')]);
@@ -649,10 +657,10 @@ await test('Monarch’s own connector, a test: Connect Monarch, signed in and ba
   assert.ok(JSON.parse(kv.get('money:monarch')).access, 'the sign-in is kept in aOS');
   const t = JSON.parse(await p.evaluate(() => localStorage.getItem('money.monarch.test')));
   assert.deepEqual([t.tool, t.count, t.byId, t.onlyMonarch >= 1, t.pending], ['GetTransactions', 3, 1, true, 1]);
-  await p.click('#setBtn');
+  await p.click('#setBtn'); await unfold(p);
   await p.waitForSelector('#setBody #monarchTest');
   const s = await p.locator('#setBody').innerText();
-  assert.match(s, /Read 3 transactions from Monarch/); assert.match(s, /1 by Monarch’s own id/); assert.match(s, /still pending in Monarch/);
+  assert.match(s, /Read 3 transactions, 1 of Money’s \d+ matched/); assert.match(s, /1 matched by Monarch’s own id/); assert.match(s, /1 pending in Monarch/);
   await p.locator('#setBody #monarchWho').scrollIntoViewIfNeeded();
   if (SHOTS) await p.screenshot({ path: path.join(SHOTS, pad(++shot) + '-monarch-test.png') });
   await p.click('#setBody #monarchOut'); await p.click('#setBody #monarchOut');
@@ -660,6 +668,37 @@ await test('Monarch’s own connector, a test: Connect Monarch, signed in and ba
   assert.equal(kv.has('money:monarch'), false, 'disconnected: the sign-in is gone from aOS');
   await p.click('#setSheet .okbtn');
   await p.unroute('**/money/api/monarch/start'); await p.unroute('https://auth.monarch.test/**');
+});
+await test('Monarch won’t take this site’s address: it’s explained, Monarch opens, and the address it lands on is pasted back', async () => {
+  monarchOpt.rejectWeb = true; kv.delete('money:monarch:client');
+  await p.route('**/money/api/monarch/start', async route => {
+    const request = new Request('https://site.example/money/api/monarch/start', { method: 'POST', headers: route.request().headers(), body: JSON.stringify({ redirect: 'https://site.example/money/' }) });
+    const res = await onRequest({ request, params: { route: ['monarch', 'start'] }, env: { ACCOUNTS: KV } });
+    return route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
+  });
+  await p.evaluate(() => { window.__opened = []; window.open = u => { window.__opened.push(u); return {}; }; });   // Safari, as far as Money knows
+  await p.click('#setBtn'); await unfold(p);
+  await p.click('#setBody #monarchIn');
+  await p.waitForSelector('.st-ask');
+  assert.match(await p.locator('.st-ask').innerText(), /won’t load \(127\.0\.0\.1\)/);
+  await p.click('.st-ask .st-yes');
+  const opened = new URL(await p.evaluate(() => window.__opened[0]));
+  assert.equal(opened.searchParams.get('redirect_uri'), 'http://127.0.0.1:53280/callback');
+  await p.waitForSelector('#setBody #monarchPaste');
+  await p.fill('#setBody #monarchPaste', 'not an address');
+  await p.click('#setBody #monarchPasteGo');
+  assert.match(await p.locator('#toastMsg').innerText(), /code= and state=/);
+  await p.fill('#setBody #monarchPaste', 'http://127.0.0.1:53280/callback?code=code-1&state=' + opened.searchParams.get('state'));
+  await p.press('#setBody #monarchPaste', 'Enter');
+  await p.waitForFunction(() => !!localStorage.getItem('money.monarch.test'), null, { timeout: 15000 });
+  assert.ok(JSON.parse(kv.get('money:monarch')).access, 'connected');
+  await p.waitForSelector('#setBody #monarchTest');
+  assert.equal(await p.locator('#setBody #monarchPaste').count(), 0, 'the paste box goes');
+  await p.click('#setBody #monarchOut'); await p.click('#setBody #monarchOut');
+  await p.waitForSelector('#setBody #monarchIn');
+  await p.click('#setSheet .okbtn');
+  await p.unroute('**/money/api/monarch/start');
+  monarchOpt.rejectWeb = false;
 });
 assert.deepEqual(A.errs, []);
 
@@ -671,7 +710,7 @@ await test('the spouse sees nothing until it’s shared, then the same months, a
   assert.match(await mainText(B.p), /Ask Pat to share Money with you/);
   // Pat shares it: Settings > Who sees Money
   await view(p, 'month');
-  await p.click('#setBtn');
+  await p.click('#setBtn'); await unfold(p);
   await p.waitForSelector('#setBody [data-person="SPOUSE1"]');
   await p.click('#setBody [data-person="SPOUSE1"]');
   await p.waitForFunction(() => (window.__money.st.server.with || []).includes('SPOUSE1'), null, { timeout: 10000 });
@@ -684,7 +723,7 @@ await test('the spouse sees nothing until it’s shared, then the same months, a
   assert.ok((await B.p.evaluate(() => window.__money.st.T)).filter(x => x.merchant === 'Corner Diner').every(x => x.cat === 'Eating out'), 'the family’s own categories too');
   assert.equal(await B.p.locator('#ipsySlot .ipsy-btn').isVisible(), true, 'and Ipsy, once it’s shared');
   assert.equal(await B.p.locator('#readBtn').isHidden(), true, 'no Gmail reading on this phone');
-  await B.p.click('#setBtn');
+  await B.p.click('#setBtn'); await unfold(B.p);
   const s = await B.p.locator('#setBody').innerText();
   assert.match(s, /Pat’s phone reads Monarch’s emails/); assert.doesNotMatch(s, /Connect Gmail/); assert.doesNotMatch(s, /Who sees Money/i);
   assert.match(s, /Card rewards/i, 'the rates are shared: anyone who sees Money may set them');
@@ -719,7 +758,7 @@ await test('Mail’s Gmail sign-in is used first: Monarch’s emails read with i
   const ls = await M.p.evaluate(() => ({ own: localStorage.getItem('money.token'), ever: localStorage.getItem('money.token.ever'), state: localStorage.getItem('money.state'), mail: localStorage.getItem('mail.token') }));
   assert.equal(ls.own, null, 'no Gmail sign-in of Money’s own'); assert.equal(ls.ever, null); assert.equal(ls.state, null, 'no sign-in started');
   assert.equal(ls.mail, mail, 'Mail’s token as it was');
-  await M.p.click('#setBtn');
+  await M.p.click('#setBtn'); await unfold(M.p);
   const t = await M.p.locator('#setBody').innerText();
   assert.match(t, /Gmail\nMail’s sign-in, read-only\./); assert.doesNotMatch(t, /Disconnect Gmail/, 'nothing of Money’s own to disconnect');
   assert.deepEqual(M.errs, []);
@@ -746,7 +785,7 @@ await test('Mail’s token refused by Gmail: Money’s own has its turn, and Mai
   assert.ok((await M.p.evaluate(() => window.__money.D.tx)).some(x => x.merchant === 'Book Nook'), 'read with Money’s own');
   const ls = await M.p.evaluate(() => ({ own: JSON.parse(localStorage.getItem('money.token')).t, mail: localStorage.getItem('mail.token') }));
   assert.equal(ls.own, 'fake-token', 'Money’s own kept'); assert.equal(ls.mail, mail, 'Mail’s token as it was: Mail’s to renew');
-  await M.p.click('#setBtn');
+  await M.p.click('#setBtn'); await unfold(M.p);
   assert.match(await M.p.locator('#setBody').innerText(), /Gmail\n(?!Mail’s sign-in).*, read-only\.[\s\S]*Disconnect Gmail/);
   assert.deepEqual(M.errs, []);
   await M.ctx.close();
@@ -768,7 +807,7 @@ await test('signed out with nothing yet: asks to connect Gmail', async () => {
   assert.match(t, /See where your money goes/);
   assert.equal(await C.p.locator('#main [data-act="connect"]').count(), 1);
   assert.equal(await C.p.locator('#ipsySlot').isHidden(), true, 'no Ipsy signed out: there’s nothing of the family’s to ask about');
-  await C.p.click('#setBtn');
+  await C.p.click('#setBtn'); await unfold(C.p);
   assert.match(await C.p.locator('#setBody').innerText(), /On this phone only/);
   // Settings > Design: Standard, at once
   await C.p.locator('#setBody [data-design="glass"]').click();

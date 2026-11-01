@@ -109,7 +109,12 @@ every transaction, with its card, not just those over the alert amount.
 say yes, read-only; Monarch sends you back to Money (`/money/`), and aOS's server keeps the sign-in
 (`server/monarch.js`: found the way the MCP spec says, aOS registering itself with Monarch as "aOS
 Money", OAuth with PKCE, the tokens refreshed as they run out; in Workers KV, deleted with the rest of
-Money). **Test reading Monarch** reads the last 14 days through the connector and puts them beside what
+Money). Monarch takes only the return addresses of the AI apps it supports and a computer's
+own (loopback) address, so when it turns down this site's (`Redirect URI is not supported`), aOS
+registers `http://127.0.0.1:53280/callback` instead: Money explains first, Monarch opens in Safari,
+and after you say yes it lands on a page that won't load; copy that page's whole address and paste it
+under Connected accounts (**Finish connecting Monarch**, for 30 minutes). The code in it is no use
+without the PKCE verifier, which stays on aOS's server. **Test reading Monarch** reads the last 14 days through the connector and puts them beside what
 Money read from the emails: how many match (by Monarch's own id, which each alert's link carries, or by
 amount and day), how many differ and in what, what's only in Monarch or only in Money, and the fields
 Monarch gives. Nothing in Money changes yet, and nothing changes in Monarch; aOS keeps only the counts.

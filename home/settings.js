@@ -78,6 +78,20 @@ button.st-row:not(:disabled):active { background: var(--st-press) }
 .st-act .st-sub, .st-danger .st-sub { color: var(--st-muted) }
 .st-hint { margin: 8px 10px 0; font-size: 12.5px; line-height: 1.4; color: var(--st-muted) }
 .st-hint:empty { display: none }
+/* a section folded into a dropdown (fold: true): its name as a row with a chevron, and what stands on the right; tap to open */
+html .st-sec.st-fold { margin-bottom: 10px }
+html .st-sec.st-fold > summary.st-lbl { display: flex; align-items: center; gap: 10px; min-height: 52px; margin: 0; padding: 0 16px; border-radius: 20px; cursor: pointer;
+  list-style: none; background: var(--st-card); box-shadow: inset 0 0 0 1px var(--st-edge); font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--st-text);
+  -webkit-tap-highlight-color: transparent; transition: background-color .15s }
+html .st-sec.st-fold > summary.st-lbl::-webkit-details-marker { display: none }
+html .st-sec.st-fold > summary.st-lbl::after { content: attr(data-value); margin-left: auto; font-size: 15px; font-weight: 400; color: var(--st-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55% }
+html .st-sec.st-fold > summary.st-lbl .st-chev { flex: none; width: 8px; height: 13px; fill: none; stroke: var(--st-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; order: 2 }
+html .st-sec.st-fold[open] > summary.st-lbl .st-chev { transform: rotate(90deg) }
+html .st-sec.st-fold > summary.st-lbl:active { background: var(--st-press) }
+html .st-sec.st-fold > summary.st-lbl:focus-visible { outline: 2px solid var(--st-accent); outline-offset: 2px }
+html .st-sec.st-fold[open] { margin-bottom: 22px }
+html .st-sec.st-fold[open] > .st-group { margin-top: 8px }
+@media (prefers-reduced-motion: reduce) { html .st-sec.st-fold > summary.st-lbl .st-chev { transition: none } }
 .st-raw { display: block; padding: 0 }
 
 /* a choice of two or three: the name, then a segmented control */
@@ -202,15 +216,26 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
   const text = o => `<span class="st-text"><span class="st-title">${t(o, 'title')}</span>${o.sub != null && o.sub !== '' ? `<span class="st-sub">${t(o, 'sub')}</span>` : ''}</span>`;
   const val = o => (o.value != null && o.value !== '' ? `<span class="st-val">${t(o, 'value')}</span>` : '');
 
+  // Folded sections stay as they were left while the sheet is drawn again (an app redraws its Settings often).
+  const opened = new Map();
+  document.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.st-fold')) opened.set(d.dataset.fold, d.open); }, true);
+  // and at once on the tap, in case the sheet is drawn again before the toggle event comes
+  document.addEventListener('click', e => { const sm = e.target && e.target.closest && e.target.closest('details.st-fold > summary'); if (sm) opened.set(sm.parentElement.dataset.fold, !sm.parentElement.open); }, true);
   const S = {
     ICONS,
     esc,
-    // a section: its label (or '' for none), its rows, and at most one line under it
-    section(label, rows, { hint = '', id = '', hintId = '', html = false } = {}) {
+    // a section: its label (or '' for none), its rows, and at most one line under it.
+    // fold: a dropdown, closed until tapped (open: open at first); value: a word on its closed row (Connected, 3 cards)
+    section(label, rows, { hint = '', id = '', hintId = '', html = false, fold = false, open = false, value = '' } = {}) {
       const list = (Array.isArray(rows) ? rows : [rows]).filter(Boolean).join('');
       if (!list) return '';
-      return `<section class="st-sec"${id ? ` id="${esc(id)}"` : ''}>${label ? `<h3 class="st-lbl">${esc(label)}</h3>` : ''}<div class="st-group">${list}</div>`
-        + (hint || hintId ? `<p class="st-hint"${hintId ? ` id="${esc(hintId)}"` : ''}>${html ? hint : esc(hint)}</p>` : '') + '</section>';
+      const foot = (hint || hintId ? `<p class="st-hint"${hintId ? ` id="${esc(hintId)}"` : ''}>${html ? hint : esc(hint)}</p>` : '');
+      if (fold && label) {
+        const key = id || label, isOpen = opened.has(key) ? opened.get(key) : open;
+        return `<details class="st-sec st-fold" data-fold="${esc(key)}"${id ? ` id="${esc(id)}"` : ''}${isOpen ? ' open' : ''}><summary class="st-lbl"${value ? ` data-value="${esc(value)}"` : ''}>${esc(label)}${CHEV}</summary>`
+          + `<div class="st-group">${list}</div>${foot}</details>`;
+      }
+      return `<section class="st-sec"${id ? ` id="${esc(id)}"` : ''}>${label ? `<h3 class="st-lbl">${esc(label)}</h3>` : ''}<div class="st-group">${list}</div>` + foot + '</section>';
     },
     // on or off
     toggle: o => `<button type="button" class="st-row st-switch" role="switch" aria-checked="${!!o.on}"${o.disabled ? ' disabled' : ''}${attrs(o)}>${text(o)}<span class="st-sw" aria-hidden="true"><i></i></span></button>`,

@@ -98,6 +98,7 @@
         'Drinks: its chips are Meals\' tiles now, equal tiles three across: your usual drinks, the cocktails and the kinds of drink in Something else…',
         'Money: a transaction\'s merchant, amount, date and card change right on its page: type the name or the amount, pick the day, or pick one of your cards (or type another), with Undo and Put back Monarch\'s. Your fix is shared with the family and stays when the emails are read again',
         'Money: a test of Monarch\'s own connector, for whoever reads Monarch\'s emails: Settings, Connect Monarch (read-only), then Test reading Monarch puts its last 14 days beside Money\'s',
+        'Money: Settings is tidier: each section is a dropdown, closed until you tap it, with how it stands on its row (2 cards, Not connected), and Monarch has its own',
         'Home on iPhone: the views (Favorites, Climate, Lights, Media, Security, Around the house, Automations) are a floating bar of icons at the bottom, one tap to each, the one you\'re on lit, instead of a drop-down; the view\'s name is the title at the top'],
       apps: {
         calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },

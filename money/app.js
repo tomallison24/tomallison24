@@ -65,7 +65,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
   const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
   const KEY = 'allison-money-v1';
-  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', mState: 'money.monarch.state', mCode: 'money.monarch.code', mTest: 'money.monarch.test', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open', cut: KEY + '-scan-cut' };
+  const K = { token: 'money.token', state: 'money.state', silent: 'money.silent', silentFail: 'money.silentFail', lastAuth: 'money.lastAuth', hint: 'money.hint', mState: 'money.monarch.state', mCode: 'money.monarch.code', mTest: 'money.monarch.test', mPaste: 'money.monarch.paste', view: KEY + '-view', checkOff: KEY + '-check-off', open: KEY + '-open', cut: KEY + '-scan-cut' };
   // Inside aOS, reading Gmail, sending it to the family's copy and the daily check count as an update under way: aOS
   // doesn't put Money away or start it again until it's done (../home/welcome.js AllisonOS.updating).
   const updating = (task, on) => { try { AllisonOS.updating(task, on); } catch {} };
@@ -850,8 +850,27 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try {
       const r = await api('monarch/start', { redirect: MONARCH_BACK() }, true);
       ls.set(K.mState, r.state);
-      toGoogle(r.url);
+      if (!r.paste) { ls.del(K.mPaste); toGoogle(r.url); return; }
+      // Monarch sends apps like aOS back only to a computer's own address: the reader brings it back by hand
+      // (server/monarch.js, LOOPBACK). Monarch opens in Safari, so its address bar is there to copy from.
+      ls.set(K.mPaste, JSON.stringify({ state: r.state, at: Date.now() }));
+      renderSettings();
+      const ok = await AllisonOS.settings.ask({ title: 'Copy the address Monarch opens', yes: 'Open Monarch',
+        text: 'After you say yes in Monarch, it opens a page that won’t load (127.0.0.1). That’s expected: copy that page’s whole address, come back to Money, and paste it under Connected accounts.' });
+      if (!ok) return;
+      if (!window.open(r.url, '_blank')) toGoogle(r.url);
     } catch (err) { toast(monarchSay(err), null, 8000); }
+  }
+  const monarchPasting = () => { try { const p = JSON.parse(ls.get(K.mPaste, 'null')); return p && Date.now() - p.at < 30 * 60e3 ? p : null; } catch { return null; } };
+  // The address Monarch opened, pasted: its code and state go to aOS's server, which holds the verifier.
+  function monarchPasted() {
+    const i = $('monarchPaste'), t = String(i ? i.value : '').trim();
+    let p; try { p = new URL(t).searchParams; } catch { p = new URLSearchParams(t.replace(/^[^?]*\?/, '')); }
+    if (p.get('error')) { ls.del(K.mPaste); toast(p.get('error') === 'access_denied' ? 'Monarch access was declined.' : 'Monarch sign-in didn’t work (' + p.get('error') + ').', null, 6000); renderSettings(); return; }
+    if (!p.get('code') || !p.get('state')) { toast('That isn’t the address Monarch opened: it has code= and state= in it.', null, 6000); return; }
+    ls.del(K.mPaste);
+    ls.set(K.mCode, JSON.stringify({ code: p.get('code'), state: p.get('state'), error: '' }));
+    monarchFinish();
   }
   // Back from Monarch: the code is kept at once (welcome.js sends the page back into aOS as soon as it loads).
   function consumeMonarch() {
@@ -912,21 +931,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch (err) { busyPill(null); toast(monarchSay(err), null, 8000); }
     finally { st.monarch = null; monarchStatus(); }
   }
+  // Monarch's own dropdown in Settings: how it stands, the test and what it found, Disconnect.
   function monarchRows(S) {
     const m = st.monarch;
-    if (!m) { monarchStatus(); return [S.info({ title: 'Monarch', sub: 'Checking…' })]; }
-    if (m.error) return [S.info({ title: 'Monarch', sub: 'Couldn’t check just now.' })];
-    if (!m.connected) return [S.action({ id: 'monarchIn', icon: 'link', title: 'Connect Monarch', sub: 'A read-only test: Money reads your transactions straight from Monarch.' })];
+    if (!m) { monarchStatus(); return [S.info({ title: 'Checking…' })]; }
+    if (m.error) return [S.info({ title: 'Couldn’t check just now.' })];
+    if (!m.connected && monarchPasting()) return [
+      S.info({ title: 'Finish connecting', sub: 'Paste the whole address of the page Monarch opened.' }),
+      S.raw('<div class="frow"><input class="txt" id="monarchPaste" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="http://127.0.0.1:53280/callback?code=…" aria-label="The address Monarch opened"><button class="chip" type="button" id="monarchPasteGo">Use it</button></div>', { id: 'monarchPasteRow' }),
+      S.action({ id: 'monarchIn', icon: 'link', title: 'Start again', sub: 'Opens Monarch’s sign-in again.' }),
+    ];
+    if (!m.connected) return [S.action({ id: 'monarchIn', icon: 'link', title: 'Connect Monarch', sub: 'Money reads your transactions straight from Monarch, read-only.' })];
     let t = null; try { t = JSON.parse(ls.get(K.mTest, 'null')); } catch {}
+    const matched = t ? t.byId + t.byCharge : 0;
     return [
-      S.info({ id: 'monarchWho', title: 'Monarch', sub: 'Read-only, connected ' + ago(m.at) + '.' }),
-      S.action({ id: 'monarchTest', icon: 'refresh', title: 'Test reading Monarch', sub: t ? 'Last tested ' + ago(t.at) + '.' : 'Reads the last 14 days and puts them beside Money’s.' }),
-      ...(t ? [
-        S.info({ title: t.tool ? 'Read ' + plural(t.count, 'transaction') + ' from Monarch' : 'Monarch has no transactions tool', sub: t.tool ? 'With ' + t.tool + ', one of its ' + t.tools + ' tools, for the last 14 days.' : 'It has ' + t.tools + ' tools.' }),
-        t.tool ? S.info({ title: (t.byId + t.byCharge) + ' of Money’s ' + t.mine + ' match', sub: t.byId + ' by Monarch’s own id, ' + t.byCharge + ' by amount and day; ' + t.differ + ' differ' + (t.diffs.length ? ' (' + t.diffs.join('; ') + ')' : '') + '.' }) : '',
-        t.tool ? S.info({ title: plural(t.onlyMonarch, 'transaction') + ' only in Monarch', sub: plural(t.onlyMoney, 'transaction') + ' only in Money, and ' + t.pending + ' still pending in Monarch.' }) : '',
-        t.shape && t.shape.length ? S.info({ title: 'What Monarch gives', sub: t.shape.join(', ') + '.' }) : '',
-      ] : []),
+      S.info({ id: 'monarchWho', title: 'Read-only', sub: 'Connected ' + ago(m.at) + '.' }),
+      S.action({ id: 'monarchTest', icon: 'refresh', title: 'Test reading Monarch', sub: !t ? 'Reads the last 14 days and puts them beside Money’s.'
+        : t.tool ? 'Read ' + plural(t.count, 'transaction') + ', ' + matched + ' of Money’s ' + t.mine + ' matched, ' + ago(t.at) + '.' : 'Monarch has no transactions tool (' + t.tools + ' tools).' }),
+      t && t.tool ? S.info({ title: t.onlyMonarch + ' only in Monarch, ' + t.onlyMoney + ' only in Money',
+        sub: t.byId + ' matched by Monarch’s own id and ' + t.byCharge + ' by amount and day; ' + t.differ + ' differ' + (t.diffs.length ? ' (' + t.diffs.join('; ') + ')' : '') + ', and ' + t.pending + ' pending in Monarch.' }) : '',
+      t && t.shape && t.shape.length ? S.info({ title: 'What Monarch gives', sub: t.shape.join(', ') + '.' }) : '',
       S.danger({ id: 'monarchOut', icon: 'out', title: 'Disconnect Monarch' }),
     ];
   }
@@ -1158,11 +1182,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (s.can) how = s.readerName + '’s phone reads Monarch’s emails, updated ' + ago(D.readAt) + '.';
     else if (s.open) how = 'Nobody reads Monarch’s emails yet: connect Gmail on the phone that gets them.';
     else how = s.readerName + '’s phone reads Monarch’s emails: ask ' + s.readerName + ' to share Money with you (Settings, Who sees Money).';
-    let html = window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'setDesign' })) : '';
+    // Every section is a dropdown, closed until tapped, with how it stands on its row (home/settings.js, fold).
+    const F = (o = {}) => Object.assign({ fold: true }, o);
+    let html = window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'setDesign' }), F()) : '';
     if (reader) {
       if (people === null) { people = []; loadPeople(); }
       html += S.section('Who sees Money', people.length ? people.map(p => S.toggle({ html: true, title: no(p.name), on: (s.with || []).includes(p.id), data: { person: p.id } }))
-        : S.info({ title: 'Nobody else is in the family yet.' }), { hint: 'Only you, and those you turn on, see Money: not even the family’s owner otherwise.' });
+        : S.info({ title: 'Nobody else is in the family yet.' }), F({ value: (s.with || []).length ? 'You and ' + plural(s.with.length, 'other') : 'Just you', hint: 'Only you, and those you turn on, see Money: not even the family’s owner otherwise.' }));
     }
     if (sees) {
       const all = base(), colour = cardColours(), acct2 = C.accounts(all);
@@ -1175,7 +1201,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
             f('base', k, 'On everything (%)', r.base), f('online', k, 'Online shopping (%)', r.online), f('grocery', k, 'Groceries and wholesale clubs (%)', r.grocery),
             f('cap', k, 'Bonus on the first, a quarter ($)', r.cap, '0 for no limit.')];
         }).concat(S.input({ id: 'onlineList', title: 'Online stores', sub: 'What counts as online shopping, separated by commas.', value: (settings().online || C.ONLINE).join(', '), attrs: 'autocomplete="off"' })),
-        { hint: 'Set from what you said (Robinhood 3% on everything; Customized Cash 6% online, 2% at groceries and wholesale clubs, 1% else, the bonus on the first $2,500 a quarter): check them against your cards’ terms.' });
+        F({ value: plural(cards.length, 'card'), hint: 'Check these against your cards’ terms.' }));
       }
       const rc = settings().recat || {}, merchants = new Map(D.tx.map(x => [C.catKey(x.merchant), x.merchant]));
       const rules = [...Object.entries(rc.g || {}).filter(([, v]) => v.c).map(([k, v]) => ({ k: 'g:' + k, what: no(v.f || k) + ' → ' + no(v.c), sub: 'Category merged.' })),
@@ -1185,8 +1211,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         ...(rules.length ? rules.map(r => S.info({ html: true, title: r.what, sub: esc(r.sub), extra: '<button class="chip quiet" type="button" data-unrule="' + esc(r.k) + '">Remove</button>' }))
           : [S.info({ title: 'Monarch’s categories, as its emails say', sub: 'Change one from a transaction: tap it, then Change.' })]),
         one ? S.info({ title: plural(one, 'transaction') + ' changed on its own' }) : '',
-      ], { hint: 'Shared with whoever sees Money.' });
+      ], F({ value: rules.length ? plural(rules.length, 'change') : 'Monarch’s', hint: 'Shared with whoever sees Money.' }));
     }
+    if (reader) { const m = st.monarch; html += S.section('Monarch', monarchRows(S), F({ id: 'monarchSec', open: !!monarchPasting(), value: !m ? '' : m.connected ? 'Connected' : monarchPasting() ? 'Finish connecting' : 'Not connected', hint: 'A read-only test: nothing changes in Monarch.' })); }
     if (!viewer) {
       const tok = getToken(), own = !!ls.get(K.token + '.ever', '');   // Mail's sign-in, or Money's own (ever: there's one to disconnect)
       const who = tok && tok.mail ? 'Mail’s sign-in' : ls.get(K.hint, '') || 'Connected';
@@ -1195,9 +1222,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.action({ id: 'readNow', icon: 'refresh', title: 'Check now', sub: D.readAt ? 'Last checked ' + ago(D.readAt) + '.' : 'Not checked yet.' }),
         S.action({ id: 'readAgain', icon: 'mail', title: 'Read the last 5 years again', sub: 'Every Monarch email, from the start.' }),
         own ? S.danger({ id: 'gmailOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
-        ...(reader ? monarchRows(S) : []),
-      ] : [S.action({ id: 'gmailIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Money reads only Monarch’s emails, and can’t change or send anything.' }), ...(reader ? monarchRows(S) : [])],
-      { hint: 'In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.' });
+      ] : S.action({ id: 'gmailIn', icon: 'mail', title: 'Connect Gmail', sub: 'Read-only: Money reads only Monarch’s emails, and can’t change or send anything.' }),
+      F({ value: hasGmail() ? 'Gmail' : 'Not connected', hint: 'In Monarch, set the expense and deposit alerts to $1 (Settings, Notifications), so every transaction is emailed.' }));
     }
     const lc = D.lastCheck, ideas = sees && signed && s && s.can;
     html += S.section('AI helper', [
@@ -1205,20 +1231,21 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       reader ? S.toggle({ id: 'checkOn', title: 'Check each day', sub: 'Ipsy checks each new transaction against its Monarch email; what passed is never checked again.', on: checkOn() }) : '',
       reader ? S.action({ id: 'checkNow', icon: 'refresh', title: 'Check now', sub: lc ? 'Last checked ' + ago(lc.at) + ': ' + plural(lc.n, 'transaction') + (lc.fixed ? ', ' + plural(lc.fixed, 'correction') : '') + (lc.flagged ? ', ' + lc.flagged + ' to look at' : '') + '.' : 'Not checked yet.' }) : '',
       ideas ? S.action({ id: 'ideasNow', icon: 'list', title: 'Ask Ipsy for ideas', sub: 'Categories to merge and merchants to move; it looks once a month too, and nothing changes until you accept.' }) : '',
-    ], { hint: reader || ideas ? 'Ipsy uses Claude Sonnet 5.5: a few cents a month for the daily check, under a cent for each look at your categories.' : '' });
+    ], F({ hint: reader || ideas ? 'Ipsy uses Claude Sonnet 5.5: a few cents a month for the daily check, under a cent for each look at your categories.' : '' }));
     html += S.section('Your data', [
       D.tx.length ? S.action({ id: 'exportBtn', icon: 'upload', title: 'Export as a spreadsheet', sub: 'A CSV file.' }) : '',
       S.danger({ id: 'wipeBtn', title: 'Delete all data', sub: reader ? 'From this phone, and from aOS for everyone it’s shared with.' : 'From this phone.' }),
-    ]);
+    ], F());
     html += S.section('Family account', user ? S.info({ id: 'acctState', title: 'Signed in as ' + user.name, sub: how })
       : [S.info({ id: 'acctState', title: 'On this phone only' }),
-        S.action({ id: 'signIn', icon: 'face', title: 'Sign in with Face ID', sub: 'Shares Money with your family, or shows it if it’s shared with you.' })], { id: 'acct' });
+        S.action({ id: 'signIn', icon: 'face', title: 'Sign in with Face ID', sub: 'Shares Money with your family, or shows it if it’s shared with you.' })], F({ id: 'acct', value: user ? user.name.split(' ')[0] : 'Signed out', open: !user }));
     $('setBody').innerHTML = html;
   }
   const names = ids => (people || []).filter(p => ids.includes(p.id)).map(p => p.name).join(', ') || plural(ids.length, 'person');
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); sync(); };
   const setBody = $('setBody');
   if (window.aosDesign) aosDesign.bind(setBody);
+  setBody.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'monarchPaste') { e.preventDefault(); monarchPasted(); } });
   setBody.addEventListener('click', async e => {
     const t = e.target;
     if (t.closest('#signIn')) {
@@ -1228,6 +1255,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     if (t.closest('#gmailIn')) { signIn(); return; }
     if (t.closest('#monarchIn')) { monarchIn(); return; }
+    if (t.closest('#monarchPasteGo')) { monarchPasted(); return; }
     if (t.closest('#monarchTest')) { monarchTest(); return; }
     const mo = t.closest('#monarchOut');
     if (mo) { if (!AllisonOS.settings.armed(mo, 'Tap again to disconnect')) return; try { await api('monarch/disconnect', {}, true); ls.del(K.mTest); toast('Monarch disconnected.'); } catch (err) { toast(monarchSay(err)); } st.monarch = null; renderSettings(); return; }
