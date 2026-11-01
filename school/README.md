@@ -42,6 +42,14 @@ the post's groups and words (`audience`):
 - **another grade**: posted to other grades only, or naming only others ("4th and 5th grade
   Basketball"). These go to Everything else, never away.
 
+A post for the whole school can still hold dates for one grade, so each date is sorted too (`forGrade`):
+a newsletter's date line that names other grades ("3rd Grade Wax Museum", "Middle School Dance", "Pre-K
+Picnic"), or sits under a short heading that does ("**5th Grade Corner**", until the next heading or
+paragraph), is left out of Coming up, the rest of the year, the days off and Calendar's School layer; so is
+a date a post gives only on lines for other grades ("1st grade: Wednesday, November 4"). A date that names
+no grade, or names hers, is kept: when the emails don't say, it stays. Pre-K, TK and preschool are not
+Kindergarten. With no grade known (Settings > Your child, or the emails), nothing is left out.
+
 **Settings > Your child** starts from what the emails say (`detect`: the homeroom group, the grade
 group that comes on its own, the homeroom's teacher, the school); anything set there wins. Nothing
 about a school, a teacher or a child is written in this code (the repository is public).

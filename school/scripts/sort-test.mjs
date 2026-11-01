@@ -71,6 +71,51 @@ test('grades named in words', () => {
   assert.deepEqual(g('Kindergarten Character Day'), [0]);
   assert.deepEqual(g('our 2nd Annual Trunk or Treat'), []);
   assert.deepEqual(g('99th percentile'), []);
+  assert.deepEqual(g('Kinders to the zoo'), [0]);
+  assert.deepEqual(g('Kindergartners and 1st graders'), [0, 1]);
+  assert.deepEqual(g('Grade K Picnic'), [0]);
+  assert.deepEqual(g('K/1 Sing-along'), [0, 1]);
+  assert.deepEqual(g('Pre-K Picnic'), [-1], 'Pre-K is not Kindergarten');
+  assert.deepEqual(g('Pre-Kindergarten Open House'), [-1]);
+  assert.deepEqual(g('TK and Kindergarten families'), [-1, 0]);
+  assert.deepEqual(g('Middle School Dance'), [6, 7, 8]);
+  assert.deepEqual(g('5K Fun Run'), [], 'a race, not a grade');
+});
+
+// A whole-school newsletter: its dates for other grades are left out, its dates for no grade in particular are
+// kept, and a heading names the grade for the dates under it.
+const NEWS = { id: 'n9', threadId: 'n9', date: at('2026-10-25', 17).getTime(), subject: 'Maple Grove Times 10/25/2026',
+  text: '## Upcoming Events\n\n**November**\n\n- **November 3** – Kindergarten Pumpkin Patch Trip\n- **November 4** – 3rd Grade Wax Museum\n- **November 5** – Middle School Dance\n'
+    + '- **November 6** – Pre-K Picnic\n- **November 9** – Family Bingo Night\n- **November 10** – K-2 Assembly\n- **November 12** – No School for 5th Grade (Camp)\n\n'
+    + '**5th Grade Corner**\n\n- **November 16** – Science Camp Forms Due\n- **November 17** – Camp Packing Night\n\n**Kindergarten Corner**\n\n- **November 18** – Field Trip to the Farm\n\n'
+    + '**Everyone**\n\n- **November 19** – Picture Retakes\n' };
+
+test('a newsletter’s dates for other grades are left out; ones for hers, or for no grade, stay', () => {
+  const s = S.sections(read([NEWS]), { now: at('2026-11-01', 9), me: ME });
+  const titles = s.year.map(e => e.title);
+  for (const t of ['Kindergarten Pumpkin Patch Trip', 'Family Bingo Night', 'K-2 Assembly', 'Field Trip to the Farm', 'Picture Retakes']) assert.ok(titles.includes(t), t + ' is kept: ' + titles.join(' | '));
+  for (const t of ['3rd Grade Wax Museum', 'Middle School Dance', 'Pre-K Picnic', 'Science Camp Forms Due', 'Camp Packing Night']) assert.ok(!titles.includes(t), t + ' is left out');
+  assert.ok(!s.off.has('2026-11-12'), 'no school for 5th grade is a school day for her');
+  // with no grade known, nothing is left out
+  const all = S.sections(read([NEWS]), { now: at('2026-11-01', 9), me: { ...ME, grade: null } }).year.map(e => e.title);
+  assert.ok(all.includes('3rd Grade Wax Museum') && all.includes('Camp Packing Night'), 'no grade: everything');
+  // and Calendar's School layer is the same
+  const c = S.calendarItems(read([NEWS]), { now: at('2026-11-01', 9), me: ME }).map(e => e.title);
+  assert.ok(c.includes('Family Bingo Night') && !c.includes('3rd Grade Wax Museum') && !c.includes('Camp Packing Night'), c.join(' | '));
+});
+
+test('a newsletter read before its dates kept their grades is sorted the same', () => {
+  const [x] = read([NEWS]); delete x.evv; x.events = x.events.map(({ g, ...e }) => e);
+  const titles = S.sections([x], { now: at('2026-11-01', 9), me: ME }).year.map(e => e.title);
+  assert.ok(titles.includes('Field Trip to the Farm') && !titles.includes('Camp Packing Night'), titles.join(' | '));
+});
+
+test('a school-wide post with a date for each grade keeps hers, and the dates no grade is named for', () => {
+  const m = { id: 'pd1', threadId: 'pd1', date: at('2026-10-26', 9).getTime(), subject: 'Picture Day',
+    text: 'Sam Ortiz posted in Maple Grove Academy\n\nPicture Day\n\nPicture day is coming! Kindergarten: Tuesday, November 3. 1st grade: Wednesday, November 4. 2nd grade: Thursday, November 5.\nRetakes for everyone on December 1.\n' };
+  const s = S.sections(read([m]), { now: at('2026-11-01', 9), me: ME });
+  const days = s.year.filter(e => e.title === 'Picture Day').map(e => e.d);
+  assert.deepEqual(days, ['2026-11-03', '2026-12-01'], days.join());
 });
 
 test('whose a post is: her class, her grade, the school, or another grade', () => {
