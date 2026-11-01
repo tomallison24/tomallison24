@@ -113,8 +113,10 @@ Money", OAuth with PKCE, the tokens refreshed as they run out; in Workers KV, de
 Money). Monarch takes only the return addresses of the AI apps it supports and a computer's
 own (loopback) address, so when it turns down this site's (`Redirect URI is not supported`), aOS
 registers `http://127.0.0.1:53280/callback` instead: Money explains first, Monarch opens in Safari,
-and after you say yes it lands on a page that won't load; copy that page's whole address and paste it
-under Connected accounts (**Finish connecting Monarch**, for 30 minutes). The code in it is no use
+and after you say yes it lands on a page that won't load; copy that page's whole address (touch and hold
+Safari's address bar, then Copy: the bar itself shows only 127.0.0.1) and paste it under Connected accounts
+(**Finish connecting Monarch**, for 30 minutes). Its code and state are found after a ? or a #, or in an
+address encoded once; anything else says which site the pasted address is. The code in it is no use
 without the PKCE verifier, which stays on aOS's server. **Test reading Monarch** reads the last 14 days through the connector and puts them beside what
 Money read from the emails: how many match (by Monarch's own id, which each alert's link carries, or by
 amount and day), how many differ and in what, what's only in Monarch or only in Money, and the fields
