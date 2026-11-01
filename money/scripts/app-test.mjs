@@ -66,7 +66,14 @@ const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.get
 const NOW = new Date();
 const ym = n => { const d = new Date(NOW.getFullYear(), NOW.getMonth() + n, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
 // day d of the month n months from now (never after today in this month)
-const on = (n, d) => { const x = new Date(NOW.getFullYear(), NOW.getMonth() + n, d, 12); if (x > NOW) x.setTime(new Date(NOW.getFullYear(), NOW.getMonth(), Math.max(1, NOW.getDate() - 1), 12).getTime()); return x; };
+// (one that would be: the day before, or three hours ago on the 1st, never before the month began, so this month's
+// charges are always this month's and always older than the emails read in the last two hours)
+const on = (n, d) => {
+  const x = new Date(NOW.getFullYear(), NOW.getMonth() + n, d, 12);
+  if (x > NOW) x.setTime(NOW.getDate() > 1 ? new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - 1, 12).getTime()
+    : Math.max(NOW.getTime() - 3 * 3600e3, new Date(NOW.getFullYear(), NOW.getMonth(), 1, 0, 1).getTime()));
+  return x;
+};
 
 // ---- made-up transactions: three months before this one, and this one so far ----
 let k = 0;
@@ -75,7 +82,8 @@ const T = (d, amt, merchant, extra = {}) => Object.assign({ id: 'seed' + (++k), 
 const RECENT_SEED = Date.now() - 3 * 3600e3;
 const SEED = [];
 for (const n of [-3, -2, -1, 0]) {
-  for (const d of [2, 9, 16, 23]) if (n < 0 || d < NOW.getDate()) SEED.push(T(on(n, d), 391.5, 'Little Learners', { cat: 'Child Care', emoji: '👶' }));
+  // this month: those before today, and always the first (on the 1st or 2nd, it falls on the day before or the 1st)
+  for (const d of [2, 9, 16, 23]) if (n < 0 || d < NOW.getDate() || d === 2) SEED.push(T(on(n, d), 391.5, 'Little Learners', { cat: 'Child Care', emoji: '👶' }));
   SEED.push(T(on(n, 3), 1000, 'Mortgage Co', { account: 'Shared Checking', last4: '0001', cat: 'Mortgage', emoji: '🏠' }));
   SEED.push(T(on(n, 5), n === 0 ? 640 : 180, 'Amazon'));
   SEED.push(T(on(n, 6), 120, 'Costco', { account: CUSTOM, last4: '1111' }));
@@ -92,7 +100,8 @@ const RECENT = Date.now() - 2 * 3600e3;
 const MAIL = {
   m1: { subject: '💲 New expense from Book Nook in Monarch', html: alertHtml('We noticed an expense of $42.00 from Book Nook, which was spent from Rocket Credit Card **9876 (...9876) and has been categorized as 📚 Books.'), at: RECENT },
   m2: { subject: '✨ You have 2 new updates in Monarch', at: RECENT + 60e3, html: '<html><body><p class="activity-body"><a>A new expense of $42.00 from Book Nook has been categorized as 📚 Books.</a></p><p class="activity-body"><a>A new expense of $15.75 from Corner Diner has been categorized as 🍽 Restaurants.</a></p></body></html>' },
-  m3: { subject: '🛠️ Access Expired', at: RECENT, text: 'Hi Pat,\n\nRocket Bank only grants Monarch access for a limited time. To continue syncing, reauthorize the connection.' },
+  // newer than every charge before it, even in a month's first hours
+  m3: { subject: '🛠️ Access Expired', at: Date.now() - 10 * 60e3, text: 'Hi Pat,\n\nRocket Bank only grants Monarch access for a limited time. To continue syncing, reauthorize the connection.' },
   m4: { subject: 'What’s new at Monarch', at: RECENT, html: '<p>Our new reports are here!</p>' },
   // read long ago (it's in seen), and read wrong: its merchant is in the phone as "Joes Garag"
   m5: { subject: '💲 New expense from Joe’s Garage in Monarch', html: alertHtml('We noticed an expense of $88.20 from Joe&#39;s Garage, which was spent from Rocket Credit Card **9876 (...9876) and has been categorized as 🚗 Auto Maintenance.'), at: RECENT - 3600e3 },
@@ -301,8 +310,60 @@ await test('a category’s transactions, and one transaction', async () => {
   assert.match(t, /Back/);
   await snap(p, 'transaction');
   await p.click('#txBody [data-back]');
-  assert.match(await p.locator('#txBody').innerText(), /transactions/);
+  assert.match(await p.locator('#txBody').innerText(), /\d+ transactions?/);
   await p.click('#txSheet .okbtn');
+});
+await test('a transaction’s amount, date and card change in place, with Undo; Put back Monarch’s; shared with the family', async () => {
+  await view(p, 'activity');
+  await p.fill('#q', 'mortgage'); await p.waitForTimeout(100);
+  await p.locator('#main [data-tx]').first().click();
+  await p.waitForSelector('#txSheet:not([hidden])');
+  const id = await p.evaluate(() => window.__money.st.txId);
+  const raw = await p.evaluate(i => window.__money.raw().find(x => x.id === i), id);
+  assert.equal(await p.inputValue('#edAmt'), '1000.00'); assert.equal(await p.inputValue('#edDate'), raw.date);
+  assert.match(await p.locator('#edAcct option:checked').innerText(), /Shared Checking ···0001/);
+  // the amount
+  await p.fill('#edAmt', '$1,012.5'); await p.press('#edAmt', 'Enter');
+  await p.waitForFunction(() => document.querySelector('#txBody .bigamt').textContent.includes('1,012.50'));
+  assert.match(await p.locator('#toastMsg').innerText(), /Amount changed to \$1,012\.50/);
+  assert.match(await p.locator('#txBody').innerText(), /Monarch said: Amount \$1,000\.00/);
+  await p.click('#toastAct');
+  await p.waitForFunction(() => document.querySelector('#txBody .bigamt').textContent.includes('1,000.00'));
+  assert.equal(await p.locator('#txBody [data-unedit]').count(), 0, 'Undo: as Monarch said');
+  await p.fill('#edAmt', 'abc'); await p.press('#edAmt', 'Enter');
+  assert.match(await p.locator('#toastMsg').innerText(), /isn’t an amount/); assert.equal(await p.inputValue('#edAmt'), '1000.00');
+  await p.fill('#edAmt', '1012.50'); await p.press('#edAmt', 'Enter');
+  await p.waitForFunction(() => document.querySelector('#txBody .bigamt').textContent.includes('1,012.50'));
+  // the date: a day earlier, in the month before
+  const day = new Date(Date.parse(raw.date + 'T12:00:00Z') - 40 * 864e5).toISOString().slice(0, 10);
+  await p.fill('#edDate', day);
+  await p.waitForFunction(d => document.querySelector('#edDate').value === d && !!document.querySelector('#txBody [data-unedit]') && /Date/.test(document.querySelector('#txBody .note').textContent), day);
+  assert.match(await p.locator('#toastMsg').innerText(), /^Moved to /);
+  // the card: one you have, then another
+  const cust = await p.$eval('#edAcct', s => [...s.options].find(o => /Customized Cash/.test(o.textContent)).value);
+  await p.selectOption('#edAcct', cust);
+  await p.waitForFunction(() => /Customized Cash Rewards Visa Signature ···1111/.test(document.querySelector('#edAcct option:checked').textContent));
+  assert.match(await p.locator('#txBody').innerText(), /Card Shared Checking ···0001/, 'what Monarch said');
+  await p.selectOption('#edAcct', 'other');
+  await p.fill('#edAcctNew', 'Apple Card'); await p.click('#edAcctGo');
+  await p.waitForFunction(() => /Apple Card/.test(document.querySelector('#edAcct option:checked').textContent));
+  let v = await p.evaluate(i => window.__money.view().find(x => x.id === i), id);
+  assert.deepEqual([v.amt, v.date, v.account], [1012.5, day, 'Apple Card']);
+  assert.equal((await p.evaluate(i => window.__money.raw().find(x => x.id === i), id)).amt, 1000, 'what was read is kept');
+  // shared: the family's settings in aOS carry the fix
+  await p.waitForFunction(() => !window.__money.D.setDirty, null, { timeout: 10000 });
+  const shared = JSON.parse(kv.get('money:meta')).settings.edits[id];
+  assert.deepEqual([shared.amt, shared.date, shared.acct], [1012.5, day, 'Apple Card']);
+  // the month it moved to shows it; Search still finds it
+  await snap(p, 'transaction-edited');
+  // Put back Monarch's
+  await p.click('#txBody [data-unedit]');
+  await p.waitForFunction(() => !document.querySelector('#txBody [data-unedit]'));
+  v = await p.evaluate(i => window.__money.view().find(x => x.id === i), id);
+  assert.deepEqual([v.amt, v.date, v.account], [1000, raw.date, 'Shared Checking']);
+  assert.match(await p.locator('#toastMsg').innerText(), /Back to what Monarch said/);
+  await p.click('#txSheet .okbtn');
+  await p.fill('#q', ''); await view(p, 'month');
 });
 await test('the month before', async () => {
   await p.click('#main [data-act="prev"]');

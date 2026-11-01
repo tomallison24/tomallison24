@@ -259,6 +259,8 @@ await test('bad input', async () => {
   assert.equal(cleanTx({ id: 'x', date: '2026-10-01', amt: -1, at: 1, dir: 'out', merchant: 'A' }), null);
   assert.equal(cleanTx({ id: 'x', date: '2026-10-01', amt: 1, at: 1, dir: 'sideways', merchant: 'A' }), null);
   assert.equal(cleanSettings(null), null);
+  const ce = cleanSettings({ at: 5, edits: { t1: { amt: 12.345, date: '2026-10-02', acct: ' Apple Card ', l4: '12', at: 3 }, t2: { amt: -1, date: 'soon', at: 4 }, t3: { amt: 9 }, t4: 'x' } }).edits;
+  assert.deepEqual(ce, { t1: { at: 3, amt: 12.35, date: '2026-10-02', acct: 'Apple Card' }, t2: { at: 4 } }, 'fixes: only what makes sense, with their time');
   assert.equal(cleanTx({ id: 'e:bk1:105210', date: '2026-10-01', amt: 1052.1, at: 1, dir: 'out', merchant: 'Frontier Airlines', src: 'email' }).src, 'email', 'a charge found in an email stays one');
   assert.equal(cleanTx({ id: 'x', date: '2026-10-01', amt: 1, at: 1, dir: 'out', merchant: 'A', src: 'made-up' }).src, 'alert');
 });

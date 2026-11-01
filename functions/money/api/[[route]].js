@@ -158,8 +158,9 @@ export function cleanSettings(s) {
   const dismissed = Array.isArray(s.dismissed) ? s.dismissed.map(x => str(x, 80)).filter(Boolean).slice(-100) : [];
   const out = { cards, dismissed, at: num(s.at) || Date.now() };
   if (online) out.online = online;
-  const recat = cleanRecat(s.recat), ideas = cleanIdeas(s.ideas);
+  const recat = cleanRecat(s.recat), ideas = cleanIdeas(s.ideas), edits = cleanEdits(s.edits);
   if (recat) out.recat = recat;
+  if (edits) out.edits = edits;
   if (ideas) out.ideas = ideas;
   return out;
 }
@@ -178,6 +179,24 @@ function cleanRecat(r) {
       if (k === 'g') o[key].f = str(v.f, 60);
     }
     out[k] = o;
+  }
+  return out;
+}
+// The family's own fixes to a transaction's amount, date and card (money/calc.js, edited): an entry
+// with none of them is a fix taken back.
+const EDITS_MAX = 400;
+function cleanEdits(e) {
+  if (!e || typeof e !== 'object') return undefined;
+  const out = {};
+  for (const [id, v] of Object.entries(e).slice(-EDITS_MAX)) {
+    const key = str(id, 120);
+    if (!key || !v || typeof v !== 'object' || num(v.at) == null) continue;
+    const o = { at: v.at }, amt = num(v.amt);
+    if (amt != null && amt >= 0 && amt <= 1e7) o.amt = Math.round(amt * 100) / 100;
+    if (ISO.test(str(v.date, 10)) && v.date.length === 10) o.date = v.date;
+    const acct = str(v.acct, 80).trim();
+    if (acct) { o.acct = acct; const l4 = str(v.l4, 4); if (/^\d{4}$/.test(l4)) o.l4 = l4; }
+    out[key] = o;
   }
   return out;
 }
@@ -205,6 +224,11 @@ export function mergeSettings(a, b) {
       recat[k] = Object.fromEntries(Object.entries(o).slice(-RECAT_MAX[k]));
     }
     base.recat = recat;
+  }
+  if (a.edits || b.edits) {
+    const o = Object.assign({}, a.edits || {});
+    for (const [id, v] of Object.entries(b.edits || {})) if (!o[id] || (v.at || 0) >= (o[id].at || 0)) o[id] = v;
+    base.edits = Object.fromEntries(Object.entries(o).sort((x, y) => (x[1].at || 0) - (y[1].at || 0)).slice(-EDITS_MAX));
   }
   if (a.ideas || b.ideas) {
     const newer = !a.ideas ? b.ideas : !b.ideas ? a.ideas : (b.ideas.at || 0) >= (a.ideas.at || 0) ? b.ideas : a.ideas;
