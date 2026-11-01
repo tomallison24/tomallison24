@@ -127,6 +127,11 @@ the same kinds of row and the same words.**
     **Notifications** · **Your data** · **Family account**. Notifications live
     here too (Notes' bell opens this section).
   - Rows: the kinds in rule 5. At most one line under a section (`hint`).
+  - A long Settings may fold its sections into dropdowns (`S.section(label, rows, { fold: true, value })`):
+    each one a row with its name, how it stands on the right (2 cards, Not connected) and a chevron,
+    closed until tapped, and kept open or closed while the sheet is drawn again. Fold every section or
+    none, in the same order; open one at first only when it needs the person (`open: true`: signed
+    out, a sign-in to finish). Money does.
 - **Enforced:** CI: `shared`, `title`, `gear`, `design-first`, `order`.
 - **Known gaps:** none. Allowed differences: Clock draws its own Design rows,
   as its looks live in `clock/design.js` (the check takes them); Sparkle's

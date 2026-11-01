@@ -31,8 +31,10 @@
 //   POST forget                         (the reader) everything here deleted: Settings > Delete all data
 //   Monarch's own connector, read-only (server/monarch.js), the reader only; a test for now:
 //   GET  monarch/status                 -> { connected, at, scope, test }
-//   POST monarch/start  { redirect }    -> { url } Monarch's sign-in, to send the reader to (redirect:
-//                                        this site's /money/, where Monarch sends them back)
+//   POST monarch/start  { redirect }    -> { url, state, paste } Monarch's sign-in, to send the reader to
+//                                        (redirect: this site's /money/, where Monarch sends them back; paste:
+//                                        Monarch wouldn't take it, so it sends them to a loopback address
+//                                        whose code they paste into Money)
 //   POST monarch/finish { code, state } -> { ok } the sign-in's code becomes the tokens, kept here
 //   POST monarch/test   { from, to }    -> { tool, tools, count, shape, items } Monarch's transactions
 //                                        for those days (at most 31), in Money's words; nothing kept but the counts
