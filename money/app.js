@@ -168,7 +168,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const settings = () => D.settings || { cards: {}, dismissed: [], at: 0 };
   // Every transaction as the family sees it: Monarch's category, or the one they gave it (calc.js, recat).
-  const view = () => (st.T = C.recat(D.tx, settings()));
+  // Under that, the amount, date and card the family fixed by hand (calc.js, edited); D.tx keeps what was read.
+  const base = () => C.edited(D.tx, settings());
+  const view = () => (st.T = C.recat(base(), settings()));
   const byId = id => (st.T || view()).find(t => t.id === id);
   function changeSettings(fn) {
     const s = JSON.parse(JSON.stringify(settings()));
@@ -191,8 +193,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // Each card its own colour, in the order of what's been spent on them (the same on every view).
   function cardColours() {
-    const acct = C.accounts(D.tx), tot = new Map();
-    for (const x of D.tx) if (x.dir === 'out') { const a = acct(x).name; if (a) tot.set(a, (tot.get(a) || 0) + x.amt); }
+    const all = base(), acct = C.accounts(all), tot = new Map();
+    for (const x of all) if (x.dir === 'out') { const a = acct(x).name; if (a) tot.set(a, (tot.get(a) || 0) + x.amt); }
     const order = [...tot].sort((a, b) => b[1] - a[1]).map(e => e[0]);
     return name => { const i = order.indexOf(name); return i >= 0 && i < 6 ? String(i) : 'x'; };
   }
@@ -431,7 +433,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     return html;
   }
-  function prep() { st.acct = C.accounts(D.tx); st.rw = C.rewards(D.tx, settings()); }
+  function prep() { const all = base(); st.acct = C.accounts(all); st.rw = C.rewards(all, settings()); }
   function activityHtml() {
     prep();
     const q = st.q.trim().toLowerCase();
@@ -463,7 +465,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function cardsHtml() {
     prep();
-    const colour = cardColours(), s = settings(), list = C.byCard(D.tx, st.ym, s), months = C.rewardMonths(D.tx, s, st.ym, 6);
+    const colour = cardColours(), s = settings(), all = base(), list = C.byCard(all, st.ym, s), months = C.rewardMonths(all, s, st.ym, 6);
     const earned = list.reduce((a, c) => a + c.earned, 0), spent = list.reduce((a, c) => a + c.spent, 0);
     const rows = list.length ? list.map(c => {
       const rate = !c.card ? 'From Monarch’s summaries, which don’t say' : !c.isCard ? 'Bank account' : c.rule ? rateText(c.rule) : 'Cash back not set';
@@ -471,7 +473,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + '<span class="rt"><b>' + (c.card ? no(c.card) : 'Card not known') + '</b><small><span>' + esc(plural(c.n, 'charge')) + '</span> · <span>' + esc(rate) + '</span></small></span>'
         + '<span class="rv">' + esc(usdR(c.spent)) + (c.earned ? '<small>+' + esc(usd2(c.earned)) + ' <span>back</span></small>' : '') + '</span></button>';
     }).join('') : '';
-    const miss = C.missed(D.tx, s, C.ymAdd(st.ym, -2), st.ym);
+    const miss = C.missed(all, s, C.ymAdd(st.ym, -2), st.ym);
     const missHtml = miss.length ? '<p class="sechead"><span>Use the better card</span><span>Last 3 months</span></p><div class="rgroup">' + miss.slice(0, 5).map(e => '<div class="tip"><span class="em" aria-hidden="true">' + I.card + '</span><span class="tt"><b>' + esc(KIND[e.kind]) + '</b> <span>on</span> ' + no(e.from) + ' (' + e.fromRate + '%) <span>would earn</span> ' + e.rate + '% <span>on</span> ' + no(e.to) + '<span>:</span> <span>' + esc(plural(e.n, 'charge')) + '</span>, ' + esc(usdR(e.spent)) + '<span>.</span></span><span class="tv save">+' + esc(usd2(e.more)) + '</span></div>').join('') + '</div>' : '';
     return navRow()
       + '<div class="sum" role="group" aria-label="Rewards"><span class="big"><b class="in">' + esc(usd2(earned)) + '</b><span>back <span>in ' + esc(monthName(st.ym)) + '</span></span></span><span class="line"><span>On</span> ' + esc(usdR(spent)) + ' <span>spent</span></span></div>'
@@ -483,7 +485,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ? [r.online > r.base ? r.online + '% online' : '', r.grocery > r.base ? r.grocery + '% groceries' : '', r.base + '% else'].filter(Boolean).join(', ')
     : r.base + '% on everything';
   function repeatsHtml() {
-    const rec = C.recurring(D.tx, today()), on = rec.filter(r => r.active), off = rec.filter(r => !r.active);
+    const rec = C.recurring(base(), today()), on = rec.filter(r => r.active), off = rec.filter(r => !r.active);
     const year = on.reduce((a, r) => a + r.yearly, 0);
     const row = r => '<button class="row' + (r.active ? '' : ' off') + '" type="button" data-merchant="' + esc(r.merchant) + '"><span class="em" aria-hidden="true">' + esc(r.emoji || '•') + '</span><span class="rt"><b>' + no(r.merchant) + '</b><small>'
       + '<span>' + esc(EVERY[r.every]) + '</span> · <span>last</span> ' + esc(short(r.last)) + '</small></span><span class="rv">' + (r.varies ? '~' : '') + esc(usdR(r.amt)) + '<small>' + esc(usdR(r.yearly)) + ' <span>a year</span></small></span></button>';
@@ -540,13 +542,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function openTx(id, back) {
     prep(); view();
     const x = byId(id); if (!x) return;
+    if (st.txId !== id) st.acctNew = false;
     st.txId = id;
     const a = st.acct(x), r = st.rw.get(x.id), gid = x.id.split(':')[0];
     $('txLbl').innerHTML = no(x.merchant);
     $('txBody').innerHTML = (back ? '<button class="chip quiet" type="button" data-back style="align-self:flex-start">' + I.chevL + 'Back</button>' : '')
       + '<p class="bigamt' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? '+' : '') + esc(usd2(x.amt)) + '</p><p class="sub">' + esc(dayName(x.date)) + '</p>'
-      + '<dl class="rgroup kv"><dt>' + (x.dir === 'in' ? 'Into' : 'Card') + '</dt><dd>' + (a.name ? no(a.name) + (x.last4 ? ' ···' + esc(x.last4) : '') + (a.guess ? ' <span>(probably: Monarch’s summary didn’t say)</span>' : '') : 'Not known') + '</dd>'
-      + '<dt>Category</dt><dd>' + esc(x.emoji) + ' ' + no(x.cat || '—') + (x.how ? '<br><small><span>Monarch said:</span> ' + no(x.mcat || '—') + '</small>' : '')
+      + editHtml(x, a)
+      + '<dl class="rgroup kv"><dt>Category</dt><dd>' + esc(x.emoji) + ' ' + no(x.cat || '—') + (x.how ? '<br><small><span>Monarch said:</span> ' + no(x.mcat || '—') + '</small>' : '')
       + ' <button class="chip quiet" type="button" data-recat="' + esc(x.id) + '" style="margin-top:6px">Change</button></dd>'
       + (x.dir === 'out' ? '<dt>Cash back</dt><dd>' + (r && r.rate != null ? esc(usd2(r.earned)) + ' (' + r.rate + '%' + (r.capped ? ', <span>over the bonus limit</span>' : '') + ')' : 'Not set for this card') + '</dd>' : '')
       + '<dt>From</dt><dd>' + (x.src === 'summary' ? 'Monarch’s summary email' : x.src === 'email' ? 'An email Ipsy found (Monarch didn’t email about it), added when you said yes' : 'Monarch’s alert email') + '</dd>'
@@ -559,6 +562,66 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + (x.src === 'email' && st.server && st.server.reader ? '<button class="chip quiet" type="button" data-unfound="' + esc(x.id) + '">Remove</button>' : '') + '</div>';
     if ($('txSheet').hidden) openSheet('txSheet');
   }
+  // The amount, date and card, each changed in place (calc.js, edited): saved as you leave it, with Undo.
+  function editHtml(x, a) {
+    const cards = st.cards = C.cardList(base()), cur = x.account ? cards.findIndex(c => C.cardKey(c.name) === C.cardKey(x.account)) : -1, ed = x.ed || {};
+    const card = c => c.name + (c.last4 ? ' ···' + c.last4 : '');
+    const opts = (cur < 0 ? '<option value="" selected>' + esc(x.account ? card({ name: x.account, last4: x.last4 }) : a.name ? 'Probably ' + a.name : 'Not known') + '</option>' : '')
+      + cards.map((c, i) => '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + esc(i === cur ? card({ name: c.name, last4: x.last4 }) : card(c)) + '</option>').join('')
+      + '<option value="other">Another card…</option>';
+    const said = [ed.merchant != null ? 'Merchant ' + no(ed.merchant) : '', ed.amt != null ? 'Amount ' + no(usd2(ed.amt)) : '', ed.date ? 'Date ' + esc(dayName(ed.date)) : '', ed.account != null ? (x.dir === 'in' ? 'Into ' : 'Card ') + no(ed.account ? card({ name: ed.account, last4: ed.last4 }) : 'not known') : ''].filter(Boolean);
+    return '<div class="rgroup" id="txEdit">'
+      + '<div class="frow"><label for="edMerch">Merchant</label><input class="amt merch" id="edMerch" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" translate="no" value="' + esc(x.merchant) + '"></div>'
+      + '<div class="frow"><label for="edAmt">Amount</label><input class="amt" id="edAmt" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" value="' + esc(x.amt.toFixed(2)) + '"></div>'
+      + '<div class="frow"><label for="edDate">Date</label><input id="edDate" type="date" min="' + esc(C.keepFrom(today())) + '-01" max="' + esc(today()) + '" value="' + esc(x.date) + '"></div>'
+      + '<div class="frow"><label for="edAcct">' + (x.dir === 'in' ? 'Into' : 'Card') + '</label><select id="edAcct" translate="no">' + opts + '</select></div>'
+      + (st.acctNew ? '<div class="frow"><input class="txt" id="edAcctNew" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="Its name, as on the card" aria-label="Another card’s name"><button class="chip" type="button" id="edAcctGo">Use it</button></div>' : '')
+      + '</div>'
+      + (said.length ? '<p class="note"><span>Monarch said:</span> ' + said.join('; ') + '. <button class="chip quiet" type="button" data-unedit style="margin-top:6px">Put back Monarch’s</button></p>' : '');
+  }
+  function editTx(id, patch, what) {
+    const raw = D.tx.find(t => t.id === id); if (!raw) return;
+    const prev = ((settings().edits || {})[id]) || null;
+    changeSettings(s => { s.edits = C.setEdit(s.edits || {}, raw, patch, Date.now()); });
+    st.acctNew = false; openTx(id, !!st.list);
+    toast(what, () => {
+      changeSettings(s => { const o = Object.assign({}, s.edits); delete o[id]; o[id] = Object.assign({}, prev || {}, { at: Date.now() }); s.edits = o; });
+      if (!$('txSheet').hidden && st.txId === id) openTx(id, !!st.list);
+    });
+  }
+  function onEdit(t) {
+    const x = byId(st.txId); if (!x) return;
+    if (t.id === 'edMerch') {
+      const v = String(t.value).replace(/\s+/g, ' ').trim().slice(0, 120);
+      if (!v) { t.value = x.merchant; toast('Give it a name.'); return; }
+      if (v !== x.merchant) editTx(x.id, { merch: v }, 'Now ' + v + '.');
+    } else if (t.id === 'edAmt') {
+      const n = Math.round(parseFloat(String(t.value).replace(/[$,\s]/g, '')) * 100) / 100;
+      if (!isFinite(n) || n < 0 || n > 1e7) { t.value = x.amt.toFixed(2); toast('That isn’t an amount.'); return; }
+      if (Math.abs(n - x.amt) >= 0.005) editTx(x.id, { amt: n }, 'Amount changed to ' + usd2(n) + '.');
+      else t.value = n.toFixed(2);
+    } else if (t.id === 'edDate') {
+      const v = t.value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v > today() || v < C.keepFrom(today()) + '-01') { t.value = x.date; toast('Pick a day up to today.'); return; }
+      if (v !== x.date) editTx(x.id, { date: v }, 'Moved to ' + dayName(v) + '.');
+    } else if (t.id === 'edAcct') {
+      if (t.value === 'other') { st.acctNew = true; openTx(x.id, !!st.list); const i = $('edAcctNew'); if (i) i.focus(); return; }
+      const c = (st.cards || [])[+t.value]; if (!c || t.value === '') return;
+      editTx(x.id, { acct: c.name, l4: c.last4 || null }, (x.dir === 'in' ? 'Into ' : 'On ') + c.name + ' now.');
+    }
+  }
+  function newCard() {
+    const i = $('edAcctNew'), name = i ? i.value.replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+    if (!name) { toast('Give the card a name.'); return; }
+    const x = byId(st.txId); if (!x) return;
+    editTx(x.id, { acct: name, l4: null }, (x.dir === 'in' ? 'Into ' : 'On ') + name + ' now.');
+  }
+  $('txBody').addEventListener('change', e => { if (e.target.closest('#txEdit')) onEdit(e.target); });
+  $('txBody').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (e.target.id === 'edAmt' || e.target.id === 'edMerch') { e.preventDefault(); e.target.blur(); }
+    else if (e.target.id === 'edAcctNew') { e.preventDefault(); newCard(); }
+  });
   const FIELD_NAME = { amount: 'Amount', direction: 'In or out', merchant: 'Merchant', account: 'Card', category: 'Category' };
   const fieldVal = (f, v) => f === 'amount' ? usd2(parseFloat(v) || 0) : f === 'direction' ? (v === 'in' ? 'Money in' : 'Money out') : v;
   function checkHtml(x) {
@@ -706,6 +769,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (rf) { const x = D.tx.find(t => t.id === rf.dataset.unfound); if (!x) return; removeFound(x.id); closeSheet('txSheet'); toast('Removed ' + x.merchant + '.', () => addFound(x)); return; }
     if (e.target.closest('[data-back]') && st.list) { view(); openList(st.list.title, st.list.ids.map(byId).filter(Boolean)); return; }
     const rb = e.target.closest('[data-recat]'); if (rb) { recatOpen(rb.dataset.recat); return; }
+    if (e.target.closest('#edAcctGo')) { newCard(); return; }
+    if (e.target.closest('[data-unedit]')) { editTx(st.txId, { merch: null, amt: null, date: null, acct: null, l4: null }, 'Back to what Monarch said.'); return; }
     const pk = e.target.closest('[data-pick]'); if (pk) { setCat(st.txId, pk.dataset.pick, pk.dataset.emoji || ''); return; }
     if (e.target.closest('#newCatGo')) { setCat(st.txId, $('newCat').value, ''); return; }
     if (e.target.closest('#recatAll')) { AllisonOS.settings.flip($('recatAll')); return; }
@@ -1010,8 +1075,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         : S.info({ title: 'Nobody else is in the family yet.' }), { hint: 'Only you, and those you turn on, see Money: not even the family’s owner otherwise.' });
     }
     if (sees) {
-      const colour = cardColours(), acct2 = C.accounts(D.tx);
-      const cards = [...new Set(D.tx.filter(x => x.dir === 'out').map(x => acct2(x).name).filter(n => n && C.isCard(n)))];
+      const all = base(), colour = cardColours(), acct2 = C.accounts(all);
+      const cards = [...new Set(all.filter(x => x.dir === 'out').map(x => acct2(x).name).filter(n => n && C.isCard(n)))];
       if (cards.length) {
         const f = (rule, key, title, v, sub) => S.input({ id: rule + key, title, sub, value: String(v || 0), data: { rule, key }, attrs: 'inputmode="decimal" autocomplete="off"' });
         html += S.section('Card rewards', cards.flatMap(c => {
@@ -1279,5 +1344,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (money/scripts/app-test.mjs) only.
-  window.__money = { st, D, render, setView, openTx, openList, sync, scan, renderSettings, dailyCheck, askIdeas, addFound, removeFound };
+  window.__money = { st, D, view, raw: () => D.tx, render, setView, openTx, openList, sync, scan, renderSettings, dailyCheck, askIdeas, addFound, removeFound };
 })();

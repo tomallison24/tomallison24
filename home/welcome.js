@@ -95,7 +95,8 @@
         'School: tapping a date from a newsletter opens at its own part of the email (its heading and paragraphs), with Show the whole email to read the rest, scrolled to that part and marked',
         'School works with your other apps: Open in Mail on every post, Remind me in Notes, the weather at drop-off and pickup, School\'s day and what\'s due in aOS Home\'s morning brief and search, and Ipsy in aOS can answer "What\'s on at school tomorrow?"',
         'Drinks: Cocktails… in a day lists 29 cocktails by their spirit (Margarita, Espresso Martini, Negroni, Mojito, Old Fashioned, Aperol Spritz and more): one tap logs it at the classic recipe\'s standard drinks (the International Bartenders Association\'s), so a Margarita counts 1.6 and a Long Island Iced Tea 1.7, not the 1 a plain "Cocktail" did. Picking Cocktail in Something else… offers them too, to change the size or log two',
-        'Drinks: its chips are Meals\' tiles now, equal tiles three across: your usual drinks, the cocktails and the kinds of drink in Something else…'],
+        'Drinks: its chips are Meals\' tiles now, equal tiles three across: your usual drinks, the cocktails and the kinds of drink in Something else…',
+        'Money: a transaction\'s merchant, amount, date and card change right on its page: type the name or the amount, pick the day, or pick one of your cards (or type another), with Undo and Put back Monarch\'s. Your fix is shared with the family and stays when the emails are read again'],
       apps: {
         calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
       } },

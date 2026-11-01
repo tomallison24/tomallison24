@@ -270,4 +270,34 @@ test('week by week, and through the month against the usual', () => {
   assert.equal(C.usualByDay(list, [], 31), null);
 });
 
+test('your own fixes: amount, date and card on top of what Monarch said; put back; the newer wins; the newest 400 kept', () => {
+  const a = T('2026-10-05', 40, 'Corner Diner', ROCKET), b = T('2026-10-20', 12, 'Book Nook', ROCKET), list = [b, a];
+  assert.equal(C.edited(list, {}), list, 'no fixes: the same list');
+  let edits = C.setEdit({}, a, { amt: 42.5 }, 10);
+  edits = C.setEdit(edits, a, { date: '2026-10-25', acct: 'Apple Card', l4: null }, 11);
+  assert.deepEqual(edits[a.id], { amt: 42.5, date: '2026-10-25', acct: 'Apple Card', at: 11 });
+  const v = C.edited(list, { edits });
+  assert.equal(v[0].id, a.id, 'a new date moves it to that day');
+  assert.deepEqual([v[0].amt, v[0].date, v[0].account, v[0].last4], [42.5, '2026-10-25', 'Apple Card', '']);
+  assert.deepEqual(v[0].ed, { amt: 40, date: '2026-10-05', account: 'Rocket Credit Card', last4: '9876' });
+  assert.equal(list[1].amt, 40, 'what was read is left as it was');
+  assert.equal(C.accounts(v)(v[0]).name, 'Apple Card', 'cards and rewards read the fix');
+  // the same as Monarch's is no fix; all put back leaves only its time
+  assert.deepEqual(C.setEdit(edits, a, { amt: 40 }, 12)[a.id], { date: '2026-10-25', acct: 'Apple Card', at: 12 });
+  const back = C.setEdit(edits, a, { amt: null, date: null, acct: null, l4: null }, 13);
+  assert.deepEqual(back[a.id], { at: 13 }); assert.equal(C.edited(list, { edits: back })[1], a);
+  // the merchant: a new name, its own category's rule follows it
+  const r = C.edited(list, { edits: C.setEdit({}, b, { merch: '  Book Nook Cafe ' }, 20) });
+  assert.deepEqual([r[0].merchant, r[0].ed.merchant], ['Book Nook Cafe', 'Book Nook']);
+  assert.deepEqual(C.setEdit({}, b, { merch: 'Book Nook' }, 21)[b.id], { at: 21 }, 'the same name is no fix');
+  assert.equal(C.recat(r, { recat: { m: { 'book nook cafe': { c: 'Coffee', e: '☕', at: 1 } } } })[0].cat, 'Coffee');
+  // two phones: the newer of each wins
+  const m = C.mergeSettings({ at: 1, edits: { [a.id]: { amt: 1, at: 5 }, [b.id]: { amt: 2, at: 9 } } }, { at: 2, edits: { [a.id]: { amt: 3, at: 7 }, [b.id]: { amt: 4, at: 8 } } });
+  assert.deepEqual([m.edits[a.id].amt, m.edits[b.id].amt], [3, 2]);
+  let many = {}; for (let i = 0; i < C.EDITS_MAX + 5; i++) many = C.setEdit(many, T('2026-10-01', 1, 'X'), { amt: 2 }, i);
+  assert.equal(Object.keys(many).length, C.EDITS_MAX);
+  // the cards you have, each with its usual last 4
+  assert.deepEqual(C.cardList([a, b, T('2026-10-02', 5, 'Y', { account: 'Shared Checking', last4: '0001' })]), [{ name: 'Rocket Credit Card', last4: '9876' }, { name: 'Shared Checking', last4: '0001' }]);
+});
+
 console.log(n + ' calc tests passed');

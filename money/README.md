@@ -84,6 +84,21 @@ Etsy, eBay, Wayfair, Chewy, Temu, Shein and Zappos to start). **Groceries and wh
 Monarch's Groceries category, or Costco, Sam's Club or BJ's. A card known by its name keeps its
 rewards when it's replaced (Robinhood's **1111, then **9876, are one card).
 
+## Fixing a transaction's merchant, amount, date and card
+
+A transaction's page has its **Merchant**, **Amount**, **Date** and **Card** (**Into**, for money in) at the top, each
+changed in place: type the merchant's name or the amount, pick the day, or pick the card from those your transactions use
+(each with its usual last 4 digits), or **Another card…** to type one. It saves when you leave the
+field, with **Undo**. Under them, **Monarch said:** what the email had, and **Put back Monarch's**.
+
+It's kept as the categories are: what Monarch's email said stays on the transaction, and the fix sits on
+top of it in the family's shared settings (`edits: { txId: { merch, amt, date, acct, l4, at } }`, `calc.js`
+`edited`), so every phone that sees Money shows it, reading the emails again doesn't undo it, and the
+newer of two phones' fixes wins (an entry with no fields left is one put back). Everything (the month,
+the usual, Trends, cards and rewards, Recurring, search, Export) reads the fixed copy; a new date moves
+it to that day and month, and a new merchant takes that merchant's own category if the family gave it one. Ipsy's daily check still compares the email with what Money read, not with
+your fix. aOS keeps the newest 400 fixes (`functions/money/api`, `cleanEdits`).
+
 ## Your own categories, and Ipsy's ideas
 
 Categories are Monarch's, as its emails say, until someone changes one. Monarch's own stays on each

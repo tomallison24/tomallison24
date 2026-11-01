@@ -123,9 +123,11 @@ for (const dir of ['calendar', 'calendarvintage']) await test('Calendar (/' + di
   // the right days, titles, lines and links (the contract in aOS/UPGRADES.md)
   const occ = await page.evaluate(() => window.__calendar.st.occ.filter(x => ['meals', 'orders', 'news'].includes(x.kind)).map(x => ({ kind: x.kind, title: x.title, sub: x.sub, link: x.link, startDate: x.startDate, allDay: x.allDay, hours: (x.end - x.start) / 36e5 })));
   const by = title => occ.find(x => x.title === title) || assert.fail(title + ' not in st.occ: ' + JSON.stringify(occ));
-  assert.deepEqual(by('Dinner: Lasagna'), { kind: 'meals', title: 'Dinner: Lasagna', sub: 'Meals', link: '../meals/?date=' + TODAY, startDate: TODAY, allDay: true, hours: 24 });
+  // a whole day, midnight to midnight: 25 hours when the clocks go back, 23 when they go forward
+  const dayLong = await page.evaluate(d => { const a = new Date(d + 'T00:00'), b = new Date(a); b.setDate(b.getDate() + 1); return (b - a) / 36e5; }, TODAY);
+  assert.deepEqual(by('Dinner: Lasagna'), { kind: 'meals', title: 'Dinner: Lasagna', sub: 'Meals', link: '../meals/?date=' + TODAY, startDate: TODAY, allDay: true, hours: dayLong });
   assert.equal(by('Breakfast: Pancakes').startDate, TOMORROW);
-  assert.deepEqual(by('Arrives: Target'), { kind: 'orders', title: 'Arrives: Target', sub: 'Kettle', link: '../orders/?open=o1', startDate: TODAY, allDay: true, hours: 24 });
+  assert.deepEqual(by('Arrives: Target'), { kind: 'orders', title: 'Arrives: Target', sub: 'Kettle', link: '../orders/?open=o1', startDate: TODAY, allDay: true, hours: dayLong });
   assert.equal(by('Return by: Amazon').startDate, TOMORROW);
   assert.equal(by('Pick up by: Best Buy').sub, 'Orders', 'no what: the app name');
   assert.deepEqual(by('Liverpool v Everton'), { kind: 'news', title: 'Liverpool v Everton', sub: 'Premier League', link: '../news/?sport=scores&match=g1', startDate: TOMORROW, allDay: false, hours: 2 });

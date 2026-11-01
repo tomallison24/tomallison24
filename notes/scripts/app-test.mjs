@@ -192,10 +192,13 @@ for (const scheme of ['light', 'dark']) {
   });
 
   await step(scheme + ': switch to the list view and back', async () => {
+    // a grid for each month the notes were written in (two on the first days of a month): one column each, then two
+    const grids = await page.locator('.grid:has(> .col)').count();
+    assert.ok(grids >= 1);
     await page.click('#viewBtn'); await page.waitForTimeout(300);
-    assert.equal(await page.locator('.grid .col').count(), 1);
+    assert.equal(await page.locator('.grid .col').count(), grids);
     await page.click('#viewBtn'); await page.waitForTimeout(300);
-    assert.equal(await page.locator('.grid .col').count(), 2);
+    assert.equal(await page.locator('.grid .col').count(), 2 * grids);
   });
 
   await step(scheme + ': swipe a note: its actions are Retro discs (pin mustard, tag teal, archive olive, delete orange)', async () => {

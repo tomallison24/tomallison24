@@ -403,8 +403,57 @@
     }
     return [...by.values()].sort((a, b) => b.total - a.total || b.n - a.n);
   }
-  // Two copies of the settings (this phone's and aOS's): the newer one, with every category change
-  // and idea taken back from both, entry by entry, the newer of each.
+  // ---------------------------------------------------------------------
+  // Your own fixes to a transaction's merchant, amount, date and card (shared settings, edits):
+  //   edits: { txId: { merch, amt, date, acct, l4, at } }   any of them (acct with its last 4, l4)
+  // What Monarch's email said stays on the transaction, as its category does; the fix sits on top of it,
+  // and the copy says what it was (ed: { merchant, amt, date, account, last4 }). A new merchant takes
+  // that merchant's own category, if the family gave it one. An entry with none of them is a
+  // fix taken back (kept, with its time, so it wins over an older copy on another phone). A new date
+  // moves it to that day (its at, which orders the lists, becomes noon that day).
+  // ---------------------------------------------------------------------
+  const EDITS_MAX = 400;
+  function edited(txs, settings) {
+    const ed = settings && settings.edits;
+    if (!ed || !Object.keys(ed).length) return txs;
+    let moved = false;
+    const out = txs.map(x => {
+      const e = ed[x.id]; if (!e) return x;
+      const y = Object.assign({}, x), was = {};
+      if (typeof e.merch === 'string' && e.merch.trim() && e.merch.trim() !== x.merchant) { was.merchant = x.merchant; y.merchant = e.merch.trim(); }
+      if (typeof e.amt === 'number' && isFinite(e.amt) && e.amt >= 0 && Math.abs(e.amt - x.amt) >= 0.005) { was.amt = x.amt; y.amt = r2(e.amt); }
+      if (typeof e.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.date !== x.date) { was.date = x.date; y.date = e.date; y.at = Date.parse(e.date + 'T12:00:00Z'); moved = true; }
+      if (typeof e.acct === 'string' && e.acct.trim() && (e.acct !== (x.account || '') || (e.l4 || '') !== (x.last4 || ''))) { was.account = x.account || ''; was.last4 = x.last4 || ''; y.account = e.acct.trim(); y.last4 = e.l4 || ''; }
+      if (!Object.keys(was).length) return x;
+      y.ed = was; return y;
+    });
+    return moved ? out.sort((a, b) => b.at - a.at || (a.id < b.id ? 1 : -1)) : out;
+  }
+  // A fix to one transaction: the fields given (null takes one back), the rest as they were. A field the
+  // same as Monarch's is no fix at all, so it's left out.
+  function setEdit(edits, x, patch, at) {
+    const o = Object.assign({}, edits), e = Object.assign({}, o[x.id] || {});
+    delete e.at;
+    for (const [k, v] of Object.entries(patch)) { if (v == null) delete e[k]; else e[k] = v; }
+    if (e.merch != null && (!String(e.merch).trim() || String(e.merch).trim() === x.merchant)) delete e.merch;
+    if (e.amt != null && Math.abs(e.amt - x.amt) < 0.005) delete e.amt;
+    if (e.date != null && e.date === x.date) delete e.date;
+    if (e.acct != null && e.acct === (x.account || '') && (e.l4 || '') === (x.last4 || '')) { delete e.acct; delete e.l4; }
+    if (e.acct == null) delete e.l4;
+    delete o[x.id]; o[x.id] = Object.assign(e, { at });   // the newest last, so the oldest go first past EDITS_MAX
+    return Object.fromEntries(Object.entries(o).slice(-EDITS_MAX));
+  }
+  // Every card and account the transactions name, with the last 4 digits each most often has: [{ name, last4 }].
+  function cardList(txs) {
+    const m = new Map();
+    for (const x of txs) if (x.account) {
+      const k = cardKey(x.account), c = m.get(k) || { name: x.account, n: 0, l4: new Map() };
+      c.n++; if (x.last4) c.l4.set(x.last4, (c.l4.get(x.last4) || 0) + 1); m.set(k, c);
+    }
+    return [...m.values()].sort((a, b) => b.n - a.n).map(c => ({ name: c.name, last4: ([...c.l4].sort((a, b) => b[1] - a[1])[0] || [''])[0] }));
+  }
+  // Two copies of the settings (this phone's and aOS's): the newer one, with every category change,
+  // fix and idea taken back from both, entry by entry, the newer of each.
   function mergeSettings(a, b) {
     if (!a) return b; if (!b) return a;
     const base = Object.assign({}, (b.at || 0) >= (a.at || 0) ? b : a);
@@ -415,6 +464,11 @@
       recat[k] = o;
     }
     if (ra.t || ra.m || ra.g || rb.t || rb.m || rb.g) base.recat = recat;
+    if (a.edits || b.edits) {
+      const o = Object.assign({}, a.edits || {});
+      for (const [id, v] of Object.entries(b.edits || {})) if (!o[id] || (v && v.at || 0) >= (o[id].at || 0)) o[id] = v;
+      base.edits = Object.fromEntries(Object.entries(o).sort((x, y) => (x[1].at || 0) - (y[1].at || 0)).slice(-EDITS_MAX));
+    }
     const ia = a.ideas, ib = b.ideas;
     if (ia || ib) {
       const newer = !ia ? ib : !ib ? ia : (ib.at || 0) >= (ia.at || 0) ? ib : ia;
@@ -460,5 +514,5 @@
 
   root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, sameCharge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
     recurring, minFor, month, pace, compare, weeks, byDay, usualByDay, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune, MAX_MONTH, newest, csvCell,
-    catKey, recat, categories, mergeSettings, ideasInput };
+    catKey, recat, categories, mergeSettings, ideasInput, edited, setEdit, cardList, EDITS_MAX };
 })(typeof window !== 'undefined' ? window : globalThis);
