@@ -190,7 +190,14 @@ await test('the month grid shows the Family events, the layers and a holiday', a
     assert.ok((await page.textContent('#mgrid')).includes('Grandma visiting'), 'the all-day event, on next month’s grid');
     await page.evaluate(d => window.__calendar.goTo(d), TODAY);
   }
-  assert.ok(grid.includes('Swimming (late)'), 'the changed occurrence of the weekly swim');
+  // a week ago: on the first days of a month that can be last month's grid
+  const late = ymd(day(-7));
+  if (grid.includes('Swimming (late)') || late.slice(0, 7) === TODAY.slice(0, 7)) assert.ok(grid.includes('Swimming (late)'), 'the changed occurrence of the weekly swim');
+  else {
+    await page.evaluate(d => window.__calendar.goTo(d), late);
+    assert.ok((await page.textContent('#mgrid')).includes('Swimming (late)'), 'the changed occurrence of the weekly swim, on last month’s grid');
+    await page.evaluate(d => window.__calendar.goTo(d), TODAY);
+  }
   const sel = await page.textContent('#main');
   assert.ok(sel.includes('Dentist') && sel.includes('Bins out') && sel.includes('Call the plumber'), 'today’s list under the grid: ' + sel.slice(0, 300));
   assert.ok(sel.includes('12 High Street'));
