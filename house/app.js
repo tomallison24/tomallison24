@@ -1379,7 +1379,7 @@ function drawTopNav() {
   const shown = VIEWS.filter(viewShown), key = shown.map(v => v.id).join();
   if (nav.dataset.key !== key) {
     nav.dataset.key = key; nav.classList.remove('ready');
-    put(nav, '<i class="vt-thumb" aria-hidden="true"></i>' + shown.map(v => `<button type="button" data-view="${v.id}"><span class="vt-ic" aria-hidden="true">${svg(v.icon, 17)}</span>${esc(v.name)}</button>`).join(''));
+    put(nav, '<i class="vt-thumb" aria-hidden="true"></i>' + shown.map(v => `<button type="button" data-view="${v.id}" aria-label="${esc(v.name)}"><span class="vt-ic" aria-hidden="true">${svg(v.icon, 17)}</span><span class="vt-n">${esc(v.name)}</span></button>`).join(''));
   }
   let cur = null;
   for (const b of nav.querySelectorAll('[data-view]')) {

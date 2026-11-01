@@ -180,6 +180,19 @@
     nav.vtop > button .vt-ic { display: none; }
   }
   @media (min-width: 700px) and (max-width: 819px) { nav.vtop > button { padding: 0 8px; font-size: 12.5px; letter-spacing: 0; } }
+  /* ---- on a phone the same bar floats at the bottom, in reach of a thumb: one icon per view, no menu to open,
+     the one you're on lit by the slider; the view's name is the title at the top. Hidden under a popup. ---- */
+  @media (max-width: 699px) {
+    .vtop { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 8; translate: -50% 0;
+      display: flex; gap: 2px; width: max-content; max-width: calc(100vw - 24px); padding: 5px; border-radius: 999px;
+      transition: opacity .25s, transform .3s cubic-bezier(.2,.8,.2,1); }
+    nav.vtop > button { width: 46px; height: 46px; padding: 0; gap: 0; justify-content: center; }
+    nav.vtop > button .vt-n { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    nav.vtop > button[data-view] .vt-ic { width: 30px; height: 30px; background: none; }
+    nav.vtop > button .vt-ic svg { width: 23px; height: 23px; }
+    html.lock .vtop { transform: translateY(12px); }
+    .vbar { display: none; }
+  }
   @media (prefers-reduced-transparency: reduce) { .vtop::before { background: var(--lgs-solid); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   /* ---- top bar ---- */
   .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 6px 4px 14px; }
