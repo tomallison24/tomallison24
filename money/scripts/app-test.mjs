@@ -123,7 +123,30 @@ async function gmail(route) {
 // ---- Anthropic's API, as the route sees it (Node's fetch): what Ipsy's check answers ----
 const aiCalls = [], ideasCalls = [];
 const IDEAS = { ideas: [{ kind: 'move', from: '', merchant: 'Costco', to: 'Groceries', why: 'Costco is mostly groceries: $120 a month.' }, { kind: 'merge', from: 'Auto Maintenance', merchant: '', to: 'Car', why: 'One category for the car.' }] };
+// ---- Monarch's own connector, as the route sees it (server/monarch.js): a stand-in, read-only ----
+const monarchCalls = [];
+const MJ = (o, st = 200, h = {}) => new Response(JSON.stringify(o), { status: st, headers: Object.assign({ 'Content-Type': 'application/json' }, h) });
+async function monarchFetch(url, o = {}) {
+  const u = String(url);
+  if (u === 'https://api.monarch.com/.well-known/oauth-protected-resource/mcp') return MJ({ resource: 'https://api.monarch.com/mcp', authorization_servers: ['https://auth.monarch.test'] });
+  if (u === 'https://auth.monarch.test/.well-known/oauth-authorization-server') return MJ({ authorization_endpoint: 'https://auth.monarch.test/authorize', token_endpoint: 'https://auth.monarch.test/token', registration_endpoint: 'https://auth.monarch.test/register' });
+  if (u === 'https://auth.monarch.test/register') return MJ({ client_id: 'aos-client' }, 201);
+  if (u === 'https://auth.monarch.test/token') return new URLSearchParams(o.body).get('code') === 'code-1' ? MJ({ access_token: 'tok-1', refresh_token: 'ref-1', expires_in: 3600, scope: 'read' }) : MJ({ error: 'invalid_grant' }, 400);
+  if (u === 'https://api.monarch.com/mcp') {
+    const m = JSON.parse(o.body); monarchCalls.push(m.method);
+    if (m.method === 'notifications/initialized') return new Response(null, { status: 202 });
+    const result = m.method === 'initialize' ? { protocolVersion: '2025-06-18', serverInfo: { name: 'monarch' } }
+      : m.method === 'tools/list' ? { tools: [{ name: 'GetAccounts', inputSchema: { properties: {} } }, { name: 'GetTransactions', inputSchema: { properties: { startDate: {}, endDate: {}, limit: {} } } }] }
+      : { content: [{ type: 'text', text: JSON.stringify({ results: [
+        { id: '998877665544332211', date: ymd(new Date(RECENT)), amount: -42, merchant: { name: 'Book Nook' }, account: { displayName: 'Rocket Credit Card' }, category: { name: 'Books' } },
+        { id: 'mm2', date: ymd(new Date(RECENT)), amount: -4.5, merchant: { name: 'Corner Coffee' }, account: { displayName: 'Rocket Credit Card' }, category: { name: 'Coffee Shops' } },
+        { id: 'mm3', date: ymd(new Date(RECENT)), amount: -9.99, merchant: { name: 'Stream Box' }, account: { displayName: 'Rocket Credit Card' }, category: { name: 'Streaming' }, pending: true }] }) }] };
+    return MJ({ jsonrpc: '2.0', id: m.id, result }, 200, m.method === 'initialize' ? { 'Mcp-Session-Id': 's1' } : {});
+  }
+  throw new Error('unexpected fetch ' + u);
+}
 globalThis.fetch = async (url, opts) => {
+  if (/^https:\/\/(api\.monarch\.com|auth\.monarch\.test)\//.test(String(url))) return monarchFetch(url, opts);
   if (!String(url).startsWith('https://api.anthropic.com/')) throw new Error('unexpected fetch ' + url);
   const body = JSON.parse(opts.body), words = body.messages[0].content;
   if (/spending categories/.test(body.system)) { ideasCalls.push(words); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(IDEAS) }] }), { status: 200 }); }
@@ -602,6 +625,41 @@ await test('kept in IndexedDB, five years of it: moved from localStorage, read b
   await p.waitForSelector('#main .sum', { timeout: 10000 });
   assert.equal(await p.evaluate(() => window.__money.D.tx.length), n);
   assert.equal(await p.evaluate(saved), n);
+});
+await test('Monarch’s own connector, a test: Connect Monarch, signed in and back, its transactions beside Money’s; Disconnect', async () => {
+  // aOS's route sees this site as https://site.example (as api() does): Money's own address is sent as that
+  await p.route('**/money/api/monarch/start', async route => {
+    const req = route.request();
+    const request = new Request('https://site.example/money/api/monarch/start', { method: 'POST', headers: req.headers(), body: JSON.stringify({ redirect: 'https://site.example/money/' }) });
+    const res = await onRequest({ request, params: { route: ['monarch', 'start'] }, env: { ACCOUNTS: KV } });
+    return route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
+  });
+  // Monarch's sign-in page: the reader says yes, and is sent back to Money with a code
+  await p.route('https://auth.monarch.test/**', route => {
+    const u = new URL(route.request().url());
+    assert.equal(u.searchParams.get('scope'), 'read', 'read-only');
+    return route.fulfill({ status: 302, headers: { Location: BASE + '/money/?code=code-1&state=' + u.searchParams.get('state') } });
+  });
+  await p.click('#setBtn');
+  await p.waitForSelector('#setBody #monarchIn');
+  assert.match(await p.locator('#setBody').innerText(), /Connect Monarch/);
+  await Promise.all([p.waitForURL(/\/money\/\?code=|\/money\/$/), p.click('#setBody #monarchIn')]);
+  await p.waitForFunction(() => !!localStorage.getItem('money.monarch.test'), null, { timeout: 15000 });
+  assert.doesNotMatch(p.url(), /code=/, 'the code is taken off the address');
+  assert.ok(JSON.parse(kv.get('money:monarch')).access, 'the sign-in is kept in aOS');
+  const t = JSON.parse(await p.evaluate(() => localStorage.getItem('money.monarch.test')));
+  assert.deepEqual([t.tool, t.count, t.byId, t.onlyMonarch >= 1, t.pending], ['GetTransactions', 3, 1, true, 1]);
+  await p.click('#setBtn');
+  await p.waitForSelector('#setBody #monarchTest');
+  const s = await p.locator('#setBody').innerText();
+  assert.match(s, /Read 3 transactions from Monarch/); assert.match(s, /1 by Monarch’s own id/); assert.match(s, /still pending in Monarch/);
+  await p.locator('#setBody #monarchWho').scrollIntoViewIfNeeded();
+  if (SHOTS) await p.screenshot({ path: path.join(SHOTS, pad(++shot) + '-monarch-test.png') });
+  await p.click('#setBody #monarchOut'); await p.click('#setBody #monarchOut');
+  await p.waitForSelector('#setBody #monarchIn');
+  assert.equal(kv.has('money:monarch'), false, 'disconnected: the sign-in is gone from aOS');
+  await p.click('#setSheet .okbtn');
+  await p.unroute('**/money/api/monarch/start'); await p.unroute('https://auth.monarch.test/**');
 });
 assert.deepEqual(A.errs, []);
 

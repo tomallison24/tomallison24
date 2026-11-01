@@ -158,6 +158,7 @@ async function forget(db, u) {
     const gone = ['money:share', 'money:meta'];
     let cursor;
     do { const page = await db.list({ prefix: 'money:tx:', cursor }); gone.push(...page.keys.map(k => k.name)); cursor = page.list_complete ? null : page.cursor; } while (cursor);
+    { const page = await db.list({ prefix: 'money:monarch' }); gone.push(...page.keys.map(k => k.name)); }   // the sign-in to Monarch's connector
     for (const k of gone) await db.delete(k);
   } else if (money && (money.with || []).includes(id)) await putJSON(db, 'money:share', Object.assign({}, money, { with: money.with.filter(x => x !== id) }));
 }

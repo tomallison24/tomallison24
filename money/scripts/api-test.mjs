@@ -264,6 +264,79 @@ await test('bad input', async () => {
   assert.equal(cleanTx({ id: 'e:bk1:105210', date: '2026-10-01', amt: 1052.1, at: 1, dir: 'out', merchant: 'Frontier Airlines', src: 'email' }).src, 'email', 'a charge found in an email stays one');
   assert.equal(cleanTx({ id: 'x', date: '2026-10-01', amt: 1, at: 1, dir: 'out', merchant: 'A', src: 'made-up' }).src, 'alert');
 });
+await test('Monarch’s own connector: found, registered, signed in with PKCE, refreshed, read over MCP; the reader only', async () => {
+  // a stand-in Monarch: the resource's metadata names its sign-in server, which takes registrations
+  const seen = { reg: null, challenge: '', tokens: 0, mcp: [] };
+  const was = globalThis.fetch;
+  const J = (o, st = 200, h = {}) => new Response(JSON.stringify(o), { status: st, headers: Object.assign({ 'Content-Type': 'application/json' }, h) });
+  const sha = async v => btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v))))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  let access = 'tok-1';
+  globalThis.fetch = async (url, o = {}) => {
+    const u = new URL(String(url));
+    if (u.href === 'https://api.monarch.com/.well-known/oauth-protected-resource/mcp') return J({ resource: 'https://api.monarch.com/mcp', authorization_servers: ['https://auth.monarch.test'] });
+    if (u.href === 'https://auth.monarch.test/.well-known/oauth-authorization-server') return J({ authorization_endpoint: 'https://auth.monarch.test/authorize', token_endpoint: 'https://auth.monarch.test/token', registration_endpoint: 'https://auth.monarch.test/register', token_endpoint_auth_methods_supported: ['none'], scopes_supported: ['read', 'write'] });
+    if (u.href === 'https://auth.monarch.test/register') { seen.reg = JSON.parse(o.body); return J({ client_id: 'aos-client' }, 201); }
+    if (u.href === 'https://auth.monarch.test/token') {
+      const p = new URLSearchParams(o.body); seen.tokens++;
+      assert.equal(p.get('client_id'), 'aos-client'); assert.equal(p.get('resource'), 'https://api.monarch.com/mcp');
+      if (p.get('grant_type') === 'authorization_code') {
+        assert.equal(p.get('code'), 'code-1'); assert.equal(await sha(p.get('code_verifier')), seen.challenge, 'PKCE: the verifier matches the challenge');
+        return J({ access_token: 'tok-1', refresh_token: 'ref-1', expires_in: 3600, scope: 'read' });
+      }
+      assert.equal(p.get('grant_type'), 'refresh_token'); assert.equal(p.get('refresh_token'), 'ref-1');
+      return J({ access_token: (access = 'tok-2'), expires_in: 3600 });
+    }
+    if (u.href === 'https://api.monarch.com/mcp') {
+      assert.equal(o.headers.Authorization, 'Bearer ' + access);
+      const m = JSON.parse(o.body); seen.mcp.push(m.method);
+      if (m.method === 'initialize') return J({ jsonrpc: '2.0', id: m.id, result: { protocolVersion: '2025-06-18', serverInfo: { name: 'monarch' }, capabilities: { tools: {} } } }, 200, { 'Mcp-Session-Id': 'ses-1' });
+      assert.equal(o.headers['Mcp-Session-Id'], 'ses-1');
+      if (m.method === 'notifications/initialized') return new Response(null, { status: 202 });
+      if (m.method === 'tools/list') return new Response('event: message\ndata: ' + JSON.stringify({ jsonrpc: '2.0', id: m.id, result: { tools: [
+        { name: 'GetAccounts', inputSchema: { properties: {} } }, { name: 'GetTransactionsSummary', inputSchema: { properties: {} } },
+        { name: 'GetTransactions', inputSchema: { properties: { startDate: {}, endDate: {}, limit: {} } } }] } }) + '\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+      if (m.method === 'tools/call') {
+        assert.deepEqual(m.params, { name: 'GetTransactions', arguments: { startDate: '2026-10-01', endDate: '2026-10-14', limit: 300 } });
+        return J({ jsonrpc: '2.0', id: m.id, result: { content: [{ type: 'text', text: JSON.stringify({ totalCount: 2, results: [
+          { id: '998877', date: '2026-10-03', amount: -42, merchant: { id: 'm1', name: 'Book Nook' }, account: { id: 'a1', displayName: 'Rocket Credit Card' }, category: { name: 'Books' }, pending: false },
+          { id: '998878', date: '2026-10-04', amount: 1200.5, merchant: { name: 'Payroll' }, account: { displayName: 'Shared Checking' }, category: { name: 'Paychecks' }, pending: true }] }) }] } });
+      }
+    }
+    throw new Error('unexpected fetch ' + u.href);
+  };
+  try {
+    assert.equal((await call('monarch/status', { token: alex })).status, 403, 'not the reader');
+    assert.equal((await call('monarch/status', { token: pat })).body.connected, false);
+    assert.equal((await call('monarch/start', { token: pat, body: { redirect: 'https://evil.example/money/' } })).status, 400, 'only back to this site’s Money');
+    const st = (await call('monarch/start', { token: pat, body: { redirect: 'https://site.example/money/' } })).body;
+    const au = new URL(st.url);
+    assert.equal(au.origin + au.pathname, 'https://auth.monarch.test/authorize');
+    assert.deepEqual(['response_type', 'client_id', 'redirect_uri', 'scope', 'code_challenge_method', 'resource'].map(k => au.searchParams.get(k)), ['code', 'aos-client', 'https://site.example/money/', 'read', 'S256', 'https://api.monarch.com/mcp']);
+    assert.equal(au.searchParams.get('state'), st.state);
+    assert.deepEqual([seen.reg.client_name, seen.reg.redirect_uris, seen.reg.token_endpoint_auth_method, seen.reg.scope], ['aOS Money', ['https://site.example/money/'], 'none', 'read']);
+    seen.challenge = au.searchParams.get('code_challenge');
+    assert.equal((await call('monarch/finish', { token: pat, body: { code: 'code-1', state: 'made-up' } })).body.error, 'monarch-state');
+    assert.deepEqual((await call('monarch/finish', { token: pat, body: { code: 'code-1', state: st.state } })).body, { ok: true, scope: 'read' });
+    assert.equal((await call('monarch/finish', { token: pat, body: { code: 'code-1', state: st.state } })).status, 400, 'a sign-in is used once');
+    assert.equal(JSON.parse(db.m.get('money:monarch')).refresh, 'ref-1', 'the tokens are kept in aOS');
+    assert.equal((await call('monarch/test', { token: pat, body: { from: '2026-09-01', to: '2026-10-14' } })).status, 400, 'at most 31 days');
+    const t = (await call('monarch/test', { token: pat, body: { from: '2026-10-01', to: '2026-10-14' } })).body;
+    assert.equal(t.tool, 'GetTransactions'); assert.equal(t.count, 2);
+    assert.deepEqual(t.items[0], { id: '998877', date: '2026-10-03', amt: 42, dir: 'out', merchant: 'Book Nook', account: 'Rocket Credit Card', cat: 'Books', pending: false });
+    assert.deepEqual([t.items[1].dir, t.items[1].amt, t.items[1].pending], ['in', 1200.5, true]);
+    assert.ok(t.shape.includes('merchant{id,name}'));
+    assert.deepEqual(seen.mcp, ['initialize', 'notifications/initialized', 'tools/list', 'tools/call']);
+    // an hour later: the token is refreshed, once
+    const k = JSON.parse(db.m.get('money:monarch')); k.exp = Date.now() - 1; db.m.set('money:monarch', JSON.stringify(k));
+    await call('monarch/test', { token: pat, body: { from: '2026-10-01', to: '2026-10-14' } });
+    assert.equal(access, 'tok-2'); assert.equal(JSON.parse(db.m.get('money:monarch')).refresh, 'ref-1', 'the refresh token kept');
+    const status = (await call('monarch/status', { token: pat })).body;
+    assert.deepEqual([status.connected, status.test.count, status.test.tool], [true, 2, 'GetTransactions']);
+    assert.ok(!JSON.stringify(status).includes('Book Nook'), 'no transactions kept');
+    assert.equal((await call('monarch/disconnect', { token: pat, body: {} })).body.ok, true);
+    assert.equal((await call('monarch/test', { token: pat, body: { from: '2026-10-01', to: '2026-10-14' } })).body.error, 'monarch-signin');
+  } finally { globalThis.fetch = was; }
+});
 await test('removing someone it was shared with takes them off the list; removing the reader deletes it all', async () => {
   const removeAs = async (token, id) => {
     const request = new Request('https://site.example/aOS/api/remove', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Origin: 'https://site.example' }, body: JSON.stringify({ id }) });

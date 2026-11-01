@@ -99,6 +99,24 @@ the usual, Trends, cards and rewards, Recurring, search, Export) reads the fixed
 it to that day and month, and a new merchant takes that merchant's own category if the family gave it one. Ipsy's daily check still compares the email with what Money read, not with
 your fix. aOS keeps the newest 400 fixes (`functions/money/api`, `cleanEdits`).
 
+## Monarch's own connector (a test)
+
+Monarch has its own MCP connector (`https://api.monarch.com/mcp`), the one its help pages give to Claude,
+ChatGPT and the rest. Money is testing it as a better source than the emails: Monarch's own record of
+every transaction, with its card, not just those over the alert amount.
+
+**Settings > Connected accounts > Connect Monarch** (the reader only) sends you to Monarch to sign in and
+say yes, read-only; Monarch sends you back to Money (`/money/`), and aOS's server keeps the sign-in
+(`server/monarch.js`: found the way the MCP spec says, aOS registering itself with Monarch as "aOS
+Money", OAuth with PKCE, the tokens refreshed as they run out; in Workers KV, deleted with the rest of
+Money). **Test reading Monarch** reads the last 14 days through the connector and puts them beside what
+Money read from the emails: how many match (by Monarch's own id, which each alert's link carries, or by
+amount and day), how many differ and in what, what's only in Monarch or only in Money, and the fields
+Monarch gives. Nothing in Money changes yet, and nothing changes in Monarch; aOS keeps only the counts.
+**Disconnect Monarch** deletes the sign-in (Monarch's Settings > MCP Connector lists it too).
+
+Routes: `functions/money/api` `monarch/status`, `start`, `finish`, `test`, `disconnect`.
+
 ## Your own categories, and Ipsy's ideas
 
 Categories are Monarch's, as its emails say, until someone changes one. Monarch's own stays on each
