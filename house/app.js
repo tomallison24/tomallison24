@@ -741,7 +741,7 @@ function render() {
   safe('the dehumidifiers', renderDehums);
   safe('the thermostats', renderThermos);
   for (const f of FAMILIES) if (f.render) safe(f.name, () => f.render());
-  safe('the menu', renderViewHead);
+  safe('the view bar', renderViewHead);
   if (openId) safe('the popup', renderUnit);
   if (openTId) safe('the popup', renderThermo);
   if (openD) safe('the popup', renderDev);
@@ -818,7 +818,7 @@ function openUnit(id) {
   renderUnit();
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheets(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSheets(); closeViewMenu(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSheets(); } });
 
 function dragToClose(wrap) {
   const sh = wrap.querySelector('.sheet'), body = sh.querySelector('.sheet-body');
@@ -1312,7 +1312,7 @@ document.addEventListener('click', e => {
 });
 
 // ---------------------------------------------------------------------------
-// The drop-down: six views, one per kind of device, Favorites first, then the
+// The views (the view bar): six, one per kind of device, Favorites first, then the
 // automations - and
 // the app always opens on Favorites. Each view holds sections (Thermostats,
 // Heaters, ...) under small headings; the other families add theirs from
@@ -1333,7 +1333,7 @@ const SECTIONS = [
 ];
 let curView = 'fav';
 const secsOf = v => SECTIONS.filter(x => x.view === v.id).sort((a, b) => a.order - b.order);
-// A view's line in the drop-down: what its sections are doing, at most two of them.
+// A view's line beside its name at the top: what its sections are doing, at most two of them.
 const QUIET = /^(Off|Idle|Holding|Quiet|All off|Docked|Unavailable|Offline|—|)$|W now$/;
 function viewSum(v) {
   if (v.sum) return v.sum() || v.quiet;   // a view's own summary (favorites.js sets them)
@@ -1362,24 +1362,22 @@ let shownView = null;
 function renderViewHead() {
   const v = VIEWS.find(x => x.id === curView);
   if (shownView !== curView) { const from = shownView; shownView = curView; if (from) window.dispatchEvent(new CustomEvent('viewchange', { detail: { from, to: curView } })); }
-  $('viewName').textContent = v.name; $('vbName').textContent = v.name;
-  if ($('vbIcon').dataset.v !== v.icon) { $('vbIcon').dataset.v = v.icon; $('vbIcon').innerHTML = svg(v.icon, 18); }
-  if (!$('viewBtn').querySelector('.vb-chev svg')) $('viewBtn').querySelector('.vb-chev').innerHTML = svg('chev', 20).replace('<svg', '<svg style="transform:rotate(180deg)"');
+  $('viewName').textContent = v.name;
   $('secSum').textContent = viewSum(v);
   for (const x of VIEWS) { const box = $('g-' + x.id); if (box) box.hidden = x.id !== curView; }
   for (const x of SECTIONS) { const h = document.querySelector(`.vsec[data-sec="${x.id}"] .vsec-h small`); if (h) h.textContent = x.sum(); }
-  if (!$('viewMenu').hidden) drawViewMenu();
   drawTopNav();
 }
-// The view bar at the top, on a larger screen (CSS shows it from 700 points wide): every view in the menu, the one
-// you're on marked, with a lit pill behind it (the slider) that slides across to the next one you tap; drawn again
+// The view bar: at the top on a larger screen (from 700 points wide), names and icons; floating at the bottom on a
+// phone, the icons alone (the names are read out, and the one you're on is the title). Every view, the one you're on
+// marked, with a lit pill behind it (the slider) that slides across to the next one you tap; drawn again
 // only when the views shown change, so a tap stays where it is.
 function drawTopNav() {
   const nav = $('vtop'); if (!nav) return;
   const shown = VIEWS.filter(viewShown), key = shown.map(v => v.id).join();
   if (nav.dataset.key !== key) {
     nav.dataset.key = key; nav.classList.remove('ready');
-    put(nav, '<i class="vt-thumb" aria-hidden="true"></i>' + shown.map(v => `<button type="button" data-view="${v.id}"><span class="vt-ic" aria-hidden="true">${svg(v.icon, 17)}</span>${esc(v.name)}</button>`).join(''));
+    put(nav, '<i class="vt-thumb" aria-hidden="true"></i>' + shown.map(v => `<button type="button" data-view="${v.id}" aria-label="${esc(v.name)}"><span class="vt-ic" aria-hidden="true">${svg(v.icon, 17)}</span><span class="vt-n">${esc(v.name)}</span></button>`).join(''));
   }
   let cur = null;
   for (const b of nav.querySelectorAll('[data-view]')) {
@@ -1388,7 +1386,7 @@ function drawTopNav() {
     if (nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2);   // the one you're on, in sight
   }
   const th = nav.querySelector('.vt-thumb'); if (!th) return;
-  if (!cur || !cur.offsetWidth) { th.classList.remove('on'); nav.classList.remove('ready'); return; }   // hidden (a phone): placed again when it shows
+  if (!cur || !cur.offsetWidth) { th.classList.remove('on'); nav.classList.remove('ready'); return; }   // not laid out yet: placed again when it is
   Object.assign(th.style, { transform: `translate(${cur.offsetLeft}px, ${cur.offsetTop}px)`, width: cur.offsetWidth + 'px', height: cur.offsetHeight + 'px' });
   th.classList.add('on');
   if (!nav.classList.contains('ready')) requestAnimationFrame(() => requestAnimationFrame(() => nav.classList.add('ready')));   // placed first, then it slides
@@ -1396,27 +1394,9 @@ function drawTopNav() {
 // a phone turned on its side, a window made wider: the bar shows (or its buttons change size), so the slider is placed again
 let navResize = 0;
 addEventListener('resize', () => { cancelAnimationFrame(navResize); navResize = requestAnimationFrame(() => { $('vtop').classList.remove('ready'); drawTopNav(); }); });
-function goView(id) { curView = id; closeViewMenu(); renderViewHead(); window.scrollTo({ top: 0 }); }
-// A view with nothing in it (Labs between ideas) is left out of the menu.
+function goView(id) { curView = id; renderViewHead(); window.scrollTo({ top: 0 }); }
+// A view with nothing in it (Labs between ideas) is left out of the bar.
 const viewShown = v => { const box = $('g-' + v.id); return !box || box.children.length > 0; };
-function drawViewMenu() {
-  put($('viewMenu'), VIEWS.filter(viewShown).map(v => `<button type="button" role="option" data-view="${v.id}" aria-selected="${v.id === curView}">
-      <span class="ic">${svg(v.icon, 20)}</span><span class="k">${v.name}<small>${esc(viewSum(v))}</small></span><span class="tick">${svg('check', 20)}</span></button>`).join(''));
-}
-function closeViewMenu() { $('viewMenu').hidden = true; $('viewBtn').setAttribute('aria-expanded', 'false'); }
-$('viewBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  const m = $('viewMenu');
-  if (!m.hidden) return closeViewMenu();
-  drawViewMenu(); m.hidden = false; $('viewBtn').setAttribute('aria-expanded', 'true');
-});
-$('viewMenu').addEventListener('click', e => {
-  const b = e.target.closest('[data-view]'); if (!b) return;
-  curView = b.dataset.view;
-  closeViewMenu(); renderViewHead();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-document.addEventListener('click', e => { if (!$('viewMenu').hidden && !e.target.closest('#viewMenu, #viewBtn')) closeViewMenu(); });
 $('vtop').addEventListener('click', e => {
   const b = e.target.closest('[data-view]'); if (!b || b.dataset.view === curView) return;
   curView = b.dataset.view; renderViewHead();

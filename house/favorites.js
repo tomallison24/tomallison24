@@ -328,7 +328,7 @@ family({
   },
 });
 
-// What each view says in the drop-down: what is running or needs you, not
+// What each view says beside its name at the top: what is running or needs you, not
 // every section's line run together.
 {
   const V = id => VIEWS.find(v => v.id === id), fav = famOf('fav'), sumOf = id => famOf(id).sum;

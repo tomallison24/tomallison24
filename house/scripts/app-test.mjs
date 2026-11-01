@@ -66,7 +66,7 @@ async function phone(scheme, { design = null, seed = null, at = '/house/', size 
   page.on('pageerror', e => errors.push('script error: ' + e.message));
   await page.addInitScript(() => document.addEventListener('securitypolicyviolation', e => { (window.__csp = window.__csp || []).push(e.violatedDirective + ' ' + e.blockedURI); }));
   await page.goto(BASE + at);
-  await page.waitForSelector(size ? '#vtop [data-view]' : '#viewBtn');
+  await page.waitForSelector('#vtop [data-view]');
   await page.waitForTimeout(1500);
   return { ctx, page, errors };
 }
@@ -93,7 +93,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.ok(bg === card && radius === '22px' && (backdrop === 'none' || backdrop === ''), 'a flat card: ' + [bg, radius, backdrop].join(' | '));
     assert.ok(await page.$eval('#g-fav .dg[data-th="of"] .dg-fx', e => getComputedStyle(e).display === 'none'), 'no card sky');
     assert.equal((await css(page, '.ambient i', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'the mustard sun behind the title');
-    assert.equal((await css(page, '.vbar', ['backgroundColor'], '::before'))[0], 'rgb(74, 52, 38)', 'the walnut view picker');
+    assert.equal((await css(page, '#vtop', ['backgroundColor'], '::before'))[0], 'rgb(74, 52, 38)', 'the walnut view bar');
     assert.equal(await heatTint(page), HEAT.vintage, 'the Heat target is burnt orange');
     assert.equal(await page.$eval('.bgfx', e => getComputedStyle(e).display), 'none', 'nothing moving behind the page');
     assert.equal(await page.$eval('.bgfx canvas', c => c.hidden), true, 'and the background is not drawn');
@@ -123,7 +123,8 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
 
   await test(`${label}: opens on Favorites, with the lamps' presets`, async () => {
-    assert.equal((await page.textContent('#vbName')).trim(), 'Favorites');
+    assert.equal((await page.textContent('#viewName')).trim(), 'Favorites');
+    assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), 'fav', 'Favorites is lit in the bar');
     assert.ok(await page.locator('#g-fav .lp-chips').count() > 0, 'no lamp presets on Favorites');
   });
 
@@ -206,10 +207,8 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.match(await page.textContent('#thermoWrap .away-note'), /^\s*Away from the house: in Eco until someone arrives\.\s*$/);
     await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
     await page.evaluate(() => goView('fav'));
-    // The menu says it too.
-    await page.click('#viewBtn');
-    assert.match(await page.textContent('#viewMenu [data-view="fav"] small'), /^Away/);
-    await page.click('#viewBtn');
+    // The line beside Favorites says it too.
+    assert.match(await page.textContent('#secSum'), /^Away/);
     // Reduce Motion: the same pill, still.
     await page.emulateMedia({ reducedMotion: 'reduce' });
     assert.equal(await pill.evaluate(e => getComputedStyle(e).animationName), 'none', 'the pill is still under Reduce Motion');
@@ -222,18 +221,17 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await card('lr').locator('.dg-sky').evaluate(e => e.style.background), skyHome, 'the sky is back to the room\'s');
   });
 
-  await test(`${label}: every view in the drop-down opens, with something in it`, async () => {
-    await page.click('#viewBtn');
-    const ids = await page.$$eval('#viewMenu [data-view]', els => els.map(e => e.dataset.view));
-    assert.ok(['fav', 'climate', 'lights', 'media', 'security', 'around'].every(id => ids.includes(id)), 'views in the menu: ' + ids.join());
-    await page.click('#viewBtn');
+  await test(`${label}: every view in the bar at the bottom opens in one tap, with something in it`, async () => {
+    const ids = await page.$$eval('#vtop [data-view]', els => els.map(e => e.dataset.view));
+    assert.ok(['fav', 'climate', 'lights', 'media', 'security', 'around', 'autos'].every(id => ids.includes(id)), 'views in the bar: ' + ids.join());
     for (const id of ids) {
-      await page.click('#viewBtn');
-      await page.click(`#viewMenu [data-view="${id}"]`);
+      await page.click(`#vtop [data-view="${id}"]`);
       await page.waitForFunction(id => { const b = document.getElementById('g-' + id); return b && !b.hidden; }, id);
       const shown = await page.$eval('#g-' + id, b => b.children.length && b.getBoundingClientRect().height > 50);
       assert.ok(shown, `the ${id} view is empty`);
+      assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), id, 'the one you are on is marked');
     }
+    await page.click('#vtop [data-view="fav"]');
   });
 
   await test(`${label}: the gear opens Settings, titled Settings with a Done tick, and the sub-views get a Close cross`, async () => {
@@ -281,7 +279,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.ok(!(await page.evaluate(() => document.documentElement.hasAttribute('data-sky'))), 'no sky');
   });
   await test('Design: Standard is kept across a reload', async () => {
-    await page.reload(); await page.waitForSelector('#viewBtn'); await page.waitForTimeout(800);
+    await page.reload(); await page.waitForSelector('#vtop [data-view]'); await page.waitForTimeout(800);
     assert.equal(await look(page), 'glass');
     assert.equal(await page.evaluate(() => localStorage.getItem('design.house')), 'glass');
   });
@@ -294,7 +292,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await page.evaluate(() => document.documentElement.dataset.sky), 'day');
     assert.equal(await page.$eval('.bgfx canvas', c => c.hidden), true);
     assert.ok(!(await page.isVisible('#custBlock')), 'Background hides');
-    await page.reload(); await page.waitForSelector('#viewBtn'); await page.waitForTimeout(800);
+    await page.reload(); await page.waitForSelector('#vtop [data-view]'); await page.waitForTimeout(800);
     assert.equal(await look(page), 'vintage');
     assert.equal(await page.evaluate(() => localStorage.getItem('design.house')), 'vintage');
   });
@@ -317,7 +315,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
   await test('old address: moved once only', async () => {
     await page.evaluate(() => localStorage.setItem('housev.bg', '"aurora"'));
-    await page.reload(); await page.waitForSelector('#viewBtn'); await page.waitForTimeout(800);
+    await page.reload(); await page.waitForSelector('#vtop [data-view]'); await page.waitForTimeout(800);
     assert.equal(await page.evaluate(() => localStorage.getItem('house.bg')), '"ripples"');
   });
   await test('old address: no script errors', async () => { assert.deepEqual(errors, []); });
@@ -400,11 +398,11 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
   await ctx.close();
 }
-// a larger screen: every view in a bar at the top, the one you're on marked, the picker at the bottom gone; a phone keeps the picker
+// a larger screen: every view in a bar at the top, the one you're on marked; a phone has the same bar, icons alone, at the bottom
 for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']]) {
   const { ctx, page } = await phone('dark', { design, size });
   await test(`the view bar at the top on a ${size[0]}-wide screen (${design})`, async () => {
-    assert.ok(await page.isVisible('#vtop') && !(await page.isVisible('#vbar')), 'the top bar shows, the bottom picker does not');
+    assert.ok(await page.isVisible('#vtop') && await page.$eval('#vtop', n => n.getBoundingClientRect().top < 80), 'the bar is at the top');
     const names = await page.$$eval('#vtop [data-view]', bs => bs.map(b => b.textContent.trim()));
     assert.ok(names.length >= 6 && names[0] === 'Favorites' && names.includes('Lights'), names.join());
     assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), 'fav');
@@ -427,8 +425,19 @@ for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']])
 }
 {
   const { ctx, page } = await phone('dark');
-  await test('a phone keeps the picker at the bottom, and no bar at the top', async () => {
-    assert.ok(await page.isVisible('#vbar') && !(await page.isVisible('#vtop')));
+  await test('a phone: the views are a floating bar of icons at the bottom, one tap each, each named for VoiceOver, hidden under a popup', async () => {
+    const bar = await page.$eval('#vtop', n => { const r = n.getBoundingClientRect(); return { pos: getComputedStyle(n).position, bottom: innerHeight - r.bottom, left: r.left, right: innerWidth - r.right }; });
+    assert.ok(bar.pos === 'fixed' && bar.bottom >= 0 && bar.bottom < 40 && bar.left >= 8 && bar.right >= 8, 'floating at the bottom, inside the screen: ' + JSON.stringify(bar));
+    const btns = await page.$$eval('#vtop [data-view]', bs => bs.map(b => ({ label: b.getAttribute('aria-label'), w: b.getBoundingClientRect().width, h: b.getBoundingClientRect().height, name: b.querySelector('.vt-n').getBoundingClientRect().width })));
+    assert.ok(btns.length >= 7 && btns.every(b => b.label && b.w >= 44 && b.h >= 44 && b.name <= 1), 'icons alone, 44 points or more, each with its name read out: ' + JSON.stringify(btns));
+    assert.ok(await page.$eval('#vtop', n => n.scrollWidth <= n.clientWidth + 1), 'every view fits without scrolling');
+    await page.click('#vtop [data-view="media"]'); await page.waitForTimeout(600);
+    assert.equal(await page.textContent('#viewName'), 'Media', 'the view\'s name is the title');
+    const sl = await page.evaluate(() => { const t = document.querySelector('#vtop .vt-thumb'), c = document.querySelector('#vtop [aria-current]'), m = new DOMMatrix(getComputedStyle(t).transform);
+      return { on: t.classList.contains('on'), x: Math.round(m.m41), cx: c.offsetLeft }; });
+    assert.ok(sl.on && Math.abs(sl.x - sl.cx) <= 1, 'the lit circle is under Media: ' + JSON.stringify(sl));
+    await page.click('#gear'); await page.waitForTimeout(500);
+    assert.equal(await page.$eval('#vtop', n => getComputedStyle(n).pointerEvents), 'none', 'it steps aside under a popup');
   });
   await ctx.close();
 }

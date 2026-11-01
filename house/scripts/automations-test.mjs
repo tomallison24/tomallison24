@@ -89,10 +89,9 @@ async function phone({ scheme = 'dark', design = 'glass', ha = null } = {}) {
     });
   });
   await page.goto(BASE + '/house/');
-  await page.waitForSelector('#viewBtn');
+  await page.waitForSelector('#vtop [data-view]');
   if (ha) await page.waitForFunction(() => document.getElementById('chip').dataset.s === 'live', null, { timeout: 10000 });
-  await page.click('#viewBtn');
-  await page.click('#viewMenu [data-view="autos"]');
+  await page.click('#vtop [data-view="autos"]');
   await page.waitForTimeout(400);
   return { ctx, page, errors, asked, calls };
 }
