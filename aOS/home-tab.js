@@ -528,25 +528,55 @@
     if (!current) { paintHome(true); if (prev) syncPrefs(); }   // an app's design may have changed its icon; and its settings follow you
     remember();
     tint();
+    if (current) watch(current);
+  }
+  // The app window, looked at once it should be on screen (after its slide in): if it isn't there (off to the
+  // side, not in-app, its frame hidden), it's put right at once, and what was found is kept for the owner
+  // (aos.glitch, the last five; aosHomeTab.glitches()) and shown for a moment. The owner saw the window
+  // missing after the phone's own back swipe, aOS Home dimmed under the shade with nothing over it, and
+  // the cause isn't certain yet: this keeps aOS usable and says what it saw.
+  let watchT = null;
+  function watch(id) {
+    clearTimeout(watchT);
+    watchT = setTimeout(() => {
+      if (current !== id) return;
+      const box = frames[id], f = box && box.firstChild, r = win.getBoundingClientRect(), bad = [];
+      let where = '?'; try { where = f.contentWindow.location.pathname; } catch {}
+      if (!body.classList.contains('in-app')) bad.push('not in-app');
+      if (r.left > 2 || r.right < innerWidth - 2) bad.push(`window at ${Math.round(r.left)}..${Math.round(r.right)} of ${innerWidth}`);
+      if (!box) bad.push('no frame'); else if (box.hidden) bad.push('frame hidden');
+      if (!bad.length) return;
+      const seen = { at: new Date().toISOString(), app: id, bad, inline: win.style.cssText, shade: $('appshade').style.cssText, cls: body.className, where, drag: ex != null, leaving: !!leaving,
+        tint: getComputedStyle(win).backgroundColor, hist: history.length, state: JSON.stringify(history.state), look: document.documentElement.dataset.look || '' };
+      try { localStorage.setItem('aos.glitch', JSON.stringify([seen, ...get('aos.glitch', [])].slice(0, 5))); } catch {}
+      settle();
+      body.classList.remove('dragging'); win.style.transform = ''; win.style.transition = ''; $('appshade').style.opacity = '';
+      body.classList.add('in-app'); $('appwin').setAttribute('aria-hidden', 'false');
+      if (box) reveal(id);
+      toast(`aOS put the app window back (${bad.join('; ')})`, 6000);
+    }, 700);
   }
 
   // The phone's own back (an iPhone's swipe in from the left edge, which iOS takes for itself
   // whenever there's a page behind, as there is after a sign-in at Google) goes to Home: an open app
   // is a step of its own in the window's history, over Home's. "‹ aOS" takes that step back too,
   // unless the app has added steps of its own since (Mail's message page), when it's just replaced.
-  let pushedAt = 0, leaving = false;
+  let pushedAt = 0, leaving = 0;   // leaving: when remember() last called history.back(), its popstate still to come
   const appStep = () => !!(history.state && history.state.aosApp);
   function remember() {
     const url = location.pathname + location.search + (current ? '#app=' + current : '');
     const { aosApp, ...rest } = history.state || {};
     try {
       if (current && !appStep()) { history.pushState({ ...rest, aosApp: current }, '', url); pushedAt = history.length; }
-      else if (!current && appStep() && history.length === pushedAt) { leaving = true; history.back(); }
+      else if (!current && appStep() && history.length === pushedAt) { leaving = Date.now(); history.back(); }
       else history.replaceState(current ? { ...rest, aosApp: current } : rest, '', url);
     } catch {}
   }
   addEventListener('popstate', () => {
-    if (leaving) { leaving = false; if (current) remember(); return; }   // an app opened while going back
+    // the popstate of remember()'s own history.back(): an app opened meanwhile is pushed again. Only a fresh one:
+    // a back with nothing behind brings none, and the next popstate (the phone's own back) must not be taken for it
+    const own = leaving && Date.now() - leaving < 1500; leaving = 0;
+    if (own) { if (current) remember(); return; }
     const id = appStep() ? history.state.aosApp : null;
     if (id !== current) show(known(id) ? id : null);
   });
@@ -732,7 +762,7 @@
   rollIn(8e3 + Math.random() * 6e3);
 
   let toastT = null;
-  function toast(t) { const el = $('htoast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1800); }
+  function toast(t, ms = 1800) { const el = $('htoast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), ms); }
 
   // ---- Ipsy in aOS: one helper across the apps that have Ipsy (functions/aOS/api/ipsy.js) ----
   // Claude names a tool with its app in front ("travel__search_gmail"). aOS opens that app out of
@@ -806,7 +836,7 @@
     let n = 0; const tap = () => { try { const b = frames[id].firstChild.contentDocument.querySelector(sel); if (b && frames[id].firstChild.contentWindow.AllisonOS) return b.click(); } catch {} if (n++ < 120) setTimeout(tap, 250); };   // up to 30 seconds for the app to start
     setTimeout(tap, 300);
   };
-  window.aosHomeTab = { layout: v => v === undefined ? layout : setLayout(v), everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
+  window.aosHomeTab = { glitches: () => get('aos.glitch', []), layout: v => v === undefined ? layout : setLayout(v), everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
   setLayout(layout, false); readUnread(); freshen(); syncPrefs();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];
