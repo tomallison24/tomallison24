@@ -434,6 +434,31 @@ for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']])
   await ctx.close();
 }
 {
+  const { ctx, page, errors } = await phone('dark');
+  await test('Lights: every light that dims has the brightness presets on its pill, one tap each; the popup has the slider alone', async () => {
+    await page.click('#vtop [data-view="lights"]'); await page.waitForTimeout(400);
+    await page.click('#g-lights [data-room="lounge"] [data-a="fold"]');
+    await page.click('#g-lights [data-room="living"] [data-a="fold"]');
+    await page.waitForTimeout(700);
+    const pills = await page.$$eval('#g-lights .lp[data-dv^="lights:light."]', ps => ps.map(p => ({ id: p.dataset.dv, onoff: p.classList.contains('onoff'), chips: p.querySelectorAll('.lp-chips .chip2').length })));
+    assert.ok(pills.length >= 10, 'every light has a pill: ' + pills.length);
+    assert.ok(pills.filter(p => !p.onoff).every(p => p.chips === 5), 'five presets on each light that dims: ' + JSON.stringify(pills.filter(p => p.chips !== 5)));
+    assert.deepEqual(pills.filter(p => p.onoff).map(p => [p.id, p.chips]), [['lights:light.living_room_fireplace_lights_socket', 0]], 'the Fireplace is on / off only: no presets');
+    const side = '#g-lights .lp[data-dv="lights:light.side_lamps"]';
+    await page.click(side + ' .chip2[data-v="50"]');
+    await page.waitForFunction(s => document.querySelector(s + ' .lp-val')?.textContent === '50%', side, { timeout: 5000 });
+    assert.equal(await page.getAttribute(side + ' .chip2[data-v="50"]', 'aria-pressed'), 'true');
+    assert.ok(!(await page.isVisible('#devWrap.open')), 'a preset sets the light without opening its popup');
+    await page.click(side + ' .lp-name');
+    await page.waitForSelector('#devWrap.open', { state: 'attached' });
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('#devWrap.open .chip2').count(), 0, 'no presets in the popup');
+    assert.ok(await page.locator('#devWrap.open input[type="range"]').count() > 0, 'its slider is still there');
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
+{
   const { ctx, page } = await phone('dark');
   await test('a phone: the views are a floating bar of icons at the bottom, one tap each, each named for VoiceOver, hidden under a popup', async () => {
     const bar = await page.$eval('#vtop', n => { const r = n.getBoundingClientRect(); return { pos: getComputedStyle(n).position, bottom: innerHeight - r.bottom, left: r.left, right: innerWidth - r.right }; });
