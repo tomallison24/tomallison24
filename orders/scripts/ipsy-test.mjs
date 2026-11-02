@@ -381,6 +381,79 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await ctx.close();
 }
 
+// ---- Ipsy keeps orders up to date: an order still open whose newer email the read of Gmail never tied to it (another
+// sender, another thread) is found by its order or tracking number, read, and moved on; never its items; once per email ----
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => {
+    localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })); localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', 'glass');
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
+    localStorage.setItem('orders.token.ever', '1');
+    localStorage.setItem('aos.session', JSON.stringify({ token: 'sess-1', user: { id: 'u1', name: 'Sam' } }));
+  });
+  // UPS's own "delivered" email: only a search for the order's numbers finds it (the read of Gmail doesn't tie it)
+  const UPS = { id: 'e9', threadId: 't9', ago: 1, from: 'UPS <mcinfo@ups.example>', subject: 'Your package was delivered', text: 'Your package was delivered today at the front door.\n\nTracking Number: 1Z0000000000000001\nReference: US-0000000001' };
+  const searches = [];
+  await ctx.route('https://gmail.googleapis.com/**', route => {
+    const u = new URL(route.request().url());
+    if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'sam@example.com' } });
+    if (u.pathname.endsWith('/messages')) {
+      const q = u.searchParams.get('q') || '';
+      if (/^[{"]/.test(q)) { searches.push(q); return route.fulfill({ json: { messages: [UPS, EMAILS[0]].filter(m => /1Z0000000000000001|US-0000000001/.test(q) && m.text.includes('US-0000000001')).map(m => ({ id: m.id, threadId: m.threadId })) } }); }
+      return route.fulfill({ json: { messages: [{ id: 'e3', threadId: 't3' }], resultSizeEstimate: 1 } });
+    }
+    const m = [...EMAILS, UPS].find(x => x.id === u.pathname.split('/').pop());
+    return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
+  });
+  await ctx.route('**/sheet/api/**', route => route.fulfill({ status: 409, json: { ok: false, error: 'no-sheet' } }));
+  const reads = [];
+  await ctx.route('**/orders/api/read', route => {
+    const b = JSON.parse(route.request().postData());
+    reads.push(b);
+    if (/was delivered/.test(b.text)) return route.fulfill({ json: { fact: { kind: 'package', status: 'delivered', orderNo: 'US-0000000001', items: [{ name: 'Only part of it' }], total: 1 } } });
+    return route.fulfill({ json: { fact: { kind: 'package', status: 'shipped' } } });   // its own email: nothing new
+  });
+  const page = await ctx.newPage();
+  const problems = [];
+  page.on('pageerror', e => problems.push(String(e)));
+  page.on('dialog', d => { problems.push('a browser dialog: ' + d.message()); d.dismiss(); });
+  await page.goto(BASE + '/orders/');
+  const skin = () => page.evaluate(() => { const o = window.__orders.orders.find(x => /skin/i.test(x.store)); return o && JSON.parse(JSON.stringify(o)); });
+
+  await step('Up to date: an order on its way is looked for by its numbers, and a newer email nobody tied to it moves it on', async () => {
+    await page.waitForFunction(() => { const o = window.__orders && window.__orders.orders.find(x => /skin/i.test(x.store)); return o && o.status === 'delivered'; }, null, { timeout: 20000 });
+    assert.ok(searches.some(q => /US-0000000001/.test(q) && /after:\d+/.test(q)), searches.join(' | '));
+    assert.ok(reads.some(b => /was delivered/.test(b.text)), 'UPS\'s email was read');
+    const o = await skin();
+    assert.equal(o.source.msgId, 'e9', 'the order follows the newer email');
+    assert.equal(o.items[0].name, 'Skin Tech LED Light Therapy Face Mask', 'never its items');
+    assert.ok(o.total !== 1, 'nor its total');
+    await page.waitForFunction(() => /Updated .*from a newer email/.test(JSON.parse(localStorage.getItem('ipsy.orders.chat') || '{"view":[]}').view.map(v => v.text).join('|')), null, { timeout: 8000 });
+  });
+  await step('Up to date: Undo puts it back on its way', async () => {
+    await page.click('.ipsy-btn');
+    await page.waitForSelector('.ipsy-change');
+    await page.locator('.ipsy-change:has-text("from a newer email") .ipsy-undo').first().click();
+    await page.waitForFunction(() => window.__orders.orders.find(x => /skin/i.test(x.store)).status === 'shipped', null, { timeout: 5000 });
+    assert.equal((await skin()).source.msgId, 'e3');
+    await page.keyboard.press('Escape');
+  });
+  await step('Up to date: that email is never read for it again, even when the search is due again', async () => {
+    const n = reads.length, m = searches.length;
+    await page.evaluate(() => localStorage.removeItem('allison-orders-v1-newer-at'));
+    await page.reload();
+    await page.waitForFunction(() => window.__orders && document.querySelector('.ipsy-btn'));
+    await page.waitForTimeout(5000);
+    assert.ok(searches.length > m, 'looked again');
+    assert.equal(reads.length, n, 'already read: not sent again');
+    assert.equal((await skin()).status, 'shipped', 'the Undo holds');
+  });
+  await step('Up to date (newer emails): no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 console.log(failed ? failed + ' failed' : 'all passed');

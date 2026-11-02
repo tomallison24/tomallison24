@@ -55,7 +55,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', returnsV: KEY + '-returns-v', tab: KEY + '-tab',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', log: KEY + '-log', logSeed: KEY + '-log-seed',
     family: KEY + '-family', notMine: KEY + '-not-mine',
-    aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyAutoV: KEY + '-ipsy-auto-v', ipsyTried: KEY + '-ipsy-tried',
+    aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyAutoV: KEY + '-ipsy-auto-v', newerAt: KEY + '-newer-at', ipsyTried: KEY + '-ipsy-tried',
     cleanup: KEY + '-cleanup-5d', cut: KEY + '-scan-cut',
   };
   // Inside aOS, reading Gmail (and Ipsy's checks after it) count as an update under way: aOS doesn't put Orders away
@@ -839,8 +839,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return changed;
   }
   // The email of an order, fetched again from Gmail, read by Claude: its facts, or null for "not an order".
-  async function aiRead(o, quiet) {
-    const msg = await gmail('/messages/' + o.source.msgId, { format: 'full' });
+  async function aiRead(o, quiet) { return (await aiReadMsg(o.source.msgId, o.source.date, quiet)).fact; }
+  // Any email by its id: { fact (or null), mail: the email as an order's source }.
+  async function aiReadMsg(id, date, quiet) {
+    const msg = await gmail('/messages/' + id, { format: 'full' });
     const { html, text } = bodies(msg.payload);
     const fromHtml = html ? P.htmlToText(html) : '';
     const body = (fromHtml && fromHtml.length > text.length * 1.2 ? fromHtml : (text || fromHtml))
@@ -848,8 +850,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     // email addresses, phone, card and account numbers stay on the phone (home/redact.js): placeholders go, the real ones
     // come back. Not the sender: that's the store's own address, which says which store it is.
     const M = (window.AllisonOS && AllisonOS.redact ? AllisonOS.redact.make() : { hide: x => x, show: x => x });
-    const j = await aiCall({ subject: M.hide(header(msg, 'subject')), from: header(msg, 'from'), date: +msg.internalDate || o.source.date, text: M.hide(body) }, quiet);
-    return j.fact ? M.show(j.fact) : null;
+    const j = await aiCall({ subject: M.hide(header(msg, 'subject')), from: header(msg, 'from'), date: +msg.internalDate || date, text: M.hide(body) }, quiet);
+    const mail = { msgId: id, threadId: msg.threadId || '', subject: header(msg, 'subject').slice(0, 200), from: header(msg, 'from').slice(0, 200), date: +msg.internalDate || date || Date.now() };
+    return { fact: j.fact ? M.show(j.fact) : null, mail };
   }
   // Ipsy checks an order: its email read again by Claude (functions/orders/api read: Haiku 5.5, every
   // number checked against the email's own words), what it found put onto the order, with Undo in
@@ -871,6 +874,40 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const changed = [...new Set(applyAi(o, f))];
       save();
       if (changed.length && ipsy) ipsy.change('Fixed ' + (o.store || 'an order') + ': ' + changed.slice(0, 4).join(', '), undoTo(o, before));
+      return { changed, undo: undoTo(o, before) };
+    } catch (e) {
+      return { error: e instanceof AuthError ? 'auth' : e.code || 'server', message: e.message, until: e.until };
+    }
+  }
+  // An order still open can sit there for weeks when its delivered (or shipped, or delayed) email never got tied to it:
+  // another sender, a reply in another thread, a layout the reader missed. So Ipsy looks in Gmail for an email newer than
+  // the order's own that names its order or tracking number (one that is another order's own email, or a hidden order's,
+  // is left out): the newest such email, or null.
+  const NUM_OK = v => typeof v === 'string' && /^[A-Za-z0-9-]{6,40}$/.test(v) && /\d/.test(v);
+  const alnum = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  async function newerMail(o) {
+    const terms = [...new Set([o.orderNo, o.tracking].filter(NUM_OK))];
+    if (!terms.length || !o.source || !o.source.date) return null;
+    const theirs = new Set(orders.filter(x => x !== o && x.source).flatMap(x => (x.private || x.hide) ? [x.source.msgId, x.source.threadId] : [x.source.msgId]).filter(Boolean));
+    const r = await gmail('/messages', { q: (terms.length > 1 ? '{' + terms.map(t => '"' + t + '"').join(' ') + '}' : '"' + terms[0] + '"') + ' after:' + Math.floor(o.source.date / 1000), maxResults: 5 });
+    const m = ((r && r.messages) || []).find(x => x.id !== o.source.msgId && !theirs.has(x.id) && !theirs.has(x.threadId));
+    return m ? m.id : null;
+  }
+  // That email read by Claude: only where the order is goes onto it (status, courier, tracking, delivery days, a
+  // problem), never its items or total (a "delivered" email often lists only part of an order), and only when it is
+  // about this order (an order number that is another one's leaves it alone). Undo in Ipsy's chat.
+  async function checkNewer(o, id) {
+    const before = JSON.parse(JSON.stringify(o));
+    try {
+      const { fact: f, mail } = await aiReadMsg(id, 0, true);
+      if (!f) return { none: true };
+      if (f.orderNo && o.orderNo && !alnum(f.orderNo).includes(alnum(o.orderNo)) && !alnum(o.orderNo).includes(alnum(f.orderNo))) return { none: true };
+      const was = o.source;
+      o.source = mail;                                           // the step it adds is dated by this email
+      const changed = [...new Set(applyAi(o, { status: f.status, deliveredOn: f.deliveredOn, carrier: f.carrier, tracking: f.tracking, eta: f.eta, etaEnd: f.etaEnd, pickupBy: f.pickupBy, issue: f.issue }))];
+      if (!changed.length) { Object.keys(o).forEach(k => { if (!(k in before)) delete o[k]; }); Object.assign(o, before); o.source = was; return { changed }; }
+      save();
+      if (ipsy) ipsy.change('Updated ' + (o.store || 'an order') + ' from a newer email: ' + changed.slice(0, 4).join(', '), undoTo(o, before));
       return { changed, undo: undoTo(o, before) };
     } catch (e) {
       return { error: e instanceof AuthError ? 'auth' : e.code || 'server', message: e.message, until: e.until };
@@ -901,7 +938,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // It used to be asked for first, and a "Not now" turned it off: that answer is set aside once, now it's on by default.
   if (ls.get(K.ipsyAutoV, '') !== '2') { if (ls.get(K.ipsyAuto, '') === '0') ls.del(K.ipsyAuto); ls.set(K.ipsyAutoV, '2'); }
   const autoOn = () => ls.get(K.ipsyAuto, '') !== '0';
-  let autoBusy = false;
+  let autoBusy = false, newerMore = false;
   const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'ai-off', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy', 'ai-budget'];
   const when = o => (o.source && o.source.date) || 0;
   async function autoCheck() { updating('check', true); try { await autoCheckNow(); } finally { updating('check', false); } }
@@ -911,9 +948,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const due = orders.filter(o => !o.private && !o.hide && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
       .sort((a, b) => needsCheck(b) - needsCheck(a) || when(b) - when(a));
     const todo = due.slice(0, 10);
-    if (!todo.length) return;
+    const newerDue = newerMore || Date.now() - +ls.get(K.newerAt, 0) > 20 * 6e4;
+    if (!todo.length && !newerDue) return;
     autoBusy = true; ipsy.working(true);
-    let checked = 0, fixed = 0, left = 0, stop = '', until = '';
+    let checked = 0, fixed = 0, left = 0, stop = '', until = '', more = due.length > todo.length;
     for (const o of todo) {
       if (!orders.includes(o)) continue;
       const r = await checkOrder(o, true);
@@ -922,9 +960,31 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (r.changed && r.changed.length) fixed++;
       if (needsCheck(o)) left++;
     }
+    // Then every order still open (the longest waiting first) is looked for in Gmail by its order and tracking numbers
+    // (newerMail): an email newer than its own that Ipsy hasn't read for it is read (checkNewer), once per email, 10 at a
+    // time. The searches run at most every 20 minutes; nothing is sent to Claude when there's no new email.
+    newerMore = false;
+    if (!stop && newerDue) {
+      const open = orders.filter(o => !o.private && !o.hide && kindOn(o) && isOpen(o) && o.source && o.source.msgId && !(o.locks && o.locks.status))
+        .sort((a, b) => needsCheck(b) - needsCheck(a) || when(a) - when(b)).slice(0, 40);
+      let sent = 0;
+      for (const o of open) {
+        if (!orders.includes(o) || !isOpen(o)) continue;
+        let id;
+        try { id = await newerMail(o); } catch (e) { if (e instanceof AuthError) { stop = 'auth'; break; } continue; }
+        if (!id || tried.has(o.id + ':' + id)) continue;
+        if (sent >= 10) { newerMore = more = true; break; }
+        const r = await checkNewer(o, id); sent++;
+        if (r.error && AUTO_STOP.includes(r.error)) { stop = r.error; until = r.until; break; }
+        tried.add(o.id + ':' + id); checked++;
+        if (r.changed && r.changed.length) fixed++;
+        if (needsCheck(o)) left++;
+      }
+      if (!newerMore) ls.set(K.newerAt, String(Date.now()));
+    }
     ls.set(K.ipsyTried, JSON.stringify([...tried].slice(-500)));
     autoBusy = false; ipsy.working(false); render();
-    if (!stop && due.length > todo.length) setTimeout(autoCheck, 1500);   // more waiting: the next 10, while Orders is open
+    if (!stop && more) setTimeout(autoCheck, 1500);   // more waiting: the next 10, while Orders is open
     const need = n => n + ' still need' + (n === 1 ? 's' : '') + ' you';
     if (checked) ipsy.note('Checked ' + plural(checked, 'order') + ': ' + (fixed ? 'updated ' + fixed : 'nothing to change') + (left ? ', ' + need(left) : '') + '.');
     if (fixed) ipsy.hint('I updated ' + plural(fixed, 'order') + (left ? '; ' + need(left) + ' in To check.' : '.'));
