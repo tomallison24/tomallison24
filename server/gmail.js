@@ -14,7 +14,10 @@
 //
 // Kept in the accounts' KV:
 //   gm:<user>            [{ email, kind, at, sealed }]  one entry an account and kind ('read' or 'modify'), at most 4
-//   gmst:<state>         { uid, kind, back }            a sign-in on its way, 10 minutes, used once
+//   gmst:<state>         { uid, kind, back, nonce }     a sign-in on its way, 10 minutes, used once
+//
+// A sign-in is tied to the phone that started it (a cookie, aos_gm, set by gmail/start and checked when Google sends
+// the person back): a link to Google's page sent to someone else can't put their Gmail in the sender's account.
 import { getJSON, putJSON, rand, b64u, unb64u } from './auth.js';
 
 export const DAYS = 30;
@@ -52,23 +55,27 @@ export const safeBack = s => (typeof s === 'string' && /^\/[a-zA-Z0-9]/.test(s) 
 // POST gmail/start { kind, hint, back } -> the address of Google's sign-in (with a code), for this person
 export async function start(db, env, me, site, { kind = 'read', hint = '', back: to = '' } = {}) {
   if (!SCOPES[kind]) kind = 'read';
-  const state = rand(18);
-  await putJSON(db, 'gmst:' + state, { uid: me.id, kind, back: safeBack(to) }, STATE_SECS);
+  const state = rand(18), nonce = rand(18);
+  await putJSON(db, 'gmst:' + state, { uid: me.id, kind, back: safeBack(to), nonce }, STATE_SECS);
   const u = new URL(AUTH);
   u.search = new URLSearchParams({
     client_id: clientId(env), redirect_uri: back(site), response_type: 'code', scope: SCOPES[kind], include_granted_scopes: 'true',
     access_type: 'offline', prompt: 'consent', state, ...(hint ? { login_hint: String(hint).slice(0, 120) } : {}),
   });
-  return { url: u.toString() };
+  return { url: u.toString(), cookie: COOKIE + '=' + nonce + '; Path=/aOS/api/gmail; HttpOnly; Secure; SameSite=Lax; Max-Age=' + STATE_SECS };
 }
+export const COOKIE = 'aos_gm';
+export const cookieOf = header => { const m = new RegExp('(?:^|;\\s*)' + COOKIE + '=([A-Za-z0-9_-]+)').exec(header || ''); return m ? m[1] : ''; };
+export const clearCookie = COOKIE + '=; Path=/aOS/api/gmail; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
 
 // GET gmail/back?code&state: Google sends the person here. The code becomes the refresh token (kept, sealed) and
 // they go back to the page they came from, with #gmail=kept (or #gmail=error).
-export async function finish(db, env, site, params, f = fetch) {
+export async function finish(db, env, site, params, nonce = '', f = fetch) {
   const state = params.get('state') || '', st = state && await getJSON(db, 'gmst:' + state);
   if (st) await db.delete('gmst:' + state);
   const go = (ok, extra = '') => ({ to: site + (st ? st.back : '/aOS/') + '#gmail=' + (ok ? 'kept' : 'error') + extra });
   if (!st || params.get('error') || !params.get('code')) return go(false);
+  if (!nonce || nonce !== st.nonce) return go(false);   // not the phone that started this sign-in
   const r = await post(f, TOKEN, { code: params.get('code'), client_id: clientId(env), client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: back(site), grant_type: 'authorization_code' });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.refresh_token || !j.access_token) return go(false);

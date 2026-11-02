@@ -268,8 +268,8 @@ export async function onRequest({ request, params, env }) {
     // Google's sign-in comes back here, a page load with no session: the sign-in's state says whose it is
     if (route === 'gmail/back' && method === 'GET') {
       if (!gmail.on(env)) return reply({ error: 'off' }, 404);
-      const u = new URL(request.url), r = await gmail.finish(db, env, u.origin, u.searchParams);
-      return new Response(null, { status: 302, headers: { Location: r.to, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+      const u = new URL(request.url), r = await gmail.finish(db, env, u.origin, u.searchParams, gmail.cookieOf(request.headers.get('Cookie')));
+      return new Response(null, { status: 302, headers: { Location: r.to, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'Set-Cookie': gmail.clearCookie } });
     }
 
     // ---- for the family ----
@@ -279,7 +279,10 @@ export async function onRequest({ request, params, env }) {
     if (route.startsWith('gmail')) {
       if (!gmail.on(env)) return reply({ error: 'off' }, 404);
       if (route === 'gmail' && method === 'GET') return reply(await gmail.view(db, env, me));
-      if (route === 'gmail/start' && method === 'POST') return reply(await gmail.start(db, env, me, new URL(request.url).origin, await body(request)));
+      if (route === 'gmail/start' && method === 'POST') {   // the cookie ties the sign-in to this phone (server/gmail.js)
+        const { url, cookie } = await gmail.start(db, env, me, new URL(request.url).origin, await body(request));
+        const res = reply({ url }); res.headers.append('Set-Cookie', cookie); return res;
+      }
       if (route === 'gmail/token' && method === 'POST') { const r = await gmail.token(db, env, me, await body(request)); return reply(r, r.status || (r.error ? 409 : 200)); }
       if (route === 'gmail/disconnect' && method === 'POST') return reply(await gmail.disconnect(db, env, me, await body(request)));
     }

@@ -43,12 +43,17 @@ globalThis.fetch = async (url, opts = {}) => {
   return realFetch(url, opts);
 };
 
-const call = async (path, body, token, env = ON, query = '') => {
+// the phone's cookies: gmail/start sets aos_gm (the sign-in is this phone's), gmail/back clears it
+let jar = '';
+const call = async (path, body, token, env = ON, query = '', cookie) => {
   const h = { 'Content-Type': 'application/json' }; if (token) h.Authorization = 'Bearer ' + token;
+  const c = cookie === undefined ? jar : cookie; if (c) h.Cookie = c;
   const request = new Request(SITE + '/aOS/api/' + path + query, { method: body === undefined ? 'GET' : 'POST', headers: h, body: body === undefined ? undefined : JSON.stringify(body) });
   const res = await onRequest({ request, params: { route: path.split('/') }, env });
   const text = await res.text(); let json = null; try { json = JSON.parse(text); } catch {}
-  return { status: res.status, body: json, location: res.headers.get('Location') };
+  const sc = res.headers.get('Set-Cookie') || '';
+  if (sc) { const m = /aos_gm=([^;]*)/.exec(sc); jar = m && m[1] ? 'aos_gm=' + m[1] : ''; }
+  return { status: res.status, body: json, location: res.headers.get('Location'), cookie: sc };
 };
 let n = 0;
 const test = async (name, fn) => { await fn(); n++; console.log('ok -', name); };
@@ -94,6 +99,19 @@ await test('back from Google: the refresh token is kept sealed, and the person g
   assert.equal(await db.get('gmst:' + state), null, 'the sign-in\'s state is used once');
   const again = await call('gmail/back', undefined, null, ON, '?state=' + state + '&code=good');
   assert.equal(again.location, SITE + '/aOS/#gmail=error', 'used twice: an error, nothing kept');
+});
+
+await test('the sign-in is the phone\'s that started it: finished elsewhere (a link sent to someone), nothing is kept', async () => {
+  const r = await call('gmail/start', { back: '/travel/' }, pat);
+  assert.match(r.cookie, /^aos_gm=[A-Za-z0-9_-]{20,}; Path=\/aOS\/api\/gmail; HttpOnly; Secure; SameSite=Lax; Max-Age=600$/);
+  const s = new URL(r.body.url).searchParams.get('state');
+  for (const other of ['', 'aos_gm=someone-elses-phone']) {
+    const before = JSON.stringify(await getJSON(db, 'gm:u1'));
+    const s2 = other ? new URL((await call('gmail/start', { back: '/travel/' }, pat)).body.url).searchParams.get('state') : s;
+    const back = await call('gmail/back', undefined, null, ON, '?state=' + s2 + '&code=good', other);
+    assert.equal(back.location, SITE + '/travel/#gmail=error', 'refused: ' + (other || 'no cookie'));
+    assert.equal(JSON.stringify(await getJSON(db, 'gm:u1')), before, 'nothing kept');
+  }
 });
 
 await test('back from Google goes only to a page of this site', async () => {
