@@ -115,7 +115,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   const app = 'orders', tag = 'orders (' + design + ')';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.addInitScript(a => { localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'); localStorage.setItem('aos.seen', JSON.stringify({ [a]: '999' })); }, app);
-  await ctx.addInitScript(d => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', d); localStorage.setItem('allison-orders-v1-ipsy-auto', '0'); }, design);
+  await ctx.addInitScript(d => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('design.orders', d); localStorage.setItem('allison-orders-v1-ipsy-auto', '0'); localStorage.setItem('allison-orders-v1-ipsy-auto-v', '2'); }, design);
   const page = await ctx.newPage();
   const problems = [];
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|429/.test(m.text())) problems.push(m.text()); });
@@ -284,7 +284,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   await ctx.close();
 }
 
-// ---- Ipsy keeps orders up to date by itself: offered once, then the email of each order in To check and
+// ---- Ipsy keeps orders up to date by itself, on by default (no offer): the email of each order in To check and
 // each order on its way read again (verified on the server), fixes with Undo in the chat, never the same
 // email twice, and never a Face ID prompt ----
 {
@@ -323,17 +323,10 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
   const skin = () => page.evaluate(() => { const o = window.__orders.orders.find(x => /skin/i.test(x.store)); return o && { status: o.status, check: window.__orders.needsCheck(o) }; });
   const walmart = () => page.evaluate(() => { const o = window.__orders.orders.find(x => x.store === 'Walmart'); return o && { guess: o.guess, issue: o.issue, items: o.items, total: o.total, check: window.__orders.needsCheck(o) }; });
 
-  await step('Up to date: Ipsy offers once, from its corner, before checking anything by itself', async () => {
-    await page.waitForSelector('.ipsy-hint', { timeout: 12000 });
-    assert.match(await page.textContent('.ipsy-hint'), /keep your orders up to date by myself/);
-    assert.equal(reads.length, 0, 'nothing is sent before a yes');
-    assert.equal((await walmart()).check, true);
-    assert.deepEqual(await skin(), { status: 'shipped', check: false }, 'on its way, not in To check');
+  await step('Up to date: on by default, with no asking first, as Orders opens', async () => {
+    await page.waitForFunction(() => window.__orders && window.__orders.orders.length >= 2, null, { timeout: 12000 });
+    assert.ok(!/keep your orders up to date by myself\?/.test(await page.evaluate(() => (document.querySelector('.ipsy-hint') || {}).textContent || '')), 'no offer');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'tocheck-offer.png') });
-    await page.click('.ipsy-hint');
-    await page.waitForSelector('.ipsy-ask [data-ans="yes"]');
-    assert.match(await page.textContent('.ipsy-ask'), /keep your orders up to date by myself\? I’ll reread their emails with Claude/);
-    await page.click('.ipsy-ask [data-ans="yes"]');
   });
 
   await step('Up to date: each order\'s email is read again, signed in quietly, and the fix lands with Undo in the chat', async () => {
@@ -369,6 +362,19 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark']]) {
     await page.click('#stIpsyAuto');
     assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'false');
     assert.equal(await page.evaluate(() => localStorage.getItem('allison-orders-v1-ipsy-auto')), '0');
+    await page.reload();
+    await page.waitForFunction(() => window.__orders && document.querySelector('.ipsy-btn'));
+    assert.equal(await page.evaluate(() => localStorage.getItem('allison-orders-v1-ipsy-auto')), '0', 'turned off in Settings: stays off');
+  });
+
+  await step('Up to date: a phone that said Not now to the old offer has it on, once', async () => {
+    await page.evaluate(() => localStorage.removeItem('allison-orders-v1-ipsy-auto-v'));
+    await page.reload();
+    await page.waitForFunction(() => window.__orders && document.querySelector('.ipsy-btn'));
+    assert.equal(await page.evaluate(() => localStorage.getItem('allison-orders-v1-ipsy-auto')), null);
+    await page.click('#setBtn');
+    assert.equal(await page.getAttribute('#stIpsyAuto', 'aria-checked'), 'true');
+    await page.keyboard.press('Escape');
   });
 
   await step('Up to date: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });

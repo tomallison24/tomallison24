@@ -104,11 +104,13 @@ const browser = await chromium.launch();
 let failed = 0;
 const step = async (name, fn) => { try { await fn(); console.log('ok -', name); } catch (e) { failed++; console.log('FAIL -', name, '\n  ', e.message.split('\n').slice(0, 8).join('\n   ')); } };
 
-async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false, auto = false } = {}) {
+async function open({ calendar = true, ai = true, board = true, empty = false, stored = null, failGets = false, auto = false, verify = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
   // Ipsy's own check runs whenever Ipsy fills in what's missing: held back here (travel/app.js __travelNoAuto), so only
   // the tests of it see what it sends
   if (!auto) await ctx.addInitScript(() => { window.__travelNoAuto = true; });
+  // and its check of upcoming bookings against their newest emails, after it: only the test of that one sees it
+  if (!verify) await ctx.addInitScript(() => { window.__travelNoVerify = true; });
   await ctx.addInitScript(id => (localStorage.setItem('aos.helper', '{"who":"mia","name":"Ipsy"}'), localStorage.setItem('aos.sky', 'day'), localStorage.setItem('aos.seen', JSON.stringify({ [id]: '999' }))), ID);   // the sky held at day
   const page = await ctx.newPage();
   const problems = [];
@@ -563,7 +565,7 @@ const pick = (page, f) => page.evaluate(f);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-settings.png') });
     const on = id => page.getAttribute(id, 'aria-checked');
     assert.equal(await page.textContent('#stCalOpt .st-sub'), 'Shares bookings with the Family calendar, both ways.'); assert.equal(await on('#stCalOpt'), 'true');
-    assert.equal(await page.textContent('#stAiOpt .st-sub'), 'Completes new bookings from their emails and moves them to Upcoming, on this phone.'); assert.equal(await on('#stAiOpt'), 'true');
+    assert.equal(await page.textContent('#stAiOpt .st-sub'), 'Completes new bookings from their emails and checks upcoming ones against their newest emails, each time Travel opens, on this phone.'); assert.equal(await on('#stAiOpt'), 'true');
     assert.equal(await page.$$eval('#setSheet .st-sub', e => e.filter(x => (x.textContent.match(/[.!?](\s|$)/g) || []).length > 1).length), 0, 'a sentence each');
     assert.ok(!!(await page.$('.tripwrap [data-ai]')), 'the button is there while the switch is on');
     await page.click('#stCalOpt'); await page.click('#stAiOpt');
@@ -638,6 +640,46 @@ const pick = (page, f) => page.evaluate(f);
     const rows = seen.sheetTab.tab('Bookings').slice(1);
     assert.ok(rows.length && rows.every(r => r[0] === 'Pat'), rows.map(r => r[0] + ':' + r[4]).join(' | '));
     assert.ok(await page.evaluate(() => window.__travel.bookings.filter(b => b.conf === 'TRZ4KD').every(b => b.by === 'u1' && !b.from)), 'the Undo kept, marked as hers');
+  });
+  await step('Ipsy\'s own check: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
+  await ctx.close();
+}
+
+// =================== Ipsy keeps upcoming bookings up to date: each against its newest email, once per email, no press ===================
+{
+  const { ctx, page, seen, problems } = await open({ calendar: false, auto: true, verify: true, stored: { 'aos.session': JSON.stringify({ token: 'sess-1', user: { id: 'u1', name: 'Pat' } }) } });
+  page.on('dialog', d => { problems.push('a browser dialog: ' + d.message()); d.dismiss(); });
+  const ua = () => pick(page, () => JSON.parse(JSON.stringify(window.__travel.bookings.find(x => x.conf === 'KQ7T2M'))));
+  await step('Ipsy\'s own check: an upcoming flight is checked against its newest email (a schedule change) as Travel opens, with no press, marked Check', async () => {
+    await page.waitForFunction(() => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); return b && b.dep.endsWith('T21:05'); }, null, { timeout: 20000 });
+    const sent = seen.extract.map((x, i) => [x, seen.auth[i]]).filter(([x]) => x.check);
+    assert.ok(sent.some(([x]) => /now departs at 9:05 PM/.test(x.text)), 'the newer email, found by its confirmation code');
+    assert.ok(sent.every(([, a]) => a === 'Bearer sess-1'), 'the family session, never a Face ID prompt');
+    assert.ok(seen.searches.some(q => q.startsWith('"KQ7T2M" after:')), seen.searches.join(' | '));
+    const b = await ua();
+    assert.equal(b.filled.time, 'ai'); assert.equal(b.guess, true); assert.equal(b.source.msgId, 'e6', 'the booking follows the newer email');
+    await page.waitForFunction(() => /against their newest emails and updated 1 booking/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 15000 });
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-ipsy-verified.png') });
+  });
+  await step('Ipsy\'s own check: Undo in the chat puts the flight back', async () => {
+    await page.click('.ipsy-hint');
+    await page.waitForSelector('.ipsy-change');
+    const ch = page.locator('.ipsy-change:has-text("Marked Check")').first();
+    assert.match(await ch.textContent(), /Updated .*time.*Marked Check\..*Undo/);
+    await ch.locator('.ipsy-undo').click();
+    await page.waitForFunction(() => window.__travel.bookings.find(x => x.conf === 'KQ7T2M').dep.endsWith('T20:15'), null, { timeout: 5000 });
+    await page.keyboard.press('Escape');
+  });
+  await step('Ipsy\'s own check: the same email is never sent twice, even when it is due again', async () => {
+    const n = seen.extract.filter(x => x.check).length;
+    assert.ok(n >= 1);
+    await page.evaluate(() => localStorage.removeItem('allison-travel-v1-verify-at'));
+    await page.reload();
+    await page.waitForFunction(() => window.__travel && document.querySelector('.ipsy-btn'));
+    await page.waitForTimeout(5000);
+    assert.equal(seen.extract.filter(x => x.check).length, n, 'each email already read: not sent again');
+    assert.ok(+(await page.evaluate(() => localStorage.getItem('allison-travel-v1-verify-at'))) > 0, 'looked: due again in 20 minutes');
+    assert.equal((await ua()).dep, iso(BACK) + 'T20:15', 'the Undo holds');
   });
   await step('Ipsy\'s own check: no script errors and no browser dialogs', async () => { assert.deepEqual(problems, []); });
   await ctx.close();

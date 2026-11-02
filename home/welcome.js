@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
-      notes: ['Home: a device opened from Favorites\' Running Now goes back to Favorites when you close its card',
+      notes: ['Orders and Travel keep themselves up to date: each time you open them, Ipsy checks what changed in your emails by itself, with no Have Ipsy check to press. Orders: on for everyone now, with no asking first (a Not now from before is set aside once; Settings > Ipsy keeps orders up to date turns it off). Travel: every booking still to come is checked against its newest email (a schedule change, new dates, a cancellation), once per email; what changed is marked Check, with Undo in Ipsy\'s chat. Travel\'s Have Ipsy check also leaves out email addresses and card and account numbers now, as everywhere else',
+        'Home: a device opened from Favorites\' Running Now goes back to Favorites when you close its card',
         'Money: connecting Monarch directly is put away for now (Monarch didn\'t let aOS sign in); Money keeps reading Monarch\'s emails',
         'Money reads the deposits in Monarch\'s summary emails (paychecks, interest) as money in, and reads every email again once to pick up the ones it missed',
         'School reads the school\'s ParentSquare emails in Gmail, read-only, on your phone. At the top, the next school day: what to wear or bring, days off on the way to it, and pickup (the usual carpool, or that weekday\'s club). Then what needs you (sign-ups, RSVPs, forms, surveys and payments, soonest due first, with Mark done), the next two weeks and the rest of the year, her class\'s posts and messages to you first, everything else from school below (searchable), and the school\'s other sites, report cards and payments',

@@ -55,7 +55,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     seen: KEY + '-seen', skipped: KEY + '-skipped', lastScan: KEY + '-scan', queryV: KEY + '-query-v', returnsV: KEY + '-returns-v', tab: KEY + '-tab',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', log: KEY + '-log', logSeed: KEY + '-log-seed',
     family: KEY + '-family', notMine: KEY + '-not-mine',
-    aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyTried: KEY + '-ipsy-tried',
+    aiOk: KEY + '-ai-ok', ipsyAuto: KEY + '-ipsy-auto', ipsyAutoV: KEY + '-ipsy-auto-v', ipsyTried: KEY + '-ipsy-tried',
     cleanup: KEY + '-cleanup-5d', cut: KEY + '-scan-cut',
   };
   // Inside aOS, reading Gmail (and Ipsy's checks after it) count as an update under way: aOS doesn't put Orders away
@@ -892,34 +892,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else toast(r.changed.length ? 'Ipsy fixed the ' + r.changed.slice(0, 4).join(', ') + '.' : 'Ipsy agrees with what’s there.', r.changed.length ? r.undo : null, 6000);
   }
 
-  // Ipsy keeps orders up to date by itself: after each read of Gmail (and when Orders opens), every order
-  // in To check, and every order still on its way, whose newest email Ipsy hasn't read yet, is checked
-  // once (per email), To check first, at most 10 at a time, quietly. Asked once first, from Ipsy's corner;
-  // Settings > AI helper turns it on or off. A fix shows in Ipsy's chat with Undo, and Ipsy says in its corner
-  // what it did. What it can't fix stays in To check.
+  // Ipsy keeps orders up to date by itself: each time Orders opens, after each read of Gmail, every order in To check,
+  // and every order still on its way, whose newest email Ipsy hasn't read yet, is checked once (per email), To check
+  // first, 10 at a time (then the next 10), quietly. On unless turned off in Settings (no asking first: the owner asked
+  // for it to just happen); Claude switched off for Orders (AI helper) stops it too. A fix shows in Ipsy's chat with
+  // Undo, and Ipsy says in its corner what it did. What it can't fix stays in To check.
   const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('orders');   // Settings > AI helper, Use Claude in Orders (this phone)
-  let autoBusy = false, autoOffered = false;     // offered once each time Orders opens
+  // It used to be asked for first, and a "Not now" turned it off: that answer is set aside once, now it's on by default.
+  if (ls.get(K.ipsyAutoV, '') !== '2') { if (ls.get(K.ipsyAuto, '') === '0') ls.del(K.ipsyAuto); ls.set(K.ipsyAutoV, '2'); }
+  const autoOn = () => ls.get(K.ipsyAuto, '') !== '0';
+  let autoBusy = false;
   const AUTO_STOP = ['signin', 'accounts-off', 'no-ai', 'ai-off', 'limit', 'offline', 'auth', 'ai-key', 'ai-unreachable', 'ai-busy', 'ai-budget'];
   const when = o => (o.source && o.source.date) || 0;
   async function autoCheck() { updating('check', true); try { await autoCheckNow(); } finally { updating('check', false); } }
   async function autoCheckNow() {
-    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken() || !claudeOn()) return;
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken() || !claudeOn() || !autoOn()) return;
     const tried = new Set(ls.json(K.ipsyTried, []));
-    const todo = orders.filter(o => !o.private && !o.hide && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
-      .sort((a, b) => needsCheck(b) - needsCheck(a) || when(b) - when(a)).slice(0, 10);
+    const due = orders.filter(o => !o.private && !o.hide && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
+      .sort((a, b) => needsCheck(b) - needsCheck(a) || when(b) - when(a));
+    const todo = due.slice(0, 10);
     if (!todo.length) return;
-    const mode = ls.get(K.ipsyAuto, '');
-    if (mode === '0') return;
-    if (mode !== '1') {
-      if (autoOffered) return;
-      autoOffered = true;
-      ipsy.hint('Want me to keep your orders up to date by myself?', async () => {
-        const ok = await ipsy.ask('Want me to keep your orders up to date by myself? I’ll reread their emails with Claude and fix what I can, with Undo.', { yes: 'Yes, keep them up to date', no: 'Not now' });
-        ls.set(K.ipsyAuto, ok ? '1' : '0');
-        if (ok) { ls.set(K.aiOk, '1'); ipsy.close(); autoCheck(); }
-      });
-      return;
-    }
     autoBusy = true; ipsy.working(true);
     let checked = 0, fixed = 0, left = 0, stop = '', until = '';
     for (const o of todo) {
@@ -932,6 +924,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     ls.set(K.ipsyTried, JSON.stringify([...tried].slice(-500)));
     autoBusy = false; ipsy.working(false); render();
+    if (!stop && due.length > todo.length) setTimeout(autoCheck, 1500);   // more waiting: the next 10, while Orders is open
     const need = n => n + ' still need' + (n === 1 ? 's' : '') + ' you';
     if (checked) ipsy.note('Checked ' + plural(checked, 'order') + ': ' + (fixed ? 'updated ' + fixed : 'nothing to change') + (left ? ', ' + need(left) : '') + '.');
     if (fixed) ipsy.hint('I updated ' + plural(fixed, 'order') + (left ? '; ' + need(left) + ' in To check.' : '.'));
@@ -1321,7 +1314,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
       + S.section('AI helper', [
         S.claude('orders'),
-        S.toggle({ id: 'stIpsyAuto', title: 'Ipsy keeps orders up to date', sub: 'Ipsy rereads new order emails and To check, and fixes them.', on: ls.get(K.ipsyAuto, '') === '1' }),
+        S.toggle({ id: 'stIpsyAuto', title: 'Ipsy keeps orders up to date', sub: 'Each time Orders opens, Ipsy rereads new order emails and To check, and fixes them.', on: autoOn() }),
         PV ? S.toggle({ id: 'stIpsyGmail', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('orders') }) : '',
       ], { id: 'stIpsy' })
       + S.section('Your data', [
@@ -1366,7 +1359,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (id === 'stHidden') showHidden();
     else if (id === 'stIpsyGmail') { const PV = window.AllisonOS.ipsy.privacy; PV.gmail('orders', !PV.gmail('orders')); renderSettings(); }
     else if (id === 'stIpsyAuto') {
-      const on = ls.get(K.ipsyAuto, '') !== '1';
+      const on = !autoOn();
       ls.set(K.ipsyAuto, on ? '1' : '0'); if (on) ls.set(K.aiOk, '1');
       renderSettings();
       if (on) { ls.del(K.ipsyTried); closeSheet('setSheet'); autoCheck(); }

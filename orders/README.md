@@ -301,10 +301,11 @@ it did (*I updated 2 orders; 1 still needs you in To check*). What it can't fix
 unavailable) stays in To check for you. An order with no new email isn't read
 again: re-reading the same email wouldn't tell Ipsy anything new.
 
-- **Offered once.** The first time there's something to check, Ipsy asks from
-  its corner; nothing is sent until you say yes. **Settings > AI helper > Ipsy keeps
-  orders up to date** turns it on or off (it was *Ipsy checks To check*; a yes
-  given then still counts).
+- **On by default, with no asking.** It used to be offered once from Ipsy's
+  corner; now it just runs (the owner asked for it). A *Not now* given to that
+  offer is set aside once. **Settings > AI helper > Ipsy keeps orders up to date**
+  turns it off (and it stays off), as does turning Claude off for Orders.
+- More than 10 waiting: the next 10 follow while Orders is open.
 - It never asks for Face ID by itself: signed out, it waits (and says so).
 - It stops for the day at the daily limit below, and tries again later.
 
