@@ -163,12 +163,21 @@ for (const scheme of ['light', 'dark']) {
     await page.evaluate(() => { for (const x of Object.values(window.__travel.live)) x.at = Date.now() - 3 * 6e4; document.dispatchEvent(new Event('visibilitychange')); });
     await page.waitForTimeout(600);
     assert.equal(lookups.length, again, 'not asked again when it was checked 3 minutes ago');
+    // the flight home, 4 days out, says when its status starts (36 hours before), not nothing; and it isn't looked up
+    const home = await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.flightNo === '987'); const v = window.__travel.flightState(b); return { text: v && v.text, from: new Date(window.__travel.startT(b) - 36 * 3600e3).getDay() }; });
+    assert.match(home.text || '', /^Status from \S+ \d{1,2}:\d\d\s?[AP]M$/, 'the flight home says when its status starts: ' + home.text);
+    assert.ok(!lookups.some(l => l.startsWith('UA987')), 'and it is not looked up yet');
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trips-' + scheme + '.png') });
 
   await step(scheme + ': the Next cards: a card for each stage of the trip, in order; a stage chip or a swipe moves between them', async () => {
     const stages = await page.$$eval('#heroStages [data-stage]', bs => bs.map(b => b.textContent.trim()));
-    assert.deepEqual(stages, ['Flight', 'Hotel', 'Car'], 'the flight, then the hotel tonight, then the car tomorrow: ' + stages);
+    // the flight first, then the hotel and the car in the order they happen: the check-in is tonight or, when the flight lands
+    // after midnight, tomorrow afternoon, after the car at 10 am (so the order depends on the time of day the test runs)
+    assert.equal(stages[0], 'Flight', 'the flight first: ' + stages);
+    assert.deepEqual([...stages].sort(), ['Car', 'Flight', 'Hotel'], 'a card for each stage: ' + stages);
+    const keys = await page.$$eval('#heroStages [data-stage]', bs => bs.map(b => window.__travel.startT(window.__travel.bookings.find(x => x.id === b.dataset.id))));
+    assert.ok(keys[1] <= keys[2], 'the hotel and the car in the order they happen: ' + stages);
     assert.equal(await page.$$eval('#heroTrack > .hero', c => c.length), 3);
     assert.equal(await page.getAttribute('#heroStages [data-stage="0"]', 'aria-pressed'), 'true');
     // the second card peeks in, so you can see there's more
@@ -179,18 +188,18 @@ for (const scheme of ['light', 'dark']) {
     const shown = () => page.evaluate(() => { const t = document.getElementById('heroTrack'), cs = [...t.children]; const x = t.getBoundingClientRect().left + 14;
       return cs.findIndex(c => Math.abs(c.getBoundingClientRect().left - x) < 4); });
     const inView = await page.evaluate(() => { const t = document.getElementById('heroTrack').getBoundingClientRect(), c = document.querySelectorAll('#heroTrack > .hero')[2].getBoundingClientRect(); return c.left >= t.left - 1 && c.right <= t.right + 1; });
-    assert.ok(inView, 'the car card is shown, all of it');
+    assert.ok(inView, 'the last card is shown, all of it');
     assert.equal(await page.getAttribute('#heroStages [data-stage="2"]', 'aria-pressed'), 'true');
     // a swipe back moves the chips with it
     await page.evaluate(() => { const t = document.getElementById('heroTrack'); t.scrollTo({ left: t.children[1].offsetLeft - t.children[0].offsetLeft, behavior: 'auto' }); });
     await page.waitForTimeout(400);
-    assert.equal(await page.getAttribute('#heroStages [data-stage="1"]', 'aria-pressed'), 'true', 'the hotel chip follows the swipe');
+    assert.equal(await page.getAttribute('#heroStages [data-stage="1"]', 'aria-pressed'), 'true', 'the second chip follows the swipe');
     // the list drawn again (live status, the clock) keeps the stage you were on
     await page.evaluate(() => window.__travel.render()); await page.waitForTimeout(300);
-    assert.equal(await shown(), 1, 'still on the hotel after the list is drawn again');
+    assert.equal(await shown(), 1, 'still on the second card after the list is drawn again');
     // a card's words start at its top, however tall the tallest card is
     const top = await page.evaluate(() => { const c = document.querySelectorAll('#heroTrack > .hero')[2], k = c.querySelector('.k'); return k.getBoundingClientRect().top - c.getBoundingClientRect().top; });
-    assert.ok(top < 30, 'the car card\'s label at its top: ' + top);
+    assert.ok(top < 30, 'the last card\'s label at its top: ' + top);
     await page.click('#heroStages [data-stage="0"]'); await page.waitForTimeout(700);
   });
 
@@ -515,12 +524,13 @@ await step('signed out, live status on open, the ping, the calendar pass and the
   assert.ok(calls.every(c => c.endsWith(' signed out')), 'nothing went with a session');
   assert.equal(await page.$('#aos-signin'), null, 'no sign-in sheet for any of them');
   assert.ok(await page.isHidden('#toast'), 'and no toast');
-  // the app keeps what it has: the trip is there, and a flight's live status is simply not checked yet
+  // the app keeps what it has: the trip is there, and its flight's card says to sign in for its status, rather than nothing
+  assert.match(await page.textContent('.hero .meta .st'), /^Sign in for status$/, 'the Next card says why there is no status');
   await page.click('.trip[data-trip]'); await page.waitForSelector('#tripPage:not([hidden])');
   await page.click('#tpBody .ev.flight'); await page.waitForSelector('#bkSheet:not([hidden]) #bkLive');
   await page.waitForTimeout(800);
   assert.equal(await page.$('#aos-signin'), null, 'opening the flight asks nobody either');
-  assert.match(await page.textContent('#bkLive'), /Not checked yet/, 'live status stays unknown, not "not set up"');
+  assert.match(await page.textContent('#bkLive'), /Sign in to see it/, 'live status stays unknown, not "not set up": it says to sign in');
   // a tap: Check again asks for Face ID
   await page.click('#bkLiveGo');
   await page.waitForSelector('#aos-signin', { timeout: 5000 });

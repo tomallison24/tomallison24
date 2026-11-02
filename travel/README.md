@@ -494,6 +494,13 @@ Set up (about 5 minutes):
 
 Settings in Travel then says **Working**.
 
+A flight's card (the Next card and its trip's card) always says something about
+its status (`flightState` in `app.js`): the status itself from 36 hours before
+take-off; before that, when it starts ("Status from Thu 4:04 PM"); signed out,
+"Sign in for status" (the check on open is quiet and asks nobody, a tap on the
+flight's Check again asks for Face ID); and "Status unavailable", "No status
+yet" or "Status paused this month" when there is none.
+
 Keeping it free: each flight is looked up only from 36 hours before take-off
 until it lands, at most every 10 minutes in the last 6 hours and hourly
 before that; the server keeps each answer for 10 minutes so both phones share
