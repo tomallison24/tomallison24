@@ -623,14 +623,16 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     stages.sort((a, b) => key(a) - key(b));
     const label = (b, i) => { const s = startT(b); return s <= now ? 'Now' : (i ? (STAGE[stageOf(b)] || 'Then') : 'Next') + ' · ' + until(s); };
     // the parking pass for these stages, its QR code a tap away
-    const pass = stages.find(b => isParking(b) && b.qr) || stages.map(b => b.type === 'flight' && parkingForFlight(b)).find(p => p && p.qr);
-    if (stages.length === 1) return heroCard(next, label(next, 0), now) + (pass ? qrButton(pass) : '');
+    const pass0 = stages.find(b => isParking(b) && b.qr) || stages.map(b => b.type === 'flight' && parkingForFlight(b)).find(p => p && p.qr);
+    const pass = pass0 && !heroDone.has(pass0.id) ? pass0 : null;   // ticked off (the pass or its card): gone from here, still on its trip
+    const qr = p => '<div class="qrslot">' + qrButton(p) + '<button class="herodone" type="button" data-done="' + esc(p.id) + '" aria-label="Done with parking: take the pass off the Next cards">' + I.tick + '</button></div>';
+    if (stages.length === 1) return heroCard(next, label(next, 0), now) + (pass ? qr(pass) : '');
     const at = Math.max(0, stages.findIndex(b => b.id === st.heroAt));
     return '<div class="herocar"><div class="herotrack" id="heroTrack" aria-label="This trip, a card for each stage">'
       + stages.map((b, i) => heroCard(b, label(b, i), now, i)).join('') + '</div>'
       + '<div class="chips stagebar" id="heroStages" role="group" aria-label="Show a stage">' + stages.map((b, i) => '<button class="chip glass" type="button" data-stage="' + i + '" data-id="' + esc(b.id)
         + '" aria-pressed="' + (i === at) + '">' + (b.parking ? I.parking : I[b.type] || I.other) + esc(STAGE[stageOf(b)] || titleOf(b)) + '</button>').join('') + '</div></div>'
-      + (pass ? qrButton(pass) : '');
+      + (pass ? qr(pass) : '');
   }
   // One Next card. i: its place in the carousel, if it is in one.
   function heroCard(next, k, now, i) {
@@ -770,7 +772,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // A Next card's tick: that stage leaves the carousel (it stays on its trip), the one after it shows; Undo brings it back.
   function heroTick(id) {
-    const slot = document.querySelector('.heroslot [data-done="' + CSS.escape(id) + '"]'), at = slot && slot.closest('.heroslot');
+    const slot = document.querySelector('.heroslot [data-done="' + CSS.escape(id) + '"]'), at = slot && slot.closest('.heroslot');   // the parking pass's tick has no card (.qrslot)
     const after = at && (at.nextElementSibling || at.previousElementSibling), then = after && after.querySelector('[data-done]');
     const was = st.heroAt;
     heroDone.add(id); saveDone();
