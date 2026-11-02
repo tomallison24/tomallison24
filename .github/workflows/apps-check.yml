@@ -209,6 +209,7 @@ jobs:
               house/scripts/app-test.mjs
               calendar/scripts/app-test.mjs
               mail/scripts/security-test.mjs
+              mail/scripts/tags-test.mjs
           # Fitness (and its Health page, and Ipsy), Clock, Notes' aisles, reminders and security
           - group: fitness-clock
             tests: |

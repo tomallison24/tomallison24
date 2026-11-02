@@ -117,7 +117,8 @@
         'School inside aOS no longer reads with Mail\'s Gmail sign-in when it\'s a different account from School\'s (that inbox has no school emails), and Settings says which account it read, how many school emails it found and how many posts it has',
         'Settings is tidier in every app: each section is a dropdown, closed until you tap it, with how it stands on its row (Design says your look)',
         'Travel and Orders: Check now works when the Gmail sign-in has run out (it signs you in again instead of seeming to do nothing), Settings says signed out rather than connected then, Ipsy says the sign-in ran out rather than that Gmail isn\'t connected, and neither reads with Mail\'s sign-in when that\'s a different Gmail account',
-        'Travel, Orders, School and Money can stay signed in to Gmail for 30 days instead of an hour, once the owner sets it up (aOS/RELEASING.md, Gmail stays signed in): you sign in once a month, and Disconnect ends it'],
+        'Travel, Orders, School and Money can stay signed in to Gmail for 30 days instead of an hour, once the owner sets it up (aOS/RELEASING.md, Gmail stays signed in): you sign in once a month, and Disconnect ends it',
+        'Mail: a tag can be kept out of the inbox (Manage Tags, In inbox / Out of inbox): its mail goes straight to the tag, which is in the mailbox menu, and what was in the inbox moves there, with Undo'],
       apps: {
         calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
       } },
