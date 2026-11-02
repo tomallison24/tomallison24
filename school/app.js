@@ -41,6 +41,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const K = {
     items: KEY + '-items', seen: KEY + '-seen', done: KEY + '-done', moved: KEY + '-moved', opened: KEY + '-opened', prefs: KEY + '-prefs', bare: KEY + '-bare', lastScan: KEY + '-scan', loc: KEY + '-loc', wx: KEY + '-wx',
     token: 'school.token', state: 'school.state', silent: 'school.silent', silentFail: 'school.silentFail', lastAuth: 'school.lastAuth', hint: 'school.hint', me: 'school.me',
+    readAs: 'school.readAs', found: 'school.found',
   };
   // Mail's OAuth client (not a secret: see mail/app.js). School's own address must be added to it as a
   // redirect URI once - school/README.md, "Gmail".
@@ -398,7 +399,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const S = AllisonOS.settings, m = me(), d = P.detect(items);
     const groups = [...new Set(items.flatMap(x => x.groups || []))].filter(g => g && g !== d.school).sort();
     const timeSel = (id, title, value, from, to) => S.select({ id, title, value, options: TIMES(from, to).map(t => [t, P.clock(t)]) });
-    const tok = getToken(), who = ls.get(K.me, '') || ls.get('mail.me', '');
+    const tok = getToken(), who = ls.get(K.readAs, '') || ls.get(K.me, '');
+    const found = ls.json(K.found, null), msgs = new Set(items.map(x => x.msg)).size;
+    const lastLine = 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + (found ? (found.year ? ': ' + plural(found.n, 'school email') + ' in the last year.' : ': ' + plural(found.n, 'school email') + ' since the time before.') : '.');
     more.innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'moreDesign' })) : '')
       + S.section('Your child', [
         S.input({ id: 'cName', title: 'Name', value: prefs.name || '', placeholder: 'Her first name' }),
@@ -418,12 +421,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.toggle({ id: 'cWx', title: 'Weather at drop-off and pickup', sub: 'Uses Weather’s place, or where this phone is.', on: prefs.weather !== 'off' }),
       ], { hint: 'A club on a weekday changes that day’s pickup time.' })
       + S.section('Connected accounts', hasGmail() ? [
-        S.info({ id: 'gState', title: 'Gmail', sub: tok ? (who ? 'Signed in as ' + who + '.' : 'Signed in.') : 'Signed out; it signs in again when School opens.' }),
-        S.action({ id: 'scanBtn', icon: 'refresh', title: 'Check now', sub: 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + '.' }),
+        S.info({ id: 'gState', title: 'Gmail', sub: tok ? (who ? 'Reading ' + who + '.' : 'Signed in.') : 'Signed out; it signs in again when School opens.' }),
+        S.action({ id: 'scanBtn', icon: 'refresh', title: 'Check now', sub: lastLine }),
         S.action({ id: 'rereadBtn', icon: 'mail', title: 'Read the last year again', sub: 'Keeps what you marked done or moved.' }),
         ls.get(K.token + '.ever', '') ? S.danger({ id: 'gOut', icon: 'out', title: 'Disconnect Gmail', sub: 'What School has read stays on this phone.' }) : '',
       ] : [S.action({ id: 'gIn', icon: 'mail', title: 'Connect Gmail', sub: 'Reads the school’s ParentSquare emails, read-only.' })], { open: !tok })
       + S.section('Your data', [
+        S.info({ id: 'dataState', title: 'On this phone', sub: items.length ? plural(items.length, 'post') + ' from ' + plural(msgs, 'email') + '.' : 'No posts yet.' }),
         S.action({ id: 'exportBtn', icon: 'upload', title: 'Back up everything', sub: 'A file with what School has read and your settings.' }),
         S.action({ id: 'importBtn', icon: 'download', title: 'Import a backup', sub: 'Brings back a School backup.' }),
         S.danger({ id: 'wipeBtn', title: 'Delete all data', sub: 'From this phone; your Gmail is not touched.' }),
@@ -463,7 +467,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (w && S.armed(w, 'Tap again to delete everything')) {
       const n = items.length;
       items = []; seen = new Set(); done = {}; moved = {}; opened = {}; prefs = {};
-      [K.items, K.seen, K.done, K.moved, K.opened, K.prefs, K.lastScan, K.bare].forEach(ls.del);
+      [K.items, K.seen, K.done, K.moved, K.opened, K.prefs, K.lastScan, K.bare, K.found].forEach(ls.del);
       saveItems();
       render(); renderMore();
       toast('Deleted ' + plural(n, 'post') + ' and your settings.');
@@ -496,8 +500,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, '');
   class AuthError extends Error {}
   const tokenAt = k => { try { const o = JSON.parse(ls.get(k, 'null')); if (o && o.exp > Date.now() && (k === K.token || /gmail\.(modify|readonly)|mail\.google\.com/.test(o.scope || ''))) return o; } catch {} return null; };
-  // Opened in aOS, Mail's and Orders' sign-ins are in the same storage and cover reading.
-  const getToken = () => tokenAt(K.token) || tokenAt('mail.token') || tokenAt('orders.token');
+  // Opened in aOS, Mail's and Orders' sign-ins are in the same storage and cover reading, but only when they're the
+  // same Gmail account as School's own (or School has none yet): another account's inbox has no ParentSquare emails,
+  // so School read nothing and said it had checked.
+  const mine = app => { const own = ls.get(K.hint, '') || ls.get(K.me, ''); const theirs = ls.get(app + '.hint', '') || ls.get(app + '.me', ''); return !own || !theirs || own.toLowerCase() === theirs.toLowerCase(); };
+  const getToken = () => tokenAt(K.token) || (mine('mail') && tokenAt('mail.token')) || (mine('orders') && tokenAt('orders.token')) || null;
   const mayRenew = () => !!ls.get(K.token + '.ever', '') && Date.now() - +ls.get(K.lastAuth, 0) > 60e3 && Date.now() - +ls.get(K.silentFail, 0) > 12 * H;
   const hasGmail = () => !!getToken() || !!ls.get(K.token + '.ever', '');
   // Inside aOS Google's sign-in can't open in this app's frame: the whole aOS window goes to Google and comes
@@ -525,7 +532,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function signOut() {
     const tok = tokenAt(K.token);
     if (tok) fetch('https://oauth2.googleapis.com/revoke', { method: 'POST', mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', keepalive: true, body: new URLSearchParams({ token: tok.t }) }).catch(() => {});
-    [K.token, K.token + '.ever', K.state, K.silent, K.silentFail, K.lastAuth, K.hint, K.me].forEach(ls.del);
+    [K.token, K.token + '.ever', K.state, K.silent, K.silentFail, K.lastAuth, K.hint, K.me, K.readAs, K.found].forEach(ls.del);
     renderMore(); render();
     toast('Disconnected Gmail. What School read stays.');
   }
@@ -603,7 +610,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       render();
       if (!next) updating('gmail', true);
       busyPill('Reading Gmail');
-      if (!ls.get(K.me, '')) gmail('/profile').then(p => { if (p && p.emailAddress) { ls.set(K.me, p.emailAddress); ls.set(K.hint, p.emailAddress); } }).catch(() => {});
+      // the account this read is of, for Settings (it can be Mail's or Orders' sign-in, inside aOS)
+      gmail('/profile').then(p => { if (p && p.emailAddress) { ls.set(K.readAs, p.emailAddress); if (!ls.get(K.me, '')) { ls.set(K.me, p.emailAddress); ls.set(K.hint, p.emailAddress); } } }).catch(() => {});
       const ids = [];
       let pageToken;
       do {
@@ -612,6 +620,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         pageToken = r.nextPageToken;
       } while (pageToken && ids.length < 3000);
       const fresh = ids.filter(m => !seen.has(m.id));
+      ls.set(K.found, JSON.stringify({ n: ids.length, year: !lastAt }));
       more = fresh.length > MAX_SCAN;
       const todo = fresh.slice(0, MAX_SCAN);   // newest first
       let doneN = 0;

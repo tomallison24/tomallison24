@@ -78,7 +78,9 @@ School reads Gmail **on the phone, read-only** (`gmail.readonly`), as Orders doe
 a year back the first time, then anything new each time it opens (at most every 30 minutes), 250
 emails a batch. Each email is read once; **Read the last year again** in Settings starts over (what
 you marked done or moved stays). Opened inside aOS, Mail's or Orders' Gmail sign-in is used if
-there's one.
+there's one and it's the same Gmail account as School's (another account's inbox has no ParentSquare emails).
+Settings says which account it read (**Reading …**), how many school emails the last check found, and how
+many posts are on the phone.
 
 A sign-in lasts an hour. When School opens after that it renews it quietly (Google's `prompt=none`), at most
 every 12 hours after one fails; **Check now** tapped while signed out goes straight to Google's sign-in, with
