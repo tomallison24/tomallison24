@@ -251,6 +251,25 @@ test('airport parking is parking, not a hotel ("00:30 AM" included)', () => {
   assert.equal(b.start, '2026-02-04T06:00'); assert.equal(b.end, '2026-02-06T00:30');
 });
 
+test('ParkRDU: "15:00 PM" is 3 pm, and the pass has its plate, its airport and its QR code\'s text', () => {
+  const html = '<td>Thank you for reserving for <strong>ParkRDU Central</strong>. Your confirmation number is <strong>QW3RT</strong>.</td>'
+    + '<img src="https://parkrdu.com/RaleighDurhambooking/barcode/QRCodeGen?data=CHRES1111111QW3RT" alt="">'
+    + rows('Booking Reference&#58; ', 'QW3RT', 'Airport&#58; ', 'ParkRDU Central ', 'Arrival Date &#38; Time&#58; ', '11/02/26 15:00 PM',
+      'Exit Date &#38; Time&#58; ', '11/08/26 16:00 PM', 'License plate&#58; ', 'XYZ9876');
+  const { b } = one({ html, subject: 'Booking QW3RT Parking Confirmation', from: 'noreply@parkrdu.com', date: Date.parse('2026-10-26') });
+  assert.equal(b.parking, true); assert.equal(b.conf, 'QW3RT'); assert.equal(b.place, 'ParkRDU Central');
+  assert.equal(b.start, '2026-11-02T15:00'); assert.equal(b.end, '2026-11-08T16:00');
+  assert.equal(b.plate, 'XYZ9876'); assert.equal(b.airport, 'RDU'); assert.equal(b.qr, 'CHRES1111111QW3RT');
+  assert.equal(b.guess, false, 'in and out and the reference: nothing to check');
+});
+test('a QR code is only taken from a QR or barcode image, never a link or a logo', () => {
+  const base = rows('Thank you for reserving for <strong>ParkRDU Central</strong>. Your confirmation number is <strong>QW3RT</strong>.', 'Arrival Date &#38; Time&#58; ', '11/02/26 06:00 AM');
+  const qr = img => one({ html: img + base, subject: 'Booking QW3RT Parking Confirmation', from: 'noreply@parkrdu.com', date: Date.parse('2026-10-26') }).b.qr;
+  assert.equal(qr('<img src="https://parkrdu.com/content/logo.png?data=abc">'), undefined);
+  assert.equal(qr('<img src="https://example.com/qr?data=https%3A%2F%2Fevil.example%2F">'), undefined, 'a web address is not a pass');
+  assert.equal(qr('<img src="https://chart.example/chart?cht=qr&amp;chl=PASS%20123">'), 'PASS 123');
+});
+
 // Rides: the shapes of real Uber and Lyft receipts (cells and rows as the
 // app's HTML reader leaves them), which reach the app through the Travel label.
 const UBER = 'Jul 7, 2026 12:58 PM\nThanks for riding, Tom  We hope you enjoyed your ride this afternoon.\nTotal  $24.96\nTrip fare  CA$23.90\n' +

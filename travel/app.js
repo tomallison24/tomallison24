@@ -82,7 +82,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
   // Bump QUERY_V whenever the reader (parse.js) or QUERY changes: the next scan then reads the last year again, once, and what the old
   // reader made of those emails is rebuilt (travel/scripts/reader-version-test.mjs fails if parse.js changes and this does not).
-  const QUERY_V = '5';
+  const QUERY_V = '6';
 
   const I = {
     lock: '<svg class="lk" viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
@@ -95,6 +95,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     plane: '<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>',
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
     map: '<svg viewBox="0 0 24 24"><path d="M12 21s-6.6-5.6-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.4-6.6 11-6.6 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+    parking: '<svg viewBox="0 0 24 24"><rect x="3.8" y="3.8" width="16.4" height="16.4" rx="3.6"/><path d="M9.6 17V7.4h3.3a2.8 2.8 0 0 1 0 5.6H9.6"/></svg>',
+    qr: '<svg viewBox="0 0 24 24"><rect x="3.6" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="14" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="3.6" y="14" width="6.4" height="6.4" rx="1.2"/><path d="M14 14h2.6v2.6H14zM17.8 17.8h2.6v2.6h-2.6zM14 19.6v.8M19.6 14h.8"/></svg>',
+    tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
     cal: '<svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/></svg>',
     search: '<svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>',
     ext: '<svg viewBox="0 0 24 24"><path d="M13.6 4h6.4v6.4"/><path d="M20 4l-9 9"/><path d="M17.6 13.6v3.6a2.8 2.8 0 0 1-2.8 2.8H6.8A2.8 2.8 0 0 1 4 17.2V9.2a2.8 2.8 0 0 1 2.8-2.8h3.6"/></svg>',
@@ -535,6 +538,48 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   // Render: the trips list
   // ---------------------------------------------------------------------
+  // Airport parking (parse.js, parkingFromText). Each pass goes with the flight that leaves that airport on the day you drive
+  // in: with passes for several trips in the email, the day sorts out which is which. Two for the same day (a changed
+  // booking): the newest email's.
+  const dayOf = v => String(v || '').slice(0, 10);
+  const isParking = b => !!(b && b.type === 'other' && b.parking && b.status !== 'cancelled');
+  function flightForParking(p) {
+    if (!isParking(p) || !dayOf(p.start)) return null;
+    return alive().filter(f => f.type === 'flight' && f.status !== 'cancelled' && dayOf(f.dep) === dayOf(p.start) && (!p.airport || !f.from || f.from === p.airport))
+      .sort((a, b) => startT(a) - startT(b))[0] || null;
+  }
+  function parkingForFlight(f) {
+    if (!f || f.type !== 'flight') return null;
+    return alive().filter(p => isParking(p) && dayOf(p.start) === dayOf(f.dep) && flightForParking(p) === f)
+      .sort((a, b) => ((b.source && b.source.date) || 0) - ((a.source && a.source.date) || 0))[0] || null;
+  }
+  const qrButton = p => '<button class="chip glass qrbtn" type="button" data-qr="' + esc(p.id) + '"><span class="ic">' + I.qr + '</span><span>Parking QR code<span class="sub" translate="no">' + esc(p.place || 'Show it at the gate') + '</span></span></button>';
+  // The pass, full screen: its QR code drawn here (qrcode.js), black on white and large, as the gate's scanner wants it,
+  // with the lot, the reference and the plate under it; works offline.
+  function showQr(id) {
+    const p = bookings.find(b => b.id === id); if (!p || !p.qr || !window.qrcode) return;
+    let q;
+    try { q = qrcode(0, 'M'); q.addData(p.qr); q.make(); } catch { return toast('Couldn’t draw this QR code. Open the email instead.'); }
+    const n = q.getModuleCount(), m = 4;
+    let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
+    const f = flightForParking(p);
+    const box = document.createElement('div');
+    box.className = 'qrsheet'; box.id = 'qrSheet'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Parking QR code');
+    box.innerHTML = '<div class="qrcard"><div class="qrhead"><div><p class="k">' + I.parking + 'Parking pass</p><h2 translate="no">' + esc(p.place || 'Parking') + '</h2></div>'
+      + '<button class="iconbtn okbtn" type="button" id="qrDone" aria-label="Done">' + I.tick + '</button></div>'
+      + '<svg class="qrcode" viewBox="0 0 ' + (n + 2 * m) + ' ' + (n + 2 * m) + '" role="img" aria-label="QR code for ' + esc(p.conf || 'the parking pass') + '" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>'
+      + '<dl class="qrfacts">' + [['Reference', p.conf], ['Plate', p.plate], ['In', p.start ? fmtDay(p.start) + (fmtTime(p.start) ? ' · ' + fmtTime(p.start) : '') : ''], ['Out', p.end ? fmtDay(p.end) + (fmtTime(p.end) ? ' · ' + fmtTime(p.end) : '') : ''],
+        ['For', f ? flightName(f) + ' · ' + (f.from || '') + ' → ' + (f.to || '') : '']].filter(x => x[1]).map(([k, v]) => '<div><dt>' + esc(k) + '</dt><dd translate="no">' + esc(v) + '</dd></div>').join('') + '</dl>'
+      + '<p class="hint">Turn your screen brightness up and hold the code about six inches from the scanner.</p></div>';
+    const was = document.activeElement;
+    const close = () => { box.remove(); document.removeEventListener('keydown', key, true); if (was && was.focus) try { was.focus({ preventScroll: true }); } catch {} };
+    const key = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+    box.addEventListener('click', e => { if (e.target === box || e.target.closest('#qrDone')) close(); });
+    document.addEventListener('keydown', key, true);
+    document.body.appendChild(box);
+    $('qrDone').focus({ preventScroll: true });
+  }
   function statusPill(b) {
     if (b.status === 'cancelled') return '<span class="st bad">Canceled</span>';
     const l = b.type === 'flight' && liveView(b);
@@ -580,6 +625,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       const out = next.pickup && moment(next.pickup, next.pickupIso) <= now;
       h += '<h3' + (carCo(next) !== 'Rental car' ? ' translate="no"' : '') + '>' + esc(carCo(next)) + '</h3><div class="when">' + (out ? 'Return ' + esc(fmtDay(next.dropoff)) + ' · ' + esc(fmtTime(next.dropoff)) : 'Pick up ' + esc(fmtDay(next.pickup)) + (fmtTime(next.pickup) ? ' · ' + esc(fmtTime(next.pickup)) : '')) + '</div>';
       h += '<div class="sub">' + esc([out ? next.dropPlace : next.pickupPlace, next.conf ? 'Conf. ' + next.conf : ''].filter(Boolean).join(' · ')) + '</div>';
+    } else if (next.parking) {
+      const inLot = moment(next.start) <= now;
+      h += '<h3 translate="no">' + esc(next.place || 'Parking') + '</h3><div class="when">' + (inLot ? 'Exit ' + esc(fmtDay(next.end)) + (fmtTime(next.end) ? ' · ' + esc(fmtTime(next.end)) : '') : 'In ' + esc(fmtDay(next.start)) + (fmtTime(next.start) ? ' · ' + esc(fmtTime(next.start)) : '')) + '</div>';
+      h += '<div class="sub">' + esc([next.plate ? 'Plate ' + next.plate : '', next.conf ? 'Conf. ' + next.conf : ''].filter(Boolean).join(' · ')) + '</div>';
     } else {
       h += '<h3' + (next.title ? ' translate="no"' : '') + '>' + esc(titleOf(next)) + '</h3><div class="when">' + esc(fmtDay(startOf(next))) + '</div>';
     }
@@ -587,7 +636,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const x = next.type === 'flight' && liveView(next) && live[next.id];
     const asOf = x ? (inflight.has(next.id) ? 'Checking…' : 'Checked ' + ago(x.at)) : '';
     if (pill) h += '<div class="meta">' + pill + (asOf ? '<span class="asof">' + esc(asOf) + '</span>' : '') + '</div>';
-    return h + '</button>';
+    h += '</button>';
+    // the parking pass for this flight (or this parking), its QR code a tap away
+    const park = next.parking ? next : next.type === 'flight' ? parkingForFlight(next) : null;
+    if (park && park.qr) h += qrButton(park);
+    return h;
   }
   // A trip's next flight's live status, for its card: "UA 123 · On time" (from 36 hours before take-off).
   function tripFlightPill(g) {
@@ -599,8 +652,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function tripCard(g, i) {
     const n = t => g.live.filter(b => b.type === t).length;
+    const parks = g.live.filter(isParking).length;
     const counts = [['flight', n('flight'), 'flight'], ['hotel', n('hotel'), 'hotel'], ['car', n('car'), 'car']].filter(x => x[1])
-      .map(([t, k, w]) => '<span class="count">' + I[t] + esc(plural(k, w === 'car' ? 'car' : w)) + '</span>').join('');
+      .map(([t, k, w]) => '<span class="count">' + I[t] + esc(plural(k, w === 'car' ? 'car' : w)) + '</span>').join('')
+      + (parks ? '<span class="count">' + I.parking + 'Parking</span>' : '');
     const soon = !g.past && g.startT > Date.now() ? until(g.startT) : !g.past ? 'Now' : '';
     const ai = !g.past && g.gaps && aiOn() && aiAvail !== false;
     return '<div class="tripwrap" style="--i:' + i + '"><button class="trip glass' + (g.past ? ' past' : '') + (ai ? ' hasai' : '') + '" type="button" data-trip="' + esc(g.id) + '" style="--i:' + i + '">'
@@ -657,6 +712,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     st.when = b.dataset.when; ls.set(K.when, st.when); render(); animateIn($('list'));
   });
   $('list').addEventListener('click', e => {
+    const qb = e.target.closest('[data-qr]'); if (qb) return showQr(qb.dataset.qr);
     const a = e.target.closest('[data-ai]'); if (a) return checkTripWithAI(a.dataset.ai, a);
     const t = e.target.closest('[data-trip]'); if (t) return openTrip(t.dataset.trip);
     const b = e.target.closest('[data-bk]'); if (b) return openBooking(b.dataset.bk);
@@ -687,7 +743,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const meta = [statusPill(b), b.only && side === 'start' ? justMePill : '', b.conf && side === 'start' ? '<span class="st bare" translate="no">' + esc(b.conf) + '</span>' : ''].filter(Boolean).join('');
     const keepT = b.type === 'flight' || (b.type === 'other' && b.title), keepS = b.type === 'car' || b.type === 'other';   // the family's (a flight, a place): left as it is in Russian
     return '<button class="ev ' + esc(b.type) + cx + '" type="button" data-bk="' + esc(b.id) + '">'
-      + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(at ? fmtDay(at) : 'No date') + '</small>' : '') + '</span><span class="ic">' + (b.ride ? I.car : I[b.type] || I.other) + '</span>'
+      + '<span class="tm">' + esc(time) + (withDate ? '<small>' + esc(at ? fmtDay(at) : 'No date') + '</small>' : '') + '</span><span class="ic">' + (b.ride ? I.car : b.parking ? I.parking : I[b.type] || I.other) + '</span>'
       + '<span class="bd"><span class="t"' + (keepT ? ' translate="no"' : '') + '>' + esc(t) + '</span>' + (s ? '<span class="s"' + (keepS ? ' translate="no"' : '') + '>' + esc(s) + '</span>' : '') + (meta ? '<span class="m">' + meta + '</span>' : '') + '</span></button>';
   }
   function tripById(id) { return groupTrips().find(g => g.id === id || g.items.some(b => b.id === id)); }
@@ -789,7 +845,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   $('tpBack').onclick = finishTrip;
   $('tpDone').onclick = finishTrip;
-  $('tpBody').addEventListener('click', e => { const b = e.target.closest('[data-bk]'); if (b) openBooking(b.dataset.bk); });
+  $('tpBody').addEventListener('click', e => { const q = e.target.closest('[data-qr]'); if (q) return showQr(q.dataset.qr); const b = e.target.closest('[data-bk]'); if (b) openBooking(b.dataset.bk); });
   $('tpBody').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'tpName') e.target.blur(); });
   $('tpCal').onclick = async () => {
     const g = tripById(st.trip); if (!g) return;
@@ -818,11 +874,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function renderBooking() {
     const b = st.booking;
-    $('bkLbl').textContent = st.isNew ? 'New ' + TYPE_NAME[b.type].toLowerCase() : TYPE_NAME[b.type];
+    $('bkLbl').textContent = st.isNew ? 'New ' + TYPE_NAME[b.type].toLowerCase() : b.parking ? 'Parking' : TYPE_NAME[b.type];
     let h = '';
     if (!st.isNew && !startOf(b)) h += '<div class="verify"><span>' + esc(P.missingFields(b).includes('date') && b.type !== 'hotel' ? 'The email has no date. Pick the day below (or your calendar may supply it).' : 'The email has no dates. Fill them in below.') + '</span></div>';
     else if (b.guess && !isPast(b)) h += '<div class="verify"><span>' + esc(b.filled ? 'Filled in ' + fillText(b) + '. Check these details.' : b.fromCal ? 'Made from an event in your calendar. Check these details.' : 'Read from the words of the email. Check these details.') + '</span><button class="textbtn" type="button" id="bkOk">Looks right</button></div>';
     if (b.type === 'flight' && !st.isNew) h += '<div class="live glass" id="bkLive"></div>';
+    // the parking pass: its QR code (a pass), or the pass that goes with this flight
+    const pass = b.parking ? bookings.find(x => x.id === b.id) : b.type === 'flight' && !st.isNew ? parkingForFlight(bookings.find(x => x.id === b.id)) : null;
+    if (pass && pass.qr) h += '<div class="rgroup glass">' + qrButton(pass).replace('chip glass qrbtn', 'rowbtn') + '</div>';
     const dayField = !st.isNew && !startOf(b) && b.type !== 'hotel' ? [['_day', 'Date', '', 'date']] : [];
     h += '<div class="box glass"><div class="kv">' + dayField.concat(FIELDS[b.type]).map(([k, label, ph, type, w]) => {
       const v = b[k] || '';
@@ -898,6 +957,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const keptStamp = b => { const cur = bookings.find(x => x.id === b.id); if (cur) b.updated = cur.updated; };
   $('bkBody').addEventListener('click', async e => {
     const b = st.booking; if (!b) return;
+    const qb = e.target.closest('[data-qr]'); if (qb) return showQr(qb.dataset.qr);
     if (e.target.closest('#bkOk')) {
       readFields(); b.guess = false; b.checked = true;
       const i = bookings.findIndex(x => x.id === b.id);

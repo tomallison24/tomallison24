@@ -515,6 +515,26 @@ svg.fs{fill:currentColor}
 .hero .sub{font-size:13px;color:var(--muted);margin-top:2px}
 .hero .meta{margin-top:10px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
 .hero .meta .asof{font-size:12px;color:var(--muted)}   /* when the flight's status was checked (app.js, heroHTML) */
+/* a parking pass (app.js, qrButton, showQr): under the Next card and in a booking, and its QR code full screen,
+   black on white whatever the look, as a gate's scanner reads it best */
+.qrbtn{display:flex;width:100%;height:auto;min-height:56px;margin:10px 0 0;padding:8px 14px 8px 8px;border-radius:18px;gap:10px;font-size:15px;font-weight:700;text-align:left;justify-content:flex-start}
+.qrbtn .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.qrbtn .ic svg,.rowbtn .ic svg{width:20px;height:20px}
+.qrbtn .sub{display:block;font-weight:500;font-size:12.5px;color:var(--muted)}
+.qrsheet{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);background:rgba(10,12,16,.6);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.qrcard{width:100%;max-width:420px;max-height:100%;overflow-y:auto;overflow-x:hidden;background:#fff;color:#16181c;border-radius:28px;padding:18px 18px 16px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.qrhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.qrhead .k{margin:0;display:flex;gap:6px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4d5562}
+.qrhead .k svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}
+.qrhead h2{margin:2px 0 0;font-size:22px;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere}
+.qrcard .okbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none;background:#16181c;color:#fff}
+.qrcard .okbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.qrcode{display:block;width:100%;max-width:340px;height:auto;aspect-ratio:1;margin:12px auto 6px}
+.qrcode rect,.qrcode path{stroke:none!important;stroke-width:0!important}   /* the app's icons are outlined: the code's squares must not be */
+.qrfacts{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:8px 0 12px}
+.qrfacts dt{font-size:12px;color:#4d5562}
+.qrfacts dd{margin:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.qrcard .hint{margin:0;font-size:13px;line-height:1.4;color:#4d5562}
 
 /* trip cards */
 .trip{--h:211;display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;border-radius:22px;padding:14px 14px 12px;color:var(--text);transition:transform .18s var(--ease)}
