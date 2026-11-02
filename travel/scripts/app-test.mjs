@@ -801,6 +801,70 @@ await step('signed out of Gmail: Settings says so, and Check now goes to Google\
   await ctx.close();
 });
 
+// ---- airport parking: each pass with the flight leaving that airport on the day you drive in, its QR code drawn here ----
+await step('airport parking: the pass for the day you fly, its QR code full screen; another trip\'s pass stays with that trip', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => { localStorage.setItem('aos.sky', 'day'); localStorage.setItem('aos.seen', JSON.stringify({ travel: '999' })); window.__travelNoAuto = true;
+    if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('travel.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' })); localStorage.setItem('travel.token.ever', '1'); } });
+  const page = await ctx.newPage(), errs = [];
+  page.on('pageerror', e => errs.push(String(e)));
+  // ParkRDU's shape: "11/02/26 15:00 PM" (a 24-hour time with PM after it), the QR code an image whose address carries its text.
+  // In on the flight's day, about 90 minutes before it (just after midnight when that would be the day before).
+  let parkIn = new Date(soon.getTime() - 90 * 6e4);
+  if (iso(parkIn) !== iso(soon)) { parkIn = new Date(soon); parkIn.setHours(0, 5, 0, 0); }
+  const later = day(40), stamp = d => pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + '/' + String(d.getFullYear()).slice(2) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + (d.getHours() >= 12 ? ' PM' : ' AM');
+  const pass = (conf, a, e) => `<td>Thank you for reserving for <strong>ParkRDU Central</strong>. Your confirmation number is <strong>${conf}</strong>.</td>
+    <img src="https://parkrdu.example/barcode/QRCodeGen?data=CHRES9990001${conf}" alt="">
+    <table><tr><td>Booking Reference&#58;</td><td>${conf}</td></tr><tr><td>Airport&#58;</td><td>ParkRDU Central</td></tr>
+    <tr><td>Arrival Date &#38; Time&#58;</td><td>${stamp(a)}</td></tr><tr><td>Exit Date &#38; Time&#58;</td><td>${stamp(e)}</td></tr>
+    <tr><td>License plate&#58;</td><td>TEST123</td></tr></table>`;
+  const mails = [
+    { id: 'p1', threadId: 'p1', from: 'United Airlines <unitedairlines@united.com>', subject: 'Your trip confirmation - RD7Q2M', html:
+      `<html><body><table><tr><td>Confirmation number:</td><td>RD7Q2M</td></tr><tr><td>${long(soon)}</td></tr><tr><td>UA 1234</td></tr>
+       <tr><td>Raleigh, NC, US (RDU) to Boston, MA, US (BOS)</td></tr><tr><td>Departs ${hm(soon)}</td><td>Arrives ${hm(arrive)}</td></tr></table></body></html>` },
+    { id: 'p2', threadId: 'p2', from: 'noreply@parkrdu.com', subject: 'Booking AB1CD Parking Confirmation', html: pass('AB1CD', parkIn, day(4)) },
+    { id: 'p3', threadId: 'p3', from: 'noreply@parkrdu.com', subject: 'Booking ZZ9YX Parking Confirmation', html: pass('ZZ9YX', later, day(44)) },
+  ];
+  await ctx.route('https://gmail.googleapis.com/**', route => {
+    const u = new URL(route.request().url());
+    if (u.pathname.endsWith('/profile')) return route.fulfill({ json: { emailAddress: 'tom@example.com' } });
+    if (u.pathname.endsWith('/messages')) return route.fulfill({ json: { messages: mails.map(m => ({ id: m.id, threadId: m.threadId })) } });
+    const m = mails.find(x => x.id === u.pathname.split('/').pop());
+    return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
+  });
+  await ctx.route(BASE + '/travel/api/**', route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/ping') ? { ok: true, status: false } : { error: 'no-key' } }));
+  await page.goto(BASE + '/travel/');
+  await page.waitForFunction(() => window.__travel && window.__travel.bookings.filter(b => b.parking).length === 2, null, { timeout: 8000 });
+  const parks = await page.evaluate(() => window.__travel.bookings.filter(b => b.parking).sort((a, b) => a.start.localeCompare(b.start)));
+  assert.equal(parks[0].conf, 'AB1CD'); assert.equal(parks[0].qr, 'CHRES9990001AB1CD'); assert.equal(parks[0].plate, 'TEST123'); assert.equal(parks[0].airport, 'RDU');
+  assert.equal(parks[0].start, iso(parkIn) + 'T' + pad(parkIn.getHours()) + ':' + pad(parkIn.getMinutes()), 'a 24-hour time with PM after it');
+  assert.ok(parks.every(b => !b.guess), 'complete passes aren\'t left to check');
+  assert.ok(!(await page.evaluate(() => window.__travel.checkList().some(b => b.parking))), 'not in To check');
+  // the Next card is the pass (you drive in before the flight), with its QR code a tap away
+  await page.waitForSelector('.qrbtn[data-qr]');
+  assert.equal(await page.getAttribute('.qrbtn', 'data-qr'), parks[0].id);
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'parking-next.png') });
+  await page.click('.qrbtn');
+  await page.waitForSelector('#qrSheet .qrcode path');
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'parking-qr.png') });
+  const sheet = await page.evaluate(() => ({ d: document.querySelector('#qrSheet .qrcode path').getAttribute('d').length, text: document.querySelector('#qrSheet').innerText,
+    w: document.querySelector('#qrSheet .qrcode').getBoundingClientRect().width, label: document.getElementById('qrSheet').getAttribute('aria-label'),
+    stroke: getComputedStyle(document.querySelector('#qrSheet .qrcode path')).strokeWidth, fill: getComputedStyle(document.querySelector('#qrSheet .qrcode path')).fill }));
+  assert.ok(sheet.stroke === '0px' || sheet.stroke === '0', 'the squares are not outlined (that blurs them together): ' + sheet.stroke);
+  assert.equal(sheet.fill, 'rgb(0, 0, 0)', 'black on white');
+  assert.ok(sheet.d > 500, 'the code is drawn'); assert.ok(sheet.w >= 300, 'big enough for a scanner: ' + sheet.w);
+  assert.match(sheet.text, /AB1CD/); assert.match(sheet.text, /TEST123/); assert.match(sheet.text, /UA 1234 · RDU → BOS/, 'the flight it goes with');
+  await page.click('#qrDone'); assert.equal(await page.$('#qrSheet'), null, 'Done closes it');
+  // the flight's own page has the same pass, not the one for the trip in 40 days
+  const flight = await page.evaluate(() => window.__travel.bookings.find(b => b.type === 'flight').id);
+  await page.evaluate(id => document.querySelector('[data-trip]').click(), flight);
+  await page.waitForSelector('#tpBody .ev.flight'); await page.click('#tpBody .ev.flight');
+  await page.waitForSelector('#bkBody [data-qr]');
+  assert.equal(await page.getAttribute('#bkBody [data-qr]', 'data-qr'), parks[0].id);
+  assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
 await browser.close();
 server.close();
 console.log(failed ? failed + ' failed' : 'all passed');

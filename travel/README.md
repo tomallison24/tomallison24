@@ -34,6 +34,13 @@ with the details filled in.
   a trip checks again a status over 10 minutes old, so it isn't stale; while Travel stays open it checks hourly,
   then every 10 minutes in the last 6 hours. Links to the email (in Mail, or Gmail on the web),
   a map, the calendar, **Mark as cancelled** and **Delete**.
+- **Airport parking**: a parking reservation email (ParkRDU's, and others in the same shape: "Arrival Date & Time",
+  "Exit Date & Time") becomes a parking pass: the lot, in and out, the reference, the plate and its **QR code**. A pass goes
+  with the flight that leaves that airport on the day you drive in, so with passes for several trips in your email, each
+  is with its own trip (two for the same day, a changed booking: the newest). The Next card, the flight's page and the
+  pass's own page have **Parking QR code**: the code full screen, black on white and large, drawn by the app
+  (`qrcode.js`) from the text the email's QR picture carries, so it works with no signal in the garage. Trip cards say
+  Parking when there is a pass.
 - **Explore**: from, to and dates, then one tap to search Google Flights,
   Google Hotels, Marriott, Kayak rental cars or National. Book there; the
   confirmation email then shows up in Trips by itself.

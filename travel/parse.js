@@ -204,7 +204,12 @@
     let m;
     while ((m = TIME_RE.exec(text))) {
       let h, mi;
-      if (m[1] !== undefined) { if (+m[1] > 12) continue; h = +m[1] % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0); mi = +(m[2] || 0); }
+      if (m[1] !== undefined) {
+        if (+m[1] > 23) continue;
+        // "15:00 PM" (ParkRDU writes the 24-hour time and an AM/PM after it): the hour says it already
+        if (+m[1] > 12) { if (m[2] === undefined) continue; h = +m[1]; } else h = +m[1] % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0);
+        mi = +(m[2] || 0);
+      }
       else { h = +m[4]; mi = +m[5]; }
       out.push({ i: m.index, end: m.index + m[0].length, time: pad(h) + ':' + pad(mi) });
     }
@@ -517,11 +522,29 @@
     const e = dateAfter(text, /(?:exit|departure|pick[- ]?up|check[- ]?out|end|return)(?:\s+date)?(?:\s*(?:&|and)\s*time)?\s*[:\-]?/i, ref, 80);
     if (!a) return [];
     const lot = (/(?:reserving for|reserved|lot|facility|airport)\s*[:\-]?\s*(?:<[^>]*>)?\s*([A-Z][\w&' .-]{2,40}?)(?:\s*[.\n]|$)/.exec(text) || [])[1] || '';
+    const conf = findConf(text) || ((/booking\s+([A-Z0-9]{5,8})\b/i.exec(subject) || [])[1] || '');
+    const plate = ((/licen[cs]e\s*plate\s*(?:number)?\s*[:\-]?\s*([A-Z0-9][A-Z0-9 -]{1,9}[A-Z0-9])\b/i.exec(text) || [])[1] || '').toUpperCase();
+    // the airport: a code in the lot's name ("ParkRDU Central") or the subject
+    const airport = ((lot + ' ' + subject).match(/[A-Z]{3}/g) || []).find(c => AIRPORTS[c]) || '';
     return [{
-      type: 'other', status: 'confirmed', conf: findConf(text) || ((/booking\s+([A-Z0-9]{5,8})\b/i.exec(subject) || [])[1] || ''), traveller: '',
-      title: 'Parking' + (lot ? ' · ' + lot.trim() : ''), place: lot.trim(),
-      start: a.date + (a.time ? 'T' + a.time : ''), end: e ? e.date + (e.time ? 'T' + e.time : '') : '', guess: true,
+      type: 'other', parking: true, status: 'confirmed', conf, traveller: '',
+      title: 'Parking' + (lot ? ' · ' + lot.trim() : ''), place: lot.trim(), plate, airport,
+      start: a.date + (a.time ? 'T' + a.time : ''), end: e ? e.date + (e.time ? 'T' + e.time : '') : '',
+      guess: !(a.time && e && conf),   // the times in and out and the reference: nothing to check
     }];
+  }
+  // A parking pass's QR code: its image's address carries what it says ("…/QRCodeGen?data=CHRES1234567ZQ7XW"), so the app draws
+  // it itself (qrcode.js), on the phone and offline, rather than loading a picture from the sender.
+  function qrIn(html) {
+    for (const m of String(html || '').matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)) {
+      const src = m[1].replace(/&amp;/g, '&');
+      if (!/qr|barcode/i.test(src)) continue;
+      const v = /[?&](?:data|text|code|content|value|chl|qr)=([^&#]+)/i.exec(src);
+      if (!v) continue;
+      let d; try { d = decodeURIComponent(v[1].replace(/\+/g, ' ')); } catch { d = v[1]; }
+      if (d && d.length <= 300 && !/^https?:/i.test(d)) return d;
+    }
+    return '';
   }
 
   function carFromText(text, subject, from, ref) {
@@ -623,6 +646,7 @@
       }
     }
     const source = { msgId: msg.id || '', threadId: msg.threadId || '', subject: subject.slice(0, 200), from: from.slice(0, 200), date: ref };
+    for (const b of found) if (b.parking) { const qr = qrIn(html); if (qr) b.qr = qr; }
     for (const b of found) {
       if (cancelled) b.status = 'cancelled';
       b.source = source;
