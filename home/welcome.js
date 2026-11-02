@@ -114,7 +114,8 @@
         'School: Check now works when the Gmail sign-in has run out: it goes to Google\'s sign-in instead of seeming to do nothing, so a phone whose posts were gone reads them again. Its pages draw faster, and posts it can\'t sort are listed rather than hidden',
         'School inside aOS no longer reads with Mail\'s Gmail sign-in when it\'s a different account from School\'s (that inbox has no school emails), and Settings says which account it read, how many school emails it found and how many posts it has',
         'Settings is tidier in every app: each section is a dropdown, closed until you tap it, with how it stands on its row (Design says your look)',
-        'Travel and Orders: Check now works when the Gmail sign-in has run out (it signs you in again instead of seeming to do nothing), Settings says signed out rather than connected then, Ipsy says the sign-in ran out rather than that Gmail isn\'t connected, and neither reads with Mail\'s sign-in when that\'s a different Gmail account'],
+        'Travel and Orders: Check now works when the Gmail sign-in has run out (it signs you in again instead of seeming to do nothing), Settings says signed out rather than connected then, Ipsy says the sign-in ran out rather than that Gmail isn\'t connected, and neither reads with Mail\'s sign-in when that\'s a different Gmail account',
+        'Travel, Orders, School and Money can stay signed in to Gmail for 30 days instead of an hour, once the owner sets it up (aOS/RELEASING.md, Gmail stays signed in): you sign in once a month, and Disconnect ends it'],
       apps: {
         calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
       } },
@@ -2671,6 +2672,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
       const r = await fetch(api('state'), { cache: 'no-store', headers: t ? { Authorization: 'Bearer ' + t } : {} }); if (!r.ok) return;
       const j = await r.json();
       if (j.erase && t && t === token()) return eraseHere(true);
+      try { j.gmail ? localStorage.setItem('aos.gmail.on', '1') : localStorage.removeItem('aos.gmail.on'); } catch {}   // Gmail kept signed in (home/account.js AllisonOS.gmail)
       p = j.plan || null;
       try { p ? localStorage.setItem(PLAN, JSON.stringify(p)) : localStorage.removeItem(PLAN); } catch {}
       showPlan(p);

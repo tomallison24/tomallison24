@@ -40,10 +40,16 @@
 //   POST erase            (owner) { id }       -> signs someone else out everywhere and erases aOS from their
 //                                                 phones as they next open (they lost their only phone)
 //   POST home             (owner) { address }  -> sets it (https, origin only); blank clears it
+//   GET  gmail/back       Google's sign-in comes back here (no session: the state says whose), server/gmail.js
+//   GET  gmail            (family) { on, accounts: [{ email, kind, until }] } Gmail kept signed in (never a token)
+//   POST gmail/start      (family) { kind, hint, back } -> { url } Google's sign-in, with a code
+//   POST gmail/token      (family) { email, kind } -> { token, exp, scope, email, until } an hour-long key, or { error }
+//   POST gmail/disconnect (family) { email }       -> revoked at Google and deleted here
 //   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
 //                         stops it at the end of its month, { resume: true } keeps a cancelled one
 
 import { vapidKeys, cleanSub, devices, addDevice, dropDevices, message, sendTo, announce, audienceIds } from '../../../server/push.js';
+import * as gmail from '../../../server/gmail.js';
 import { reply, kv, getJSON, putJSON, rand, b64u, party, verifyRegistration, verifyAssertion, issue, sessionUser, eraseAsked, ownerCodeOk, sealChallenge, openChallenge, signOuts, signOutOthers } from '../../../server/auth.js';
 
 const NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
@@ -141,7 +147,7 @@ async function body(request, max = MAX_BODY) {
 // and Health. There's no bringing it back: inviting them again makes a new account. Today's AI counts
 // (<app>:ai:<id>:<day> and the like) go by themselves in two days.
 async function forget(db, u) {
-  const id = u.id, keys = ['apps', 'sv', 'wipe', 'prefs', 'move', 'push', 'health', 'vitals', 'vitals-sent', 'drinks', 'handoff:want'].map(k => k + ':' + id);
+  const id = u.id, keys = ['apps', 'sv', 'wipe', 'prefs', 'move', 'push', 'health', 'vitals', 'vitals-sent', 'drinks', 'handoff:want', 'gm'].map(k => k + ':' + id);
   for (const a of LAYER_APPS) keys.push('layer:' + a + ':' + id);
   for (const pre of ['handoff:' + id + ':', 'handoff:taken2:' + id + ':']) {
     let cursor;
@@ -188,7 +194,7 @@ export async function onRequest({ request, params, env }) {
     const erase = !u && request.headers.has('Authorization') && await eraseAsked(db, request);
     // you use aOS 2: your apps opened from their own icons hand over what they keep only on the phone (handoff)
     const carry = !!u && !!(await db.get('handoff:want:' + u.id));
-    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps }, ...(erase ? { erase: true } : {}), ...(carry ? { carry: true } : {}) });
+    return reply({ storage: true, setup: !!plan, plan, user: u && { ...pub(u), apps }, ...(erase ? { erase: true } : {}), ...(carry ? { carry: true } : {}), ...(gmail.on(env) ? { gmail: true } : {}) });
   }
   if (!db) return reply({ error: 'storage' }, 503);
   if (method !== 'POST' && method !== 'GET') return reply({ error: 'method' }, 405);
@@ -259,8 +265,27 @@ export async function onRequest({ request, params, env }) {
       return reply({ token: await issue(db, user.id, Date.now(), await signOuts(db, user.id)), user: pub(user) });
     }
 
+    // Google's sign-in comes back here, a page load with no session: the sign-in's state says whose it is
+    if (route === 'gmail/back' && method === 'GET') {
+      if (!gmail.on(env)) return reply({ error: 'off' }, 404);
+      const u = new URL(request.url), r = await gmail.finish(db, env, u.origin, u.searchParams, gmail.cookieOf(request.headers.get('Cookie')));
+      return new Response(null, { status: 302, headers: { Location: r.to, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'Set-Cookie': gmail.clearCookie } });
+    }
+
     // ---- for the family ----
     if (!me) return reply({ error: 'signin' }, 401);
+
+    // Gmail kept signed in (server/gmail.js): only your own, and only an hour-long key ever leaves
+    if (route.startsWith('gmail')) {
+      if (!gmail.on(env)) return reply({ error: 'off' }, 404);
+      if (route === 'gmail' && method === 'GET') return reply(await gmail.view(db, env, me));
+      if (route === 'gmail/start' && method === 'POST') {   // the cookie ties the sign-in to this phone (server/gmail.js)
+        const { url, cookie } = await gmail.start(db, env, me, new URL(request.url).origin, await body(request));
+        const res = reply({ url }); res.headers.append('Set-Cookie', cookie); return res;
+      }
+      if (route === 'gmail/token' && method === 'POST') { const r = await gmail.token(db, env, me, await body(request)); return reply(r, r.status || (r.error ? 409 : 200)); }
+      if (route === 'gmail/disconnect' && method === 'POST') return reply(await gmail.disconnect(db, env, me, await body(request)));
+    }
 
     // Home fills this in for a new person, so they only need their own token.
     if (route === 'home' && method === 'GET') return reply({ address: (await db.get('config:home')) || null });

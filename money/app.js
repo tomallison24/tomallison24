@@ -812,7 +812,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { localStorage.setItem('aos.away', 'money|' + Date.now()); } catch {}
     window.top.location.replace(u);
   }
+  // Gmail kept signed in through aOS's server (home/account.js AllisonOS.gmail): set up there, a tap signs in with a
+  // code and the hour-long keys come from the server, so this app isn't asked again for 30 days. Not set up: the
+  // sign-in below, as before.
+  const keepG = () => { const G = window.AllisonOS && window.AllisonOS.gmail; return G && G.on() ? G : null; };
+  const renewKept = async () => { const G = keepG(); return !!G && await G.renewInto({ kind: 'read', store: K.token, me: K.hint }); };
+  const keptUntil = () => { const t = +ls.get(K.token + '.until', 0); return keepG() && t > Date.now() ? new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
   function signIn(opts = {}) {
+    // kept signed in: no quiet hour-long sign-in on the phone (it would get round the 30 days); a tap signs in with a
+    // code, through aOS's server
+    if (opts.silent && keepG()) return;
+    if (!opts.silent && !opts.legacy && keepG()) {
+      ls.set(K.lastAuth, String(Date.now()));
+      const hint = opts.choose ? '' : ls.get(K.hint, '') || ls.get('mail.hint', '');
+      keepG().start({ kind: 'read', hint }).then(u => (u ? toGoogle(u, false) : signIn(Object.assign({}, opts, { legacy: true }))));
+      return;
+    }
     const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
     ls.set(K.state, nonce); ls.set(K.lastAuth, String(Date.now()));
     const hint = ls.get(K.hint, '') || ls.get('mail.hint', '');
@@ -825,13 +840,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     toGoogle(u.toString(), !!opts.silent);
   }
   function signOutGmail() {
-    const tok = ownToken();
+    const tok = ownToken(), G = keepG();
+    if (G) G.disconnect(ls.get(K.hint, ''));   // kept signed in: revoked at Google and forgotten on aOS's server too
+    ls.del(K.token + '.until');
     if (tok) fetch('https://oauth2.googleapis.com/revoke', { method: 'POST', mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', keepalive: true, body: new URLSearchParams({ token: tok.t }) }).catch(() => {});
     [K.token, K.token + '.ever', K.state, K.silent, K.silentFail, K.lastAuth].forEach(ls.del);
     renderSettings(); render();
     toast('Gmail disconnected. What Money read stays.');
   }
   function consumeRedirect() {
+    const kept = /^#gmail=(kept|error)/.exec(location.hash);   // back from the sign-in through aOS's server
+    if (kept) { history.replaceState(null, '', redirectUri() + location.search); ls.del(K.silentFail); return kept[1] === 'kept' ? { ok: true, kept: true } : { error: 'access_denied' }; }
     const raw = location.hash.slice(1);
     if (!raw || !/(^|&)(access_token|error)=/.test(raw)) return null;
     const p = new URLSearchParams(raw);
@@ -1023,6 +1042,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   async function scan({ loud, again } = {}) {
     await ready;
     if (st.reading || !mayRead()) return;
+    if (!getToken()) await renewKept();   // kept signed in: an hour-long key from aOS's server, no sign-in
     if (!getToken()) {
       if (mayRenew()) { signIn({ silent: true }); return; }
       if (loud) signIn();
@@ -1432,6 +1452,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     (signedIn() ? sync() : Promise.resolve()).then(() => {
       if (getToken() && (back && back.ok || scanDue())) scan({ loud: !!(back && back.ok) });
       else if (getToken()) dailyCheck();
+      else if (!getToken() && keepG() && mayRead() && (back && back.ok || scanDue())) scan({ loud: !!(back && back.ok) });   // kept signed in
       else if (!getToken() && mayRenew() && mayRead() && Date.now() - D.lastScan > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
     });
   }
