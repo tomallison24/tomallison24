@@ -87,13 +87,14 @@ family({
       : `background:rgb(${r.pc});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)`;
     return `<button class="lp-badge${tWaiting(r.d, 'power') ? ' wait' : ''}" data-a="toggle" style="width:${size}px;height:${size}px;${st2}" aria-pressed="${r.on}" aria-label="${r.on ? 'Turn off' : 'Turn on'} ${esc(r.L.name)}"${r.offline ? ' disabled' : ''}>${svg(r.on ? 'lightbulb' : 'lightbulbOff', size > 50 ? 30 : 22)}</button>`;
   },
-  // A light's pill: name, brightness, the slider; on Favorites (\`presets\`)
-  // also the popup's brightness presets, so they're one tap from the app.
-  pill(id, presets) {
+  // A light's pill: name, brightness, the slider and, for every light that dims, the brightness presets
+  // (1 / 25 / 50 / 75 / 100), one tap from the list, here and on Favorites, as on the Signal dashboard's
+  // pills. The popup has the slider alone (the presets moved out of it, 2026-11-02).
+  pill(id) {
     const r = this.read(id);
     return `${this.badge(r)}<div class="lp-mid"><div class="lp-row"><span class="lp-name" translate="no">${esc(r.L.name)}</span><span class="lp-val">${this.readout(r)}</span></div>
       ${r.onoff ? '' : sliderHTML('bri', r.bri, 1, 100, 1, { tint: r.pc, cls: 'thin', unit: '%', aria: r.L.name + ' brightness', dis: r.offline })
-        + (presets ? this.presets(r, 'lp-chips') : '')}</div>`;
+        + this.presets(r, 'lp-chips')}</div>`;
   },
   presets(r, cls) { return chipsHTML('chip', L_CHIPS(), r.on ? r.bri : null, { near: 2, dis: r.offline, cls }); },
   roomBar(R) {
@@ -132,7 +133,7 @@ family({
   // sibling in its .lpw wrapper).
   paint(p, id) {
     const r = this.read(id);
-    put(p, this.pill(id, !!p.closest('.favs')));
+    put(p, this.pill(id));
     p.classList.toggle('on', r.on); p.classList.toggle('offline', r.offline); p.classList.toggle('onoff', r.onoff);
     // The light comes from the bulb: brightest at the icon, fading with the
     // distance from it (about as light does, the square of it), behind the
@@ -155,8 +156,7 @@ family({
       fx: skyHTML(r.on ? grad('#1C1B1A', '#272523', '#3A3633') : grad('#17181A', '#212326', '#33363B'), r.pc, r.on ? { pool: 'breathe', poolA: 0.08 + 0.12 * r.bri / 100 } : {}, 150),
       parts: [
         ['hero', `<div class="uhero lphero">${this.halo(r, '50%')}${this.badge(r, 120)}<div class="dg-title">${r.offline ? offWord(id) : r.on ? (r.onoff ? 'On' : Math.round(r.bri) + '%') : 'Off'}</div></div>`],
-        r.onoff ? null : ['bri', sliderHTML('bri', r.bri, 1, 100, 1, { label: 'BRIGHTNESS', shown: r.on ? Math.round(r.bri) + '%' : 'Off', unit: '%', tint: r.pc, dis: r.offline })
-          + this.presets(r)],
+        r.onoff ? null : ['bri', sliderHTML('bri', r.bri, 1, 100, 1, { label: 'BRIGHTNESS', shown: r.on ? Math.round(r.bri) + '%' : 'Off', unit: '%', tint: r.pc, dis: r.offline })],
         ['power', grp(swRow('toggle', 'Power', 'power', r.on, tint, { dis: r.offline, wait: tWaiting(r.d, 'power') }), true)],
         L.kind === 'strip' ? ['colour', lbl('COLOR') + this.swatches(r)] : null,
         ms.length ? ['members', lbl('LIGHTS IN THIS GROUP') + `<div class="group">${memberRows}</div>`] : null,

@@ -310,8 +310,10 @@ dashboard's comments record a quirk, the app keeps it:
   their lights coming in one after another - and a disc that
   turns a whole room off (or on), All on / All off (the dashboard's list:
   not outdoors, the garage or the heaters' backlights). Each light: its
-  colour mixed with warm grey, a halo by brightness, a slider; its popup has
-  1 / 25 / 50 / 75 / 100 and the lamps in its group. The TV strip has the
+  colour mixed with warm grey, a halo by brightness, a slider and, on every
+  light that dims, the 1 / 25 / 50 / 75 / 100% presets right on the pill, one
+  tap each, as on the dashboard's LP1 pill (they were in the popup until
+  2026-11-02); its popup has the slider and the lamps in its group. The TV strip has the
   dashboard's swatches and Custom.
 - **Speakers and TV** (SN3, `media.yaml`): a glass record with the album art,
   turning while playing, the art tinting the sky. Play / pause, skip, volume
