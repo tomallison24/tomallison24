@@ -492,7 +492,22 @@
   const reveal = id => { for (const [k, f] of Object.entries(frames)) f.hidden = k !== id; };
   let hideT = null;
   // at: where in the app to open it (what the Ipsy bar found in it, aOS/home-find.js), as '#…' or '?…'
+  // the swipe in from the left edge (below): where it stands, and settle() to end it. A finished swipe
+  // (released: pointerup, touchend) past a third of the screen goes back; any other end snaps the window
+  // back where it was. Either way nothing of the drag is left behind: no inline transform, no body.dragging.
+  const edge = $('appedge'), win = $('appwin');
+  let ex = null, px = null, dx = 0;
+  function settle(released = false) {
+    if (ex == null) return;
+    const far = released && dx > innerWidth * 0.3;
+    ex = null; px = null;
+    body.classList.remove('dragging');
+    void body.offsetWidth;   // let it animate from where the finger left it
+    win.style.transform = ''; $('appshade').style.opacity = '';
+    if (far) show(null);
+  }
   function show(id, at = '') {
+    settle();
     closeMenu();
     id = known(id) ? id : null;
     at = /^[#?][\w=&%.:-]*$/.test(at || '') ? at : '';
@@ -613,30 +628,40 @@
   $('appmenu').addEventListener('click', e => { const b = e.target.closest('[data-to]'); if (b) show(b.dataset.to || null); });
   document.addEventListener('pointerdown', e => { if (!$('appmenu').hidden && !e.target.closest('#appmenu, #appback')) closeMenu(); });
 
-  const edge = $('appedge'), win = $('appwin');
-  let ex = null, dx = 0;
+  // The swipe in from the left edge (#appedge, an 18px strip): the app window follows the finger, and past
+  // a third of the screen it goes back. The drag ends on pointerup or pointercancel; but a swipe that starts
+  // on the strip is one an iPhone can take for itself (its own back gesture, which goes to Home through
+  // popstate), and then the end never comes: the window stayed where the finger left it (translateX
+  // inline, off the screen when the swipe had gone all the way) with body.dragging on, so every app opened
+  // after that sat off the screen, aOS Home showing under it, until aOS was closed. So the drag is settled
+  // by whatever comes next too: show() (an app opening, Home), popstate, a finger down anywhere else, the
+  // pointer's capture lost, the page hidden or the window losing focus, and touchend/touchcancel as a
+  // fallback for a pointerup that never arrives.
   edge.addEventListener('pointerdown', e => {
     if (!current) return;
-    ex = e.clientX; dx = 0; closeMenu();
+    settle();
+    ex = e.clientX; px = e.pointerId; dx = 0; closeMenu();
     try { edge.setPointerCapture(e.pointerId); } catch {}
     body.classList.add('dragging');
   });
   edge.addEventListener('pointermove', e => {
-    if (ex == null) return;
+    if (ex == null || e.pointerId !== px) return;
     dx = Math.max(0, e.clientX - ex);
     win.style.transform = `translateX(${dx}px)`;
     $('appshade').style.opacity = String(Math.max(0, 1 - dx / innerWidth));
   });
-  const endEdge = () => {
-    if (ex == null) return;
-    ex = null;
-    body.classList.remove('dragging');
-    void body.offsetWidth;   // let it animate from where the finger left it
-    win.style.transform = ''; $('appshade').style.opacity = '';
-    if (dx > innerWidth * 0.3) show(null);
-  };
+  const endEdge = e => { if (ex != null && (!e || e.pointerId == null || e.pointerId === px)) settle(true); };
   edge.addEventListener('pointerup', endEdge);
-  edge.addEventListener('pointercancel', endEdge);
+  edge.addEventListener('pointercancel', () => settle());
+  edge.addEventListener('lostpointercapture', () => settle());
+  addEventListener('pointerup', endEdge, true);
+  addEventListener('pointercancel', () => settle(), true);
+  addEventListener('touchend', () => settle(true), true);
+  addEventListener('touchcancel', () => settle(), true);
+  document.addEventListener('pointerdown', e => { if (ex != null && e.pointerId !== px) settle(); }, true);
+  addEventListener('popstate', () => settle(), true);
+  addEventListener('blur', () => settle());
+  addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') settle(); });
 
   // ---- the Ipsy bar: find an app, or what's in one, or ask Ipsy ----
   // An app matches on its name first (the start of it best), then on what it does and its group.
