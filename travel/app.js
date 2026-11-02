@@ -588,6 +588,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (b.guess && !isPast(b)) return '<span class="st warn">Check details</span>';
     return '';
   }
+  // The Next cards: the next thing to happen, then the trip's other stages still to come, a card each in the order they
+  // happen (its parking, flight, rental car and hotel), swiped through like a carousel; the stage chips under them say
+  // which is shown and jump to one. One stage: just its card.
+  const STAGE = { parking: 'Parking', flight: 'Flight', car: 'Car', hotel: 'Hotel' };
+  const stageOf = b => b.parking ? 'parking' : b.type;
   function heroHTML(groups) {
     const now = Date.now();
     const soon = alive().filter(b => !b.ride && b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D);
@@ -601,10 +606,27 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     };
     const next = soon.sort((a, b) => key(a) - key(b))[0];
     if (!next) return '';
-    const s = startT(next), going = s <= now;
-    const k = going ? 'Now' : 'Next · ' + until(s);
-    let h = '<button class="hero glass" type="button" data-bk="' + esc(next.id) + '" style="--tint:var(--' + ({ flight: 'fl', hotel: 'ho', car: 'ca' }[next.type] || 'fl') + ')">';
-    h += '<p class="k">' + (I[next.type] || I.other) + esc(k) + '</p>';
+    // the stages of next's trip still to come: the next of each kind, in the order they happen
+    const trip = groups.find(g => g.items.some(b => b.id === next.id));
+    const pool = trip ? soon.filter(b => trip.items.some(x => x.id === b.id)) : [next];
+    const stages = [next];
+    for (const kind of Object.keys(STAGE)) { const f = pool.find(b => stageOf(b) === kind); if (f && !stages.includes(f)) stages.push(f); }
+    stages.sort((a, b) => key(a) - key(b));
+    const label = (b, i) => { const s = startT(b); return s <= now ? 'Now' : (i ? (STAGE[stageOf(b)] || 'Then') : 'Next') + ' · ' + until(s); };
+    // the parking pass for these stages, its QR code a tap away
+    const pass = stages.find(b => isParking(b) && b.qr) || stages.map(b => b.type === 'flight' && parkingForFlight(b)).find(p => p && p.qr);
+    if (stages.length === 1) return heroCard(next, label(next, 0), now) + (pass ? qrButton(pass) : '');
+    const at = Math.max(0, stages.findIndex(b => b.id === st.heroAt));
+    return '<div class="herocar"><div class="herotrack" id="heroTrack" aria-label="This trip, a card for each stage">'
+      + stages.map((b, i) => heroCard(b, label(b, i), now, i)).join('') + '</div>'
+      + '<div class="chips stagebar" id="heroStages" role="group" aria-label="Show a stage">' + stages.map((b, i) => '<button class="chip glass" type="button" data-stage="' + i + '" data-id="' + esc(b.id)
+        + '" aria-pressed="' + (i === at) + '">' + (b.parking ? I.parking : I[b.type] || I.other) + esc(STAGE[stageOf(b)] || titleOf(b)) + '</button>').join('') + '</div></div>'
+      + (pass ? qrButton(pass) : '');
+  }
+  // One Next card. i: its place in the carousel, if it is in one.
+  function heroCard(next, k, now, i) {
+    let h = '<button class="hero glass" type="button" data-bk="' + esc(next.id) + '"' + (i != null ? ' data-slide="' + i + '"' : '') + ' style="--tint:var(--' + ({ flight: 'fl', hotel: 'ho', car: 'ca' }[next.type] || 'fl') + ')">';
+    h += '<p class="k">' + (next.parking ? I.parking : I[next.type] || I.other) + esc(k) + '</p>';
     if (next.type === 'flight') {
       h += '<div class="route" translate="no"><div class="ap"><b>' + esc(next.from || '—') + '</b><span>' + esc(next.fromName || city(next.from)) + '</span></div><div class="line">' + I.plane + '</div>'
         + '<div class="ap r"><b>' + esc(next.to || '—') + '</b><span>' + esc(next.toName || city(next.to)) + '</span></div></div>';
@@ -636,11 +658,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const x = next.type === 'flight' && liveView(next) && live[next.id];
     const asOf = x ? (inflight.has(next.id) ? 'Checking…' : 'Checked ' + ago(x.at)) : '';
     if (pill) h += '<div class="meta">' + pill + (asOf ? '<span class="asof">' + esc(asOf) + '</span>' : '') + '</div>';
-    h += '</button>';
-    // the parking pass for this flight (or this parking), its QR code a tap away
-    const park = next.parking ? next : next.type === 'flight' ? parkingForFlight(next) : null;
-    if (park && park.qr) h += qrButton(park);
-    return h;
+    return h + '</button>';
   }
   // A trip's next flight's live status, for its card: "UA 123 · On time" (from 36 hours before take-off).
   function tripFlightPill(g) {
@@ -700,6 +718,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (st.when === 'past') h += olderHTML();
     }
     $('list').innerHTML = h;
+    wireHero();
     if ($('emptyGo')) $('emptyGo').onclick = () => hasGmail() ? scan({ loud: true }) : openSettings();
     if ($('emptyAdd')) $('emptyAdd').onclick = () => openAdd();
     if ($('olderBtn')) $('olderBtn').onclick = () => loadOlder(true);
@@ -711,6 +730,27 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const b = e.target.closest('[data-when]'); if (!b) return;
     st.when = b.dataset.when; ls.set(K.when, st.when); render(); animateIn($('list'));
   });
+  // The Next carousel: swiping moves the chosen stage chip (its glass thumb slides, home/slide.js); a chip scrolls to its card.
+  // The stage you were on stays shown when the list is drawn again (every few minutes, after live status).
+  function wireHero() {
+    const track = $('heroTrack'), bar = $('heroStages'); if (!track || !bar) return;
+    const cards = [...track.children], chips = [...bar.querySelectorAll('[data-stage]')];
+    const show = i => { chips.forEach((c, j) => c.setAttribute('aria-pressed', String(j === i))); st.heroAt = chips[i] && chips[i].dataset.id; slide(bar, chips[i], 'stages'); };
+    const at = Math.max(0, chips.findIndex(c => c.getAttribute('aria-pressed') === 'true'));
+    if (at) track.scrollLeft = cards[at].offsetLeft - cards[0].offsetLeft;
+    slide(bar, chips[at], 'stages', { jump: true });
+    let raf = 0;
+    track.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => {
+      const x = track.scrollLeft, end = x >= track.scrollWidth - track.clientWidth - 2;   // at the end: the last card, which can't line up at the start
+      const i = end ? cards.length - 1 : cards.reduce((best, c, j) => Math.abs(c.offsetLeft - cards[0].offsetLeft - x) < Math.abs(cards[best].offsetLeft - cards[0].offsetLeft - x) ? j : best, 0);
+      if (chips[i] && chips[i].getAttribute('aria-pressed') !== 'true') show(i);
+    }); }, { passive: true });
+    bar.addEventListener('click', e => {
+      const c = e.target.closest('[data-stage]'); if (!c) return;
+      const i = +c.dataset.stage; show(i);
+      track.scrollTo({ left: cards[i].offsetLeft - cards[0].offsetLeft, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    });
+  }
   $('list').addEventListener('click', e => {
     const qb = e.target.closest('[data-qr]'); if (qb) return showQr(qb.dataset.qr);
     const a = e.target.closest('[data-ai]'); if (a) return checkTripWithAI(a.dataset.ai, a);
