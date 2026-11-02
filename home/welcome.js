@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
-      notes: ['Home: a device opened from Favorites\' Running Now goes back to Favorites when you close its card',
+      notes: ['Every app: a sheet, popup or list no longer slides sideways when something in it is wider than the screen (a long line, a wide tile); like the page itself, it scrolls up and down only',
+        'Home: a device opened from Favorites\' Running Now goes back to Favorites when you close its card',
         'Money: connecting Monarch directly is put away for now (Monarch didn\'t let aOS sign in); Money keeps reading Monarch\'s emails',
         'Money reads the deposits in Monarch\'s summary emails (paychecks, interest) as money in, and reads every email again once to pick up the ones it missed',
         'School reads the school\'s ParentSquare emails in Gmail, read-only, on your phone. At the top, the next school day: what to wear or bring, days off on the way to it, and pickup (the usual carpool, or that weekday\'s club). Then what needs you (sign-ups, RSVPs, forms, surveys and payments, soonest due first, with Mark done), the next two weeks and the rest of the year, her class\'s posts and messages to you first, everything else from school below (searchable), and the school\'s other sites, report cards and payments',

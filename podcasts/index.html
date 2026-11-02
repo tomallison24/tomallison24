@@ -304,7 +304,7 @@ html.locked .tagbar{opacity:0;transform:translateY(12px);pointer-events:none}
 .tagbtn .tb-chev{display:grid;flex:none}
 .tagbtn .tb-chev svg{width:16px;height:16px;transition:transform .25s var(--ease)}
 .tagbtn[aria-expanded="true"] .tb-chev svg{transform:rotate(180deg)}
-.tagmenu{position:absolute;bottom:calc(100% + 10px);left:50%;translate:-50% 0;min-width:230px;max-height:60vh;overflow:auto;padding:6px;border-radius:22px;transform-origin:50% 100%;animation:menuUp .22s var(--ease) both;
+.tagmenu{position:absolute;bottom:calc(100% + 10px);left:50%;translate:-50% 0;min-width:230px;max-height:60vh;overflow:auto;overflow-x:hidden;padding:6px;border-radius:22px;transform-origin:50% 100%;animation:menuUp .22s var(--ease) both;
   background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
   box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 18px 40px var(--lift-strong)}
 .tagmenu[hidden]{display:none}
@@ -342,7 +342,7 @@ html.locked .tagbar{opacity:0;transform:translateY(12px);pointer-events:none}
 .sheet.settling{transition:transform .28s var(--ease)}
 .sheethead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px 8px 20px}
 .sheethead h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sheetbody{overflow-y:auto;overscroll-behavior:contain;padding:4px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheetbody{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:4px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
 .field{display:flex;flex-direction:column;gap:8px}
 .label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:0 4px;display:flex;justify-content:space-between;align-items:center}
 .box{border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
