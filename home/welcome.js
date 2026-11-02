@@ -92,6 +92,7 @@
         'aOS: after a swipe back from an app that the phone took as its own back gesture, the next app you opened sometimes stayed off the screen, aOS Home showing in its place and nothing seeming to answer until aOS was closed. Fixed: every app opens on screen again',
         'Home: every light that dims has its brightness presets (night, 25%, 50%, 75%, full) right on its pill in Lights, one tap each, as on Favorites; its popup keeps the slider',
         'Travel: live status works for flights whose number or date was filled in another way (Frontier\'s emails leave the date out); if it still can\'t ask, the flight says what it asked for',
+        'Travel: a flight\'s airline typed as its name ("Frontier") or its number with the airline in it ("F9 3073") is kept as its code and number, so its live status, its name and the calendar have them right; flights already kept that way are put right',
         'Travel: a flight\'s card always says something about its status: before the 36 hours, when it starts ("Status from Thu 4:04 PM"); signed out, "Sign in for status"; and when there is none, why, rather than nothing',
         'Travel: the Next card is now a carousel of your trip\'s stages, parking, flight, car and hotel, in the order they happen: swipe through them, or tap a stage under them',
         'Travel: airport parking. A parking reservation email becomes a pass with its QR code, matched to the flight you leave on that day; Parking QR code on the Next card and the flight shows it full screen, and it works with no signal in the garage',

@@ -843,7 +843,21 @@
   // Parses text pasted by hand (a forwarded confirmation, say).
   const parseText = (text, ref) => parseEmail({ text, subject: '', from: '', date: ref || Date.now() });
 
-  const api = { parseEmail, parseText, realDates, missingFields, applyDate, eventsFromIcs, bookingFromEvent, cityToCode, sameFlightish, sameStay, sameRental, sameThing, rideCompany, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
+  // A flight's airline code and number, tidied: the code from the airline's name ("Frontier" -> F9) or from the front of the
+  // number ("F9 3073" -> F9, 3073), no spaces or leading zero. What can't be made out stays as it was given.
+  function tidyFlight(code0, no0, name) {
+    const byName = v => { const k = String(v || '').toLowerCase().replace(/[^a-z]/g, ''); return k ? (Object.entries(AIRLINES).find(([, n]) => n.toLowerCase().replace(/[^a-z]/g, '') === k) || [''])[0] : ''; };
+    let code = String(code0 || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let no = String(no0 || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!/^[A-Z0-9]{2}$/.test(code)) code = byName(code0) || '';
+    const m = /^([A-Z][A-Z0-9]|[0-9][A-Z])(\d{1,4}[A-Z]?)$/.exec(no);
+    if (m && (!code || m[1] === code)) { code = m[1]; no = m[2]; }
+    if (!code) code = byName(name);
+    no = no.replace(/^0+(?=\d)/, '');
+    return { code: code || String(code0 || ''), no: no || String(no0 || '') };
+  }
+
+  const api = { tidyFlight, parseEmail, parseText, realDates, missingFields, applyDate, eventsFromIcs, bookingFromEvent, cityToCode, sameFlightish, sameStay, sameRental, sameThing, rideCompany, htmlToText, jsonLdBlocks, fromSchema, microdata, findDates, findTimes, findConf, idFor, bookingKey, airlineFromSender, AIRLINES, AIRPORTS, addDays, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
