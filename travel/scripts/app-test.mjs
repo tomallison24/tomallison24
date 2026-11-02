@@ -150,6 +150,20 @@ for (const scheme of ['light', 'dark']) {
     assert.match(await page.textContent('.hero .st'), /Delayed 35 min/);
     assert.match(await page.textContent('.hero'), /Gate B32/);
   });
+  await step(scheme + ': the flight\'s status on its cards, and checked again when Travel comes back on screen', async () => {
+    assert.match(await page.textContent('.hero .meta .asof'), /^Checked (just now|\d+ min ago)$/, 'the Next card says when it was checked');
+    await page.waitForFunction(() => /UA 1234 · Delayed 35 min/.test((document.querySelector('.trip .st.fs') || {}).textContent || ''), null, { timeout: 5000 });
+    // 15 minutes later, Travel comes back on screen: the status is asked for again, not left stale
+    const before = lookups.length;
+    await page.evaluate(() => { for (const x of Object.values(window.__travel.live)) x.at = Date.now() - 15 * 6e4; document.dispatchEvent(new Event('visibilitychange')); });
+    await page.waitForTimeout(600);
+    assert.ok(lookups.length > before, 'asked again on coming back: ' + lookups.length + ' after ' + before);
+    // and 3 minutes old, it isn't asked for again (the allowance lasts)
+    const again = lookups.length;
+    await page.evaluate(() => { for (const x of Object.values(window.__travel.live)) x.at = Date.now() - 3 * 6e4; document.dispatchEvent(new Event('visibilitychange')); });
+    await page.waitForTimeout(600);
+    assert.equal(lookups.length, again, 'not asked again when it was checked 3 minutes ago');
+  });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trips-' + scheme + '.png') });
 
   await step(scheme + ': switches: a glass thumb slides under the chosen section and filter', async () => {
