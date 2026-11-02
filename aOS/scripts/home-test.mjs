@@ -227,6 +227,17 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.locator('.happ[data-open="weather"]').click(); await pg.waitForTimeout(1200);
   await pg.mouse.move(5, 420); await pg.mouse.down(); await pg.mouse.move(280, 420, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(600);
   check(!(await state()).inApp, `a swipe in from the left edge goes back ${tag}`);
+  // a swipe from the edge the phone takes for itself (an iPhone's own back gesture): its pointerup never comes,
+  // the phone goes back through popstate; the next app still opens on screen, nothing of the drag left behind
+  await pg.locator('.happ[data-open="weather"]').click(); await pg.waitForTimeout(800);
+  await pg.evaluate(() => { const e = document.getElementById('appedge'), o = { bubbles: true, pointerId: 7, pointerType: 'touch', isPrimary: true, clientY: 420 };
+    e.dispatchEvent(new PointerEvent('pointerdown', { ...o, clientX: 4 })); e.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: 200 })); e.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: 380 })); });
+  await pg.goBack(); await pg.waitForTimeout(500);
+  await pg.locator('.happ[data-open="notes"]').click(); await pg.waitForTimeout(700);
+  s = await state();
+  check(s.inApp && s.shown.join() === 'notes' && await pg.evaluate(() => getComputedStyle(document.getElementById('appwin')).transform === 'none' && !document.getElementById('appwin').style.transform && !document.body.classList.contains('dragging')),
+    `a swipe the phone took over (no pointerup) leaves nothing behind: the next app opens on screen ${tag}`);
+  await pg.locator('#appback').click(); await pg.waitForTimeout(500);
   await pg.locator('.happ[data-open="notes"]').click(); await pg.waitForTimeout(700);
   const bb = await pg.locator('#appback').boundingBox();
   await pg.mouse.move(bb.x + 10, bb.y + 10); await pg.mouse.down(); await pg.waitForTimeout(600); await pg.mouse.up(); await pg.waitForTimeout(200);
