@@ -80,6 +80,11 @@ emails a batch. Each email is read once; **Read the last year again** in Setting
 you marked done or moved stays). Opened inside aOS, Mail's or Orders' Gmail sign-in is used if
 there's one.
 
+A sign-in lasts an hour. When School opens after that it renews it quietly (Google's `prompt=none`), at most
+every 12 hours after one fails; **Check now** tapped while signed out goes straight to Google's sign-in, with
+the account it had, never the quiet try (which fails without a word when Google wants you to sign in again).
+If the posts can't be sorted, they're listed newest first rather than not at all.
+
 It signs in with **Mail's own Google client**, so it needs School's address added to that client once:
 
 1. [console.cloud.google.com](https://console.cloud.google.com) → the project Mail uses →
