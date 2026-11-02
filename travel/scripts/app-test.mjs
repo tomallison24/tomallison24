@@ -767,6 +767,26 @@ await step('a phone with both: Travel\'s own data is kept, the old app\'s is not
   await ctx.close();
 });
 
+// Gmail connected once, its sign-in run out (an hour), Google said no to a quiet renewal today, and Mail signed in to
+// another Gmail account: Settings says signed out (it said connected), Mail's sign-in isn't used for the wrong inbox,
+// and Check now goes to Google's sign-in (it reopened Settings, so the tap seemed to do nothing).
+await step('signed out of Gmail: Settings says so, and Check now goes to Google\'s sign-in, never another account\'s inbox', async () => {
+  const mail = JSON.stringify({ t: 'other', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.modify' });
+  const { ctx, page, errs } = await phone('light', { seed: { 'aos.seen': JSON.stringify({ travel: '999' }), 'travel.token.ever': '1', 'travel.me': 'tom@example.com', 'travel.hint': 'tom@example.com',
+    'travel.lastAuth': String(Date.now() - 3 * 3600e3), 'travel.silentFail': String(Date.now() - 3600e3), 'mail.token': mail, 'mail.hint': 'work@example.com' } });
+  const urls = []; page.on('request', r => urls.push(r.url()));
+  await page.click('#setBtn'); await page.waitForTimeout(400);
+  assert.equal((await page.textContent('#stGmailWho .st-sub')).trim(), 'tom@example.com: signed out; Check now signs in again.');
+  await page.click('#stScan'); await page.waitForTimeout(600);
+  assert.ok(!urls.some(u => u.startsWith('https://gmail.googleapis.com/')), 'nothing read with Mail\'s other account: ' + urls.join(' | '));
+  const auth = urls.find(u => u.startsWith('https://accounts.google.com/'));
+  assert.ok(auth, 'went to Google\'s sign-in: ' + urls.join(' | '));
+  assert.notEqual(new URL(auth).searchParams.get('prompt'), 'none', 'one you can see, not a quiet try');
+  assert.equal(new URL(auth).searchParams.get('login_hint'), 'tom@example.com');
+  assert.deepEqual(errs.filter(e => !/sessionStorage|Access is denied/.test(e)), []);
+  await ctx.close();
+});
+
 await browser.close();
 server.close();
 console.log(failed ? failed + ' failed' : 'all passed');

@@ -110,7 +110,8 @@
         'School and Calendar\'s School layer leave out the dates meant for other grades: a newsletter\'s line for 3rd grade, the middle school or Pre-K (or under a heading for one), and a post\'s date given for another grade only. A date that doesn\'t say which grade stays in, and Pre-K is no longer read as Kindergarten',
         'School: Check now works when the Gmail sign-in has run out: it goes to Google\'s sign-in instead of seeming to do nothing, so a phone whose posts were gone reads them again. Its pages draw faster, and posts it can\'t sort are listed rather than hidden',
         'School inside aOS no longer reads with Mail\'s Gmail sign-in when it\'s a different account from School\'s (that inbox has no school emails), and Settings says which account it read, how many school emails it found and how many posts it has',
-        'Settings is tidier in every app: each section is a dropdown, closed until you tap it, with how it stands on its row (Design says your look)'],
+        'Settings is tidier in every app: each section is a dropdown, closed until you tap it, with how it stands on its row (Design says your look)',
+        'Travel and Orders: Check now works when the Gmail sign-in has run out (it signs you in again instead of seeming to do nothing), Settings says signed out rather than connected then, Ipsy says the sign-in ran out rather than that Gmail isn\'t connected, and neither reads with Mail\'s sign-in when that\'s a different Gmail account'],
       apps: {
         calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
       } },
