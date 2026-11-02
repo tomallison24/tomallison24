@@ -1371,7 +1371,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('stBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'stDesign' })) : '')
       + S.section('What counts as an order', kindRows, { id: 'stKinds' })
       + S.section('Hidden orders', S.nav({ id: 'stHidden', icon: 'eye', title: 'Show hidden orders', sub: 'Gifts and anything you hid, after Face ID.' }))
-      + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
+      + S.section('Connected accounts', gmail, { id: 'stGmail', open: !getToken(), hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
       + S.section('AI helper', [
         S.claude('orders'),
         S.toggle({ id: 'stIpsyAuto', title: 'Ipsy keeps orders up to date', sub: 'Each time Orders opens, Ipsy rereads new order emails and To check, and fixes them.', on: autoOn() }),

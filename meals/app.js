@@ -472,7 +472,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (act === 'dropopts') { opts = null; saveOpts(); render(); return toast('Options discarded.'); }
     if (act === 'restart') { Object.assign(flow, FLOW()); saveFlow(); return render(); }
     if (act === 'edit') return editChoices();
-    if (act === 'rules') return openSettings();
+    if (act === 'rules') { openSettings(); return AllisonOS.settings.reveal('rulesHead'); }
     if (act === 'optask') { const t = (($('askIn') || {}).value || '').trim(); return askIpsy(t ? t + ' (on the options being picked)' : ''); }
     if (act === 'tell' || act === 'change') { const t = (($('askIn') || {}).value || '').trim(); return askIpsy(act === 'change' && t && data.draft ? t + ' (on the new plan waiting)' : t); }
     if (act === 'new') return goTab('ipsy');

@@ -125,7 +125,7 @@ const shot = (page, name) => SHOTS ? page.screenshot({ path: path.join(SHOTS, na
       ok(scheme + ': Settings opens on Design, in a group of its own, with no note under it, then the sections in the standard order', await page.evaluate(() => {
         const b = document.getElementById('stBody'), first = b.firstElementChild;
         const order = [...b.children].map(s => s.querySelector('.st-lbl')?.textContent);
-        return first.matches('section.st-sec') && first.querySelector('.st-lbl').textContent === 'Design' && !!first.querySelector('.st-group #stDesign .aos-design') && !first.querySelector('.st-hint')
+        return first.matches('.st-sec') && first.querySelector('.st-lbl').textContent === 'Design' && !!first.querySelector('.st-group #stDesign .aos-design') && !first.querySelector('.st-hint')
           && JSON.stringify(order.filter(l => l !== 'Blocked senders')) === JSON.stringify(['Design', 'Inbox clean-up', 'Connected accounts', 'Notifications']);
       }));
       await shot(page, 'vintage-settings-' + scheme);

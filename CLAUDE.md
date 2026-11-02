@@ -85,7 +85,10 @@ in the `check` job (named `apps`), browser tests in the `browser` groups that ru
 `<folder>/scripts/*test*.mjs` that no workflow runs, so a new test goes into
 the workflow in the same PR. Browser tests seed `localStorage['aos.seen']`
 with `'999'` for every app they open, so no walkthrough or update screen
-covers the page after the next release. A test that depends on the date must
+covers the page after the next release. Settings' dropdowns start open under a
+browser test (`home/settings.js`, `navigator.webdriver`), so a test reaches
+its rows; to see them closed, as a person does, seed `aos.settings.folds` as
+`'closed'` (the design check does). A test that depends on the date must
 work on every day of the week and at the end of a month.
 
 ## Home and the Signal dashboard: change both

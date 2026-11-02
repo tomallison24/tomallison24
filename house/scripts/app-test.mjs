@@ -140,7 +140,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     await page.locator('#g-fav .runchip', { hasText: 'Kitchen' }).first().click();
     await page.waitForSelector('#devWrap.open', { state: 'attached' });
     assert.equal((await page.textContent('#viewName')).trim(), 'Media', 'the card opens on its own view');
-    await page.locator('#devWrap [data-close]').first().click();
+    await page.locator('#devWrap button[data-close]').first().click();   // the ✕ (the scrim behind the card is data-close too, and the card covers it)
     await page.waitForFunction(() => !document.querySelector('#devWrap.open'));
     assert.equal((await page.textContent('#viewName')).trim(), 'Favorites', 'closed: back to Favorites');
     assert.equal(await page.$eval('#vtop [aria-current="page"]', b => b.dataset.view), 'fav');
