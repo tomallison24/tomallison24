@@ -164,9 +164,10 @@ if (!check && pngs.length) {
 {
   const { createHash } = await import('crypto');
   const file = path.join(ROOT, 'aOS/glyphs.js');
-  // the pebble: a soft superellipse with a little wobble, like sea glass, in a 512 box
-  const PEBBLE = 'M' + Array.from({ length: 72 }, (_, i) => { const t = i / 72 * Math.PI * 2, c = Math.cos(t), s = Math.sin(t), r = 1 + .035 * Math.sin(2 * t + .7) + .02 * Math.sin(3 * t + 2.1);
-    return [Math.round(256 + 240 * r * Math.sign(c) * Math.abs(c) ** (2 / 2.6)), Math.round(256 + 240 * r * Math.sign(s) * Math.abs(s) ** (2 / 2.6))].join(' '); }).join('L') + 'Z';
+  // the pebble's outline: an iOS app icon's rounded square (2026-11-02, was a soft wobbly superellipse like sea glass), a
+  // superellipse of degree 5, the continuous corner iOS draws, in a 512 box (240 from the middle, room for the shadow)
+  const PEBBLE = 'M' + Array.from({ length: 180 }, (_, i) => { const t = i / 180 * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+    return [256 + 240 * Math.sign(c) * Math.abs(c) ** (2 / 5), 256 + 240 * Math.sign(s) * Math.abs(s) ** (2 / 5)].map(v => +v.toFixed(1)).join(' '); }).join('L') + 'Z';
   const HUE = Function('return ' + /const ROOM_HUE = (\{[^}]*\})/.exec(readFileSync(path.join(ROOT, 'aOS/app.js'), 'utf8'))[1])();
   const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
   const mixc = (a, b, k) => '#' + rgb(a).map((v, i) => Math.round(v + (rgb(b)[i] - v) * k).toString(16).padStart(2, '0')).join('').toUpperCase();
