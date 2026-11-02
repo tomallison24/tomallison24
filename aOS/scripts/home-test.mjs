@@ -238,6 +238,18 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(s.inApp && s.shown.join() === 'notes' && await pg.evaluate(() => getComputedStyle(document.getElementById('appwin')).transform === 'none' && !document.getElementById('appwin').style.transform && !document.body.classList.contains('dragging')),
     `a swipe the phone took over (no pointerup) leaves nothing behind: the next app opens on screen ${tag}`);
   await pg.locator('#appback').click(); await pg.waitForTimeout(500);
+  // the app window looked at once it should be on screen: found off to the side (however that came about), it's put
+  // back at once, and what was seen is kept for the owner
+  await pg.evaluate(() => localStorage.removeItem('aos.glitch'));
+  await pg.locator('.happ[data-open="weather"]').click();
+  await pg.evaluate(() => { document.getElementById('appwin').style.transform = 'translateX(400px)'; document.body.classList.add('dragging'); document.querySelector('.frame[data-id="weather"]').hidden = true; });
+  await pg.waitForTimeout(1100);
+  const g = await pg.evaluate(() => aosHomeTab.glitches());
+  check((await state()).shown.join() === 'weather' && await pg.evaluate(() => document.getElementById('appwin').getBoundingClientRect().left === 0 && !document.getElementById('appwin').style.transform && !document.body.classList.contains('dragging'))
+    && g.length === 1 && g[0].app === 'weather' && g[0].bad.some(b => /window at 400/.test(b)) && g[0].bad.includes('frame hidden') && /put the app window back/.test(await pg.textContent('#htoast')),
+    `an app window found off the screen is put back, and what was seen is kept (${(g[0] || {}).bad}) ${tag}`);
+  await pg.locator('#appback').click(); await pg.waitForTimeout(500);
+  check(await pg.evaluate(() => aosHomeTab.glitches().length) === 1, `a window on screen is nothing to note ${tag}`);
   await pg.locator('.happ[data-open="notes"]').click(); await pg.waitForTimeout(700);
   const bb = await pg.locator('#appback').boundingBox();
   await pg.mouse.move(bb.x + 10, bb.y + 10); await pg.mouse.down(); await pg.waitForTimeout(600); await pg.mouse.up(); await pg.waitForTimeout(200);
