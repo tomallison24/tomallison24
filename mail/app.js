@@ -847,6 +847,42 @@ async function removeLabels(list) {
   await Promise.all([refreshLabels(true), refreshFilters(true)]);
 }
 
+// A tag kept out of the inbox (its card in Tags, Keep out of inbox): its sender rules skip the inbox, so new mail from
+// them goes straight to the tag, and what's in the inbox with the tag now leaves it. Its mail is in the tag alone (the
+// tag's view shows all of it, in the inbox or not), so the tag is put in the mailbox menu. Auto-tags' rules (a whole
+// kind of mail, not one sender) stay as they are. Gmail's filters can't be changed, so each rule is made again.
+const ownRules = id => (state.rules || []).filter(f => (f.action?.addLabelIds || []).includes(id) && f.criteria?.from && !presetOfFilter(f));
+const skipsInbox = id => { const r = ownRules(id); return r.length > 0 && r.every(f => (f.action?.removeLabelIds || []).includes('INBOX')); };
+async function remakeRule(f, skip) {
+  const remove = (f.action?.removeLabelIds || []).filter(x => x !== 'INBOX').concat(skip ? ['INBOX'] : []);
+  const action = Object.assign({}, f.action, { removeLabelIds: remove });
+  if (!remove.length) delete action.removeLabelIds;
+  await api('/settings/filters/' + f.id, { method: 'DELETE' });
+  try { return await api('/settings/filters', { method: 'POST', once: true, body: { criteria: f.criteria, action } }); }
+  catch (e) { try { await api('/settings/filters', { method: 'POST', once: true, body: { criteria: f.criteria, action: f.action } }); } catch {} throw e; }   // put the old one back
+}
+async function setSkipInbox(id, on) {
+  const back = { id, on, remade: [], ids: [], chip: !chipTags().some(l => l.id === id) };
+  for (const f of ownRules(id)) {
+    if ((f.action?.removeLabelIds || []).includes('INBOX') === on) continue;
+    back.remade.push({ was: f, now: await remakeRule(f, on) });
+  }
+  if (on) {
+    back.ids = await allIds('in:inbox', { labelIds: [id], cap: 2000 });
+    await relabel(back.ids, [], ['INBOX']);
+    patch(it => it.labelIds.includes(id), [], ['INBOX']);
+    if (back.chip) setChipPref(id, true);   // its mail is only in the tag now: the tag in the menu
+  }
+  filtersCache = null; state.rules = null; state.lists = {};
+  return back;
+}
+async function undoSkipInbox(back) {
+  for (const { now } of back.remade) if (now) await remakeRule(now, !back.on);
+  if (back.ids.length) await relabel(back.ids, ['INBOX']);
+  if (back.on && back.chip) setChipPref(back.id, false);
+  filtersCache = null; state.rules = null; state.lists = {};
+}
+
 const bucket = item => applyRule(ruleFor(item), settings.label, { skipInbox: true, item });
 const tagSender = (item, name) => applyRule(ruleFor(item), name, { item });
 
@@ -1948,6 +1984,12 @@ function viewRules() {
     return '<button class="mini' + (on ? ' on' : '') + '" data-act="chip-pref" data-id="' + esc(l.id) + '" aria-pressed="' + on + '">' +
       ICON.eye + (on ? 'In menu' : 'Not in menu') + '</button>';
   };
+  const skipBtn = l => {
+    if (!ownRules(l.id).length) return '';
+    const on = skipsInbox(l.id);
+    return '<button class="mini' + (on ? ' on' : '') + '" data-act="tag-skip" data-id="' + esc(l.id) + '" aria-pressed="' + on + '" aria-label="Keep ' + esc(l.name) + ' out of the inbox">' +
+      ICON.archive.replace('width="20" height="20"', 'width="15" height="15"') + (on ? 'Out of inbox' : 'In inbox') + '</button>';
+  };
   const delBtn = (l, what) => '<button class="act warn" data-act="del-label" data-id="' + esc(l.id) + '" aria-label="Delete ' + what + ' ' + esc(l.name) + '">' + ICON.bin + '</button>';
 
   const tagCard = l => {
@@ -1955,7 +1997,7 @@ function viewRules() {
     const meta = [rules.length ? rules.length + ' rule' + (rules.length === 1 ? '' : 's') : 'no rules', size(l.id)].filter(Boolean).join(' · ');
     return '<div class="card"><h2 class="gh"><span class="tchip" translate="no" style="--h:' + (isBucket ? 36 : tagHue(l.name)) + '">' + esc(l.name) + '</span>' +
       '<span class="gcount">' + meta + '</span>' +
-      (isBucket ? '' : '<span class="gtools">' + chipBtn(l) + delBtn(l, 'tag') + '</span>') + '</h2>' +
+      (isBucket ? '' : '<span class="gtools">' + skipBtn(l) + chipBtn(l) + delBtn(l, 'tag') + '</span>') + '</h2>' +
       (rules.length ? '<ul class="list">' + rules.map((f, i) => '<li style="--i:' + i + '" data-filter="' + esc(f.id) + '"><div class="rowtop">' +
         '<span class="open"><span class="who"><span class="name">' + esc(presetOfFilter(f) ? 'Auto-tag: ' + presetOfFilter(f).about.toLowerCase() : f.criteria?.from || f.criteria?.query || '(no sender)') + '</span></span>' +
         '<span class="snip">' + ((f.action?.removeLabelIds || []).includes('INBOX') ? 'Skips the inbox' : 'Stays in the inbox') + '</span></span>' +
@@ -3988,6 +4030,19 @@ document.addEventListener('click', async e => {
       return;
     }
 
+    case 'tag-skip': {
+      const id = el.dataset.id, l = labelsById.get(id), on = !skipsInbox(id);
+      if (!l || state.busy) return;
+      state.busy = true; el.disabled = true;
+      try {
+        const back = await setSkipInbox(id, on);
+        await loadRules({ force: true });
+        toast(on ? l.name + ' is out of the inbox' + (back.ids.length ? ' · ' + back.ids.length + ' moved' : '') + '. It’s in its tag.'
+          : 'New mail tagged ' + l.name + ' stays in the inbox again.', { label: 'Undo', action: async () => { await undoSkipInbox(back); loadRules({ force: true }); } });
+      } catch (err) { failed(err); await loadRules({ force: true }); }
+      finally { state.busy = false; }
+      return;
+    }
     case 'chip-pref': {
       const id = el.dataset.id, on = chipTags().some(l => l.id === id);
       setChipPref(id, !on);

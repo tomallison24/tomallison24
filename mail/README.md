@@ -370,7 +370,7 @@ straight away — and type a name, say *Sofia's school*:
 - that email, everything **already** in the mailbox from the same domain
   (archived mail included), and **all new mail** from it gets the tag — the
   last by a Gmail filter, so it happens whether or not the app is open;
-- tagged mail **stays in the inbox** (only Marketing skips it);
+- tagged mail **stays in the inbox** (only Marketing skips it), unless you keep the tag out of it (below);
 - the tag joins the mailbox menu (the pill at the bottom); choose it to see just that
   tag, and **Inbox** to go back.
 - **every tag has its own colour**, the same in the menu, the list, the Tags
@@ -405,7 +405,13 @@ Tags are ordinary Gmail labels, so they show up in Gmail too. The **Tags** page
 
 - **Your tags** — those with a rule, or that you switched on. Only these are
   in the mailbox menu. Each lists its rules and lets you take it out of the
-  menu or delete it.
+  menu or delete it. **In inbox / Out of inbox** keeps a tag's mail out of the
+  inbox (Monarch, Amazon): its sender rules are made again to skip the inbox (Gmail
+  can't change a filter), what's in the inbox with the tag leaves it, and the tag
+  goes in the menu, the one place its mail is then (picking it shows all of it,
+  in the inbox or not). Switched back, new mail stays in the inbox again and what's
+  in the tag stays there. Undo puts it all back. Auto-tags' rules (a kind of mail,
+  not a sender) have no switch.
 - **Other labels in Gmail** — your own labels that aren't used as tags. Switch
   one into the menu to filter by it.
 - **Left by other apps** — folders old mail apps made: `[Imap]/…`,
