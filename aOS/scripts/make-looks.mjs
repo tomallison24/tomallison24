@@ -160,7 +160,7 @@ if (!check && pngs.length) {
 // and the pebble's gradient: the app's colour (aOS/app.js, ROOM_HUE) lighter at the top left, down to its own, dark
 // enough for the white drawing. Written twice: aOS/glyphs.js (Layers' grid on aOS Home, aOS/home-tab.js) and
 // <app>/icon-pebble.svg (every other place an app's icon shows in Layers: aOS/app.js, home-tab.js, home/welcome.js).
-// The drawing is 40% of the pebble. Each keeps a hash of what it was made from, so --check needs no browser.
+// The drawing is 60% of the pebble (40% until 2026-11-02, when the pebble became a rounded square). Each keeps a hash of what it was made from, so --check needs no browser.
 {
   const { createHash } = await import('crypto');
   const file = path.join(ROOT, 'aOS/glyphs.js');
@@ -227,9 +227,9 @@ if (!check && pngs.length) {
     if (!existsSync(file) || readFileSync(file, 'utf8') !== text) { if (!todo.length) stale.push('aOS/glyphs.js'); if (!check) writeFileSync(file, text); }
     // each app's pebble as an icon of its own: the pebble a little inside the box, with a soft shadow under it
     for (const [app, g] of Object.entries(ordered)) {
-      const [vx, vy, vs] = g.vb.split(' ').map(Number), w = 512 * .92 * .4, at = 256 - w / 2;
+      const [vx, vy, vs] = g.vb.split(' ').map(Number), w = 512 * .92 * .6, at = 256 - w / 2;
       const peb = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">\n`
-        + `  <!-- Made by aOS/scripts/make-looks.mjs from icon.svg - don't edit by hand. Layers' pebble: the app's colour, lighter at the top left, its drawing in white at 40% of it. ${g.h} -->\n`
+        + `  <!-- Made by aOS/scripts/make-looks.mjs from icon.svg - don't edit by hand. Layers' pebble: the app's colour, lighter at the top left, its drawing in white at 60% of it. ${g.h} -->\n`
         + `  <defs><linearGradient id="p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.top}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`
         + `<radialGradient id="w" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
         + `<filter id="s" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#101828" flood-opacity=".22"/></filter></defs>\n`
