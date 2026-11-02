@@ -745,15 +745,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const at = Math.max(0, chips.findIndex(c => c.getAttribute('aria-pressed') === 'true'));
     if (at) track.scrollLeft = cards[at].offsetLeft - cards[0].offsetLeft;
     slide(bar, chips[at], 'stages', { jump: true });
-    let raf = 0;
+    // A tapped chip scrolls the cards to its stage: until they get there, the chip stays the one tapped (the cards passing
+    // under the edge on the way don't pull it back), unless a finger takes over.
+    let raf = 0, going = -1, goTimer = 0;
+    const arrived = () => { going = -1; clearTimeout(goTimer); };
+    for (const ev of ['pointerdown', 'touchstart', 'wheel']) track.addEventListener(ev, arrived, { passive: true });
+    track.addEventListener('scrollend', arrived);
     track.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => {
       const x = track.scrollLeft, end = x >= track.scrollWidth - track.clientWidth - 2;   // at the end: the last card, which can't line up at the start
+      if (going >= 0) { if (Math.abs(x - Math.min(cards[going].offsetLeft - cards[0].offsetLeft, track.scrollWidth - track.clientWidth)) <= 2) arrived(); return; }
       const i = end ? cards.length - 1 : cards.reduce((best, c, j) => Math.abs(c.offsetLeft - cards[0].offsetLeft - x) < Math.abs(cards[best].offsetLeft - cards[0].offsetLeft - x) ? j : best, 0);
       if (chips[i] && chips[i].getAttribute('aria-pressed') !== 'true') show(i);
     }); }, { passive: true });
     bar.addEventListener('click', e => {
       const c = e.target.closest('[data-stage]'); if (!c) return;
       const i = +c.dataset.stage; show(i);
+      going = i; clearTimeout(goTimer); goTimer = setTimeout(arrived, 1200);   // in case the scroll never says it ended
       track.scrollTo({ left: cards[i].offsetLeft - cards[0].offsetLeft, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     });
   }
