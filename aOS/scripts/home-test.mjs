@@ -445,6 +445,14 @@ for (const [w, h, scheme] of [[390, 844, 'light'], [375, 667, 'dark']]) {
   let o = await order();
   check(await pg.evaluate(() => document.documentElement.dataset.home) === 'grid' && await pg.isVisible('#hgrid') && await pg.locator('#favs').isHidden() && await pg.locator('#spaces').isHidden(), `in Layers, Home is its grid, not Favorites and groups ${tag}`);
   check(o.length === APPS.length && new Set(o).size === APPS.length && o.slice(0, 4).join() === 'drinks,mail,calendar,weather', `every app once; the top row your pin, then Mail, Calendar and Weather (${o.slice(0, 5)}) ${tag}`);
+  const names = () => pg.evaluate(() => [...document.querySelectorAll('#hgrid .gapp b')].map(b => b.textContent));
+  const abc = a => a.every((n, i) => !i || a[i - 1].localeCompare(n, 'en', { sensitivity: 'base' }) <= 0);
+  check(abc((await names()).slice(4)), `under the top row, every other app A to Z (${(await names()).slice(4, 9)}) ${tag}`);
+  // the apps you use most come up to the top row, after the ones you keep there
+  const pod = o.slice(4).find(id => id !== 'house') || o[8];
+  await pg.evaluate(id => { const d = Math.floor((Date.now() - new Date().getTimezoneOffset() * 6e4) / 864e5); localStorage.setItem('aos.home.used', JSON.stringify({ [id]: [d - 2, d - 1, d], mail: [d] })); }, pod);
+  await pg.reload(); await pg.waitForTimeout(900); o = await order();
+  check(o.slice(0, 4).join() === ['drinks', pod, 'mail', 'calendar'].join() && abc((await names()).slice(4)), `the most used (${pod}) on the top row after your pin, the rest still A to Z (${o.slice(0, 4)}) ${tag}`);
   const fit = await pg.evaluate(() => { const rs = [...document.querySelectorAll('#hgrid .orb')].map(e => e.getBoundingClientRect());
     return { big: rs.every(r => r.width >= 44 && r.height >= 44), on: rs.every(r => r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth), sky: !!document.querySelector('#hgsky [data-open="weather"]') && !!document.querySelector('#hgsky [data-open="calendar"]') }; });
   check(fit.big && fit.sky, `buttons 44 pt or more; the weather and what's next on the sky ${tag}`);
@@ -458,14 +466,17 @@ for (const [w, h, scheme] of [[390, 844, 'light'], [375, 667, 'dark']]) {
   await pg.locator('#hgrid [data-gapp="mail"]').click(); await pg.waitForTimeout(900);
   check(await pg.evaluate(() => document.body.classList.contains('in-app') && [...document.querySelectorAll('.frame')].some(f => !f.hidden && f.dataset.id === 'mail')), `one tap opens Mail inside aOS ${tag}`);
   await pg.evaluate(() => aosHomeTab.show(null)); await pg.waitForTimeout(500);
-  // Edit: tap two apps to swap them; nothing opens while editing; kept over a reload
-  const [x, y] = [o[5], o[9]];
-  await pg.click('#gridEdit'); await pg.locator(`#hgrid [data-gapp="${x}"]`).click(); await pg.locator(`#hgrid [data-gapp="${y}"]`).click(); await pg.waitForTimeout(150);
+  // Edit: a tap keeps an app on the top row (one of your pins), and a second tap lets it go back to its place, A to Z;
+  // nothing opens while editing; kept over a reload
+  o = await order(); const x = o[o.length - 1];
+  await pg.click('#gridEdit'); await pg.locator(`#hgrid [data-gapp="${x}"]`).click(); await pg.waitForTimeout(150);
   check(await pg.evaluate(() => !document.body.classList.contains('in-app')), `in Edit, a tap doesn't open the app ${tag}`);
   await pg.click('#gridEdit'); o = await order();
-  check(o[5] === y && o[9] === x && JSON.parse(await pg.evaluate(() => localStorage.getItem('aos.home.grid')))[5] === y, `Edit: ${x} and ${y} swapped, and kept ${tag}`);
+  check(o.slice(0, 2).join() === 'drinks,' + x && JSON.parse(await pg.evaluate(() => localStorage.getItem('aos.home.picks'))).includes(x), `Edit: ${x} kept on the top row, after your other pin ${tag}`);
   await pg.reload(); await pg.waitForTimeout(900);
-  check((await order())[5] === y, `the order is kept over a reload ${tag}`);
+  check((await order())[1] === x, `the top row is kept over a reload ${tag}`);
+  await pg.click('#gridEdit'); await pg.locator(`#hgrid [data-gapp="${x}"]`).click(); await pg.waitForTimeout(150); await pg.click('#gridEdit'); o = await order();
+  check(!o.slice(0, 4).includes(x) && abc((await names()).slice(4)), `a second tap lets ${x} go back among the rest, A to Z ${tag}`);
   // Thumb arc still there in Layers; and out of Layers, Classic's Favorites again
   await pg.evaluate(() => aosHomeTab.layout('arc')); await pg.waitForTimeout(100);
   check(await pg.evaluate(() => document.documentElement.dataset.home) === 'arc' && await pg.locator('#hgrid').isHidden(), `Thumb arc, picked, in Layers too ${tag}`);
