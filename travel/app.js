@@ -50,7 +50,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore', family: KEY + '-family', who: KEY + '-who', people: KEY + '-people',
     calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
-    ipsyAuto: KEY + '-ipsy-auto', verified: KEY + '-verified', verifyAt: KEY + '-verify-at', drive: KEY + '-drive', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut', more: KEY + '-scan-more',
+    done: KEY + '-done', ipsyAuto: KEY + '-ipsy-auto', verified: KEY + '-verified', verifyAt: KEY + '-verify-at', drive: KEY + '-drive', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut', more: KEY + '-scan-more',
   };
   // Inside aOS, reading Gmail (and the checks after it) count as an update under way: aOS doesn't put Travel away
   // or start it again until it's done (../home/welcome.js AllisonOS.updating).
@@ -123,7 +123,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   let graves = ls.json(K.graves, {});
   let seen = new Set(ls.json(K.seen, []));
-  let live = ls.json(K.live, {});                                            // booking id -> {at, leg, error}
+  let live = ls.json(K.live, {});
+  // Stages ticked off on the Next cards (this phone only): gone from the carousel, still on their trip
+  let heroDone = new Set(ls.json(K.done, []));
+  const saveDone = () => { heroDone = new Set([...heroDone].filter(id => bookings.some(b => b.id === id && !isPast(b)))); ls.set(K.done, JSON.stringify([...heroDone])); };                                            // booking id -> {at, leg, error}
   const shadow = new Map();
   let ipsy = null;      // Ipsy's handle (../home/ipsy.js), once it is mounted at the bottom of this file
   const st = { tab: ls.get(K.tab, 'trips'), when: ls.get(K.when, 'upcoming'), trip: null, booking: null, isNew: false, scanning: false, scanDone: 0, scanTotal: 0 };
@@ -601,7 +604,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const stageOf = b => b.parking ? 'parking' : b.type;
   function heroHTML(groups) {
     const now = Date.now();
-    const soon = alive().filter(b => !b.ride && b.status !== 'cancelled' && endT(b) > now - H && startT(b) < now + 14 * D);
+    const soon = alive().filter(b => !b.ride && b.status !== 'cancelled' && !heroDone.has(b.id) && endT(b) > now - H && startT(b) < now + 14 * D);
     const flightsIn = d => soon.filter(f => f.type === 'flight' && (f.dep || '').slice(0, 10) === d && startT(f) > now - 30 * 6e4);
     // On the day you fly in, the flight and the car come before the hotel check-in (arrival).
     const all = soon.slice();
@@ -664,7 +667,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const x = next.type === 'flight' && liveView(next) && live[next.id];
     const asOf = x ? (inflight.has(next.id) ? 'Checking…' : 'Checked ' + ago(x.at)) : '';
     if (pill) h += '<div class="meta">' + pill + (asOf ? '<span class="asof">' + esc(asOf) + '</span>' : '') + '</div>';
-    return h + '</button>';
+    // its tick: done with this stage, off the Next cards (beside the card, not in it: a button can't hold a button)
+    return '<div class="heroslot">' + h + '</button><button class="herodone" type="button" data-done="' + esc(next.id) + '" aria-label="Done: take ' + esc(STAGE[stageOf(next)] ? STAGE[stageOf(next)].toLowerCase() : 'this') + ' off the Next cards">' + I.tick + '</button></div>';
   }
   // A trip's next flight's status, for its card: "UA 123 · On time" from 36 hours before take-off, "Status from Thu 4:04 PM"
   // before that, or why there is none (flightState).
@@ -764,7 +768,18 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       track.scrollTo({ left: cards[i].offsetLeft - cards[0].offsetLeft, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     });
   }
+  // A Next card's tick: that stage leaves the carousel (it stays on its trip), the one after it shows; Undo brings it back.
+  function heroTick(id) {
+    const slot = document.querySelector('.heroslot [data-done="' + CSS.escape(id) + '"]'), at = slot && slot.closest('.heroslot');
+    const after = at && (at.nextElementSibling || at.previousElementSibling), then = after && after.querySelector('[data-done]');
+    const was = st.heroAt;
+    heroDone.add(id); saveDone();
+    if (then) st.heroAt = then.dataset.done;
+    render();
+    toast('Taken off the Next cards. It’s still on its trip.', () => { heroDone.delete(id); saveDone(); st.heroAt = was === id || !was ? id : was; render(); }, 5000);
+  }
   $('list').addEventListener('click', e => {
+    const dn = e.target.closest('[data-done]'); if (dn) return heroTick(dn.dataset.done);
     const qb = e.target.closest('[data-qr]'); if (qb) return showQr(qb.dataset.qr);
     const a = e.target.closest('[data-ai]'); if (a) return checkTripWithAI(a.dataset.ai, a);
     const t = e.target.closest('[data-trip]'); if (t) return openTrip(t.dataset.trip);
@@ -2695,5 +2710,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, liveWhy, liveAsk, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, liveWhy, liveAsk, heroTick, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
 })();

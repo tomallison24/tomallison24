@@ -189,10 +189,10 @@ for (const scheme of ['light', 'dark']) {
     assert.deepEqual([...stages].sort(), ['Car', 'Flight', 'Hotel'], 'a card for each stage: ' + stages);
     const keys = await page.$$eval('#heroStages [data-stage]', bs => bs.map(b => window.__travel.startT(window.__travel.bookings.find(x => x.id === b.dataset.id))));
     assert.ok(keys[1] <= keys[2], 'the hotel and the car in the order they happen: ' + stages);
-    assert.equal(await page.$$eval('#heroTrack > .hero', c => c.length), 3);
+    assert.equal(await page.$$eval('#heroTrack .hero', c => c.length), 3);
     assert.equal(await page.getAttribute('#heroStages [data-stage="0"]', 'aria-pressed'), 'true');
     // the second card peeks in, so you can see there's more
-    const peek = await page.evaluate(() => { const t = document.getElementById('heroTrack').getBoundingClientRect(), c = document.querySelectorAll('#heroTrack > .hero')[1].getBoundingClientRect(); return c.left < t.right && c.left > t.left + t.width / 2; });
+    const peek = await page.evaluate(() => { const t = document.getElementById('heroTrack').getBoundingClientRect(), c = document.querySelectorAll('#heroTrack .hero')[1].getBoundingClientRect(); return c.left < t.right && c.left > t.left + t.width / 2; });
     assert.ok(peek, 'the next card shows at the edge');
     // a chip scrolls to its card, its thumb going straight there: no other chip lights up while the cards pass under
     await page.evaluate(() => { window.__lit = []; const bar = document.getElementById('heroStages');
@@ -201,7 +201,7 @@ for (const scheme of ['light', 'dark']) {
     assert.deepEqual([...new Set(await page.evaluate(() => window.__lit))], ['2'], 'only the tapped chip lights up on the way');
     const shown = () => page.evaluate(() => { const t = document.getElementById('heroTrack'), cs = [...t.children]; const x = t.getBoundingClientRect().left + 14;
       return cs.findIndex(c => Math.abs(c.getBoundingClientRect().left - x) < 4); });
-    const inView = await page.evaluate(() => { const t = document.getElementById('heroTrack').getBoundingClientRect(), c = document.querySelectorAll('#heroTrack > .hero')[2].getBoundingClientRect(); return c.left >= t.left - 1 && c.right <= t.right + 1; });
+    const inView = await page.evaluate(() => { const t = document.getElementById('heroTrack').getBoundingClientRect(), c = document.querySelectorAll('#heroTrack .hero')[2].getBoundingClientRect(); return c.left >= t.left - 1 && c.right <= t.right + 1; });
     assert.ok(inView, 'the last card is shown, all of it');
     assert.equal(await page.getAttribute('#heroStages [data-stage="2"]', 'aria-pressed'), 'true');
     // a swipe back moves the chips with it
@@ -212,8 +212,20 @@ for (const scheme of ['light', 'dark']) {
     await page.evaluate(() => window.__travel.render()); await page.waitForTimeout(300);
     assert.equal(await shown(), 1, 'still on the second card after the list is drawn again');
     // a card's words start at its top, however tall the tallest card is
-    const top = await page.evaluate(() => { const c = document.querySelectorAll('#heroTrack > .hero')[2], k = c.querySelector('.k'); return k.getBoundingClientRect().top - c.getBoundingClientRect().top; });
+    const top = await page.evaluate(() => { const c = document.querySelectorAll('#heroTrack .hero')[2], k = c.querySelector('.k'); return k.getBoundingClientRect().top - c.getBoundingClientRect().top; });
     assert.ok(top < 30, 'the last card\'s label at its top: ' + top);
+    // a card's tick takes that stage off the carousel (the next one shows; it stays on its trip); Undo brings it back
+    const second = await page.getAttribute('#heroStages [data-stage="1"]', 'data-id');
+    const box = await page.$eval('#heroTrack .heroslot:nth-child(2) .herodone', el => { const r = el.getBoundingClientRect(); return { w: r.width, h: r.height }; });
+    assert.ok(box.w >= 44 && box.h >= 44, 'the tick is a full-size tap target: ' + JSON.stringify(box));
+    await page.click('#heroTrack .heroslot:nth-child(2) .herodone'); await page.waitForTimeout(300);
+    assert.equal(await page.$$eval('#heroTrack .hero', c => c.length), 2, 'two stages left');
+    assert.ok(!(await page.$$eval('#heroStages [data-stage]', bs => bs.map(b => b.dataset.id))).includes(second), 'the ticked one is gone from the chips');
+    assert.equal(await page.getAttribute('#heroStages [aria-pressed="true"]', 'data-id') !== second, true);
+    assert.match(await page.textContent('#toastMsg'), /still on its trip/);
+    assert.ok(await page.evaluate(id => window.__travel.bookings.some(b => b.id === id), second), 'the booking itself stays');
+    await page.click('#toastAct'); await page.waitForTimeout(300);
+    assert.equal(await page.$$eval('#heroTrack .hero', c => c.length), 3, 'Undo brings it back');
     await page.click('#heroStages [data-stage="0"]'); await page.waitForTimeout(700);
   });
 
