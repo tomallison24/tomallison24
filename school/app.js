@@ -199,7 +199,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
           + '<button class="btn" type="button" data-act="' + (hasGmail() ? 'scan' : 'connect') + '">' + (hasGmail() ? 'Check now' : 'Connect Gmail') + '</button>';
       return;
     }
-    const s = last = P.sections(items, { now, me: m, done, moved });
+    let s;
+    try { s = last = P.sections(items, { now, me: m, done, moved }); }
+    catch (e) {
+      // a post School can't sort never hides the rest: they're listed newest first, as they came
+      console.error(e);
+      main.innerHTML = '<div class="empty"><strong>Couldn’t sort the posts</strong>Here they are, newest first.</div>'
+        + items.slice().sort((a, b) => b.at - a.at).slice(0, 60).map(x => row({ title: x.title, sub: x.author || '', open: x.id })).join('');
+      return;
+    }
     let h = '', i = 0;
 
     // 1. the next school day
@@ -581,17 +589,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   async function scan({ loud, next } = {}) {
     if (st.scanning) return;
     if (!getToken()) {
-      if (mayRenew()) { signIn({ silent: true }); return; }
-      if (loud) { renderMore(); openSheet('moreSheet'); }
+      // Check now, tapped: Google's sign-in, where you can see it (a silent try fails quietly when Google wants
+      // you to sign in again, and Settings alone said nothing, so the tap looked like it did nothing)
+      if (loud) { if (hasGmail()) toast('Gmail needs you to sign in again.'); signIn(); return; }
+      if (mayRenew()) signIn({ silent: true });
       return;
     }
-    st.scanning = true; scanErr = ''; render();
-    if (!next) updating('gmail', true);
-    busyPill('Reading Gmail');
+    st.scanning = true; scanErr = '';
     const startedAt = Date.now(), lastAt = +ls.get(K.lastScan, 0);
     const since = lastAt ? 'after:' + Math.floor(lastAt / 1000 - 3 * 86400) : FIRST_SCAN;
     let added = 0, more = false;
     try {
+      render();
+      if (!next) updating('gmail', true);
+      busyPill('Reading Gmail');
       if (!ls.get(K.me, '')) gmail('/profile').then(p => { if (p && p.emailAddress) { ls.set(K.me, p.emailAddress); ls.set(K.hint, p.emailAddress); } }).catch(() => {});
       const ids = [];
       let pageToken;

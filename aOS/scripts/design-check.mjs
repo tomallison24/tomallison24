@@ -56,6 +56,7 @@ export const CHECKS = [
   ['names', 'Buttons have names'],
   ['aos-case', 'aOS lowercase a'],
   ['motion', 'Reduce Motion'],
+  ['sideways', 'Only up and down'],
 ];
 const SETTINGS_CHECKS = ['shared', 'title', 'gear', 'done', 'design-first', 'order', 'on-off', 'one-sentence'];
 const NA = { aos: SETTINGS_CHECKS, house: ['switch-css'] };
@@ -301,9 +302,35 @@ async function browserChecks(browser, base, id) {
     if (s.upper) r['aos-case'].push(`"AOS" in Settings (${s.upper}×)`);
     return r;
   } catch (e) {
-    for (const [k] of CHECKS) if (!r[k] && !['switch-css', 'no-dialogs', 'motion'].includes(k)) r[k] = ['the check broke: ' + e.message.split('\n')[0]];
+    for (const [k] of CHECKS) if (!r[k] && !['switch-css', 'no-dialogs', 'motion', 'sideways'].includes(k)) r[k] = ['the check broke: ' + e.message.split('\n')[0]];
     return r;
   } finally { await ctx.close(); }
+}
+
+// Only up and down (rule 3): a part that scrolls down (overflow-y: auto or scroll, or overflow: auto) locks the other
+// axis too (overflow-x: hidden or clip). Without it the browser lets that part scroll sideways as well, and a line or
+// a tile wider than the screen drags a sheet, a popup or a list off to the side under a finger meant to scroll down.
+// The page itself is locked for every app by home/welcome.js (aos-nosideways); this is for everything that scrolls
+// inside it. A part meant to pan both ways (Sparkle Kingdom's map) says so with a /* sideways */ comment in its block.
+// Looks in the app's index.html, its scripts (the CSS they write) and, for aOS, the shared scripts in home/.
+function sideways(id) {
+  const files = [path.join(ROOT, dir(id), 'index.html'), ...appFiles(id)];
+  if (id === 'aos') for (const f of fs.readdirSync(path.join(ROOT, 'home'))) if (/\.js$/.test(f) && f !== 'sw.js') files.push(path.join(ROOT, 'home', f));
+  const bad = [];
+  for (const f of files) {
+    const raw = read(f), rel = path.relative(ROOT, f);
+    // comments blanked, the same length (a position still gives the line); a /* sideways */ one leaves its mark
+    const blank = c => c.replace(/[^\n]/g, ' ');
+    const src = raw.replace(/\/\*[\s\S]*?\*\//g, c => (/^\/\*\s*sideways\b/.test(c) ? '--sideways' + blank(c.slice(10)) : blank(c)));
+    for (const m of src.matchAll(/\{([^{}]*)\}/g)) {
+      const b = m[1];
+      if (!/(^|[;\s])overflow(-y)?\s*:\s*(auto|scroll)\s*(;|$)/.test(b)) continue;
+      if (/overflow-x\s*:\s*(hidden|clip)\b|--sideways/.test(b)) continue;
+      const sel = src.slice(0, m.index).split(/[;{}\n]/).pop().trim().slice(-60);
+      bad.push(`${rel}:${lineOf(src, m.index)} ${sel || '(a block)'} scrolls down without overflow-x: hidden`);
+    }
+  }
+  return bad;
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -319,6 +346,7 @@ export async function run({ log = true } = {}) {
     r['switch-css'] = switchCss(id).map(s => 'private switch: ' + s);
     r['no-dialogs'] = noDialogs(id);
     r.motion = motion(id);
+    r.sideways = sideways(id);
     for (const k of NA[id] || []) r[k] = null;   // n/a
     results[id] = r;
     if (log) process.stderr.write('.');

@@ -921,7 +921,7 @@
 .ipsy-hrow small{font-size:12px;color:var(--muted,rgba(16,24,26,.64))}
 .ipsy-vintage .ipsy-hrow{background:transparent;border:2px solid var(--mc-edge,rgba(43,37,34,.14))}
 .ipsy-x:focus-visible,.ipsy-new:focus-visible,.ipsy-hist:focus-visible,.ipsy-hrow:focus-visible,.ipsy-send:focus-visible,.ipsy-chip:focus-visible,.ipsy-undo:focus-visible{outline:2px solid var(--accent,#3B7366);outline-offset:2px}
-.ipsy-log{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:14px 2px 10px;overscroll-behavior:contain}
+.ipsy-log{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding:14px 2px 10px;overscroll-behavior:contain}
 .ipsy-msg{max-width:86%;padding:9px 13px;border-radius:18px;font-size:15px;line-height:1.42;overflow-wrap:anywhere;white-space:pre-wrap}
 .ipsy-msg ul{margin:4px 0;padding-left:18px;white-space:normal}
 .ipsy-msg a{color:inherit}

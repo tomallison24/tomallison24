@@ -351,6 +351,40 @@ await test('a phone that lost its posts reads them again by itself, not only aft
   await ctx.close();
 });
 
+// Gmail was connected, its sign-in has run out (an hour) and Google said no to a quiet renewal earlier today: Check
+// now goes to Google's sign-in, where you can see it. It used to reopen Settings (or try quietly again), so the tap
+// seemed to do nothing, and a phone whose posts were gone stayed empty.
+for (const [where, sel, quietFail] of [['the empty page', 'main [data-act="scan"]', true], ['Settings', '#scanBtn', false]]) {
+  await test(`Check now on ${where}, signed out of Gmail: Google's sign-in, not a quiet try`, async () => {
+    const { ctx, page } = await newPage('light', Object.assign({ 'school.token.ever': '1', 'school.hint': 'pat@example.com', 'school.lastAuth': String(NOW.getTime() - 3 * 3600e3) },
+      quietFail ? { 'school.silentFail': String(NOW.getTime() - 3600e3) } : {}, where === 'Settings' ? seeded() : {}));
+    await open(page);
+    if (where === 'Settings') { await page.click('#moreBtn'); await page.waitForTimeout(400); }
+    const before = google.length;
+    await page.click(sel);
+    await page.waitForTimeout(600);
+    const asked = google.slice(before).find(u => u.startsWith('https://accounts.google.com/'));
+    assert.ok(asked, 'went to Google: ' + google.slice(before).join(' | '));
+    const q = new URL(asked).searchParams;
+    assert.notEqual(q.get('prompt'), 'none', 'a sign-in you can see');
+    assert.equal(q.get('login_hint'), 'pat@example.com', 'with the account it had');
+    google.splice(before);   // these sign-ins were asked for (the last test checks nothing else goes to Google)
+    await ctx.close();
+  });
+}
+
+await test('a post School can’t sort never hides the rest: they’re listed newest first', async () => {
+  const { ctx, page } = await newPage('light', seeded());
+  await open(page);
+  await page.evaluate(() => { window.SchoolSort.sections = () => { throw new Error('made-up'); }; window.__school.render(); });
+  const rows = await texts(page, '#main .row b');
+  assert.ok(rows.length >= 5 && rows.includes('Picture Day is Tuesday') === false && rows.includes('Character Dress Up'), rows.join(' | '));
+  errors.splice(0);   // the made-up error is logged on purpose
+  // and Check now still works after it (it used to be stuck, scanning, once a draw failed)
+  assert.equal(await page.evaluate(() => window.__school.st.scanning), false);
+  await ctx.close();
+});
+
 await test('both designs, light and dark: Vintage by default, Standard (Sea glass) when picked', async () => {
   for (const scheme of ['light', 'dark']) {
     const V = await newPage(scheme, seeded());

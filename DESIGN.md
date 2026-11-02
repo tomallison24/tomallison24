@@ -92,7 +92,19 @@ bottom left too.**
   the bottom left that presses the real one. A full-screen mode that isn't a
   page you go into takes `data-nofloat`. Settings's own title is "Settings"
   (rule 4).
-- **Enforced:** CI: `done` (Settings's ✓ Done in the corner), `title`.
+- **Only up and down:** nothing in an app scrolls sideways, on the page or in
+  a sheet. The page is locked for every app by `home/welcome.js`
+  (`aos-nosideways`: `overflow-x: clip` on html and body). Every part that
+  scrolls down inside it (a sheet's body, a popup, a list with a `max-height`)
+  locks the other axis itself: `overflow-y: auto; overflow-x: hidden`, never
+  `overflow-y: auto` or `overflow: auto` alone, which let it scroll sideways
+  too, so a long line or a wide tile drags the whole sheet off to the side
+  under a finger meant to scroll down. A strip meant to scroll sideways (chips,
+  a row of cards) is its own scroller with `overflow-x: auto`; a part meant to
+  pan both ways (Sparkle Kingdom's map) says so with a `/* sideways */` comment
+  in its block.
+- **Enforced:** CI: `done` (Settings's ✓ Done in the corner), `title`,
+  `sideways` (every block that scrolls down also sets `overflow-x: hidden`).
   Other sheets: Review.
 - **Known gaps** (Settings): none; every app's Settings closes with the ✓.
 
@@ -409,6 +421,7 @@ Chromium, offline, opens Settings as a person would, and checks:
 | `names` | 12: every button on the main screen and in Settings has a name |
 | `aos-case` | 6: "aOS" never uppercased |
 | `motion` | 10: a Reduce Motion rule |
+| `sideways` | 3: every block that scrolls down (`overflow-y: auto` or `scroll`, `overflow: auto`) also sets `overflow-x: hidden` or `clip`, or carries a `/* sideways */` comment; the app's files and, for aOS, `home/` |
 
 aOS itself has no Settings sheet (its Account tab is the hub's own), so the
 Settings checks are n/a there. CI runs it on every pull request that changes an

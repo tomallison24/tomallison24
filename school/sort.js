@@ -444,7 +444,7 @@
       if (DATED[x.kind]) for (const d of datesFor(x, grade)) dated.push({ id: x.id, d: d.d, end: d.end, time: d.time, title: x.title, kind: x.kind });
       for (const e of eventsOf(x)) if (forGrade(gradesOfEvent(e), grade)) dated.push({ id: x.id, d: e.d, end: e.end, time: e.time, title: e.what, kind: OFF_WORDS.test(e.what) ? 'noschool' : WEAR.test(e.what) ? 'wear' : 'event', from: x.title });
     }
-    const uniq = list => list.filter((e, i, a) => a.findIndex(y => y.d === e.d && norm(y.title) === norm(e.title)) === i);
+    const uniq = list => { const had = new Set(); return list.filter(e => { const k = e.d + '|' + norm(e.title); return had.has(k) ? false : (had.add(k), true); }); };   // the first of each, in one pass
     const coming = uniq(dated.filter(e => (e.end || e.d) >= today && e.d <= soon && e.kind !== 'post' || (e.kind === 'post' && e.d >= today && e.d <= soon && !/newsletter/i.test(e.title))))
       .sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : (a.time || '99') < (b.time || '99') ? -1 : 1));
     const year = uniq(dated.filter(e => (e.end || e.d) >= today)).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
@@ -467,7 +467,8 @@
     for (const [d, why] of s.off) out.push({ id: 'off|' + d, date: d, title: 'No school · ' + why, kind: 'off' });
     for (const e of s.year) if (e.kind !== 'noschool') out.push({ id: 'ev|' + e.id + '|' + e.d, date: e.d, end: e.end || undefined, time: e.time || undefined, title: e.title.slice(0, 120), kind: e.kind, item: e.id });
     for (const x of s.needs) if (x.due) out.push({ id: 'due|' + x.id, date: x.due, title: 'Due: ' + x.title.slice(0, 110), kind: 'due', item: x.id });
-    return out.filter((e, i, a) => a.findIndex(y => y.date === e.date && norm(y.title) === norm(e.title)) === i).slice(0, 400);
+    const had = new Set();
+    return out.filter(e => { const k = e.date + '|' + norm(e.title); return had.has(k) ? false : (had.add(k), true); }).slice(0, 400);
   }
 
 

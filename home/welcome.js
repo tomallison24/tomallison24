@@ -89,6 +89,7 @@
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
       notes: ['Orders and Travel keep themselves up to date: each time you open them, Ipsy checks what changed in your emails by itself, with no Have Ipsy check to press. Orders: an order still on its way is also looked for in Gmail by its order and tracking numbers, so a delivered or delayed email that never got tied to it (the courier\'s own, say) moves it on; on for everyone now, with no asking first (a Not now from before is set aside once; Settings > Ipsy keeps orders up to date turns it off). Travel: every booking still to come is checked against its newest email (a schedule change, new dates, a cancellation), once per email; what changed is marked Check, with Undo in Ipsy\'s chat. Travel\'s Have Ipsy check also leaves out email addresses and card and account numbers now, as everywhere else',
+        'Every app: a sheet, popup or list no longer slides sideways when something in it is wider than the screen (a long line, a wide tile); like the page itself, it scrolls up and down only',
         'Home: a device opened from Favorites\' Running Now goes back to Favorites when you close its card',
         'Money: connecting Monarch directly is put away for now (Monarch didn\'t let aOS sign in); Money keeps reading Monarch\'s emails',
         'Money reads the deposits in Monarch\'s summary emails (paychecks, interest) as money in, and reads every email again once to pick up the ones it missed',
@@ -104,7 +105,8 @@
         'Money: a test of Monarch\'s own connector, for whoever reads Monarch\'s emails: Settings, Connect Monarch (read-only), then Test reading Monarch puts its last 14 days beside Money\'s',
         'Money: Settings is tidier: each section is a dropdown, closed until you tap it, with how it stands on its row (2 cards, Not connected), and Monarch has its own',
         'Home on iPhone: the views (Favorites, Climate, Lights, Media, Security, Around the house, Automations) are a floating bar of icons at the bottom, one tap to each, the one you\'re on lit, instead of a drop-down; the view\'s name is the title at the top',
-        'School and Calendar\'s School layer leave out the dates meant for other grades: a newsletter\'s line for 3rd grade, the middle school or Pre-K (or under a heading for one), and a post\'s date given for another grade only. A date that doesn\'t say which grade stays in, and Pre-K is no longer read as Kindergarten'],
+        'School and Calendar\'s School layer leave out the dates meant for other grades: a newsletter\'s line for 3rd grade, the middle school or Pre-K (or under a heading for one), and a post\'s date given for another grade only. A date that doesn\'t say which grade stays in, and Pre-K is no longer read as Kindergarten',
+        'School: Check now works when the Gmail sign-in has run out: it goes to Google\'s sign-in instead of seeming to do nothing, so a phone whose posts were gone reads them again. Its pages draw faster, and posts it can\'t sort are listed rather than hidden'],
       apps: {
         calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
       } },
