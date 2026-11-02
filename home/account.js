@@ -170,4 +170,40 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
     // erase, each of those apps also erases aOS's data from its phone as it next opens.
     signOutOthers: async erase => keep(await call('signout-others', erase ? { erase: true } : {})),
   };
+
+  // Gmail kept signed in (server/gmail.js, functions/aOS/api gmail/*): signed in once through aOS's server, Google's
+  // long-lived key stays there, and an app asks it for an hour-long one when its own has run out, so the person
+  // isn't asked every hour (only every 30 days). On only when the server has it set up (GET state says gmail: true,
+  // kept by home/welcome.js as aos.gmail.on) and you're signed in to the family; otherwise the apps sign in on the
+  // phone as before.
+  //   AllisonOS.gmail.on()                                   -> set up here, and signed in
+  //   AllisonOS.gmail.renewInto({ kind, store, me })         -> true once an hour-long key is in localStorage[store]
+  //                                                            ({ t, exp, scope }, as the app's own sign-in keeps it)
+  //   AllisonOS.gmail.start({ kind, hint, back })            -> Google's sign-in address (a tap: may ask for Face ID)
+  //   AllisonOS.gmail.disconnect(email)                         revoked at Google and forgotten on the server
+  const GON = 'aos.gmail.on';
+  const gpost = async (path, body, quiet = true) => {
+    const r = await authFetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' }, { quiet });
+    let j = {}; try { j = await r.json(); } catch {}
+    if (r.status === 404 && j.error === 'off') { try { localStorage.removeItem(GON); } catch {} }
+    return r.ok ? j : Object.assign({ error: j.error || 'http-' + r.status }, j);
+  };
+  A.gmail = {
+    on: () => { try { return localStorage.getItem(GON) === '1' && !!(load() || {}).token; } catch { return false; } },
+    async renewInto({ kind = 'read', store, me = '' } = {}) {
+      let j; try { j = await gpost('gmail/token', { kind, email: me ? localStorage.getItem(me) || '' : '' }); } catch { return false; }
+      if (!j || !j.token || !store) return false;
+      try {
+        localStorage.setItem(store, JSON.stringify({ t: j.token, exp: j.exp, scope: j.scope || '' }));
+        localStorage.setItem(store + '.ever', '1');
+        localStorage.setItem(store + '.until', String(j.until || ''));
+        if (me && j.email) localStorage.setItem(me, j.email);
+      } catch { return false; }
+      return true;
+    },
+    async start({ kind = 'read', hint = '', back = location.pathname + location.search } = {}) {
+      try { const j = await gpost('gmail/start', { kind, hint, back }, false); return j && j.url || null; } catch { return null; }
+    },
+    disconnect: email => gpost('gmail/disconnect', { email: email || '' }).catch(() => null),
+  };
 })();

@@ -149,6 +149,35 @@ picks a plan. Off is only a screen over the app: nothing is deleted, so
 everything is there when a plan starts again. With accounts off there
 is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.mjs`.
 
+## Gmail stays signed in
+
+Travel, Orders, School and Money read Gmail on the phone. Signed in on the phone alone, Google gives a key that
+lasts an hour and can't be renewed, so they asked again every hour. With this set up, the person signs in once
+through aOS's server (`server/gmail.js`, routes `gmail/*` in `functions/aOS/api`): Google gives the server a
+long-lived key (a refresh token), kept **sealed** in the accounts' KV and never sent to a phone; each app asks it
+for an hour-long key when it needs one, signed in to the family, for its own person's Gmail only. **30 days** after
+signing in the server revokes it at Google and deletes it, and the person signs in again (one tap). Disconnect in an
+app, leaving the family, a new Google password or removing it in Google's security settings ends it too. Read-only
+(`gmail.readonly`); the emails are still read on the phone, never kept on the server. Mail doesn't use it yet.
+
+It's **off** until the owner sets it up; until then the apps sign in on the phone as before. Once, in a browser:
+
+1. **Google Cloud** ([console.cloud.google.com](https://console.cloud.google.com)), the project whose OAuth client
+   ID starts `804406956056-` (APIs & Services → Credentials lists it):
+   - **Google Auth Platform → Audience → Publish app** (Testing → **In production**). In Testing Google ends a
+     refresh token after 7 days. Don't submit it for verification: a family app doesn't need it. Signing in then
+     shows "Google hasn't verified this app": **Advanced → Go to … (unsafe)**, once a month.
+   - **Credentials →** that **Web application** client **→ Authorised redirect URIs → Add**, exactly:
+     `https://tomallison24-news.pages.dev/aOS/api/gmail/back`. Copy the client's **Client secret** from the same page.
+2. **Cloudflare** (dash.cloudflare.com) **→ Workers & Pages →** the site's Pages project **→ Settings → Variables
+   and Secrets → Add**, type **Secret**: `GOOGLE_CLIENT_SECRET` = that client secret, for Production. Deploy again
+   (or wait for the next release) so it takes effect.
+3. Keep **two-step sign-in** on for the Cloudflare and Google accounts: anyone in the Cloudflare account could
+   read the sealed keys and the secret together.
+
+Then each person taps **Check now** (or Connect Gmail) in one of those apps once and signs in; GET `state` says
+`gmail: true` and the apps take it from there. `node aOS/scripts/gmail-api-test.mjs` checks the server's rules.
+
 ## Ipsy and settings
 
 Every Ipsy (each app's and aOS's) can read, change and show the person's settings: Claude's

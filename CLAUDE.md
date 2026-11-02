@@ -138,7 +138,8 @@ from.
   on a 401. See `aOS/RELEASING.md`, "Family accounts". Every app, opened from
   the Home Screen and signed in, reports itself (`welcome.js`, `POST
   /aOS/api/installed`) so aOS shows it as Installed; one that has never signed
-  in asks once.
+  in asks once. Gmail can stay signed in for 30 days (`server/gmail.js`, `AllisonOS.gmail` in
+  `account.js`): off until the owner sets `GOOGLE_CLIENT_SECRET` (`aOS/RELEASING.md`, "Gmail stays signed in").
 - Light or dark: `home.settings.theme` (`auto`/`light`/`dark`), applied as
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.

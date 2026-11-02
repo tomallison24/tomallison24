@@ -643,7 +643,7 @@ await step('without the flight status server, it says so', async () => {
 // aOS walkthrough is marked seen); `before` runs on a page at that address that runs no app script (storage there is
 // the app's), e.g. to make an IndexedDB database.
 const apiCalls = [];
-async function phone(scheme = 'light', { design = null, seed = null, at = '/travel/', before = null } = {}) {
+async function phone(scheme = 'light', { design = null, seed = null, at = '/travel/', before = null, routes = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, serviceWorkers: 'block' });
   await ctx.route(/^https?:\/\/(?!localhost)/, route => route.abort());
   await ctx.route('https://gmail.googleapis.com/**', route => {
@@ -669,10 +669,12 @@ async function phone(scheme = 'light', { design = null, seed = null, at = '/trav
     localStorage.setItem('aos.sky', 'day');
     if (design) localStorage.setItem('design.travel', design);
   }, [design, seed]);
+  if (routes) await routes(ctx);   // a test's own stand-ins, before the page opens
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|404|net::ERR/.test(m.text())) errs.push(m.text()); });
+  if (routes && routes.onPage) routes.onPage(page);
   await page.goto(BASE + at);
   await page.waitForFunction(() => window.__travel, null, { timeout: 5000 });
   await page.waitForTimeout(600);
@@ -862,6 +864,53 @@ await step('airport parking: the pass for the day you fly, its QR code full scre
   await page.waitForSelector('#bkBody [data-qr]');
   assert.equal(await page.getAttribute('#bkBody [data-qr]', 'data-qr'), parks[0].id);
   assert.deepEqual(errs, []);
+  await ctx.close();
+});
+
+// Gmail kept signed in through aOS's server (server/gmail.js, home/account.js AllisonOS.gmail): when it's set up,
+// Check now asks the server for an hour-long key first (no sign-in), Settings says until when, and with none kept it
+// goes to Google's sign-in with a code (through the server); back from it (#gmail=kept), Travel reads Gmail at once.
+async function keptPhone(answer, at = '/travel/') {
+  const asked = [], urls = [];
+  const routes = ctx => ctx.route('**/aOS/api/gmail/**', route => {
+    const u = new URL(route.request().url()), body = JSON.parse(route.request().postData() || '{}');
+    asked.push({ path: u.pathname, body, auth: route.request().headers().authorization || '' });
+    return route.fulfill(answer(u.pathname, body));
+  });
+  routes.onPage = page => page.on('request', r => urls.push({ url: r.url(), auth: r.headers().authorization || '' }));
+  const { ctx, page, errs } = await phone('light', { at, routes, seed: { 'aos.seen': JSON.stringify({ travel: '999' }), 'travel.token.ever': '1', 'travel.me': 'tom@example.com', 'travel.hint': 'tom@example.com',
+    'travel.lastAuth': String(Date.now() - 3 * 3600e3), 'travel.scan': String(Date.now()), 'allison-travel-v1-scan': String(Date.now()), 'aos.gmail.on': '1', 'aos.session': JSON.stringify({ token: 'made-up-session', user: { id: 'u1', name: 'Tom' } }) } });
+  await page.waitForTimeout(400);
+  return { ctx, page, errs, asked, urls };
+}
+await step('kept signed in: Check now gets an hour-long key from aOS\'s server and reads Gmail, no sign-in', async () => {
+  const until = Date.now() + 20 * 864e5;
+  const { ctx, page, asked, urls } = await keptPhone(p => (p.endsWith('/gmail/token') ? { json: { token: 'kept-1', exp: Date.now() + 3500e3, scope: 'https://www.googleapis.com/auth/gmail.readonly', email: 'tom@example.com', until } } : { status: 404, json: {} }));
+  await page.click('#setBtn'); await page.waitForTimeout(300);
+  await page.click('#stScan'); await page.waitForTimeout(1200);
+  assert.ok(asked.some(a => a.path === '/aOS/api/gmail/token' && a.body.email === 'tom@example.com' && a.auth === 'Bearer made-up-session'), 'asked the server, signed in to the family: ' + JSON.stringify(asked));
+  assert.ok(urls.some(u => u.url.startsWith('https://gmail.googleapis.com/') && u.auth === 'Bearer kept-1'), 'read Gmail with the server\'s key');
+  assert.ok(!urls.some(u => u.url.startsWith('https://accounts.google.com/')), 'no sign-in');
+  await page.click('#setBtn'); await page.waitForTimeout(300);
+  assert.match(await page.textContent('#stGmailWho .st-sub'), /, read-only, signed in until [A-Z][a-z]{2} \d{1,2}\.$/);
+  await ctx.close();
+});
+await step('kept signed in, none kept yet (or 30 days on): Check now goes to Google\'s sign-in with a code, through aOS\'s server', async () => {
+  const { ctx, page, asked, urls } = await keptPhone(p => (p.endsWith('/gmail/token') ? { status: 409, json: { error: 'expired' } }
+    : p.endsWith('/gmail/start') ? { json: { url: 'https://accounts.google.com/o/oauth2/v2/auth?response_type=code&access_type=offline&state=made-up' } } : { status: 404, json: {} }));
+  await page.click('#setBtn'); await page.waitForTimeout(300);
+  await page.click('#stScan'); await page.waitForTimeout(1000);
+  const start = asked.find(a => a.path === '/aOS/api/gmail/start');
+  assert.ok(start && start.body.kind === 'read' && start.body.hint === 'tom@example.com' && /^\/travel\//.test(start.body.back), JSON.stringify(asked));
+  const auth = urls.find(u => u.url.startsWith('https://accounts.google.com/'));
+  assert.ok(auth && new URL(auth.url).searchParams.get('response_type') === 'code', 'Google\'s sign-in with a code: ' + (auth && auth.url));
+  await ctx.close();
+});
+await step('back from that sign-in (#gmail=kept): Travel takes the address back and reads Gmail at once', async () => {
+  const { ctx, page, urls } = await keptPhone(p => (p.endsWith('/gmail/token') ? { json: { token: 'kept-2', exp: Date.now() + 3500e3, scope: '', email: 'tom@example.com', until: Date.now() + 30 * 864e5 } } : { status: 404, json: {} }), '/travel/#gmail=kept&acct=tom%40example.com');
+  await page.waitForTimeout(1200);
+  assert.equal(await page.evaluate(() => location.hash), '', 'the address is tidied');
+  assert.ok(urls.some(u => u.url.startsWith('https://gmail.googleapis.com/') && u.auth === 'Bearer kept-2'), 'read Gmail');
   await ctx.close();
 });
 

@@ -421,7 +421,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.toggle({ id: 'cWx', title: 'Weather at drop-off and pickup', sub: 'Uses Weather’s place, or where this phone is.', on: prefs.weather !== 'off' }),
       ], { hint: 'A club on a weekday changes that day’s pickup time.' })
       + S.section('Connected accounts', hasGmail() ? [
-        S.info({ id: 'gState', title: 'Gmail', sub: tok ? (who ? 'Reading ' + who + '.' : 'Signed in.') : 'Signed out; it signs in again when School opens.' }),
+        S.info({ id: 'gState', title: 'Gmail', sub: tok ? (who ? 'Reading ' + who + (keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : 'Signed in.') : 'Signed out; it signs in again when School opens.' }),
         S.action({ id: 'scanBtn', icon: 'refresh', title: 'Check now', sub: lastLine }),
         S.action({ id: 'rereadBtn', icon: 'mail', title: 'Read the last year again', sub: 'Keeps what you marked done or moved.' }),
         ls.get(K.token + '.ever', '') ? S.danger({ id: 'gOut', icon: 'out', title: 'Disconnect Gmail', sub: 'What School has read stays on this phone.' }) : '',
@@ -517,7 +517,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { localStorage.setItem('aos.away', 'school|' + Date.now()); } catch {}
     window.top.location.replace(u);
   }
+  // Gmail kept signed in through aOS's server (home/account.js AllisonOS.gmail): set up there, a tap signs in with a
+  // code and the hour-long keys come from the server, so this app isn't asked again for 30 days. Not set up: the
+  // sign-in below, as before.
+  const keepG = () => { const G = window.AllisonOS && window.AllisonOS.gmail; return G && G.on() ? G : null; };
+  const renewKept = async () => { const G = keepG(); return !!G && await G.renewInto({ kind: 'read', store: K.token, me: K.me }); };
+  const keptUntil = () => { const t = +ls.get(K.token + '.until', 0); return keepG() && t > Date.now() ? new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
   function signIn(opts = {}) {
+    // kept signed in: no quiet hour-long sign-in on the phone (it would get round the 30 days); a tap signs in with a
+    // code, through aOS's server
+    if (opts.silent && keepG()) return;
+    if (!opts.silent && !opts.legacy && keepG()) {
+      ls.set(K.lastAuth, String(Date.now()));
+      const hint = opts.choose ? '' : ls.get(K.hint, '') || ls.get('mail.hint', '');
+      keepG().start({ kind: 'read', hint }).then(u => (u ? toGoogle(u, false) : signIn(Object.assign({}, opts, { legacy: true }))));
+      return;
+    }
     const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
     ls.set(K.state, nonce); ls.set(K.lastAuth, String(Date.now()));
     const hint = ls.get(K.hint, '') || ls.get('mail.hint', '');
@@ -530,13 +545,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     toGoogle(u.toString(), !!opts.silent);
   }
   function signOut() {
-    const tok = tokenAt(K.token);
+    const tok = tokenAt(K.token), G = keepG();
+    if (G) G.disconnect(ls.get(K.me, ''));   // kept signed in: revoked at Google and forgotten on aOS's server too
+    ls.del(K.token + '.until');
     if (tok) fetch('https://oauth2.googleapis.com/revoke', { method: 'POST', mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', keepalive: true, body: new URLSearchParams({ token: tok.t }) }).catch(() => {});
     [K.token, K.token + '.ever', K.state, K.silent, K.silentFail, K.lastAuth, K.hint, K.me, K.readAs, K.found].forEach(ls.del);
     renderMore(); render();
     toast('Disconnected Gmail. What School read stays.');
   }
   function consumeRedirect() {
+    const kept = /^#gmail=(kept|error)/.exec(location.hash);   // back from the sign-in through aOS's server
+    if (kept) { history.replaceState(null, '', redirectUri() + location.search); ls.del(K.silentFail); return kept[1] === 'kept' ? { ok: true, kept: true } : { error: 'access_denied' }; }
     const raw = location.hash.slice(1);
     if (!raw || !/(^|&)(access_token|error)=/.test(raw)) return null;
     const p = new URLSearchParams(raw);
@@ -595,6 +614,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   let scanErr = '';
   async function scan({ loud, next } = {}) {
     if (st.scanning) return;
+    if (!getToken()) await renewKept();   // kept signed in: an hour-long key from aOS's server, no sign-in
     if (!getToken()) {
       // Check now, tapped: Google's sign-in, where you can see it (a silent try fails quietly when Google wants
       // you to sign in again, and Settings alone said nothing, so the tap looked like it did nothing)
@@ -787,6 +807,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (back && back.ok) setTimeout(() => scan({ loud: true }), 100);
     else if (back && back.error && !back.silent) toast(back.error === 'access_denied' ? 'Gmail wasn’t connected.' : 'Couldn’t connect Gmail. Try again.', null, 6000);
     else if (getToken() && scanDue()) setTimeout(() => scan({ loud: false }), 600);
+    else if (!getToken() && keepG() && scanDue()) setTimeout(() => scan({ loud: false }), 600);   // kept signed in
     else if (!getToken() && mayRenew() && scanDue()) setTimeout(() => signIn({ silent: true }), 800);
     // Opened from Calendar's School layer: ?item=<id> opens that post.
     const q = new URLSearchParams(location.search).get('item');
