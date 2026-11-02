@@ -385,6 +385,39 @@ await test('a post School can’t sort never hides the rest: they’re listed ne
   await ctx.close();
 });
 
+// Inside aOS School may read with Mail's sign-in, but only Mail's for the same Gmail account: another account's inbox
+// has no ParentSquare emails, so School read nothing there and said it had just checked.
+const mailTok = who => ({ 'mail.token': JSON.stringify({ t: 'made-up', exp: NOW.getTime() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.modify' }), 'mail.hint': who });
+await test('Mail signed in to another Gmail account: School doesn’t read that inbox; Check now signs School in again', async () => {
+  const { ctx, page } = await newPage('light', Object.assign(seeded(), { 'school.token.ever': '1', 'school.hint': 'pat@example.com', 'school.me': 'pat@example.com' }, mailTok('work@example.com')));
+  await open(page);
+  const before = google.length;
+  await page.click('#moreBtn'); await page.waitForTimeout(400);
+  assert.match(await page.textContent('#gState'), /Signed out/, 'not signed in as Mail’s account');
+  await page.click('#scanBtn'); await page.waitForTimeout(600);
+  const went = google.slice(before);
+  assert.ok(!went.some(u => u.startsWith('https://gmail.googleapis.com/')), 'nothing read from the other inbox: ' + went.join(' | '));
+  assert.equal(new URL(went.find(u => u.startsWith('https://accounts.google.com/'))).searchParams.get('login_hint'), 'pat@example.com');
+  google.splice(before);
+  // the test's own seeding script, run again on the blocked Google page the sign-in went to, can't reach its storage
+  for (let i = errors.length - 1; i >= 0; i--) if (/sessionStorage.*Access is denied/.test(errors[i])) errors.splice(i, 1);
+  await ctx.close();
+});
+
+await test('Mail signed in to the same Gmail account: School reads with it, and Settings says which account and how much it has', async () => {
+  const { ctx, page } = await newPage('light', Object.assign(seeded(), { 'school.token.ever': '1', 'school.hint': 'pat@example.com', 'school.readAs': 'pat@example.com', 'school.found': JSON.stringify({ n: 12, year: true }) }, mailTok('Pat@example.com')));
+  await open(page);
+  await page.click('#moreBtn'); await page.waitForTimeout(400);
+  assert.equal((await page.textContent('#gState .st-sub')).trim(), 'Reading pat@example.com.');
+  assert.match(await page.textContent('#scanBtn'), /12 school emails in the last year\./);
+  assert.match(await page.textContent('#dataState'), /\d+ posts from \d+ emails\./);
+  const before = google.length;
+  await page.click('#scanBtn'); await page.waitForTimeout(800);
+  assert.ok(google.slice(before).some(u => u.startsWith('https://gmail.googleapis.com/')), 'read Gmail with Mail’s sign-in');
+  google.splice(before);
+  await ctx.close();
+});
+
 await test('both designs, light and dark: Vintage by default, Standard (Sea glass) when picked', async () => {
   for (const scheme of ['light', 'dark']) {
     const V = await newPage(scheme, seeded());
