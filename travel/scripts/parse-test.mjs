@@ -439,4 +439,16 @@ test('a Breeze confirmation: two flights, the airport by its new code, and a cit
   assert.equal(P.cityToCode('West Palm Beach'), 'PBI', 'a city still means the one code it always meant');
 });
 
+test('a flight\'s airline and number tidied: the name to its code, the code out of the number', () => {
+  const t = (c, n, name) => P.tidyFlight(c, n, name);
+  assert.deepEqual(t('FRONTIER', 'F93073'), { code: 'F9', no: '3073' }, 'typed in the edit sheet as the name and the whole number');
+  assert.deepEqual(t('Frontier', 'F9 3073'), { code: 'F9', no: '3073' });
+  assert.deepEqual(t('F9', '3073'), { code: 'F9', no: '3073' }, 'already right: as it was');
+  assert.deepEqual(t('', 'UA 1234'), { code: 'UA', no: '1234' });
+  assert.deepEqual(t('ua', '01234'), { code: 'UA', no: '1234' });
+  assert.deepEqual(t('Some Air', '3073', 'Frontier'), { code: 'F9', no: '3073' }, 'the airline\'s name when the code is not one');
+  assert.deepEqual(t('B6', '6123'), { code: 'B6', no: '6123' }, 'a number starting with digits keeps them');
+  assert.deepEqual(t('Nowhere Air', '3073'), { code: 'Nowhere Air', no: '3073' }, 'what can\'t be made out stays as given');
+});
+
 console.log(n + ' passed');

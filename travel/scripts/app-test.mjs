@@ -175,8 +175,9 @@ for (const scheme of ['light', 'dark']) {
     const asks = await page.evaluate(() => [
       { airlineCode: 'F9', flightNo: '3073', dep: '2026-11-02T16:04' }, { airlineCode: 'F9', flightNo: 'F9 3073', dep: '2026-11-02T16:04' },
       { airlineCode: 'f9', flightNo: '03073', dep: '2026-11-2T16:04' }, { airlineCode: 'F9', flightNo: 'F93073', dep: '11/02/2026 4:04 PM' },
+      { airlineCode: 'FRONTIER', flightNo: 'F93073', dep: '2026-11-02T16:04' },   // the airline's name typed in the edit sheet
     ].map(b => window.__travel.liveAsk({ type: 'flight', ...b })));
-    assert.deepEqual(asks, Array(4).fill({ no: 'F93073', date: '2026-11-02' }), JSON.stringify(asks));
+    assert.deepEqual(asks, Array(5).fill({ no: 'F93073', date: '2026-11-02' }), JSON.stringify(asks));
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trips-' + scheme + '.png') });
 

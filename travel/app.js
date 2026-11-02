@@ -82,7 +82,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
   // Bump QUERY_V whenever the reader (parse.js) or QUERY changes: the next scan then reads the last year again, once, and what the old
   // reader made of those emails is rebuilt (travel/scripts/reader-version-test.mjs fails if parse.js changes and this does not).
-  const QUERY_V = '6';
+  const QUERY_V = '7';
 
   const I = {
     lock: '<svg class="lk" viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
@@ -115,6 +115,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const saved = ls.json(KEY, null);
   let bookings = saved && Array.isArray(saved.bookings) ? saved.bookings : [];
   let trips = saved && Array.isArray(saved.trips) ? saved.trips : [];        // {id (first booking's id), name, updated}
+  // A flight kept with its airline written out ("Frontier", the number "F9 3073"), as the edit sheet once let it be: its
+  // code and number again, so its name, live status and the calendar have them right.
+  for (const b of bookings) if (b && b.type === 'flight' && (b.airlineCode || b.flightNo)) {
+    const t = P.tidyFlight(b.airlineCode, b.flightNo, b.airline);
+    if (/^[A-Z0-9]{2}$/.test(t.code) && (t.code !== b.airlineCode || t.no !== b.flightNo)) { b.airlineCode = t.code; b.flightNo = t.no; b.airline = P.AIRLINES[t.code] || b.airline || ''; }
+  }
   let graves = ls.json(K.graves, {});
   let seen = new Set(ls.json(K.seen, []));
   let live = ls.json(K.live, {});                                            // booking id -> {at, leg, error}
@@ -965,8 +971,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     });
     if (b._day !== undefined) { if (b._day && !startOf(b)) P.applyDate(b, b._day); delete b._day; }
     if (b.type === 'flight') {
-      const code = b.airlineCode;
-      if (/^[A-Z0-9]{2}\d{1,4}$/.test(b.flightNo || '') && !code) { b.airlineCode = b.flightNo.slice(0, 2).toUpperCase(); b.flightNo = b.flightNo.slice(2); }
+      // "Frontier" or "F9 3073" as typed: the code and the number (P.tidyFlight)
+      const t = P.tidyFlight(b.airlineCode, b.flightNo, b.airline);
+      if (/^[A-Z0-9]{2}$/.test(t.code)) { b.airlineCode = t.code; b.flightNo = t.no; }
       b.airline = P.AIRLINES[b.airlineCode] || b.airline || '';
       if (!b.fromName || P.AIRPORTS[b.from]) b.fromName = P.AIRPORTS[b.from] || b.fromName || '';
       if (!b.toName || P.AIRPORTS[b.to]) b.toName = P.AIRPORTS[b.to] || b.toName || '';
@@ -1449,10 +1456,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // (YYYY-MM-DD), tidied, so a number kept with its airline in it ("F9 3073"), a leading zero, spaces or a date written
   // another way still ask rightly.
   function liveAsk(b) {
-    const code = String(b.airlineCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    let num = String(b.flightNo || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (code && num.startsWith(code) && /^\d/.test(num.slice(code.length))) num = num.slice(code.length);
-    num = num.replace(/^0+(?=\d)/, '');
+    const { code, no: num } = P.tidyFlight(b.airlineCode, b.flightNo, b.airline);
     const dep = String(b.dep || ''), pad = n => String(n).padStart(2, '0');
     let m = /(20\d\d)-(\d{1,2})-(\d{1,2})/.exec(dep), date = m ? m[1] + '-' + pad(m[2]) + '-' + pad(m[3]) : '';
     if (!date && (m = /(\d{1,2})\/(\d{1,2})\/(20\d\d)/.exec(dep))) date = m[3] + '-' + pad(m[1]) + '-' + pad(m[2]);
