@@ -10,6 +10,8 @@
 //                 live in clock/design.js (DESIGN.md rule 14), with its own picker of the four looks
 //   order         the sections in the standard order: Design · the app's own · Connected accounts · AI helper ·
 //                 Notifications · Your data · Family account
+//   folds         every labelled section is a dropdown (home/settings.js folds them in the sheet named Settings);
+//                 the dropdowns are then opened, so the rows in them are checked as well
 //   on-off        no "On." or "Off." in the words
 //   one-sentence  a row's line under its name is one sentence, ending with a full stop
 //   switch-css    no private copy of the switch's CSS (the shared one is home/settings.js's .st-sw)
@@ -49,6 +51,7 @@ export const CHECKS = [
   ['done', '✓ Done in the corner'],
   ['design-first', 'Design first'],
   ['order', 'Sections in order'],
+  ['folds', 'Sections are dropdowns'],
   ['on-off', 'Never On./Off.'],
   ['one-sentence', 'One sentence a row'],
   ['switch-css', 'No private switch'],
@@ -58,7 +61,7 @@ export const CHECKS = [
   ['motion', 'Reduce Motion'],
   ['sideways', 'Only up and down'],
 ];
-const SETTINGS_CHECKS = ['shared', 'title', 'gear', 'done', 'design-first', 'order', 'on-off', 'one-sentence'];
+const SETTINGS_CHECKS = ['shared', 'title', 'gear', 'done', 'design-first', 'order', 'folds', 'on-off', 'one-sentence'];
 const NA = { aos: SETTINGS_CHECKS, house: ['switch-css'] };
 // Clock keeps its looks in clock/design.js (DESIGN.md rule 14 names it the one exception to home/design.js), so its
 // Design section draws Clock's own picker rather than aosDesign.picker(): design-first takes that picker there, as
@@ -208,7 +211,7 @@ function pageMain() {
   return { unnamed: unnamed(document.body), upper };
 }
 function pageSheet() {
-  const vis = el => { if (!el.getClientRects().length) return false; const s = getComputedStyle(el); return s.visibility !== 'hidden' && s.display !== 'none'; };
+  const vis = el => { if (!el.getClientRects().length) return false; if (el.closest('details:not([open])') && !el.closest('details:not([open]) > summary')) return false; const s = getComputedStyle(el); return s.visibility !== 'hidden' && s.display !== 'none'; };
   const onScreen = el => { const r = el.getBoundingClientRect(); return vis(el) && r.width > 0 && r.bottom > 40 && r.top < innerHeight - 40; };
   const dlgs = [...document.querySelectorAll('[role="dialog"]')].filter(onScreen).filter(d => !d.closest('#aos-welcome, #aos-signin, .ipsy-bubble'));
   const dlg = dlgs[dlgs.length - 1];
@@ -257,6 +260,7 @@ async function browserChecks(browser, base, id) {
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('aos.seen', JSON.stringify(Object.fromEntries(ids.map(i => [i, '999']))));
     localStorage.setItem('aos.sky', 'day');   // the Vintage sky held still
+    localStorage.setItem('aos.settings.folds', 'closed');   // Settings' dropdowns as a person sees them (closed), not a test's
     for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
   }, [['aos', ...APPS], (OPEN[id] || {}).seed || {}]);
   if ((OPEN[id] || {}).phone) await OPEN[id].phone(ctx);
@@ -280,6 +284,19 @@ async function browserChecks(browser, base, id) {
     else if (typeof o.other === 'function') { if (await o.other(p)) how = 'other'; }
     else if (o.other && await p.locator(o.other).first().count()) { await p.locator(o.other).first().click(); how = 'other'; }
     await p.waitForTimeout(900);
+    // every labelled section a dropdown (rule 4); then every dropdown opened, so the rows in them are checked too
+    const folds = how ? await p.evaluate(() => {
+      const vis = el => el.getClientRects().length > 0;
+      const dlg = [...document.querySelectorAll('[role="dialog"]')].filter(vis).pop(); if (!dlg) return null;
+      const secs = [...dlg.querySelectorAll('.st-sec')].filter(vis).filter(x => x.querySelector(':scope > .st-lbl'));
+      const flat = secs.filter(x => x.tagName !== 'DETAILS').map(x => `"${x.querySelector(':scope > .st-lbl').textContent.trim()}" isn't a dropdown`);
+      dlg.querySelectorAll('details.st-fold').forEach(d => { d.open = true; });
+      return flat;
+    }) : null;
+    await p.waitForTimeout(300);
+    // an app that draws its Settings again as it opens (Weather, Home): opened again, once it has settled
+    if (how) await p.evaluate(() => document.querySelectorAll('[role="dialog"] details.st-fold').forEach(d => { d.open = true; }));
+    await p.waitForTimeout(200);
     const s = how ? await p.evaluate(pageSheet) : null;
     const none = ['Settings didn\'t open'];
     if (!s) { for (const k of SETTINGS_CHECKS) if (!(k === 'gear' && r.gear)) r[k] = how ? none : ['no button labelled Settings']; return r; }
@@ -295,6 +312,7 @@ async function browserChecks(browser, base, id) {
     const ranks = s.labels.map(rank), bad = [];
     for (let i = 1; i < ranks.length; i++) if (ranks[i] < ranks[i - 1]) bad.push(`"${s.labels[i]}" after "${s.labels[i - 1]}"`);
     r.order = !s.labels.length ? ['no shared sections'] : bad;
+    r.folds = !s.labels.length ? ['no shared sections'] : (folds || []);
     const onoff = (s.text.match(/(^|[^\w])(On|Off)\.(\s|$)/g) || []).map(x => x.trim());
     r['on-off'] = onoff.length ? [`says ${[...new Set(onoff)].join(' and ')}`] : [];
     r['one-sentence'] = !s.labels.length ? ['no shared rows'] : s.subs.filter(t => sentences(t) > 1 || !/[.…?!]["”’)]?$/.test(t)).map(t => (sentences(t) > 1 ? 'more than one sentence: ' : 'no full stop: ') + JSON.stringify(t.slice(0, 70)));

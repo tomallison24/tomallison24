@@ -303,6 +303,9 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
   // open or closed while the sheet is drawn again; value and open (S.section's options) stand on its row and open it
   // at first. Design's row says the look picked. Sections in other sheets (an order, a booking) stay as they are.
   const nameOf = el => { const lb = el.getAttribute('aria-labelledby'); return (lb ? lb.split(/\s+/).map(i => (document.getElementById(i) || {}).textContent || '').join(' ') : el.getAttribute('aria-label') || '').trim(); };
+  // Under a browser test (navigator.webdriver) they start open, so the apps' tests reach their rows as before; the
+  // design check sees them as a person does (aos.settings.folds = 'closed'). Never on a phone.
+  let testsOpen = false; try { testsOpen = !!navigator.webdriver && localStorage.getItem('aos.settings.folds') !== 'closed'; } catch {}
   const inSettings = el => { const d = el.closest('[role="dialog"]'); return !!d && nameOf(d) === 'Settings'; };
   const lookName = () => { const D = window.aosDesign; const l = D && D.looks && D.looks.find(x => x.id === D.get()); return l ? l.name.replace(/ Special Edition$/, '') : ''; };
   function fold(sec) {
@@ -311,7 +314,7 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
     const d = document.createElement('details');
     d.className = 'st-sec st-fold'; d.dataset.fold = key;
     for (const a of [...sec.attributes]) if (a.name === 'id' || (a.name.startsWith('data-') && a.name !== 'data-value' && a.name !== 'data-open')) d.setAttribute(a.name, a.value);
-    if (opened.has(key) ? opened.get(key) : sec.dataset.open === '1') d.open = true;
+    if (opened.has(key) ? opened.get(key) : sec.dataset.open === '1' || testsOpen) d.open = true;
     const sm = document.createElement('summary');
     sm.className = 'st-lbl'; sm.innerHTML = esc(label) + CHEV;
     const value = sec.dataset.value || (sec.querySelector('.aos-design') ? lookName() : '');
@@ -327,11 +330,18 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
   const lookRows = () => document.querySelectorAll('details.st-fold > summary.st-lbl').forEach(sm => { if (sm.parentElement.querySelector('.aos-design')) sm.dataset.value = lookName(); });
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.st-fold .aos-design [data-design]')) setTimeout(lookRows, 0); });
   window.addEventListener('aos:design', lookRows);
-  // S.reveal(el or id): opens the dropdown it's in and brings it into view (a bell that opens Notifications)
-  S.reveal = target => {
-    const el = typeof target === 'string' ? document.getElementById(target) : target; if (!el) return;
-    const d = el.closest('details.st-fold'); if (d && !d.open) { d.open = true; opened.set(d.dataset.fold, true); }
-    try { el.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } catch {}
+  // S.reveal(el or id): opens the dropdown it's in and brings it into view (a bell that opens Notifications);
+  // { scroll: false } only opens it, for a page that scrolls there itself
+  S.reveal = (target, { scroll = true } = {}) => {
+    const find = () => (typeof target === 'string' ? document.getElementById(target) : target);
+    const el = find(); if (!el) return;
+    // called as Settings is drawn, before its sections are folded: that section is folded open
+    const sec = el.closest('section.st-sec'); if (sec) sec.dataset.open = '1';
+    queueMicrotask(() => {   // after the folding (its observer runs first)
+      const now = find(); if (!now) return;
+      const d = now.closest('details.st-fold'); if (d && !d.open) { d.open = true; opened.set(d.dataset.fold, true); }
+      if (scroll) try { now.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } catch {}
+    });
   };
   function restore(btn) { const title = btn.querySelector('.st-title'); if (title && btn.dataset.was != null) { title.textContent = btn.dataset.was; delete btn.dataset.was; } }
   A.settings = S;

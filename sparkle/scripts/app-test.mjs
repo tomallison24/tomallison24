@@ -272,7 +272,7 @@ const seedOf = (...ps) => ({ v: 1, players: Object.fromEntries(ps.map(x => [x.id
   if (await p.locator('.sheet h2', { hasText: 'Settings' }).count()) pr.push('a wrong answer opened Settings');
   await p.fill('#gAns', String(+m2[1] * +m2[2])); await p.click('#gOk'); await p.waitForTimeout(300);
   if (!(await p.locator('.sheet h2', { hasText: 'Settings' }).count())) pr.push('the right answer did not open Settings');
-  const labels = await p.locator('.sheet .st-lbl').allInnerTexts();
+  const labels = (await p.locator('.sheet .st-lbl').allInnerTexts()).map(l => l.trim().toUpperCase());   // dropdown rows (home/settings.js), as they were headings
   if (labels.join() !== 'DESIGN,PLAYERS,LEARNING,VOICE AND SOUND,LETTER SOUNDS,FAMILY ACCOUNT') pr.push('Settings\' sections are ' + labels.join());
   await shot(p, '10-parent');
   if (await p.getAttribute('#sBadge', 'role') !== 'switch') pr.push('Play timer on screen is not a switch');

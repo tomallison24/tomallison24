@@ -418,7 +418,7 @@ checked too), and checks:
 | `done` | 3: the ✓ labelled Done, in the head's right corner, 44 × 44 |
 | `design-first` | 4: Design is the first section, with the shared picker |
 | `order` | 4: the sections in the standard order |
-| `folds` | 4: every labelled section is a dropdown, closed when Settings opens unless the app opens it |
+| `folds` | 4: every labelled section in Settings is a dropdown |
 | `on-off` | 6: no "On." or "Off." |
 | `one-sentence` | 6: the line under a row is one sentence with a full stop |
 | `switch-css` | 5: no private copy of the switch's CSS (n/a for Home) |

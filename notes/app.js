@@ -1717,8 +1717,12 @@
   }
   $('remBellBtn').onclick = () => {
     openSettings();
-    const sec = $('stNotify'), body = sec && sec.closest('.sheetbody');
-    if (body) body.scrollTop += sec.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+    // once Settings' sections are dropdowns (home/settings.js folds them as they arrive): its own open, scrolled to
+    requestAnimationFrame(() => {
+      AllisonOS.settings.reveal('stNotify', { scroll: false });
+      const sec = $('stNotify'), body = sec && sec.closest('.sheetbody');
+      if (body) body.scrollTop += sec.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+    });
   };
 
   async function turnPushOn(){
@@ -1863,6 +1867,7 @@
   document.addEventListener('click', e => {
     if (!e.target.closest('[data-open-backup]')) return;
     openSettings();
+    AllisonOS.settings.reveal('bkExport');
   });
   async function exportBackup(){
     const file = new File([JSON.stringify({app:'allison-notes', v:1, kind:'backup', saved:new Date().toISOString(), notes, lists, todos}, null, 2)],

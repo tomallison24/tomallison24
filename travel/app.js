@@ -2189,7 +2189,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.toggle({ id: 'stCalOpt', title: 'Family calendar', sub: calAvail === false ? 'Not available on this copy of the site.' : 'Shares bookings with the Family calendar, both ways.', on: calOn() && calAvail !== false, disabled: calAvail === false }),
         S.info({ id: 'stLive', title: 'Live flight status', sub: liveAvail === true ? 'Working: ' + plural(n, 'lookup') + ' this month, of ' + LOOKUPS_A_MONTH + '.' : liveAvail === false ? 'Not available on this copy of the site.' : 'Checking…' }),
       ])
-      + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
+      + S.section('Connected accounts', gmail, { id: 'stGmail', open: !getToken(), hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
       + S.section('AI helper', [
         S.claude('travel'),
         S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and checks upcoming ones against their newest emails, each time Travel opens, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false || !claudeOn() }),

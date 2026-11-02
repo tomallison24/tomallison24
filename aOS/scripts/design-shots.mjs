@@ -237,12 +237,12 @@ if (want('anatomy')) {
   const p = await phone('travel', { look: 'glass' });
   await settings(p);
   await rows(p, S => S.section('Design', S.info({ title: 'Vintage', sub: 'Mid-century: cream and walnut, mustard, teal and orange.' }))
-    + S.section('Trips', [S.toggle({ title: 'Family calendar', sub: 'Shares bookings with the Family calendar, both ways.', on: true }), S.info({ title: 'Live flight status', sub: 'Working: 3 lookups this month, of 50.' })], { hint: 'One line under a section, at most.' }));
+    + S.section('Trips', [S.toggle({ title: 'Family calendar', sub: 'Shares bookings with the Family calendar, both ways.', on: true }), S.info({ title: 'Live flight status', sub: 'Working: 3 lookups this month, of 50.' })], { hint: 'One line under a section, at most.', value: '3 trips', open: true }));
   const lines = await annotate(p, [
     { sel: '#stLbl', text: 'Sheet title: 17, semibold' },
     { sel: '#setSheet .okbtn', text: 'The way out: the ✓, 44 × 44, in the accent (Vintage, Layers, Tron) or the pastel (Standard)', at: 'right', radius: 22 },
-    { sel: '#stBody .st-lbl', i: 1, text: 'Section label: 12, semibold, capitals, .12em apart, muted' },
-    { sel: '#stBody .st-group', i: 1, text: 'Group: corners 20, a hairline edge, no shadow; 22 between sections', at: 'right', radius: 20 },
+    { sel: '#stBody .st-lbl', i: 1, text: 'Section: a dropdown row, its name 16 semibold, how it stands on the right, a chevron; closed until tapped' },
+    { sel: '#stBody .st-group', i: 1, text: 'Open: its group under it, corners 20, a hairline edge, no shadow', at: 'right', radius: 20 },
     { sel: '#stBody .st-title', i: 1, text: 'Row name: 16, semibold' },
     { sel: '#stBody .st-sub', i: 1, text: 'The line under it: 13, regular, muted; one sentence' },
     { sel: '#stBody .st-row', i: 2, text: (w, h) => 'Row: at least 52 tall (this one ' + h + '), 16 in from the left' },
@@ -276,7 +276,8 @@ if (want('dont-sheet')) {
 // 4. Settings: the standard, in Travel (the example to copy), whole
 if (want('settings')) {
   const items = [];
-  for (const [look, name] of LOOKS.slice(0, 2)) { const p = await phone('travel', { look, h: 1900 }); await settings(p); items.push({ buf: await crop(p, '#setSheet .sheet'), label: name }); await done(p); }
+  // as a person opens it: every section a closed dropdown (a test's start open: aos.settings.folds = closed)
+  for (const [look, name] of LOOKS.slice(0, 2)) { const p = await phone('travel', { look, seed: { 'aos.settings.folds': 'closed' } }); await settings(p); items.push({ buf: await crop(p, '#setSheet .sheet'), label: name }); await done(p); }
   save('settings', await compose(items));
 }
 if (want('design-section')) {

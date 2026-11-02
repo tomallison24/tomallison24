@@ -382,7 +382,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const act = a.dataset.act;
     if (act === 'connect') { signIn(); return; }
     if (act === 'scan') { scan({ loud: true }); return; }
-    if (act === 'child') { renderMore(); openSheet('moreSheet'); return; }
+    if (act === 'child') { renderMore(); openSheet('moreSheet'); AllisonOS.settings.reveal('cName'); return; }
     if (act.startsWith('list:')) { st.q = ''; openList(act.slice(5)); }
   });
 
@@ -422,7 +422,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.action({ id: 'scanBtn', icon: 'refresh', title: 'Check now', sub: 'Last checked ' + ago(+ls.get(K.lastScan, 0)) + '.' }),
         S.action({ id: 'rereadBtn', icon: 'mail', title: 'Read the last year again', sub: 'Keeps what you marked done or moved.' }),
         ls.get(K.token + '.ever', '') ? S.danger({ id: 'gOut', icon: 'out', title: 'Disconnect Gmail', sub: 'What School has read stays on this phone.' }) : '',
-      ] : [S.action({ id: 'gIn', icon: 'mail', title: 'Connect Gmail', sub: 'Reads the school’s ParentSquare emails, read-only.' })])
+      ] : [S.action({ id: 'gIn', icon: 'mail', title: 'Connect Gmail', sub: 'Reads the school’s ParentSquare emails, read-only.' })], { open: !tok })
       + S.section('Your data', [
         S.action({ id: 'exportBtn', icon: 'upload', title: 'Back up everything', sub: 'A file with what School has read and your settings.' }),
         S.action({ id: 'importBtn', icon: 'download', title: 'Import a backup', sub: 'Brings back a School backup.' }),
