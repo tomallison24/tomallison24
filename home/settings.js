@@ -235,7 +235,7 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
         return `<details class="st-sec st-fold" data-fold="${esc(key)}"${id ? ` id="${esc(id)}"` : ''}${isOpen ? ' open' : ''}><summary class="st-lbl"${value ? ` data-value="${esc(value)}"` : ''}>${esc(label)}${CHEV}</summary>`
           + `<div class="st-group">${list}</div>${foot}</details>`;
       }
-      return `<section class="st-sec"${id ? ` id="${esc(id)}"` : ''}>${label ? `<h3 class="st-lbl">${esc(label)}</h3>` : ''}<div class="st-group">${list}</div>` + foot + '</section>';
+      return `<section class="st-sec"${id ? ` id="${esc(id)}"` : ''}${label && value ? ` data-value="${esc(value)}"` : ''}${label && open ? ' data-open="1"' : ''}>${label ? `<h3 class="st-lbl">${esc(label)}</h3>` : ''}<div class="st-group">${list}</div>` + foot + '</section>';
     },
     // on or off
     toggle: o => `<button type="button" class="st-row st-switch" role="switch" aria-checked="${!!o.on}"${o.disabled ? ' disabled' : ''}${attrs(o)}>${text(o)}<span class="st-sw" aria-hidden="true"><i></i></span></button>`,
@@ -297,6 +297,41 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
       btn.dataset.armed = String(setTimeout(() => { delete btn.dataset.armed; restore(btn); }, 4000));
       return false;
     },
+  };
+  // The Settings sheet's sections are dropdowns, in every app (DESIGN.md rule 4): a section put into a sheet named
+  // Settings is folded as it arrives (before it's drawn), its name a row with a chevron, closed until tapped, kept
+  // open or closed while the sheet is drawn again; value and open (S.section's options) stand on its row and open it
+  // at first. Design's row says the look picked. Sections in other sheets (an order, a booking) stay as they are.
+  const nameOf = el => { const lb = el.getAttribute('aria-labelledby'); return (lb ? lb.split(/\s+/).map(i => (document.getElementById(i) || {}).textContent || '').join(' ') : el.getAttribute('aria-label') || '').trim(); };
+  const inSettings = el => { const d = el.closest('[role="dialog"]'); return !!d && nameOf(d) === 'Settings'; };
+  const lookName = () => { const D = window.aosDesign; const l = D && D.looks && D.looks.find(x => x.id === D.get()); return l ? l.name.replace(/ Special Edition$/, '') : ''; };
+  function fold(sec) {
+    const h = sec.querySelector(':scope > h3.st-lbl'); if (!h || !inSettings(sec)) return;
+    const label = h.textContent.trim(), key = sec.id || label;
+    const d = document.createElement('details');
+    d.className = 'st-sec st-fold'; d.dataset.fold = key;
+    for (const a of [...sec.attributes]) if (a.name === 'id' || (a.name.startsWith('data-') && a.name !== 'data-value' && a.name !== 'data-open')) d.setAttribute(a.name, a.value);
+    if (opened.has(key) ? opened.get(key) : sec.dataset.open === '1') d.open = true;
+    const sm = document.createElement('summary');
+    sm.className = 'st-lbl'; sm.innerHTML = esc(label) + CHEV;
+    const value = sec.dataset.value || (sec.querySelector('.aos-design') ? lookName() : '');
+    if (value) sm.dataset.value = value;
+    h.remove(); d.appendChild(sm);
+    while (sec.firstChild) d.appendChild(sec.firstChild);
+    sec.replaceWith(d);
+  }
+  const foldAll = root => { if (root.matches && root.matches('section.st-sec')) fold(root); if (root.querySelectorAll) root.querySelectorAll('section.st-sec').forEach(fold); };
+  new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) foldAll(n); }).observe(document.documentElement, { childList: true, subtree: true });
+  if (document.body) foldAll(document.body);
+  // Design's row follows the look picked
+  const lookRows = () => document.querySelectorAll('details.st-fold > summary.st-lbl').forEach(sm => { if (sm.parentElement.querySelector('.aos-design')) sm.dataset.value = lookName(); });
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.st-fold .aos-design [data-design]')) setTimeout(lookRows, 0); });
+  window.addEventListener('aos:design', lookRows);
+  // S.reveal(el or id): opens the dropdown it's in and brings it into view (a bell that opens Notifications)
+  S.reveal = target => {
+    const el = typeof target === 'string' ? document.getElementById(target) : target; if (!el) return;
+    const d = el.closest('details.st-fold'); if (d && !d.open) { d.open = true; opened.set(d.dataset.fold, true); }
+    try { el.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } catch {}
   };
   function restore(btn) { const title = btn.querySelector('.st-title'); if (title && btn.dataset.was != null) { title.textContent = btn.dataset.was; delete btn.dataset.was; } }
   A.settings = S;

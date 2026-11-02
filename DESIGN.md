@@ -139,12 +139,15 @@ the same kinds of row and the same words.**
     **Notifications** · **Your data** · **Family account**. Notifications live
     here too (Notes' bell opens this section).
   - Rows: the kinds in rule 5. At most one line under a section (`hint`).
-  - A long Settings may fold its sections into dropdowns (`S.section(label, rows, { fold: true, value })`):
-    each one a row with its name, how it stands on the right (2 cards, Not connected) and a chevron,
-    closed until tapped, and kept open or closed while the sheet is drawn again. Fold every section or
-    none, in the same order; open one at first only when it needs the person (`open: true`: signed
-    out, a sign-in to finish). Money does.
-- **Enforced:** CI: `shared`, `title`, `gear`, `design-first`, `order`.
+  - **Every section is a dropdown**, so Settings opens as a short list rather than a long page: a row with
+    the section's name, how it stands on the right (Design says the look: Vintage, Standard) and a chevron,
+    closed until tapped, and kept open or closed while the sheet is drawn again. `home/settings.js` does
+    it to every labelled section in the sheet named Settings, as it arrives (sections in other sheets,
+    an order or a booking, stay open); the app gives a section's word with `S.section(label, rows, { value })`
+    (2 cards, Not connected), and opens one at first only when it needs the person (`open: true`: signed
+    out, a sign-in to finish). Something that sends the person to a row (a bell that opens Notifications)
+    uses `S.reveal(id)`, which opens its dropdown and brings it into view.
+- **Enforced:** CI: `shared`, `title`, `gear`, `design-first`, `order`, `folds`.
 - **Known gaps:** none. Allowed differences: Clock draws its own Design rows,
   as its looks live in `clock/design.js` (the check takes them); Sparkle's
   button, "Settings, for grown-ups", opens on a press and hold behind its
@@ -404,7 +407,8 @@ are line drawings in the accent colour.**
 
 `node aOS/scripts/design-check.mjs` (`--only mail,notes` for some apps,
 `--json out.json` for the results). It opens every app at iPhone size in
-Chromium, offline, opens Settings as a person would, and checks:
+Chromium, offline, opens Settings as a person would (then opens every dropdown, so the rows in them are
+checked too), and checks:
 
 | Check | Rule |
 |---|---|
@@ -414,6 +418,7 @@ Chromium, offline, opens Settings as a person would, and checks:
 | `done` | 3: the ✓ labelled Done, in the head's right corner, 44 × 44 |
 | `design-first` | 4: Design is the first section, with the shared picker |
 | `order` | 4: the sections in the standard order |
+| `folds` | 4: every labelled section is a dropdown, closed when Settings opens unless the app opens it |
 | `on-off` | 6: no "On." or "Off." |
 | `one-sentence` | 6: the line under a row is one sentence with a full stop |
 | `switch-css` | 5: no private copy of the switch's CSS (n/a for Home) |
