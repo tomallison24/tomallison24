@@ -1513,6 +1513,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (lookupsThisMonth() >= LOOKUPS_A_MONTH) return { text: 'Status paused this month', cls: 'info' };
     return { text: 'Checking…', cls: 'info' };
   }
+  // Why there is no status, in words, for the flight's sheet; anything else names its code, so it can be looked into.
+  const liveWhy = e => ({
+    limit: 'The flight data service’s monthly allowance is used up.',
+    'key-refused': 'The flight data service refused the key.',
+    unreachable: 'Couldn’t reach the flight data service.',
+    'bad-request': 'Travel couldn’t ask for this flight: check its flight number and date.',
+    setup: 'Family accounts aren’t set up on the server yet.',
+    'accounts-off': 'Family accounts aren’t set up on the server yet.',
+  }[e] || 'Couldn’t get the status just now (' + String(e).slice(0, 40) + ').');
   function renderLiveBox(loading) {
     const box = $('bkLive'), b = st.booking;
     if (!box || !b) return;
@@ -1524,7 +1533,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (liveAvail === false) h += '<p class="hint" style="margin:0">Live status isn’t set up on this copy of the site.</p>';
     else if (!liveWindow(b)) h += '<p class="hint" style="margin:0">' + (statusFrom(b) > Date.now() && !isPast(b) ? 'Shows from ' + esc(whenShort(statusFrom(b))) + ', 36 hours before take-off.' : 'Shows from 36 hours before take-off.') + '</p>';
     else if (liveNote[b.id] === 'signin' && !v) h += '<p class="hint" style="margin:0">Sign in to see it: tap ↻ to check with Face ID.</p>';
-    else if (x && x.error) h += '<p class="hint" style="margin:0">' + esc({ limit: 'The flight data service’s monthly allowance is used up.', 'key-refused': 'The flight data service refused the key.', unreachable: 'Couldn’t reach the flight data service.' }[x.error] || 'Couldn’t get the status just now.') + '</p>';
+    else if (x && x.error) h += '<p class="hint" style="margin:0">' + esc(liveWhy(x.error)) + '</p>';
     else if (x && !x.found) h += '<p class="hint" style="margin:0">No live data for ' + esc(flightName(b)) + ' on this date yet.</p>';
     else if (v) {
       const d = v.l.departure || {}, a = v.l.arrival || {};
@@ -2660,5 +2669,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, liveWhy, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
 })();

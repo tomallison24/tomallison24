@@ -167,6 +167,9 @@ for (const scheme of ['light', 'dark']) {
     const home = await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.flightNo === '987'); const v = window.__travel.flightState(b); return { text: v && v.text, from: new Date(window.__travel.startT(b) - 36 * 3600e3).getDay() }; });
     assert.match(home.text || '', /^Status from \S+ \d{1,2}:\d\d\s?[AP]M$/, 'the flight home says when its status starts: ' + home.text);
     assert.ok(!lookups.some(l => l.startsWith('UA987')), 'and it is not looked up yet');
+    // a failed check says why on the flight's sheet; an answer it has no words for names its code
+    assert.equal(await page.evaluate(() => window.__travel.liveWhy('limit')), 'The flight data service’s monthly allowance is used up.');
+    assert.equal(await page.evaluate(() => window.__travel.liveWhy('upstream-418')), 'Couldn’t get the status just now (upstream-418).');
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trips-' + scheme + '.png') });
 
