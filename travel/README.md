@@ -29,7 +29,10 @@ with the details filled in.
   Kayak rental cars and National with the trip's places and dates filled in.
 - **A booking**: every detail can be edited (an undated one has a Date field first). A flight shows **live status**
   (on time or delayed, gates, terminals, baggage belt) from 36 hours before
-  take-off until it lands. Links to the email (in Mail, or Gmail on the web),
+  take-off until it lands. The status (On time, Delayed 35 min, Canceled) is also on the trip's card, with
+  the flight number, and on the Next card with when it was checked. Opening Travel, coming back to it or opening
+  a trip checks again a status over 10 minutes old, so it isn't stale; while Travel stays open it checks hourly,
+  then every 10 minutes in the last 6 hours. Links to the email (in Mail, or Gmail on the web),
   a map, the calendar, **Mark as cancelled** and **Delete**.
 - **Explore**: from, to and dates, then one tap to search Google Flights,
   Google Hotels, Marriott, Kayak rental cars or National. Book there; the

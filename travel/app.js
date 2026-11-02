@@ -583,9 +583,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } else {
       h += '<h3' + (next.title ? ' translate="no"' : '') + '>' + esc(titleOf(next)) + '</h3><div class="when">' + esc(fmtDay(startOf(next))) + '</div>';
     }
-    const pill = statusPill(next);
-    if (pill) h += '<div class="meta">' + pill + '</div>';
+    const pill = statusPill(next) || (next.type === 'flight' && inflight.has(next.id) ? '<span class="st info">Checking…</span>' : '');
+    const x = next.type === 'flight' && liveView(next) && live[next.id];
+    const asOf = x ? (inflight.has(next.id) ? 'Checking…' : 'Checked ' + ago(x.at)) : '';
+    if (pill) h += '<div class="meta">' + pill + (asOf ? '<span class="asof">' + esc(asOf) + '</span>' : '') + '</div>';
     return h + '</button>';
+  }
+  // A trip's next flight's live status, for its card: "UA 123 · On time" (from 36 hours before take-off).
+  function tripFlightPill(g) {
+    if (g.past) return '';
+    const f = g.live.filter(b => b.type === 'flight' && liveWindow(b)).sort((a, b) => startT(a) - startT(b))[0];
+    const v = f && liveView(f);
+    if (v) return '<span class="st ' + v.cls + ' fs" translate="no">' + esc(flightName(f) + ' · ' + v.text) + '</span>';
+    return f && inflight.has(f.id) ? '<span class="st info fs" translate="no">' + esc(flightName(f)) + ' · Checking…</span>' : '';
   }
   function tripCard(g, i) {
     const n = t => g.live.filter(b => b.type === t).length;
@@ -596,7 +606,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return '<div class="tripwrap" style="--i:' + i + '"><button class="trip glass' + (g.past ? ' past' : '') + (ai ? ' hasai' : '') + '" type="button" data-trip="' + esc(g.id) + '" style="--i:' + i + '">'
       + '<div class="tt"><h3 translate="no">' + esc(g.name) + '</h3>' + (soon ? '<span class="soon">' + esc(soon) + '</span>' : '') + '</div>'
       + '<div class="dates">' + esc(fmtRange(g.start, g.end)) + '</div>'
-      + '<div class="icons">' + counts + (g.items.every(b => b.only) ? justMePill : '') + (g.check ? '<span class="st warn">' + esc(g.check + ' to check') + '</span>' : '')
+      + '<div class="icons">' + counts + tripFlightPill(g) + (g.items.every(b => b.only) ? justMePill : '') + (g.check ? '<span class="st warn">' + esc(g.check + ' to check') + '</span>' : '')
       + (g.live.length < g.items.length ? '<span class="st bad">' + esc((g.items.length - g.live.length) + ' canceled') + '</span>' : '') + '</div></button>'
       + (ai ? '<button class="chip glass aibtn" type="button" data-ai="' + esc(g.id) + '" aria-label="Have Ipsy check ' + esc(g.name) + '">' + I.spark + 'Have Ipsy check</button>' : '') + '</div>';
   }
@@ -712,7 +722,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     renderTrip();
     openSheet('tripPage');
     $('tpBody').scrollTop = 0;
-    g.items.filter(b => b.type === 'flight').forEach(b => refreshLive(b));
+    g.items.filter(b => b.type === 'flight').forEach(b => refreshLive(b, false, true));
   }
   function renderTrip() {
     const g = tripById(st.trip);
@@ -1289,10 +1299,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return s - Date.now() < 36 * H && Date.now() - e < 4 * H;
   };
   const inflight = new Map();
-  function refreshLive(b, force) {
+  // fresh: Travel just opened (or came back on screen, or a trip opened): what is over 10 minutes old is checked again,
+  // so the status on the cards isn't stale; the timer while it stays open checks hourly until 6 hours out.
+  function refreshLive(b, force, fresh) {
     if (!liveWindow(b) || liveAvail === false) return Promise.resolve();
     const cur = live[b.id];
-    const soon = startT(b) - Date.now() < 6 * H;
+    const soon = fresh || startT(b) - Date.now() < 6 * H;
     if (!force && cur && Date.now() - cur.at < (soon ? 10 : 60) * 6e4) return Promise.resolve();
     if (!force && lookupsThisMonth() >= LOOKUPS_A_MONTH) return Promise.resolve();
     if (inflight.has(b.id)) return inflight.get(b.id);
@@ -1304,6 +1316,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       keepLive(b, data);
     })().finally(() => { inflight.delete(b.id); render(); if (st.booking && st.booking.id === b.id) renderLiveBox(); });
     inflight.set(b.id, p);
+    render();   // "Checking…" on the cards while it asks
     return p;
   }
   // One flight on one day, from travel/api/flight: {ok, found, legs} or {error}. Throws when nothing answers; no server here
@@ -2427,7 +2440,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (Date.now() - lastSyncAt > 30000) sync();
     if (getToken() && scanDue()) scan();
     else ipsyVerify();                // not read just now: still checked against the newest emails (every 20 minutes at most)
-    alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
+    alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b, false, true));
     render();
   });
   // back on screen inside aOS, after another app: a read cut off out of sight goes on (its sign-in renewed if it ran out)
@@ -2454,7 +2467,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Read Gmail on open: always after a sign-in, else if it's been a while.
   if (getToken() && (back && back.ok || scanDue())) setTimeout(() => scan({ loud: !!(back && back.ok) }), 400);
   else if (!getToken() && mayRenew() && Date.now() - +ls.get(K.lastScan, 0) > 6 * H) setTimeout(() => signIn({ silent: true }), 800);
-  alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
+  alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b, false, true));
   if (Date.now() - +ls.get(K.smartAt, 0) > 20 * 6e4) setTimeout(() => smartPass(), 2500);
   else setTimeout(() => ipsyAutoCheck(), 2500);
   if (aiOn()) setTimeout(() => pingLive(true).then(render), 1500);
