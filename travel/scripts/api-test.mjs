@@ -59,6 +59,20 @@ await test('rejects odd flight numbers and dates', async () => {
   for (const q of ['no=UA1234/../x&date=2026-10-16', 'no=UA1234&date=16/10/2026', 'no=&date=2026-10-16', 'no=https://x&date=2026-10-16'])
     assert.equal((await call('flight?' + q)).status, 400, q);
   assert.equal(calls.length, 0);
+  // the answer says what it was asked, so the app can show it
+  assert.deepEqual((await call('flight?no=UA1234&date=16/10/2026')).body, { error: 'bad-request', no: 'UA1234', date: '16/10/2026' });
+  assert.equal(calls.length, 0);
+});
+await test('tidies a flight number written with its airline twice, spaces or a leading zero', async () => {
+  upstream = () => new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
+  // a day each, so none is answered from the cache
+  for (const [q, want, day] of [['F9F93073', 'F93073', '2026-11-02'], ['F9 F9 3073', 'F93073', '2026-11-03'], ['F9-0073', 'F973', '2026-11-04'], ['f9 3073', 'F93073', '2026-11-05']]) {
+    const before = calls.length;
+    const r = await call('flight?' + new URLSearchParams({ no: q, date: day }));
+    assert.equal(r.status, 200, q);
+    assert.ok(calls.length === before + 1 && calls[before].url.includes('/flights/number/' + want + '/' + day), q + ' -> ' + (calls[before] || {}).url);
+  }
+  calls.length = 0;
 });
 await test('asks AeroDataBox for that flight and trims the answer', async () => {
   upstream = () => new Response(JSON.stringify([{

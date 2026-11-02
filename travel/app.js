@@ -1431,12 +1431,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (inflight.has(b.id)) return inflight.get(b.id);
     const p = (async () => {
       let data;
-      try { data = await flightData(b.airlineCode + b.flightNo, b.dep.slice(0, 10), !force); } catch { liveNote[b.id] = 'offline'; return; }
+      const ask = liveAsk(b);
+      try { data = await flightData(ask.no, ask.date, !force); } catch { liveNote[b.id] = 'offline'; return; }
       if (data.error === 'signin') { liveNote[b.id] = 'signin'; return; }   // signed out: what it has stays, until a tap or a sign-in
       if (data.error === 'no-key') return;
       delete liveNote[b.id];
       countLookup();
-      keepLive(b, data);
+      keepLive(b, data, ask);
     })().finally(() => { inflight.delete(b.id); render(); if (st.booking && st.booking.id === b.id) renderLiveBox(); });
     inflight.set(b.id, p);
     render();   // "Checking…" on the cards while it asks
@@ -1444,6 +1445,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // One flight on one day, from travel/api/flight: {ok, found, legs} or {error}. Throws when nothing answers; no server here
   // at all (e.g. GitHub Pages), or no key there, turns live status off. Used by refreshLive, and by Ipsy (ipsy-tools.js).
+  // What to ask the status service for: the airline's 2-character code and the number ("F93073") and the day it leaves
+  // (YYYY-MM-DD), tidied, so a number kept with its airline in it ("F9 3073"), a leading zero, spaces or a date written
+  // another way still ask rightly.
+  function liveAsk(b) {
+    const code = String(b.airlineCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let num = String(b.flightNo || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code && num.startsWith(code) && /^\d/.test(num.slice(code.length))) num = num.slice(code.length);
+    num = num.replace(/^0+(?=\d)/, '');
+    const dep = String(b.dep || ''), pad = n => String(n).padStart(2, '0');
+    let m = /(20\d\d)-(\d{1,2})-(\d{1,2})/.exec(dep), date = m ? m[1] + '-' + pad(m[2]) + '-' + pad(m[3]) : '';
+    if (!date && (m = /(\d{1,2})\/(\d{1,2})\/(20\d\d)/.exec(dep))) date = m[3] + '-' + pad(m[1]) + '-' + pad(m[2]);
+    if (!date) { const t = startT(b); if (!isNaN(t)) { const d = new Date(t); date = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); } }
+    return { no: code + num, date };
+  }
   async function flightData(no, date, quiet) {
     let r, data;
     try {
@@ -1455,8 +1470,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return data;
   }
   // What came back for a booking's flight, kept for the app to show (its leg: the one from or to the booking's airports).
-  function keepLive(b, data) {
-    if (data.error) live[b.id] = { at: Date.now(), error: data.error };
+  function keepLive(b, data, ask) {
+    if (data.error) live[b.id] = { at: Date.now(), error: data.error, asked: ask ? ask.no + ' on ' + ask.date : '' };
     else {
       const legs = (data.legs || []).filter(l => !l.cargo);
       const leg = legs.find(l => l.departure.iata === b.from) || legs.find(l => l.arrival.iata === b.to) || legs[0] || null;
@@ -1514,11 +1529,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return { text: 'Checking…', cls: 'info' };
   }
   // Why there is no status, in words, for the flight's sheet; anything else names its code, so it can be looked into.
-  const liveWhy = e => ({
+  const liveWhy = (e, asked) => ({
     limit: 'The flight data service’s monthly allowance is used up.',
     'key-refused': 'The flight data service refused the key.',
     unreachable: 'Couldn’t reach the flight data service.',
-    'bad-request': 'Travel couldn’t ask for this flight: check its flight number and date.',
+    'bad-request': 'Travel couldn’t ask for ' + (asked || 'this flight') + ': check its flight number and date.',
     setup: 'Family accounts aren’t set up on the server yet.',
     'accounts-off': 'Family accounts aren’t set up on the server yet.',
   }[e] || 'Couldn’t get the status just now (' + String(e).slice(0, 40) + ').');
@@ -1533,7 +1548,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (liveAvail === false) h += '<p class="hint" style="margin:0">Live status isn’t set up on this copy of the site.</p>';
     else if (!liveWindow(b)) h += '<p class="hint" style="margin:0">' + (statusFrom(b) > Date.now() && !isPast(b) ? 'Shows from ' + esc(whenShort(statusFrom(b))) + ', 36 hours before take-off.' : 'Shows from 36 hours before take-off.') + '</p>';
     else if (liveNote[b.id] === 'signin' && !v) h += '<p class="hint" style="margin:0">Sign in to see it: tap ↻ to check with Face ID.</p>';
-    else if (x && x.error) h += '<p class="hint" style="margin:0">' + esc(liveWhy(x.error)) + '</p>';
+    else if (x && x.error) h += '<p class="hint" style="margin:0">' + esc(liveWhy(x.error, x.asked)) + '</p>';
     else if (x && !x.found) h += '<p class="hint" style="margin:0">No live data for ' + esc(flightName(b)) + ' on this date yet.</p>';
     else if (v) {
       const d = v.l.departure || {}, a = v.l.arrival || {};
@@ -2653,7 +2668,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       ...window.TravelIpsy({
         P, get bookings() { return bookings; }, groupTrips, checkList, tripById, autoName, startOf, endOf, isPast, titleOf, fillText, liveView, liveWindow,
         checkField, checkEdit, applyEdits, editText, EDIT_FIELDS, EDIT_NEEDED, EDIT_LABEL, render, openTrip, openBooking,
-        flightData, keepLive, boardData,
+        flightData, liveAsk, keepLive, boardData,
         // the same monthly allowances on this phone as the app's own look-ups
         allowance: { flight: () => LOOKUPS_A_MONTH - lookupsThisMonth(), countFlight: countLookup, board: () => FIND_A_MONTH - aiUse().find, countBoard: () => { const u = aiUse(); u.find++; aiSave(u); } },
         gmail, bodies, header, getToken, hasGmail, AuthError,
@@ -2669,5 +2684,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, liveWhy, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, liveWhy, liveAsk, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
 })();

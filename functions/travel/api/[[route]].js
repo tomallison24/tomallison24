@@ -109,9 +109,10 @@ export async function onRequestGet({ request, params, env, waitUntil }) {
   if (route !== 'flight') return reply({ error: 'not-found' }, 404);
   if (!key) return reply({ error: 'no-key' }, 503);
 
-  const no = String(q.get('no') || '').toUpperCase().replace(/\s+/g, '');
-  const date = String(q.get('date') || '');
-  if (!/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(no) || !/^20\d\d-\d\d-\d\d$/.test(date)) return reply({ error: 'bad-request' }, 400);
+  // the airline's code and the number ("F93073"), tidied: no spaces or dashes, the code once ("F9F93073"), no leading zero
+  const no = String(q.get('no') || '').toUpperCase().replace(/[\s-]+/g, '').replace(/^([A-Z0-9]{2})\1(?=\d)/, '$1').replace(/^([A-Z0-9]{2})0+(?=\d)/, '$1');
+  const date = String(q.get('date') || '').trim();
+  if (!/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(no) || !/^20\d\d-\d\d-\d\d$/.test(date)) return reply({ error: 'bad-request', no: no.slice(0, 12), date: date.slice(0, 12) }, 400);
 
   const cache = caches.default;
   const cacheKey = new Request('https://travel-status.cache/' + no + '/' + date);
