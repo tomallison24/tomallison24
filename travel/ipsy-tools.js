@@ -251,7 +251,7 @@ window.TravelIpsy = function (app) {
         b = byId(q.booking_id); if (!b) fail('No booking with id ' + q.booking_id + '.');
         if (b.type !== 'flight') fail('That booking isn’t a flight.');
         if (!b.airlineCode || !b.flightNo) fail('This flight has no flight number in the app yet. Find it (find_flight, or the web), then ask with flight and date.');
-        no = b.airlineCode + b.flightNo; date = String(b.dep || '').slice(0, 10);
+        ({ no, date } = app.liveAsk ? app.liveAsk(b) : { no: b.airlineCode + b.flightNo, date: String(b.dep || '').slice(0, 10) });
         if (!ymd(date)) fail('This flight has no date in the app yet. Ask with flight and date.');
       } else { no = clip(q.flight, 12).toUpperCase().replace(/[\s-]+/g, ''); date = q.date; }
       if (!FLIGHT.test(no)) fail('Give the flight as the airline’s 2-character code and the number, like UA1234.');

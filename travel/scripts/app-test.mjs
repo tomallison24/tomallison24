@@ -170,6 +170,13 @@ for (const scheme of ['light', 'dark']) {
     // a failed check says why on the flight's sheet; an answer it has no words for names its code
     assert.equal(await page.evaluate(() => window.__travel.liveWhy('limit')), 'The flight data service’s monthly allowance is used up.');
     assert.equal(await page.evaluate(() => window.__travel.liveWhy('upstream-418')), 'Couldn’t get the status just now (upstream-418).');
+    assert.equal(await page.evaluate(() => window.__travel.liveWhy('bad-request', 'F9F93073 on 2026-11-02')), 'Travel couldn’t ask for F9F93073 on 2026-11-02: check its flight number and date.');
+    // what it asks for, tidied: the airline once, no spaces or leading zero, the day as YYYY-MM-DD
+    const asks = await page.evaluate(() => [
+      { airlineCode: 'F9', flightNo: '3073', dep: '2026-11-02T16:04' }, { airlineCode: 'F9', flightNo: 'F9 3073', dep: '2026-11-02T16:04' },
+      { airlineCode: 'f9', flightNo: '03073', dep: '2026-11-2T16:04' }, { airlineCode: 'F9', flightNo: 'F93073', dep: '11/02/2026 4:04 PM' },
+    ].map(b => window.__travel.liveAsk({ type: 'flight', ...b })));
+    assert.deepEqual(asks, Array(4).fill({ no: 'F93073', date: '2026-11-02' }), JSON.stringify(asks));
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trips-' + scheme + '.png') });
 
