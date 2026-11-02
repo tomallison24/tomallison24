@@ -125,8 +125,9 @@ await upcoming();
 ok('bell in the Reminders header, no dot while off', await page.isVisible('#remBellBtn') && await page.isHidden('#remBellDot'));
 ok('reminder rows show the clock while notifications are off', await page.locator('.todo').first().locator('.tchip.bare svg circle').count() === 1);
 await page.click('#remBellBtn');
-ok('the bell opens Settings at its Notifications section', await page.isVisible('#backupSheet') && await page.evaluate(() => { const s = document.getElementById('stNotify'), b = s.closest('.sheetbody'); const at = s.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop;   // scrolled to it, or as far as the sheet goes
-  return s.querySelector('.st-lbl').textContent === 'Notifications' && b.scrollTop > 0 && b.scrollTop >= Math.min(at - 40, b.scrollHeight - b.clientHeight) - 1; }));
+// the bell scrolls Settings to the section on the next frame (notes/app.js, remBellBtn): waited for, not read at once
+ok('the bell opens Settings at its Notifications section', await page.isVisible('#backupSheet') && await page.waitForFunction(() => { const s = document.getElementById('stNotify'), b = s && s.closest('.sheetbody'); if (!b) return false; const at = s.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop;   // scrolled to it, or as far as the sheet goes
+  return s.querySelector('.st-lbl').textContent === 'Notifications' && b.scrollTop > 0 && b.scrollTop >= Math.min(at - 40, b.scrollHeight - b.clientHeight) - 1; }, null, { timeout: 3000 }).then(() => true, () => false));
 ok('there is no separate notifications sheet', await page.$('#pushSheet') === null);
 ok('the section says what it does in a line, and asks for the server address', (await page.textContent('#puSw .st-sub')) === 'Alerts this phone when a reminder or nudge is due.' && await page.getAttribute('#puSw', 'aria-checked') === 'false' && await page.isVisible('#puServer'));
 await page.fill('#puServer', '');

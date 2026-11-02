@@ -921,6 +921,13 @@ await step('airport parking: the pass for the day you fly, its QR code full scre
   assert.ok(sheet.d > 500, 'the code is drawn'); assert.ok(sheet.w >= 300, 'big enough for a scanner: ' + sheet.w);
   assert.match(sheet.text, /AB1CD/); assert.match(sheet.text, /TEST123/); assert.match(sheet.text, /UA 1234 · RDU → BOS/, 'the flight it goes with');
   await page.click('#qrDone'); assert.equal(await page.$('#qrSheet'), null, 'Done closes it');
+  // the pass has a tick too: done with parking, the pass and its card come off the Next cards; Undo brings them back
+  const qrTick = await page.$eval('.qrslot .herodone', el => { const r = el.getBoundingClientRect(), q = el.parentElement.querySelector('.qrbtn').getBoundingClientRect(); return { w: r.width, h: r.height, inside: r.top >= q.top - 1 && r.bottom <= q.bottom + 1 && r.right <= q.right + 1 }; });
+  assert.ok(qrTick.w >= 44 && qrTick.h >= 44 && qrTick.inside, 'a full-size tick on the pass: ' + JSON.stringify(qrTick));
+  await page.click('.qrslot .herodone'); await page.waitForTimeout(300);
+  assert.equal(await page.$('.qrbtn[data-qr]'), null, 'the pass is off the Next cards');
+  assert.ok(!(await page.$$eval('#heroStages [data-stage]', bs => bs.map(b => b.dataset.id))).includes(parks[0].id), 'and its card');
+  await page.click('#toastAct'); await page.waitForSelector('.qrbtn[data-qr]');
   // the flight's own page has the same pass, not the one for the trip in 40 days
   const flight = await page.evaluate(() => window.__travel.bookings.find(b => b.type === 'flight').id);
   await page.evaluate(id => document.querySelector('[data-trip]').click(), flight);
