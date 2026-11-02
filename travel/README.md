@@ -10,7 +10,8 @@ with the details filled in.
   where you're going (tap the name to change it). **Next** at the top is the
   next thing to happen: the flight with its gate and live status, the hotel
   check-in or the car pick-up. Swipe it (or tap a stage under it: Parking, Flight, Car, Hotel) for the trip's
-  other stages still to come, a card each in the order they happen. **Upcoming**, **Past**, and **To check** for
+  other stages still to come, a card each in the order they happen; a card's tick takes a stage you're done with off
+  the carousel (on this phone; it stays on its trip, and Undo brings it back). **Upcoming**, **Past**, and **To check** for
   bookings that need a look (below): an email with no date in it, something
   read from the words of an email, or something filled in by the calendar, the
   flight board or the AI. Only what is still to come is listed there; a

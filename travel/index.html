@@ -521,8 +521,14 @@ svg.fs{fill:currentColor}
 .herotrack{display:grid;grid-auto-flow:column;grid-auto-columns:calc(100% - 56px);gap:10px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
   scroll-snap-type:x mandatory;scroll-padding:0 14px;padding:4px 14px 8px;scrollbar-width:none}
 .herotrack::-webkit-scrollbar{display:none}
-.herotrack > .hero{scroll-snap-align:start;height:100%;display:flex;flex-direction:column;justify-content:flex-start}   /* as tall as the tallest, its words from the top */
-.herotrack > .hero > .k{align-self:flex-start}
+.herotrack > .heroslot{scroll-snap-align:start;display:flex}
+.herotrack > .heroslot > .hero{height:auto;display:flex;flex-direction:column;justify-content:flex-start}   /* as tall as the tallest, its words from the top */
+.herotrack > .heroslot > .hero > .k{align-self:flex-start}
+/* a Next card's tick (app.js, heroTick): done with that stage, off the carousel; 44px to tap, a 30px ring to see */
+.heroslot{position:relative}
+.herodone{position:absolute;top:6px;right:6px;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;color:var(--muted);transition:transform .18s var(--ease),color .2s}
+.herodone svg{width:30px;height:30px;padding:6px;box-sizing:border-box;border-radius:50%;box-shadow:inset 0 0 0 1.5px currentColor;background:var(--pill)}
+.herodone:active{transform:scale(.9);color:var(--text)}
 .stagebar{margin:0;padding:0 14px 4px}
 @media (prefers-reduced-motion:reduce){.herotrack{scroll-behavior:auto}}
 /* a parking pass (app.js, qrButton, showQr): under the Next card and in a booking, and its QR code full screen,
