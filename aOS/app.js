@@ -18,11 +18,11 @@
   // every app's own colour, the same in Vintage, Sea glass and Layers: a shade of its room's (Family warm clay to amber, Every
   // day blues, Out and about greens, You rose, Kids violet; School keeps its brick red), as its icon is drawn: a pale tint of it with the drawing in a
   // deep shade of it (each app's icon.svg; aOS/index.html, --ink-<app>, for Layers' grid). Neighbours on Home differ clearly.
-  const ROOM_HUE = { calendar: '176,102,84', meals: '238,140,60', notes: '234,220,150', house: '240,182,72', orders: '122,71,2', weather: '100,195,226', news: '69,93,118', mail: '66,105,182', clock: '52,61,114', podcasts: '128,149,214', travel: '18,147,144', places: '117,181,103', fitness: '210,96,136', drinks: '220,162,174', money: '116,47,72', sparkle: '153,112,213', school: '196,72,56' };
-  const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33', money: '120,58,54', school: '200,58,44' };   // and in Tron
+  const ROOM_HUE = { calendar: '176,102,84', meals: '238,140,60', notes: '234,220,150', house: '240,182,72', orders: '122,71,2', weather: '100,195,226', news: '69,93,118', mail: '66,105,182', clock: '52,61,114', podcasts: '128,149,214', travel: '18,147,144', places: '117,181,103', fitness: '210,96,136', drinks: '220,162,174', money: '116,47,72', sparkle: '153,112,213', school: '196,72,56', improve: '178,104,166' };
+  const GRID_HUE = { notes: '77,81,86', podcasts: '164,50,60', places: '206,51,54', meals: '151,13,19', news: '112,127,146', fitness: '41,45,51', travel: '41,45,51', drinks: '112,127,146', weather: '112,127,146', calendar: '91,108,129', mail: '151,56,53', house: '251,96,73', orders: '228,31,36', sparkle: '220,27,33', money: '120,58,54', school: '200,58,44', improve: '164,50,60' };   // and in Tron
   const HUE = new Proxy(ROOM_HUE, { get: (o, id) => (lookNow() === 'grid' && GRID_HUE[id]) || o[id] });
-  const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games', money: 'Finance', school: 'Education' };
-  const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals', 'money'];
+  const CAT = { clock: 'Utilities', mail: 'Productivity', calendar: 'Productivity', news: 'News', weather: 'Weather', notes: 'Productivity', podcasts: 'Entertainment', travel: 'Travel', places: 'Travel', orders: 'Shopping', fitness: 'Health & Fitness', drinks: 'Health & Fitness', meals: 'Food & Drink', house: 'Lifestyle', sparkle: 'Games', money: 'Finance', school: 'Education', improve: 'Productivity' };
+  const SHARED = ['calendar', 'travel', 'notes', 'places', 'meals', 'money', 'improve'];
   const group = id => D.CORE.includes(id) ? 'Core apps' : 'Allison family apps';
   // what each app needs from a new person today: ok = nothing to do, once = a one-time step
   const NEEDS = {
@@ -40,6 +40,7 @@
     drinks: [['ok', 'Your family account (Face ID)']],
     meals: [['ok', 'Your family account (Face ID)']],
     money: [['once', 'Your Google account, on the phone that gets Monarch\'s emails'], ['ok', 'Your family account (Face ID), to see it once it\'s shared with you']],
+    improve: [['ok', 'Your family account (Face ID), to share the list with the family']],
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
     school: [['once', 'Your Google account, on the phone that gets the school\'s emails'], ['ok', 'Your family account (Face ID), to show school dates in Calendar']],
     sparkle: [['ok', 'Nothing for the children'], ['once', 'A grown-up signs in with Face ID, to keep progress on every phone (optional)']],
@@ -831,7 +832,7 @@
   }
   // ---- the family's Google Sheets (functions/sheet/api; aOS/SHEETS.md) ----
   // Each app's Apps Script link and secret phrase, kept by aOS, so the phones don't hold them.
-  const SHEET_APPS = [['fitness', 'Fitness'], ['drinks', 'Drinks'], ['notes', 'Notes and Places'], ['travel', 'Travel'], ['orders', 'Orders'], ['meals', 'Meals'], ['podcasts', 'Podcasts']];
+  const SHEET_APPS = [['fitness', 'Fitness'], ['drinks', 'Drinks'], ['notes', 'Notes and Places'], ['travel', 'Travel'], ['orders', 'Orders'], ['meals', 'Meals'], ['podcasts', 'Podcasts'], ['improve', 'Improve']];
   const SHEET_WHY = { 'wrong-secret': 'That phrase doesn\'t match the script\'s SECRET.', 'short-secret': 'Use a phrase of at least 16 characters (the script\'s SECRET: a long random one is best).', 'old-script': 'That Sheet is still on the old script: paste the new one in and deploy a new version.',
     'wrong-app': 'That link is another app\'s Sheet.', url: 'Use the web app link: https://script.google.com/…/exec.', secret: 'Enter the secret phrase.', 'not-json': 'That link didn\'t answer like a Sheet script.', 'sheet-unreachable': 'Couldn\'t reach the Sheet.' };
   const sheetCall = async (path, body) => {

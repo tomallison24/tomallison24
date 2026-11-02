@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Improve</title>
+<meta name="description" content="Jot down feedback, bugs and ideas about the aOS apps as they come to you, in one list the family shares, so they can be worked through in one go.">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1213" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- design.js sets it for the design: black-translucent in Standard; default in Vintage, where black-translucent's white clock would vanish on the cream -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Improve">
+<meta name="referrer" content="no-referrer">
+<link rel="apple-touch-icon" href="icon-180.png?v=1">
+<link rel="icon" type="image/png" href="icon-512.png?v=1">
+<link rel="manifest" href="manifest.webmanifest">
+<!--
+  Improve - one list for feedback about the aOS apps: a box at the top to jot
+  down a bug, an improvement or an idea (with which app it's about), and the
+  list under it, Open or Done. Tap an item to change it, mark it done or
+  delete it. The point: dump things in as they come to you, then work through
+  them in one go ("work through Improve": Claude reads the family's Sheet).
+
+  Data: on this phone (localStorage allison-improve-v1) and, signed in, in the
+  family's Google Sheet, where everyone in the family sees every item, each
+  marked with whose it is (through aOS, ../home/sheet.js; aOS/SHEETS.md; the
+  owner sets it up in aOS > Account > Google Sheets, so Improve has no Sheet
+  settings). Code: app.js.
+  Four designs, picked in Settings > Design (../home/design.js): Vintage (the
+  default: the <style id="vintage"> block), Standard (Sea glass: that block
+  switched off), and Layers and Tron, made from Vintage by make-looks.mjs.
+-->
+<style>
+:root{
+  --bg:#EEF2F0; --text:#111114; --muted:rgba(60,60,67,.80); --faint:rgba(60,60,67,.76);
+  --accent:#3B7366; --on-accent:#FFFFFF; --cta:linear-gradient(100deg,#6FA597 0%,#8193BC 34%,#BE918F 67%,#BC9C68 100%); --cta-ink:#10181A; --accent-text:#3B7366; --danger:#E5281D; --danger-text:#AE2117; --flag:#B45309;
+  --glass:rgba(255,255,255,.58); --glass-2:rgba(255,255,255,.86); --sheet:rgba(248,250,249,.90);
+  --gb-edge:rgba(255,255,255,.95); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 60%);
+  --hair:rgba(60,60,67,.14); --hair-2:rgba(60,60,67,.09); --fill:rgba(118,118,128,.11);
+  --hi:rgba(255,255,255,.8); --lift:rgba(40,40,80,.08); --lift-strong:rgba(40,40,80,.16);
+  --scrim:rgba(0,0,0,.22); --grab:rgba(60,60,67,.30); --aurora:.40; --tint-mix:16%;
+  --blur:blur(30px) saturate(180%); --ease:cubic-bezier(.22,1,.36,1);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  --icon:#3B7366;
+  --bar-top:rgba(255,255,255,.16); --bar-bottom:rgba(255,255,255,.05); --bar-rim:rgba(255,255,255,.85); --bar-solid:rgba(247,249,248,.97);
+  --seg-thumb:rgba(255,255,255,.92);
+  --lg-bg:linear-gradient(180deg,var(--bar-top),var(--bar-bottom)); --lg-filter:blur(14px) saturate(190%) brightness(1.04);
+  --lg-rim:inset 0 0 0 1px var(--bar-rim),inset 0 1px 1px var(--hi);
+  /* Cards: very faint tiles, the same in every AllisonOS app */
+  --tile:rgba(255,255,255,.40); --tile-edge:rgba(60,60,67,.10);
+  /* the three kinds: a word on a tint of its colour (never colour alone) */
+  --k-bug:#AE2117; --k-imp:#3B7366; --k-idea:#9A4A06;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-text:#A9D3C7; --danger:#FF453A; --danger-text:#FF453A; --flag:#FF9F0A;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80);
+  --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
+  --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07);
+  --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --aurora:.72; --tint-mix:42%;
+  --icon:#A9D3C7;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
+  --seg-thumb:rgba(255,255,255,.14);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
+  --k-bug:#FF7B72; --k-imp:#A9D3C7; --k-idea:#FFB547;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D1213; --text:#FFFFFF; --muted:rgba(235,235,245,.62); --faint:rgba(235,235,245,.55);
+  --accent:#A9D3C7; --on-accent:#10181A; --cta:linear-gradient(100deg,#A9D3C7 0%,#B9C6E0 34%,#E3C5C3 67%,#E9D6B4 100%); --accent-text:#A9D3C7; --danger:#FF453A; --danger-text:#FF453A; --flag:#FF9F0A;
+  --glass:rgba(16,22,23,.46); --glass-2:rgba(34,42,43,.72); --sheet:rgba(24,31,32,.80);
+  --gb-edge:rgba(255,255,255,.16); --gb-shine:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 60%);
+  --hair:rgba(255,255,255,.11); --hair-2:rgba(255,255,255,.07); --fill:rgba(255,255,255,.07);
+  --hi:rgba(255,255,255,.10); --lift:rgba(0,0,0,.38); --lift-strong:rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.45); --grab:rgba(255,255,255,.25); --aurora:.72; --tint-mix:42%;
+  --icon:#A9D3C7;
+  --bar-top:rgba(30,38,39,.14); --bar-bottom:rgba(30,38,39,.05); --bar-rim:rgba(255,255,255,.16); --bar-solid:rgba(18,24,25,.96);
+  --seg-thumb:rgba(255,255,255,.14);
+  --tile:rgba(255,255,255,.05); --tile-edge:rgba(255,255,255,.10);
+  --k-bug:#FF7B72; --k-imp:#A9D3C7; --k-idea:#FFB547;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+html,body{overflow-x:clip;max-width:100%}
+@supports not (overflow:clip){html{overflow-x:hidden}}
+html.locked,html.locked body{overflow:hidden}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  -webkit-text-size-adjust:100%;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.b{stroke-width:2.2}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- app shell, and the light behind the glass ---- */
+.app{position:relative;width:100%;max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;overflow-x:clip;background:var(--bg);isolation:isolate}
+.ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.ambient i{position:absolute;display:block;border-radius:50%;filter:blur(58px);opacity:var(--aurora);will-change:transform}
+.ambient i:nth-child(1){width:109.2%;aspect-ratio:1;left:-22.8%;top:-3.2%;background:radial-gradient(circle,#6FA597 0%,rgba(111,165,151,0) 68%);animation:drift1 34s ease-in-out infinite alternate}
+.ambient i:nth-child(2){width:92.4%;aspect-ratio:1;right:-17.2%;top:8%;background:radial-gradient(circle,#BE918F 0%,rgba(190,145,143,0) 68%);animation:drift2 41s ease-in-out infinite alternate}
+.ambient i:nth-child(3){width:120.4%;aspect-ratio:1;right:-20%;bottom:-6%;background:radial-gradient(circle,#8193BC 0%,rgba(129,147,188,0) 68%);animation:drift3 47s ease-in-out infinite alternate}
+.ambient i:nth-child(4){width:86.8%;aspect-ratio:1;left:-17.2%;bottom:13.6%;background:radial-gradient(circle,#BC9C68 0%,rgba(188,156,104,0) 68%);animation:drift4 38s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate3d(14%,10%,0) scale(1.18)}}
+@keyframes drift2{to{transform:translate3d(-12%,16%,0) scale(1.12)}}
+@keyframes drift3{to{transform:translate3d(-16%,-12%,0) scale(1.22)}}
+@keyframes drift4{to{transform:translate3d(18%,-14%,0) scale(1.15)}}
+
+.top{padding:calc(env(safe-area-inset-top,0px) + 12px) max(14px,env(safe-area-inset-right,0px)) 4px max(14px,env(safe-area-inset-left,0px));animation:fadeDown .5s var(--ease) both}
+.titlerow{display:flex;align-items:center;gap:10px;padding:2px 4px 0}
+.title{margin:0;flex:1;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.acts{display:flex;gap:8px;align-items:center}
+
+/* ---- buttons: clear Liquid Glass, as in every AllisonOS app ---- */
+.iconbtn,.btn{background:var(--lg-bg);border:0;-webkit-backdrop-filter:var(--lg-filter);backdrop-filter:var(--lg-filter)}
+.iconbtn{position:relative;width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--icon);box-shadow:var(--lg-rim);transition:transform .18s var(--ease),background .2s,color .2s}
+.iconbtn svg{width:22px;height:22px}
+.iconbtn:active{transform:scale(.9);background:var(--glass-2);color:var(--text)}
+.btn{--tint:var(--accent);position:relative;min-height:44px;padding:8px 18px;border-radius:26px;font-weight:600;font-size:16px;color:var(--accent-text);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 42%,transparent),inset 0 1px 1px var(--hi);transition:transform .18s var(--ease),filter .2s}
+.btn:active{transform:scale(.975);filter:brightness(.9)}
+/* the page's one main button: Add */
+.btn.cta,.okbtn{color:var(--cta-ink);background:var(--cta);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 1px 1px rgba(255,255,255,.5),0 6px 18px color-mix(in srgb,var(--accent) 34%,transparent)}
+.btn.cta:active,.okbtn:active{color:var(--cta-ink);background:var(--cta);filter:brightness(.94)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.iconbtn,.btn{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.iconbtn,.btn{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* ---- content ---- */
+.list{padding:10px 14px calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.rgroup,.empty,.addbox{border-radius:22px;background:var(--tile);box-shadow:inset 0 0 0 .5px var(--tile-edge)}
+.rgroup{overflow:hidden}
+.empty{text-align:center;color:var(--muted);padding:26px 20px;font-size:14px}
+.empty strong{display:block;color:var(--text);font-size:17px;font-weight:600;margin-bottom:4px}
+.enter .rgroup,.enter .empty,.enter .chips{animation:rowIn .52s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
+
+/* the quick-add box: what to say, which kind and which app, and Add */
+.addbox{padding:10px 10px 10px;display:flex;flex-direction:column;gap:8px}
+.addbox textarea{display:block;width:100%;min-height:72px;max-height:40vh;resize:none;border:0;border-radius:14px;padding:10px 12px;font-size:16px;line-height:1.4;color:var(--text);
+  background:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge);outline:none;overflow-y:auto;overflow-x:hidden}
+.addbox textarea::placeholder{color:var(--faint)}
+.addbox textarea:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.addrow{display:flex;align-items:center;gap:8px;min-width:0}
+.addbox > .btn{width:100%}
+.pick{flex:1 1 0;min-width:0;display:flex}
+.pick select{width:100%;min-width:0;height:44px;border:0;border-radius:999px;padding:0 28px 0 13px;font-size:15px;color:var(--text);text-overflow:ellipsis;
+  appearance:none;-webkit-appearance:none;background-color:var(--lgs-field);box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center;background-size:14px}
+
+/* Open / Done: two capsules with the sliding thumb (../home/slide.js), as Travel's Upcoming / Past */
+.chips{display:flex;align-items:center;gap:8px;padding:2px 2px 0}
+.chip{flex:none;display:inline-flex;align-items:center;gap:7px;height:38px;min-width:44px;padding:0 16px;border-radius:999px;
+  font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap;transition:color .25s,background .25s,transform .18s var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip .n{font-size:12px;color:inherit;opacity:.75;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{color:var(--text);font-weight:600;background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent)}
+.slides{position:relative;isolation:isolate}
+.slides > :not(.slthumb){position:relative;z-index:1}
+.slthumb{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:var(--gb-shine),color-mix(in srgb,var(--accent) var(--tint-mix),transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--gb-edge)),inset 0 1px 0 var(--hi),0 3px 10px var(--lift);
+  transition:opacity .25s ease,scale .25s var(--ease)}
+.slthumb.off{opacity:0;scale:.7}
+.chips.slides .chip[aria-pressed="true"]{background:none}
+
+/* an item: what it says, then its kind, its app and when (and whose, if not yours) */
+.irow{display:flex;flex-direction:column;align-items:stretch;gap:6px;width:100%;min-height:56px;text-align:left;padding:12px 16px;border-top:1px solid var(--hair-2);color:var(--text)}
+.irow:first-child{border-top:0}
+.irow:active{background:var(--fill)}
+.itext{font-size:16px;line-height:1.35;overflow-wrap:anywhere;white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;overflow:hidden}
+.irow.done .itext{color:var(--muted)}
+.imeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--faint)}
+.pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  color:var(--kc,var(--muted));background:color-mix(in srgb,var(--kc,var(--muted)) 13%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--kc,var(--muted)) 28%,transparent)}
+[data-k="bug"]{--kc:var(--k-bug)} [data-k="improvement"]{--kc:var(--k-imp)} [data-k="idea"]{--kc:var(--k-idea)}
+.pill.ap{--kc:var(--muted);font-weight:500}
+.imeta .when{font-variant-numeric:tabular-nums}
+
+/* ---- sheets: Liquid Glass, as in Fitness and Drinks ---- */
+:root{--lgs-top:rgba(255,255,255,.68);--lgs-bottom:rgba(255,255,255,.50);--lgs-rim:rgba(255,255,255,.92);--lgs-edge:rgba(255,255,255,.62);
+  --lgs-field:rgba(255,255,255,.62);--lgs-filter:blur(28px) saturate(200%) brightness(1.06);--lgs-scrim:rgba(0,0,0,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}}
+:root[data-theme="dark"]{--lgs-top:rgba(40,50,51,.60);--lgs-bottom:rgba(20,27,28,.52);--lgs-rim:rgba(255,255,255,.20);--lgs-edge:rgba(255,255,255,.12);
+  --lgs-field:rgba(255,255,255,.10);--lgs-filter:blur(28px) saturate(180%) brightness(.92);--lgs-scrim:rgba(0,0,0,.30)}
+.sheetwrap{position:fixed;inset:auto 0 auto 0;top:var(--vvt,0px);height:var(--vvh,100dvh);z-index:10;display:flex;flex-direction:column;justify-content:flex-end}
+.scrim{position:absolute;inset:0;background:var(--lgs-scrim);animation:fadeIn .3s ease both}
+.sheet{position:relative;width:auto;margin:0 8px 8px;border-radius:34px;overflow:hidden;max-height:calc(100% - env(safe-area-inset-top,0px) - 32px);display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1.5px 1px var(--lgs-rim),0 24px 60px var(--lift-strong),0 2px 8px var(--lift);animation:sheetUp .46s var(--ease) both}
+@media (min-width:576px){.sheet{margin:0 auto 8px;width:544px}}
+.grab{width:38px;height:5px;border-radius:99px;background:var(--grab);margin:0 auto;padding:10px 60px 8px;background-clip:content-box;box-sizing:content-box;flex:none;cursor:grab}
+.grab,.sheethead{touch-action:none;-webkit-user-select:none;user-select:none}
+.sheet.dragging{animation:none;transition:none}
+.sheet.settling{transition:transform .28s var(--ease)}
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px 10px}
+.sheethead h2{margin:0;font-size:17px;font-weight:600;padding-left:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheetbody{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:6px 12px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px);mask-image:linear-gradient(180deg,transparent,#000 12px)}
+.sheetbody > *{flex-shrink:0}
+/* the item's words, in its sheet */
+.edtext{display:block;width:100%;min-height:104px;max-height:42vh;resize:none;border:0;background:none;padding:13px 16px;font-size:16px;line-height:1.4;color:var(--text);outline:none;overflow-y:auto;overflow-x:hidden}
+.edtext[readonly]{color:var(--muted)}
+.st-raw:focus-within{box-shadow:inset 0 0 0 2px var(--accent);border-radius:inherit}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sheet{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.sheet{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* toast: the same clear glass as the sheets */
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;width:max-content;max-width:calc(100% - 28px);
+  display:flex;gap:12px;align-items:center;padding:12px 13px 12px 16px;border-radius:16px;font-size:14px;
+  color:var(--text);background:linear-gradient(180deg,var(--lgs-top),var(--lgs-bottom));-webkit-backdrop-filter:var(--lgs-filter);backdrop-filter:var(--lgs-filter);
+  box-shadow:inset 0 0 0 1px var(--lgs-edge),inset 0 1px 1px var(--lgs-rim),0 12px 30px var(--lift-strong);transform:translateX(-50%);animation:toastIn .42s var(--ease) both}
+.toast span{min-width:0}
+.toast button{color:var(--accent-text);font-weight:600;flex:none;min-height:36px;padding:0 6px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.toast{background:var(--bar-solid)}}
+@media (prefers-reduced-transparency:reduce){.toast{background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes rowIn{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
+</style>
+<style id="vintage">
+/* ======================================================================
+   Mid-century modern, in the Retro colours
+   ----------------------------------------------------------------------
+   Improve's look, as in Drinks Vintage: flat, solid shapes instead of glass;
+   a cream ground and cards (walnut in dark mode) with mustard, teal and
+   burnt orange; atomic shapes behind the title that scroll away; Futura
+   (iOS's own, so nothing to download) for every word. Last in the sheet so
+   it wins over the glass above; Settings > Design switches it off for the
+   Standard (Sea glass) design (../home/design.js). Only colours, shapes and
+   type change: every tap and sheet works the same in both.
+   ====================================================================== */
+:root{
+  --mc-card:#FBF5E9; --mc-card-2:#F0E5D0; --mc-edge:rgba(43,37,34,.14); --mc-ink:#2B2522;
+  --mc-mustard:#E3A72F; --mc-teal:#1F6F6B; --mc-orange:#D8572A; --mc-olive:#7E8C34; --mc-walnut:#4A3426; --mc-on-mustard:#2B2522;
+  --bg:#F4ECDD; --text:#2B2522; --muted:#5B4A3F; --faint:#75635A;
+  --accent:#1F6F6B; --on-accent:#FFF8EC; --accent-text:#1F6F6B; --icon:#1F6F6B;
+  --cta:#C9502A; --cta-ink:#FFF8EC;
+  --danger:#B8452B; --danger-text:#9E3A1A; --flag:#B3401C;
+  --glass:#FBF5E9; --glass-2:#F0E5D0; --sheet:#FBF5E9;
+  --gb-edge:rgba(43,37,34,.14); --gb-shine:none;
+  --hair:rgba(43,37,34,.14); --hair-2:rgba(43,37,34,.08); --fill:rgba(43,37,34,.06); --hi:transparent;
+  --lift:rgba(43,37,34,.10); --lift-strong:rgba(43,37,34,.22); --scrim:rgba(43,37,34,.35); --grab:rgba(43,37,34,.28);
+  --tint-mix:14%; --aurora:1; --blur:none;
+  --bar-top:#FBF5E9; --bar-bottom:#FBF5E9; --bar-rim:rgba(43,37,34,.12); --bar-solid:#FBF5E9;
+  --seg-thumb:#E3A72F; --lg-bg:#FBF5E9; --lg-filter:none; --lg-rim:inset 0 0 0 1.5px rgba(43,37,34,.12);
+  --tile:#FBF5E9; --tile-edge:rgba(43,37,34,.05);
+  --lgs-top:#FBF5E9; --lgs-bottom:#FBF5E9; --lgs-rim:transparent; --lgs-edge:rgba(43,37,34,.12);
+  --lgs-field:#F4ECDD; --lgs-filter:none; --lgs-scrim:rgba(43,37,34,.30);
+  --k-bug:#9E3A1A; --k-imp:#1F6F6B; --k-idea:#855700;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --icon:#E3A72F;
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --danger:#E8684A; --danger-text:#F2906E; --flag:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25;
+  --gb-edge:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --seg-thumb:#E3A72F; --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --k-bug:#F2906E; --k-imp:#5CBDB5; --k-idea:#E3A72F;
+}}
+:root[data-theme="dark"]{
+  --mc-card:#322A25; --mc-card-2:#3D332C; --mc-edge:rgba(244,236,221,.14); --mc-ink:#F4ECDD; --mc-teal:#4FB3AB; --mc-olive:#A3B04A;
+  --bg:#241E1A; --text:#F4ECDD; --muted:#CFC1AC; --faint:#A99C86;
+  --accent:#5CBDB5; --on-accent:#1E1916; --accent-text:#5CBDB5; --icon:#E3A72F;
+  --cta:#D8572A; --cta-ink:#FFF8EC;
+  --danger:#E8684A; --danger-text:#F2906E; --flag:#F2906E;
+  --glass:#322A25; --glass-2:#3D332C; --sheet:#322A25;
+  --gb-edge:rgba(244,236,221,.14);
+  --hair:rgba(244,236,221,.14); --hair-2:rgba(244,236,221,.09); --fill:rgba(244,236,221,.07);
+  --lift:rgba(0,0,0,.22); --lift-strong:rgba(0,0,0,.4); --scrim:rgba(12,8,5,.55); --grab:rgba(244,236,221,.28);
+  --tint-mix:30%; --aurora:.9;
+  --bar-top:#322A25; --bar-bottom:#322A25; --bar-rim:rgba(244,236,221,.14); --bar-solid:#2D2621;
+  --seg-thumb:#E3A72F; --lg-bg:#322A25; --lg-rim:inset 0 0 0 1.5px rgba(244,236,221,.14);
+  --tile:#322A25; --tile-edge:rgba(244,236,221,.05);
+  --lgs-top:#322A25; --lgs-bottom:#322A25; --lgs-edge:rgba(244,236,221,.14); --lgs-field:#241E1A; --lgs-scrim:rgba(12,8,5,.5);
+  --k-bug:#F2906E; --k-imp:#5CBDB5; --k-idea:#E3A72F;
+}
+
+body{font-family:"Futura","Futura-Medium","Avenir Next","Jost",system-ui,sans-serif}
+
+/* the atomic shapes behind the title (they scroll away with the page); kept in the first 90px, right of the title, so nothing under it is hard to read */
+.ambient{position:absolute;inset:0 0 auto 0;height:120px;z-index:-1}
+.ambient i,.ambient i:nth-child(n){filter:none;animation:none;opacity:var(--aurora);will-change:auto;aspect-ratio:auto}
+.ambient i:nth-child(1){width:200px;height:200px;left:auto;right:-70px;top:-112px;bottom:auto;background:var(--sky-disc,var(--mc-mustard))}
+.ambient i:nth-child(2){width:44px;height:44px;left:auto;right:96px;top:44px;bottom:auto;background:var(--mc-teal)}
+.ambient i:nth-child(3){width:104px;height:30px;left:auto;right:-26px;top:58px;bottom:auto;border-radius:15px;background:var(--mc-orange);transform:rotate(-18deg)}
+.ambient i:nth-child(4){display:none}
+@media (max-width:359px){.ambient i:nth-child(1){width:150px;height:150px;top:-84px;right:-56px}.ambient i:nth-child(2){width:34px;height:34px;right:62px;top:56px}.ambient i:nth-child(3){right:-40px}}
+
+/* the title: big, tight, with the three little bars under it */
+.title{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.title::after{content:'';display:block;width:62px;height:6px;margin-top:10px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%231F6F6B'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23E3A72F'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23D8572A'/%3E%3C/svg%3E") no-repeat}
+
+/* buttons: flat cream discs, solid orange - no blur anywhere */
+.iconbtn,.btn,.sheet,.toast{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iconbtn{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);color:var(--icon)}
+.iconbtn:active{background:var(--mc-card-2);color:var(--icon)}
+.btn{font-weight:600;letter-spacing:.02em;background:transparent;color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.btn:active{filter:brightness(.92)}
+.btn.cta,.btn.cta:active,.iconbtn.okbtn,.iconbtn.okbtn:active{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+.iconbtn.okbtn:active{filter:brightness(.92)}
+
+/* cream cards */
+.rgroup,.empty,.addbox{background:var(--mc-card);box-shadow:none;border-radius:20px}
+.addbox textarea,.pick select{background-color:var(--lgs-field);box-shadow:inset 0 0 0 1.5px var(--mc-edge)}
+.addbox textarea:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.pick select{font-weight:600;letter-spacing:.02em}
+
+/* Open / Done: cream pills, with a mustard thumb under the chosen one */
+.chip{background:var(--mc-card);box-shadow:inset 0 0 0 1.5px var(--mc-edge);font-weight:600;letter-spacing:.04em}
+.chip[aria-pressed="true"],.chips.slides .chip[aria-pressed="true"]{color:var(--mc-on-mustard);font-weight:600}
+.chip[aria-pressed="true"]{background:var(--mc-mustard)}
+.chips.slides .chip[aria-pressed="true"]{background:none;box-shadow:none}
+.chips > .slthumb{background:var(--mc-mustard);box-shadow:none}
+
+/* the kinds: flat pills in the Retro colours */
+.pill{background:color-mix(in srgb,var(--kc,var(--muted)) 14%,var(--mc-card));box-shadow:none;letter-spacing:.03em}
+.pill.ap{background:var(--fill)}
+
+/* the sheets: cream panels with round corners */
+.sheet{background:var(--mc-card);border-radius:28px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 18px 40px -12px var(--lift-strong)}
+.sheethead h2{font-weight:600;letter-spacing:-.01em}
+.toast{background:var(--mc-card-2);border-radius:18px;box-shadow:inset 0 0 0 1.5px var(--mc-edge),0 12px 26px -10px var(--lift-strong)}
+</style>
+<style id="layers" media="not all">
+/* Layers: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#F9FBFE;--mc-card-2:#E9EBEF;--mc-edge:rgba(19,26,35,.14);--mc-ink:#131A23;--mc-mustard:#D8AB63;--mc-teal:#306E61;--mc-orange:#CF5C59;--mc-olive:#5B82CB;--mc-walnut:#262D36;--mc-on-mustard:#131A23;--bg:#F1F3F6;--text:#131A23;--muted:#3A414A;--faint:#535A62;--accent:#306E61;--on-accent:#FBFDFF;--accent-text:#306E61;--icon:#306E61;--cta:#C05552;--cta-ink:#FBFDFF;--danger:#AF4C49;--danger-text:#973F3D;--flag:#AB4644;--glass:#F9FBFE;--glass-2:#E9EBEF;--sheet:#F9FBFE;--gb-edge:rgba(19,26,35,.14);--hair:rgba(19,26,35,.14);--hair-2:rgba(19,26,35,.08);--fill:rgba(19,26,35,.06);--lift:rgba(19,26,35,.10);--lift-strong:rgba(19,26,35,.22);--scrim:rgba(19,26,35,.35);--grab:rgba(19,26,35,.28);--bar-top:#F9FBFE;--bar-bottom:#F9FBFE;--bar-rim:rgba(19,26,35,.12);--bar-solid:#F9FBFE;--seg-thumb:#D8AB63;--lg-bg:#F9FBFE;--lg-rim:inset 0 0 0 1.5px rgba(19,26,35,.12);--tile:#F9FBFE;--tile-edge:rgba(19,26,35,.05);--lgs-top:#F9FBFE;--lgs-bottom:#F9FBFE;--lgs-edge:rgba(19,26,35,.12);--lgs-field:#F1F3F6;--lgs-scrim:rgba(19,26,35,.30);--k-bug:#973F3D;--k-imp:#306E61;--k-idea:#7A5C2C}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){--mc-card:#191F26;--mc-card-2:#20262D;--mc-edge:rgba(235,239,243,.14);--mc-ink:#EBEFF3;--mc-teal:#6ABBA9;--mc-olive:#96BAFA;--bg:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-text:#76C5B3;--icon:#DEB164;--cta:#D96662;--cta-ink:#F7FAFE;--danger:#E87772;--danger-text:#F59B95;--flag:#F59B95;--glass:#191F26;--glass-2:#20262D;--sheet:#191F26;--gb-edge:rgba(235,239,243,.14);--hair:rgba(235,239,243,.14);--hair-2:rgba(235,239,243,.09);--fill:rgba(235,239,243,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(1,2,6,.55);--grab:rgba(235,239,243,.28);--bar-top:#191F26;--bar-bottom:#191F26;--bar-rim:rgba(235,239,243,.14);--bar-solid:#151B22;--seg-thumb:#DEB164;--lg-bg:#191F26;--lg-rim:inset 0 0 0 1.5px rgba(235,239,243,.14);--tile:#191F26;--tile-edge:rgba(235,239,243,.05);--lgs-top:#191F26;--lgs-bottom:#191F26;--lgs-edge:rgba(235,239,243,.14);--lgs-field:#0D1219;--lgs-scrim:rgba(1,2,6,.5);--k-bug:#F59B95;--k-imp:#76C5B3;--k-idea:#DEB164}
+}
+:root[data-theme="dark"]{--mc-card:#191F26;--mc-card-2:#20262D;--mc-edge:rgba(235,239,243,.14);--mc-ink:#EBEFF3;--mc-teal:#6ABBA9;--mc-olive:#96BAFA;--bg:#0D1219;--text:#EBEFF3;--muted:#C2C7CD;--faint:#9EA3AA;--accent:#76C5B3;--on-accent:#090F15;--accent-text:#76C5B3;--icon:#DEB164;--cta:#D96662;--cta-ink:#F7FAFE;--danger:#E87772;--danger-text:#F59B95;--flag:#F59B95;--glass:#191F26;--glass-2:#20262D;--sheet:#191F26;--gb-edge:rgba(235,239,243,.14);--hair:rgba(235,239,243,.14);--hair-2:rgba(235,239,243,.09);--fill:rgba(235,239,243,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(1,2,6,.55);--grab:rgba(235,239,243,.28);--bar-top:#191F26;--bar-bottom:#191F26;--bar-rim:rgba(235,239,243,.14);--bar-solid:#151B22;--seg-thumb:#DEB164;--lg-bg:#191F26;--lg-rim:inset 0 0 0 1.5px rgba(235,239,243,.14);--tile:#191F26;--tile-edge:rgba(235,239,243,.05);--lgs-top:#191F26;--lgs-bottom:#191F26;--lgs-edge:rgba(235,239,243,.14);--lgs-field:#0D1219;--lgs-scrim:rgba(1,2,6,.5);--k-bug:#F59B95;--k-imp:#76C5B3;--k-idea:#DEB164}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif}
+.title::after{background:none}
+/* Layers: a still sky behind the page, its colours by the time of day (data-tod, set by home/design.js when the
+   page opens and when you come back; it never animates), clear behind the title and frosted from there down, as a
+   dock of glass over it. Vintage's disc, dot and pill go: the sky is the one shape. System type, bold headings. */
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;font-style:normal;font-weight:700;letter-spacing:-.02em}
+:root{--ly-band:calc(env(safe-area-inset-top) + 150px);--ly-veil:rgba(244,246,249,.82);--ly-lift:0 1px 2px rgba(16,24,40,.08),0 10px 22px -12px rgba(16,24,40,.4);--ly-plate:linear-gradient(150deg,#B9DCD2 0%,#C6D1E7 40%,#EAD0CE 75%,#EEDFC4 100%);--ly-g1:rgba(150,200,186,.6);--ly-g2:rgba(226,182,178,.5);--ly-top:#B9DCD2}
+:root[data-tod="morning"]{--ly-plate:linear-gradient(160deg,#F4DCCB 0%,#F0E0C4 45%,#CFD8EC 100%);--ly-g1:rgba(236,196,160,.55);--ly-g2:rgba(170,188,226,.5);--ly-top:#F4DCCB}
+:root[data-tod="evening"]{--ly-plate:linear-gradient(160deg,#EDCDC9 0%,#DCCCE5 50%,#CFD5EE 100%);--ly-g1:rgba(222,176,172,.55);--ly-g2:rgba(184,170,220,.5);--ly-top:#EDCDC9}
+:root[data-tod="night"]{--ly-plate:linear-gradient(160deg,#D2D7EE 0%,#CFCFEC 55%,#DCD0E3 100%);--ly-g1:rgba(150,160,210,.5);--ly-g2:rgba(190,160,200,.42);--ly-top:#D2D7EE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ly-veil:rgba(16,20,26,.78);--ly-lift:0 1px 2px rgba(0,0,0,.3),0 10px 22px -12px rgba(0,0,0,.7);--ly-plate:linear-gradient(150deg,#1F3B35 0%,#252F48 40%,#3F2D2C 75%,#3C3424 100%);--ly-g1:rgba(46,90,80,.8);--ly-g2:rgba(90,60,58,.7);--ly-top:#1F3B35}}
+:root[data-theme="dark"]{--ly-veil:rgba(16,20,26,.78);--ly-lift:0 1px 2px rgba(0,0,0,.3),0 10px 22px -12px rgba(0,0,0,.7);--ly-plate:linear-gradient(150deg,#1F3B35 0%,#252F48 40%,#3F2D2C 75%,#3C3424 100%);--ly-g1:rgba(46,90,80,.8);--ly-g2:rgba(90,60,58,.7);--ly-top:#1F3B35}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-tod="morning"]{--ly-plate:linear-gradient(160deg,#42302A 0%,#3B3424 45%,#263049 100%);--ly-g1:rgba(90,74,48,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#42302A}}
+:root[data-theme="dark"][data-tod="morning"]{--ly-plate:linear-gradient(160deg,#42302A 0%,#3B3424 45%,#263049 100%);--ly-g1:rgba(90,74,48,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#42302A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-tod="evening"]{--ly-plate:linear-gradient(160deg,#3F2B2E 0%,#33294A 50%,#222C4A 100%);--ly-g1:rgba(74,48,96,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#3F2B2E}}
+:root[data-theme="dark"][data-tod="evening"]{--ly-plate:linear-gradient(160deg,#3F2B2E 0%,#33294A 50%,#222C4A 100%);--ly-g1:rgba(74,48,96,.8);--ly-g2:rgba(42,58,102,.7);--ly-top:#3F2B2E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-tod="night"]{--ly-plate:linear-gradient(160deg,#0F1426 0%,#191A33 55%,#241A2C 100%);--ly-g1:rgba(42,58,102,.6);--ly-g2:rgba(74,48,96,.5);--ly-top:#0F1426}}
+:root[data-theme="dark"][data-tod="night"]{--ly-plate:linear-gradient(160deg,#0F1426 0%,#191A33 55%,#241A2C 100%);--ly-g1:rgba(42,58,102,.6);--ly-g2:rgba(74,48,96,.5);--ly-top:#0F1426}
+:root{background:linear-gradient(to bottom,transparent 0,transparent var(--ly-band),var(--ly-veil) calc(var(--ly-band) + 110px)),radial-gradient(75% 45% at 8% 94%,var(--ly-g1),transparent 72%),radial-gradient(65% 40% at 96% 70%,var(--ly-g2),transparent 72%),var(--ly-plate);background-color:var(--ly-top);min-height:100%}   /* the colour: the sky's top, as the bars take it */
+:root :is(body,#app.app){background:transparent}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3),:root .aos-sky-cap{display:none}   /* and no fade under a solid status bar: the sky runs on up into it */
+:is(.fab,.okbtn){box-shadow:var(--ly-lift)}
+</style>
+<style id="grid" media="not all">
+/* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FAFCFE;--mc-card-2:#ECEEF0;--mc-edge:rgba(23,27,32,.14);--mc-ink:#171B20;--mc-mustard:#FB6049;--mc-teal:#973835;--mc-orange:#E41F24;--mc-olive:#707F92;--mc-walnut:#292D33;--mc-on-mustard:#171B20;--bg:#F3F5F7;--text:#171B20;--muted:#3D4146;--faint:#565A5F;--accent:#973835;--on-accent:#FCFDFF;--accent-text:#973835;--icon:#973835;--cta:#D41C21;--cta-ink:#FCFDFF;--danger:#C11019;--danger-text:#A50310;--flag:#B6191C;--glass:#FAFCFE;--glass-2:#ECEEF0;--sheet:#FAFCFE;--gb-edge:rgba(23,27,32,.14);--hair:rgba(23,27,32,.14);--hair-2:rgba(23,27,32,.08);--fill:rgba(23,27,32,.06);--lift:rgba(23,27,32,.10);--lift-strong:rgba(23,27,32,.22);--scrim:rgba(23,27,32,.35);--grab:rgba(23,27,32,.28);--bar-top:#FAFCFE;--bar-bottom:#FAFCFE;--bar-rim:rgba(23,27,32,.12);--bar-solid:#FAFCFE;--seg-thumb:#FB6049;--lg-bg:#FAFCFE;--lg-rim:inset 0 0 0 1.5px rgba(23,27,32,.12);--tile:#FAFCFE;--tile-edge:rgba(23,27,32,.05);--lgs-top:#FAFCFE;--lgs-bottom:#FAFCFE;--lgs-edge:rgba(23,27,32,.12);--lgs-field:#F3F5F7;--lgs-scrim:rgba(23,27,32,.30);--k-bug:#A50310;--k-imp:#973835;--k-idea:#8C1809}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-ink:#EEF0F2;--mc-teal:#FFA39B;--mc-olive:#C9DBF3;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--icon:#FF8F7F;--cta:#F93433;--cta-ink:#F8FAFC;--danger:#FA6258;--danger-text:#FE9185;--flag:#FE9185;--glass:#0D0F11;--glass-2:#131518;--sheet:#0D0F11;--gb-edge:rgba(238,240,242,.14);--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(0,0,0,.55);--grab:rgba(238,240,242,.28);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,.14);--bar-solid:#0A0C0E;--seg-thumb:#FF8F7F;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,.14);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,.14);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,.5);--k-bug:#FE9185;--k-imp:#FCB5AE;--k-idea:#FF8F7F}
+}
+:root[data-theme="dark"]{--mc-card:#0D0F11;--mc-card-2:#131518;--mc-edge:rgba(238,240,242,.14);--mc-ink:#EEF0F2;--mc-teal:#FFA39B;--mc-olive:#C9DBF3;--bg:#050608;--text:#EEF0F2;--muted:#C8CACD;--faint:#A5A8AB;--accent:#FCB5AE;--on-accent:#040506;--accent-text:#FCB5AE;--icon:#FF8F7F;--cta:#F93433;--cta-ink:#F8FAFC;--danger:#FA6258;--danger-text:#FE9185;--flag:#FE9185;--glass:#0D0F11;--glass-2:#131518;--sheet:#0D0F11;--gb-edge:rgba(238,240,242,.14);--hair:rgba(238,240,242,.14);--hair-2:rgba(238,240,242,.09);--fill:rgba(238,240,242,.07);--lift:rgba(0,0,0,.22);--lift-strong:rgba(0,0,0,.4);--scrim:rgba(0,0,0,.55);--grab:rgba(238,240,242,.28);--bar-top:#0D0F11;--bar-bottom:#0D0F11;--bar-rim:rgba(238,240,242,.14);--bar-solid:#0A0C0E;--seg-thumb:#FF8F7F;--lg-bg:#0D0F11;--lg-rim:inset 0 0 0 1.5px rgba(238,240,242,.14);--tile:#0D0F11;--tile-edge:rgba(238,240,242,.05);--lgs-top:#0D0F11;--lgs-bottom:#0D0F11;--lgs-edge:rgba(238,240,242,.14);--lgs-field:#050608;--lgs-scrim:rgba(0,0,0,.5);--k-bug:#FE9185;--k-imp:#FCB5AE;--k-idea:#FF8F7F}
+body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
+.title::after{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='62' height='6'%3E%3Crect width='28' height='6' rx='3' fill='%23973835'/%3E%3Crect x='34' width='14' height='6' rx='3' fill='%23FB6049'/%3E%3Crect x='54' width='8' height='6' rx='3' fill='%23E41F24'/%3E%3C/svg%3E") no-repeat}
+/* Tron: light cycles, after the Tron: Ares mode in Tesla's cars - dark only, as the car's screen goes, with red
+   only for what's lit: a red light trail that runs around the screen behind everything (it shows in the margins, never
+   over a card or an icon), a light racing along it, a faint grid floor under the title, and a glow on what's lit.
+   Orbitron headings, Exo 2 for the rest (SIL Open Font License, ../home/fonts). Vintage's disc,
+   dot and pill behind the title go: the car's screen is calm. */
+@font-face{font-family:"Orbitron";font-style:normal;font-weight:700;font-display:swap;src:url("../home/fonts/orbitron-700-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Exo 2";font-style:normal;font-weight:400 700;font-display:swap;src:url("../home/fonts/exo-2-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@property --tr-a{syntax:'<angle>';inherits:false;initial-value:0deg}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif;font-weight:700;letter-spacing:.02em;font-size-adjust:.5}
+:root{--tr-line:#FF2A2A;--tr-hot:#E9EDF1;--tr-glow:1;--tr-grid:rgba(255,42,42,.16);color-scheme:dark}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3){display:none}
+:is(.ambient,.aurora,.atoms)::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:110px;pointer-events:none;
+  background:linear-gradient(90deg,var(--tr-grid) 1px,transparent 1px) 50% 0/24px 100%,linear-gradient(var(--tr-grid) 1px,transparent 1px) 0 0/100% 14px;
+  transform:perspective(140px) rotateX(58deg);transform-origin:top;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+:root :is(body,#app.app){background:transparent}   /* the page's ground is <html>'s, so the trail (behind everything) shows */
+:root::before,:root::after{content:'';position:fixed;inset:max(3px,env(safe-area-inset-top)) 4px 4px 4px;z-index:-1;pointer-events:none;border-radius:30px 30px var(--tr-foot) var(--tr-foot);--tr-foot:max(30px,calc(env(safe-area-inset-bottom) + 14px))}
+:root::before{box-shadow:inset 0 0 0 1.5px rgba(255,42,42,.32),inset 0 0 14px rgba(255,42,42,.12),0 0 10px rgba(255,42,42,.18)}
+:root::after{padding:2px;background:conic-gradient(from var(--tr-a),transparent 0 78%,rgba(255,42,42,.35) 90%,#FF2A2A 97%,#FFE1E1 98.4%,transparent 98.6%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  filter:drop-shadow(0 0 4px #FF2A2A);animation:trRun 7s linear infinite}
+@keyframes trRun{to{--tr-a:360deg}}
+@media (prefers-reduced-motion:reduce){:root::after{animation:none;opacity:0}}
+:is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
+</style>
+<script src="../home/design.js" data-app="improve"></script>   <!-- Vintage or Standard, from Settings: before the page is drawn -->
+<script src="../home/names.js"></script>   <!-- your helper's name where the words say Ipsy: before the page is drawn -->
+<script src="../home/sky.js"></script>   <!-- the Vintage sky: day and night backgrounds, shared by every Vintage design (off in Standard) -->
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  <header class="top">
+    <div class="titlerow">
+      <h1 class="title">Improve</h1>
+      <div class="acts">
+        <button class="iconbtn" id="moreBtn" type="button" aria-label="Settings"><svg class="gear" viewBox="0 0 24 24" stroke-width="1.7" aria-hidden="true" style="width:22px;height:22px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="3"/><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="list" id="main">
+    <!-- the quick-add box: type, pick (remembered), Add -->
+    <section class="addbox" id="addBox" aria-label="Add an item">
+      <label class="vh" for="addText">What could be better?</label>
+      <textarea id="addText" rows="2" placeholder="A bug, an improvement or an idea…" autocapitalize="sentences" spellcheck="true"></textarea>
+      <div class="addrow">
+        <label class="pick"><span class="vh">Kind</span><select id="addKind"></select></label>
+        <label class="pick"><span class="vh">App</span><select id="addApp"></select></label>
+      </div>
+      <button class="btn cta" id="addBtn" type="button">Add</button>
+    </section>
+    <div class="chips" id="showChips" role="toolbar" aria-label="Show"></div>
+    <div id="items"></div>
+  </main>
+
+  <!-- One item: what it says, its kind and app, Done, Delete -->
+  <div class="sheetwrap" id="itemSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="itemLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="itemLbl">Edit</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
+      <div class="sheetbody"><div id="itemBody"></div></div>
+    </div>
+  </div>
+
+  <!-- Settings: Design, your data and your family account (../home/settings.js) -->
+  <div class="sheetwrap" id="moreSheet" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="moreLbl">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="sheethead"><h2 id="moreLbl">Settings</h2><button class="iconbtn okbtn" data-close type="button" aria-label="Done"><svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg></button></div>
+      <div class="sheetbody"><div id="moreBody"></div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden role="status"><span id="toastMsg"></span><button id="toastAct" type="button" hidden>Undo</button></div>
+</div>
+
+<script src="../home/slide.js"></script>
+<script src="../home/settings.js"></script>
+<script src="../home/account.js"></script>   <!-- family accounts: signing in, for the family's Google Sheet -->
+<script src="../home/sheet.js"></script>   <!-- the family's Google Sheet, through aOS (aOS/SHEETS.md) -->
+<script src="app.js"></script>
+<script src="../home/welcome.js" data-app="improve" data-auto defer></script>   <!-- aOS: this app's walkthrough the first time, and what's new after an update -->
+</body>
+</html>
