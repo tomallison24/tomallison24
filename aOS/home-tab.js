@@ -16,8 +16,8 @@
 //     every app is on the first screen. Tried first in labs/layouts/.
 //   - In Layers (aOS/look.js), Classic is Layers' own grid: what's next and the weather on the sky, then every app
 //     on one screen, four across, as pebbles in the app's own colour, lighter at the top left, with its drawing in
-//     white. The top row is yours, then each group in turn; nothing moves unless you move it (Edit, then tap two apps to swap them; kept
-//     on the phone and on your other devices: aos.home.grid). Tried first as a test page (Calm aOS, Layers).
+//     white. The top row is the four you use most (the ones you keep there first: Edit, then tap an app, kept as your pins,
+//     aos.home.picks), then every other app A to Z. Tried first as a test page (Calm aOS, Layers).
 // Up to MAX_OPEN apps stay open inside aOS, where you left them; the one used longest ago is put
 // away to open another.
 //
@@ -274,10 +274,10 @@
     if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
 
   // ---- Layers' grid ----
-  // Every app as a pebble in its own colour with its drawing in white (pebble, below); the order is yours alone: the
-  // top row starts as your pins (else Mail, Calendar, Weather and Home), then each group, and an app that's new
-  // goes on the end. Edit, then tap one app and another, swaps them.
-  const GRID = 'aos.home.grid';
+  // Every app as a pebble in its own colour with its drawing in white (pebble, below). The top row is yours: the apps
+  // you keep there (Edit, then tap one: your pins), then the ones you use most (the days you opened each in the last
+  // two weeks), then Mail, Calendar, Weather and Home; under it every other app, A to Z by its name.
+  // (aos.home.grid, the order you once put them in by hand, isn't read any more.)
   const GLYPH = {
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
@@ -304,32 +304,36 @@
       + `<radialGradient id="pw-${id}" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
       + `<path d="${P}" fill="url(#pg-${id})"/><path d="${P}" fill="url(#pw-${id})"/><path class="edge" d="${P}"/></svg>`
       + `<svg class="gl" viewBox="${g.vb}" aria-hidden="true">${g.defs ? `<defs>${g.defs}</defs>` : ''}${g.body}</svg>`; };
-  function gridOrder() {
-    const saved = get(GRID, []).filter(known);
-    const top = saved.length ? saved : [...new Set([...pins.filter(known), 'mail', 'calendar', 'weather', 'house'].filter(known))].slice(0, 4);
-    return [...new Set([...top, ...ALL])];
+  const gridPins = () => pins.filter(known).slice(0, 4);
+  function usedMost() {   // as mostUsed, but any app: the grid has room for Weather and Calendar too
+    const u = get(USED, {}), d = dayNo();
+    return Object.entries(u).filter(([id]) => known(id)).map(([id, a]) => [id, a.filter(x => d - x < 14).length, Math.max(...a)])
+      .filter(x => x[1]).sort((a, b) => b[1] - a[1] || b[2] - a[2]).map(x => x[0]);
   }
-  let gsel = '';   // the first of two apps tapped to swap, in Edit
+  function gridOrder() {
+    const top = [...new Set([...gridPins(), ...usedMost(), 'mail', 'calendar', 'weather', 'house'].filter(known))].slice(0, 4);
+    const rest = ALL.filter(id => !top.includes(id)).sort((a, b) => name(a).localeCompare(name(b), 'en', { sensitivity: 'base' }));
+    return [...top, ...rest];
+  }
   function paintGrid(wx, next) {
     const order = gridOrder(), ed = editing();
     $('gridEdit').textContent = ed ? 'Done' : 'Edit'; $('gridHint').hidden = !ed;
-    $('gridHead').textContent = ed ? 'Tap two apps to swap' : 'Your apps';
+    $('gridHead').textContent = ed ? 'Tap to keep on top' : 'Your apps';
     setHTML($('hgsky'), (known('weather') ? `<button type="button" data-open="weather" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}"><b>${wx ? esc(wx.temp) : '–'}</b><span>${wx ? esc(wx.text) : 'Weather'}</span></button>` : '')
       + (known('calendar') ? `<button type="button" data-open="calendar" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">${next
         ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Today</b><span>Nothing else on</span>'}</button>` : ''));
     setHTML($('hgrid'), order.map((id, i) => (i === 4 ? '<i class="grule" aria-hidden="true"></i>' : '')
-      + `<button type="button" class="gapp${ed && gsel === id ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--ink-${id}, var(--sp-every));--pale:var(--pale-${id}, var(--orb-on))" aria-label="${label(id)}"${ed ? ` aria-pressed="${gsel === id}"` : ''}>`
+      + `<button type="button" class="gapp${ed && gridPins().includes(id) ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--ink-${id}, var(--sp-every));--pale:var(--pale-${id}, var(--orb-on))" aria-label="${label(id)}${ed ? ': keep on the top row' : ''}"${ed ? ` aria-pressed="${gridPins().includes(id)}"` : ''}>`
       + `<span class="orb${window.aosGlyphs && aosGlyphs[id] ? ' pebble' : ''}">${pebble(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
   }
+  // In Edit, a tap keeps an app on the top row (one of your pins) or lets it go back to its place, A to Z
   function gridTap(id) {
-    if (!gsel) { gsel = id; return paintHome(true); }
-    if (gsel !== id) {
-      const o = gridOrder(), a = o.indexOf(gsel), z = o.indexOf(id);
-      [o[a], o[z]] = [o[z], o[a]]; put(GRID, o); syncPrefs(); toast('Swapped');
-    }
-    gsel = ''; paintHome(true);
+    if (pins.includes(id)) pins = pins.filter(x => x !== id);
+    else if (gridPins().length >= 4) return toast('Four at most: let one go first');
+    else pins = [...pins, id];
+    put(PINS, pins); syncPrefs(); paintHome(true);
   }
-  $('gridEdit').onclick = () => { body.classList.toggle('editing'); gsel = ''; paintHome(true); };
+  $('gridEdit').onclick = () => { body.classList.toggle('editing'); paintHome(true); };
 
   // ---- Thumb arc ----
   // Drawn at an iPhone's 390 x 844 and scaled to the screen (--arck): the ring's centre in the corner, a
@@ -372,7 +376,7 @@
     const d = document.documentElement;
     if (homeMode()) d.dataset.home = homeMode(); else delete d.dataset.home;
     if (layout === 'arc-left') d.dataset.hand = 'left'; else delete d.dataset.hand;
-    if (editing()) { body.classList.remove('editing'); $('favEdit').textContent = $('arcEdit').textContent = 'Edit'; $('favHint').hidden = $('arcHint').hidden = true; gsel = ''; }
+    if (editing()) { body.classList.remove('editing'); $('favEdit').textContent = $('arcEdit').textContent = 'Edit'; $('favHint').hidden = $('arcHint').hidden = true; }
     paintHome(true);
     if (keep) syncPrefs();
   }

@@ -49,7 +49,7 @@
     { id: 'mail.token.ever', key: 'mail.token.ever', app: 'mail', quiet: true },
     { id: 'aos.look', key: 'aos.look', app: 'aos' },
     { id: 'aos.home.picks', key: 'aos.home.picks', app: 'aos' },
-    { id: 'aos.home.grid', key: 'aos.home.grid', app: 'aos' },   // Layers' grid: the order you put the apps in (aOS/home-tab.js)
+    { id: 'aos.home.grid', key: 'aos.home.grid', app: 'aos' },   // Layers' grid: the order you once put the apps in (no longer read: the grid is your top row, then A to Z)
     { id: 'aos.home.layout', key: 'aos.home.layout', app: 'aos', blank: v => v === 'classic' },   // Classic or Thumb arc (aOS/home-tab.js)
     { id: 'aos.helper', key: 'aos.helper', app: 'aos' },   // your helper and its name (home/ipsy.js)
     { id: 'aos.helper.weather', key: 'aos.helper.weather', app: 'aos', blank: v => v === 'on' },   // your helper dresses for the weather, or not (home/ipsy.js)
