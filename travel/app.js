@@ -582,8 +582,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   function statusPill(b) {
     if (b.status === 'cancelled') return '<span class="st bad">Canceled</span>';
-    const l = b.type === 'flight' && liveView(b);
-    if (l) return '<span class="st ' + l.cls + '">' + esc(l.text) + '</span>';
+    const l = b.type === 'flight' && flightState(b);
+    if (l && !(l.wait && b.guess)) return '<span class="st ' + l.cls + '">' + esc(l.text) + '</span>';
     if (!startOf(b)) return '<span class="st warn">Needs a date</span>';
     if (b.guess && !isPast(b)) return '<span class="st warn">Check details</span>';
     return '';
@@ -654,19 +654,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } else {
       h += '<h3' + (next.title ? ' translate="no"' : '') + '>' + esc(titleOf(next)) + '</h3><div class="when">' + esc(fmtDay(startOf(next))) + '</div>';
     }
-    const pill = statusPill(next) || (next.type === 'flight' && inflight.has(next.id) ? '<span class="st info">Checking…</span>' : '');
+    const pill = statusPill(next);
     const x = next.type === 'flight' && liveView(next) && live[next.id];
     const asOf = x ? (inflight.has(next.id) ? 'Checking…' : 'Checked ' + ago(x.at)) : '';
     if (pill) h += '<div class="meta">' + pill + (asOf ? '<span class="asof">' + esc(asOf) + '</span>' : '') + '</div>';
     return h + '</button>';
   }
-  // A trip's next flight's live status, for its card: "UA 123 · On time" (from 36 hours before take-off).
+  // A trip's next flight's status, for its card: "UA 123 · On time" from 36 hours before take-off, "Status from Thu 4:04 PM"
+  // before that, or why there is none (flightState).
   function tripFlightPill(g) {
     if (g.past) return '';
-    const f = g.live.filter(b => b.type === 'flight' && liveWindow(b)).sort((a, b) => startT(a) - startT(b))[0];
-    const v = f && liveView(f);
-    if (v) return '<span class="st ' + v.cls + ' fs" translate="no">' + esc(flightName(f) + ' · ' + v.text) + '</span>';
-    return f && inflight.has(f.id) ? '<span class="st info fs" translate="no">' + esc(flightName(f)) + ' · Checking…</span>' : '';
+    const f = g.live.filter(b => b.type === 'flight' && flightState(b)).sort((a, b) => startT(a) - startT(b))[0];
+    const v = f && flightState(f);
+    return v ? '<span class="st ' + v.cls + ' fs" translate="no">' + esc(flightName(f) + ' · ' + v.text) + '</span>' : '';
   }
   function tripCard(g, i) {
     const n = t => g.live.filter(b => b.type === t).length;
@@ -1419,6 +1419,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return s - Date.now() < 36 * H && Date.now() - e < 4 * H;
   };
   const inflight = new Map();
+  const liveNote = {};   // why a flight in its window has no status yet: 'signin' (the quiet check was turned away signed out), 'offline'
   // fresh: Travel just opened (or came back on screen, or a trip opened): what is over 10 minutes old is checked again,
   // so the status on the cards isn't stale; the timer while it stays open checks hourly until 6 hours out.
   function refreshLive(b, force, fresh) {
@@ -1430,8 +1431,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (inflight.has(b.id)) return inflight.get(b.id);
     const p = (async () => {
       let data;
-      try { data = await flightData(b.airlineCode + b.flightNo, b.dep.slice(0, 10), !force); } catch { return; }
-      if (data.error === 'no-key' || data.error === 'signin') return;   // signed out: what it has stays, until a tap or a sign-in
+      try { data = await flightData(b.airlineCode + b.flightNo, b.dep.slice(0, 10), !force); } catch { liveNote[b.id] = 'offline'; return; }
+      if (data.error === 'signin') { liveNote[b.id] = 'signin'; return; }   // signed out: what it has stays, until a tap or a sign-in
+      if (data.error === 'no-key') return;
+      delete liveNote[b.id];
       countLookup();
       keepLive(b, data);
     })().finally(() => { inflight.delete(b.id); render(); if (st.booking && st.booking.id === b.id) renderLiveBox(); });
@@ -1490,6 +1493,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (/expected|scheduled/.test(s)) { text = late > 4 ? 'Late ' + late + ' min' : 'On time'; cls = late > 4 ? 'warn' : 'ok'; }
     return { text: text.trim(), cls, late, gate: d.gate, terminal: d.terminal, arrGate: a.gate, arrTerminal: a.terminal, belt: a.belt, l, at: x.at };
   }
+  // What a flight's card says about its status, always something for an upcoming flight with a number: the live status,
+  // or when it starts (36 hours out), or why there is none (signed out, not found, the service). null: nothing to say.
+  const statusFrom = b => startT(b) - 36 * H;
+  const whenShort = t => { const d = new Date(t); return d.toLocaleDateString(undefined, t - Date.now() < 6 * D ? { weekday: 'short' } : { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  function flightState(b) {
+    if (b.type !== 'flight' || b.status === 'cancelled' || isPast(b)) return null;
+    const v = liveView(b);
+    if (v) return v;
+    if (!b.flightNo || !b.airlineCode || !b.dep) return null;
+    if (statusFrom(b) > Date.now()) return { text: 'Status from ' + whenShort(statusFrom(b)), cls: 'info', wait: true };
+    if (!liveWindow(b)) return null;
+    if (inflight.has(b.id)) return { text: 'Checking…', cls: 'info' };
+    if (liveAvail === false) return { text: 'No live status', cls: 'info' };
+    if (liveNote[b.id] === 'signin') return { text: 'Sign in for status', cls: 'warn' };
+    const x = live[b.id];
+    if (x && x.error || liveNote[b.id] === 'offline') return { text: 'Status unavailable', cls: 'warn' };
+    if (x && !x.found) return { text: 'No status yet', cls: 'info' };
+    if (lookupsThisMonth() >= LOOKUPS_A_MONTH) return { text: 'Status paused this month', cls: 'info' };
+    return { text: 'Checking…', cls: 'info' };
+  }
   function renderLiveBox(loading) {
     const box = $('bkLive'), b = st.booking;
     if (!box || !b) return;
@@ -1499,7 +1522,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     h += '<button class="iconbtn" type="button" id="bkLiveGo" aria-label="Check again">' + I.refresh + '</button></div>';
     if (loading || inflight.has(b.id)) h += '<p class="hint" style="margin:0">Checking…</p>';
     else if (liveAvail === false) h += '<p class="hint" style="margin:0">Live status isn’t set up on this copy of the site.</p>';
-    else if (!liveWindow(b)) h += '<p class="hint" style="margin:0">Shows from 36 hours before take-off.</p>';
+    else if (!liveWindow(b)) h += '<p class="hint" style="margin:0">' + (statusFrom(b) > Date.now() && !isPast(b) ? 'Shows from ' + esc(whenShort(statusFrom(b))) + ', 36 hours before take-off.' : 'Shows from 36 hours before take-off.') + '</p>';
+    else if (liveNote[b.id] === 'signin' && !v) h += '<p class="hint" style="margin:0">Sign in to see it: tap ↻ to check with Face ID.</p>';
     else if (x && x.error) h += '<p class="hint" style="margin:0">' + esc({ limit: 'The flight data service’s monthly allowance is used up.', 'key-refused': 'The flight data service refused the key.', unreachable: 'Couldn’t reach the flight data service.' }[x.error] || 'Couldn’t get the status just now.') + '</p>';
     else if (x && !x.found) h += '<p class="hint" style="margin:0">No live data for ' + esc(flightName(b)) + ' on this date yet.</p>';
     else if (v) {
@@ -2636,5 +2660,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
+  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
 })();
