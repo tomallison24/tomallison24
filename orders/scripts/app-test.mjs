@@ -115,7 +115,7 @@ for (const scheme of ['light', 'dark']) {
     sessionStorage.setItem('seeded', '1');
     localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
     localStorage.setItem('orders.token.ever', '1');
-    localStorage.setItem('allison-orders-v1-ipsy-auto', '0');   // Ipsy's own To check pass: orders/scripts/ipsy-test.mjs
+    localStorage.setItem('allison-orders-v1-ipsy-auto', '0'); localStorage.setItem('allison-orders-v1-ipsy-auto-v', '2');   // Ipsy's own To check pass: orders/scripts/ipsy-test.mjs
   });
   await page.goto(BASE + '/orders/');
 
@@ -832,7 +832,7 @@ await step('Sheet Log, through aOS: every order added, status change, edit, dele
   // an old script (VERSION 2) turns away aOS's request: there's no phrase in it
   const { ctx, page, errs, posts, sheet, open } = await phone('light', { emails: true, answer: () => oldScript ? { ok: false, app: 'allison-orders-sync', error: 'wrong-secret' } : null });
   await page.goto(BASE + '/orders/icon.svg');
-  await seedPhone(page, { 'aos.session': session('tok-tom'), 'orders.token': TOKEN(), 'orders.token.ever': '1', 'allison-orders-v1-family': '1', 'allison-orders-v1-log-seed': '1', 'allison-orders-v1-ipsy-auto': '0' });
+  await seedPhone(page, { 'aos.session': session('tok-tom'), 'orders.token': TOKEN(), 'orders.token.ever': '1', 'allison-orders-v1-family': '1', 'allison-orders-v1-log-seed': '1', 'allison-orders-v1-ipsy-auto': '0', 'allison-orders-v1-ipsy-auto-v': '2' });
   await open();
   const events = () => posts.flatMap(p => p.log || []);
   const seen = (fn, what) => until(page, () => events().some(fn), () => what + ': ' + JSON.stringify(events().map(e => e.ev + ' ' + (e.o.store || '') + ' ' + e.note)));

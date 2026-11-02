@@ -122,7 +122,7 @@ const report = (name, problems) => { if (problems.length) { failed++; console.lo
     localStorage.setItem('aos.seen', JSON.stringify({ orders: '999' })); localStorage.setItem('aos.sky', 'day');
     localStorage.setItem('orders.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' }));
     localStorage.setItem('orders.token.ever', '1');
-    localStorage.setItem('allison-orders-v1-ipsy-auto', '0');
+    localStorage.setItem('allison-orders-v1-ipsy-auto', '0'); localStorage.setItem('allison-orders-v1-ipsy-auto-v', '2');
   });
   let cut = true; const fetched = [];
   await ctx.route('https://gmail.googleapis.com/**', route => {

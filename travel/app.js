@@ -50,7 +50,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     seen: KEY + '-seen', lastScan: KEY + '-scan', queryV: KEY + '-query-v', live: KEY + '-live', lookups: KEY + '-lookups', tab: KEY + '-tab', when: KEY + '-when',
     sync: KEY + '-sync', graves: KEY + '-graves', syncAt: KEY + '-sync-at', explore: KEY + '-explore', family: KEY + '-family', who: KEY + '-who', people: KEY + '-people',
     calOn: KEY + '-cal-on', aiOn: KEY + '-ai-on', ai: KEY + '-ai', aiLast: KEY + '-ai-last', revive: KEY + '-revive', scanLog: KEY + '-scan-log', scanInfo: KEY + '-scan-info', smartAt: KEY + '-smart-at',
-    ipsyAuto: KEY + '-ipsy-auto', drive: KEY + '-drive', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut', more: KEY + '-scan-more',
+    ipsyAuto: KEY + '-ipsy-auto', verified: KEY + '-verified', verifyAt: KEY + '-verify-at', drive: KEY + '-drive', ipsyTried: KEY + '-ipsy-tried', cut: KEY + '-scan-cut', more: KEY + '-scan-more',
   };
   // Inside aOS, reading Gmail (and the checks after it) count as an update under way: aOS doesn't put Travel away
   // or start it again until it's done (../home/welcome.js AllisonOS.updating).
@@ -1782,16 +1782,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // The newest email in this Gmail about a booking: the newest that names its confirmation code since the one it came
   // from (a schedule change, new dates), or that one. Never an email of a Private booking.
-  async function newestMail(b) {
+  async function newestId(b) {
     const src = b.source, hidden = new Set(bookings.filter(x => x.private && x.source).flatMap(x => [x.source.msgId, x.source.threadId]).filter(Boolean));
-    let id = src.msgId;
     if (/^[A-Z0-9]{5,}$/i.test(b.conf || '')) {
       try {
         const r = await gmail('/messages', { q: '"' + b.conf + '"' + (src.date ? ' after:' + Math.floor(src.date / 1000) : ''), maxResults: 5 });
         const m = (r && r.messages || []).find(x => !hidden.has(x.id) && !hidden.has(x.threadId));
-        if (m) id = m.id;
+        if (m) return m.id;
       } catch (e) { if (e instanceof AuthError) throw e; }
     }
+    return src.msgId;
+  }
+  async function newestMail(b, id) {
+    id = id || await newestId(b);
     const msg = await gmail('/messages/' + id, { format: 'full' });
     const { html, text } = bodies(msg.payload);
     return { id, threadId: msg.threadId || '', text: P.htmlToText(html) || text || '', subject: header(msg, 'subject'), from: header(msg, 'from'), date: +msg.internalDate || Date.now() };
@@ -1800,6 +1803,57 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const g = tripById(id);
     if (g) return checkBookings(g.items.filter(checkable));
   }
+  // Bookings read again against their newest emails (the core of Have Ipsy check, and of Ipsy's own check below): what
+  // changed ({id, before, after} for Undo), a line for each, emails read, and why it stopped early ('' if it didn't).
+  // Every email read for a booking is remembered (K.verified, booking id : email id), so Ipsy's own check (quiet) sends
+  // each one to Claude once; a press of Have Ipsy check reads them again. max: the most emails sent, each time (capped
+  // says there were more). quiet: no Face ID prompt (the session it has, or it stops). Email addresses, phone, card and
+  // account numbers stay on the phone (home/redact.js), as everywhere Claude reads an email.
+  async function verifyPass(list, { quiet, max = 8 } = {}) {
+    const out = { changes: [], said: [], read: 0, cancelled: 0, stop: '', until: '', capped: false };
+    const seen = new Set(ls.json(K.verified, [])), sent = new Set();
+    try {
+      for (const b of list) {
+        let id;
+        try { id = await newestId(b); } catch (e) { if (e instanceof AuthError) throw e; continue; }
+        const tag = b.id + ':' + id;
+        if (quiet && seen.has(tag)) continue;
+        if (sent.size >= max) { out.capped = true; break; }
+        let m;
+        try { m = await newestMail(b, id); } catch (e) { if (e instanceof AuthError) throw e; continue; }
+        if (m.text.length < 40) { seen.add(tag); continue; }
+        const M = (window.AllisonOS && AllisonOS.redact ? AllisonOS.redact.make() : { hide: x => x, show: x => x });
+        const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
+          body: JSON.stringify({ check: true, type: b.type, missing: CHECK_ASK[b.type], known: onFile(b), text: M.hide(m.text.slice(0, 8000)), subject: M.hide(m.subject), emailDate: new Date(m.date).toISOString() }) };
+        sent.add(tag);
+        let d = null;
+        try {
+          const res = await aosFetch(API + 'extract', init, quiet);    // quiet: a 401 stops it, never a Face ID prompt
+          if (quiet && res.status === 401) { out.stop = 'signin'; break; }
+          d = await res.json();
+        } catch { out.stop = 'offline'; break; }
+        if (d && d.error === 'no-key') { aiAvail = false; out.stop = 'no-key'; break; }
+        if (d && (d.error === 'limit' || d.error === 'signin' || d.error === 'ai-budget')) { out.stop = d.error; out.until = d.until; break; }
+        seen.add(tag);
+        if (!d || !d.ok) continue;
+        out.read++; noteModel('check', d.model);
+        const cur = bookings.find(x => x.id === b.id);
+        if (!cur || cur.edited) continue;                     // edited while Ipsy was reading: yours wins
+        const before = JSON.parse(JSON.stringify(cur));
+        const ch = applyCheck(cur, M.show(d.fields || {}));
+        if (!ch.length) continue;
+        // read from a newer email: the booking follows it, so the older one, read again, doesn't put the old details back
+        if (m.id !== (cur.source && cur.source.msgId) && m.date >= when(cur)) cur.source = { msgId: m.id, threadId: m.threadId, subject: m.subject.slice(0, 200), from: m.from, date: m.date };
+        if (ch.includes('cancelled')) out.cancelled++;
+        out.changes.push({ id: cur.id, before, after: sameAs(cur) });
+        out.said.push(titleOf(cur) + ': ' + (ch.includes('cancelled') ? 'cancelled' : ch.slice(0, 4).join(', ')));
+      }
+    } finally {
+      ls.set(K.verified, JSON.stringify([...seen].slice(-500)));
+      if (out.changes.length) { save(); smartSoon(); }
+    }
+    return out;
+  }
   // The same for any bookings: a trip's (above), or what's waiting in To check (render). Eight at most, each time.
   async function checkBookings(all) {
     if (st.aiBusy) return;
@@ -1807,35 +1861,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     st.aiBusy = true; render();
     if (ipsy) ipsy.working(true);
     const list = all.slice(0, 8), mine2 = list.filter(b => !b.edited);
-    const changes = [], said = [];
-    let read = 0, cancelled = 0, stop = '', until = '';
     try {
       if (aiAvail === null) await pingLive();
       if (!aiAvail) { toast('AI isn’t set up on this copy of the site.'); return; }
-      for (const b of mine2) {
-        let m;
-        try { m = await newestMail(b); } catch (e) { if (e instanceof AuthError) throw e; continue; }
-        if (m.text.length < 40) continue;
-        const init = { method: 'POST', headers: { 'X-Travel': '1', 'Content-Type': 'application/json' }, cache: 'no-store',
-          body: JSON.stringify({ check: true, type: b.type, missing: CHECK_ASK[b.type], known: onFile(b), text: m.text.slice(0, 8000), subject: m.subject, emailDate: new Date(m.date).toISOString() }) };
-        let d = null;
-        try { d = await (await aosFetch(API + 'extract', init)).json(); } catch { stop = 'offline'; break; }
-        if (d && d.error === 'no-key') { aiAvail = false; stop = 'no-key'; break; }
-        if (d && (d.error === 'limit' || d.error === 'signin' || d.error === 'ai-budget')) { stop = d.error; until = d.until; break; }
-        if (!d || !d.ok) continue;
-        read++; noteModel('check', d.model);
-        const cur = bookings.find(x => x.id === b.id);
-        if (!cur || cur.edited) continue;                     // edited while Ipsy was reading: yours wins
-        const before = JSON.parse(JSON.stringify(cur));
-        const ch = applyCheck(cur, d.fields || {});
-        if (!ch.length) continue;
-        // read from a newer email: the booking follows it, so the older one, read again, doesn't put the old details back
-        if (m.id !== (cur.source && cur.source.msgId) && m.date >= when(cur)) cur.source = { msgId: m.id, threadId: m.threadId, subject: m.subject.slice(0, 200), from: m.from, date: m.date };
-        if (ch.includes('cancelled')) cancelled++;
-        changes.push({ id: cur.id, before, after: sameAs(cur) });
-        said.push(titleOf(cur) + ': ' + (ch.includes('cancelled') ? 'cancelled' : ch.slice(0, 4).join(', ')));
-      }
-      if (changes.length) { save(); smartSoon(); }
+      const { changes, said, read, cancelled, stop, until } = await verifyPass(mine2);
       const undo = changes.length ? undoChanges(changes) : null;
       if (undo && ipsy) ipsy.change('Updated ' + said.join('; ') + '. Marked Check.', undo);
       const bits = [];
@@ -1857,7 +1886,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // checked once per email, at most 10 at a time, quietly, the way Have Ipsy check does. On with Settings > Smart help >
   // Ipsy fills in what's missing (the one switch for Ipsy's checks, this phone's own). A booking it completes goes to Upcoming; one still missing something waits in To check; Undo in Ipsy's chat.
   let autoBusy = false, signinSaid = false;
-  async function ipsyAutoCheck() { updating('check', true); try { await ipsyAutoCheckNow(); } finally { updating('check', false); } }
+  async function ipsyAutoCheck() { updating('check', true); try { await ipsyAutoCheckNow(); } finally { updating('check', false); } ipsyVerify(); }
   async function ipsyAutoCheckNow() {
     if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken() || window.__travelNoAuto) return;   // __travelNoAuto: tests only
     const tried = new Set(ls.json(K.ipsyTried, [])), tag = b => b.id + ':' + b.source.msgId;
@@ -1887,6 +1916,37 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } else if (r && r.done.size) ipsy.note('Checked ' + plural(r.done.size, 'booking') + ' missing details: ' + (r.done.size === 1 ? 'its email doesn’t' : 'their emails don’t') + ' say any more.');
     else if (stop === 'signin' && !signinSaid) { signinSaid = true; ipsy.hint('Sign in with Face ID in aOS and I can fill in what your bookings are missing.'); }
     else if (stop === 'ai-budget') ipsy.hint(AllisonOS.budgetSay(r.until));
+  }
+  // Ipsy keeps upcoming bookings up to date by itself: each time Travel opens (once Gmail is read and what's missing is
+  // filled in), every booking still to come that came from an email is checked against its newest email, the way Have
+  // Ipsy check this trip does, but only when that email is one Ipsy hasn't read for it yet: a schedule change, new dates
+  // or a cancellation lands with no press, and a booking is sent to Claude once per email. Soonest first, 8 at a time
+  // (then the next 8); the Gmail look-ups at most every 20 minutes. Same switch as filling in (Settings > Ipsy fills in
+  // what's missing). What changed is marked Check, with Undo in Ipsy's chat; a booking you edited stays as you typed it.
+  let verifyBusy = false, verifyMore = false;
+  async function ipsyVerify() { updating('verify', true); try { await ipsyVerifyNow(); } finally { updating('verify', false); } }
+  async function ipsyVerifyNow() {
+    if (!ipsy || verifyBusy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken() || window.__travelNoAuto || window.__travelNoVerify) return;   // tests only
+    if (!verifyMore && Date.now() - +ls.get(K.verifyAt, 0) < 20 * 6e4) return;
+    verifyMore = false;
+    const t = s => String(s || '9999');
+    const todo = bookings.filter(b => checkable(b) && !b.edited && !staleUndated(b)).sort((a, b) => t(startOf(a)).localeCompare(t(startOf(b))));
+    if (!todo.length) { ls.set(K.verifyAt, String(Date.now())); return; }
+    if (aiAvail === null) await pingLive(true);
+    if (!aiAvail) return;
+    verifyBusy = true; ipsy.working(true);
+    let r = null;
+    try { r = await verifyPass(todo, { quiet: true }); } catch (e) { r = null; }
+    verifyBusy = false; ipsy.working(false); render();
+    if (r && r.capped && !r.stop) { verifyMore = true; setTimeout(ipsyVerify, 1500); }   // more waiting: the next 8, while Travel is open
+    else ls.set(K.verifyAt, String(Date.now()));
+    if (!r) return;
+    if (r.changes.length) {
+      ipsy.change('Updated ' + r.said.join('; ') + '. Marked Check.', undoChanges(r.changes));
+      ipsy.hint('I checked your upcoming bookings against their newest emails and updated ' + plural(r.changes.length, 'booking') + (r.cancelled ? ' (' + r.cancelled + ' cancelled)' : '') + '. ' + (r.changes.length === 1 ? 'It’s' : 'They’re') + ' marked Check.');
+    } else if (r.read) ipsy.note('Checked ' + plural(r.read, 'upcoming booking') + ' against ' + (r.read === 1 ? 'its newest email' : 'their newest emails') + ': everything matches.');
+    else if (r.stop === 'signin' && !signinSaid) { signinSaid = true; ipsy.hint('Sign in with Face ID in aOS and I can keep your bookings up to date.'); }
+    else if (r.stop === 'ai-budget') ipsy.hint(AllisonOS.budgetSay(r.until));
   }
   // -- Changes Ipsy makes (ipsy-tools.js): "delete the Sheraton", "put the hotel in the San Diego trip", "add a dinner on the 16th" --
   // A short list of changes (set or clear a field, add a booking, delete, cancel or bring back, mark checked, join trips, take a
@@ -2132,7 +2192,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + S.section('Connected accounts', gmail, { id: 'stGmail', hint: viaMail ? 'Using Mail’s sign-in from this browser.' : '' })
       + S.section('AI helper', [
         S.claude('travel'),
-        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and moves them to Upcoming, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false || !claudeOn() }),
+        S.toggle({ id: 'stAiOpt', title: 'Ipsy fills in what’s missing', sub: aiAvail === false ? 'Not set up on this copy of the site.' : 'Completes new bookings from their emails and checks upcoming ones against their newest emails, each time Travel opens, on this phone.', on: aiOn() && aiAvail !== false, disabled: aiAvail === false || !claudeOn() }),
         PV ? S.toggle({ id: 'stIpsyGmailOpt', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats.', on: PV.gmail('travel') }) : '',
       ], { hint: ml, hintId: 'stModels' })
       + S.section('Your data', [
@@ -2361,6 +2421,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (document.visibilityState !== 'visible') return;
     if (Date.now() - lastSyncAt > 30000) sync();
     if (getToken() && scanDue()) scan();
+    else ipsyVerify();                // not read just now: still checked against the newest emails (every 20 minutes at most)
     alive().filter(b => b.type === 'flight').forEach(b => refreshLive(b));
     render();
   });
@@ -2368,6 +2429,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   addEventListener('aos:shown', () => {
     if (getToken() && scanDue()) scan();
     else if (!getToken() && ls.get(K.cut, '') && mayRenew()) signIn({ silent: true });
+    else ipsyVerify();
   });
   window.addEventListener('online', () => sync());
   addEventListener('aos:account', e => { if (e.detail) handOver().then(() => sync()); else { syncState = 'signin'; renderSyncStatus(); } });

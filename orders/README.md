@@ -301,10 +301,22 @@ it did (*I updated 2 orders; 1 still needs you in To check*). What it can't fix
 unavailable) stays in To check for you. An order with no new email isn't read
 again: re-reading the same email wouldn't tell Ipsy anything new.
 
-- **Offered once.** The first time there's something to check, Ipsy asks from
-  its corner; nothing is sent until you say yes. **Settings > AI helper > Ipsy keeps
-  orders up to date** turns it on or off (it was *Ipsy checks To check*; a yes
-  given then still counts).
+- **On by default, with no asking.** It used to be offered once from Ipsy's
+  corner; now it just runs (the owner asked for it). A *Not now* given to that
+  offer is set aside once. **Settings > AI helper > Ipsy keeps orders up to date**
+  turns it off (and it stays off), as does turning Claude off for Orders.
+- More than 10 waiting: the next 10 follow while Orders is open.
+- **Orders that just stopped moving.** An order still open can sit there for weeks
+  when its delivered (or shipped, or delayed) email never got tied to it: another
+  sender (the courier's own email), a reply in another thread, a layout the reader
+  missed. So after the check above, Ipsy searches Gmail for each open order's order
+  and tracking numbers (To check first, then the longest waiting; 40 at most), for an
+  email newer than the order's own that isn't another order's. One it hasn't read for
+  that order is read by Claude, once per email, 10 at a time: only where the order is
+  goes onto it (status, courier, tracking, delivery days, a problem), never its items
+  or total, and an email naming another order number leaves it alone. The searches run
+  at most every 20 minutes; nothing is sent to Claude when there's no new email. An
+  order with neither an order nor a tracking number can't be searched for.
 - It never asks for Face ID by itself: signed out, it waits (and says so).
 - It stops for the day at the daily limit below, and tries again later.
 

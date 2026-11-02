@@ -295,7 +295,14 @@ board, and last the AI:
   family session it has, never a Face ID prompt; signed out, it stops and says so once). A booking
   it completes (nothing missing any more) leaves To check for Upcoming; one still missing
   something is marked **Check** and waits in To check. Undo for either is in Ipsy's chat, and
-  Ipsy says in its corner what it did. With the switch off, nothing is sent. A press
+  Ipsy says in its corner what it did. After that, with the same switch, Ipsy keeps upcoming
+  bookings up to date too: every booking still to come that came from an email (not Private, not a
+  ride, not one you edited) is checked against its newest email, the same check as **Have Ipsy check
+  this trip** (below), but only when that email is one Ipsy hasn't read for it yet, so a schedule
+  change, new dates or a cancellation lands with no press and each email is sent once. Soonest first,
+  8 at a time (then the next 8 while Travel is open); the Gmail look-ups for the newest email run at
+  most every 20 minutes (when Travel opens, comes back on screen, or after a read of Gmail). What
+  changed is marked **Check**, with Undo in Ipsy's chat. With the switch off, nothing is sent. A press
   reads the emails behind that trip's incomplete bookings from Gmail, and for each
   asks only about what is missing (a date is asked for only if the email has
   one), with no limit of its own (the cost is a fraction of a cent a check). It then also asks the flight
