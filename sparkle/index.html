@@ -108,7 +108,7 @@ svg{display:block}
 
 /* ---- sheets (Settings, a player's report, a new player, the grown-up check); Settings' rows are ../home/settings.js's ---- */
 .sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:var(--scrim)}
-.sheet .panel{width:100%;max-width:560px;max-height:94dvh;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--sheet);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
+.sheet .panel{width:100%;max-width:560px;max-height:94dvh;overflow:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;background:var(--sheet);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
   border-radius:30px 30px 0 0;padding:16px 18px calc(env(safe-area-inset-bottom) + 22px);color:var(--text);-webkit-user-select:text;user-select:text}
 .sheet .shead{position:sticky;top:-16px;z-index:2;display:flex;align-items:center;gap:10px;margin:-16px -18px 8px;padding:14px 18px 10px;background:var(--sheet)}
 .sheet .shead h2{flex:1;margin:0;font-size:20px;font-weight:700}
@@ -168,7 +168,7 @@ svg{display:block}
 .rbtn.me svg{width:64px;height:84px;margin-top:10px}
 .timer{height:40px;font-size:16px;padding:0 12px;gap:4px}
 .timer svg{width:22px;height:22px}
-#map{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none}
+#map{position:absolute;inset:0;overflow:auto; /* sideways: the kingdom map pans both ways */ -webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none}
 #map::-webkit-scrollbar{display:none}
 #mapIn{position:relative;width:max(100vw,min(1000px,160vw));aspect-ratio:2/3}
 #mapIn > svg{width:100%;height:100%}
@@ -307,7 +307,7 @@ svg{display:block}
 .tabs{display:flex;gap:6px;padding:12px 12px 6px;overflow-x:auto;scrollbar-width:none}
 .tabs button{flex:none;min-height:48px;padding:0 16px;border-radius:999px;background:var(--k-lav);box-shadow:inset 0 0 0 2.5px var(--k-ink);font-weight:800;color:var(--k-ink);font-size:16px}
 .tabs button[aria-pressed="true"]{background:var(--k-pink)}
-.items{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:8px 12px calc(env(safe-area-inset-bottom) + 14px);align-content:start}
+.items{flex:1;overflow:auto;overflow-x:hidden;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:8px 12px calc(env(safe-area-inset-bottom) + 14px);align-content:start}
 .item{position:relative;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 4px 0 rgba(75,46,111,.25);padding:4px 4px 30px;height:150px;overflow:hidden}
 .item .pv{height:100%;display:flex;justify-content:center}
 .item .pv svg{height:118%;width:auto;margin-top:-4px}
@@ -317,7 +317,7 @@ svg{display:block}
 .item.on{background:#C9F7DF}
 .item.locked .pv{opacity:.5}
 .item.ask{box-shadow:inset 0 0 0 4px var(--k-gold),0 0 0 4px var(--k-gold)}
-.treasures{padding:8px 16px;display:grid;gap:10px;align-content:start;overflow:auto}
+.treasures{padding:8px 16px;display:grid;gap:10px;align-content:start;overflow:auto;overflow-x:hidden}
 .trow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-weight:800}
 .trow .tt{width:100%;font-size:15px}
 .trow .tk{width:52px;height:52px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 2.5px var(--k-ink);display:grid;place-items:center;font-size:26px}
@@ -594,7 +594,7 @@ svg{display:block}
 .care{position:absolute;left:0;right:0;bottom:0;top:calc(env(safe-area-inset-top) + 150px + min(75vw,46vh));background:#FFF6FB;border-radius:30px 30px 0 0;box-shadow:inset 0 3px 0 var(--k-ink);display:flex;flex-direction:column}
 .care .tabs button{padding:0 10px;font-size:15px;display:flex;align-items:center;gap:3px}
 .care .tabs button svg{width:22px;height:22px}
-.care .tray{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 12px calc(env(safe-area-inset-bottom) + 14px);align-content:start}
+.care .tray{flex:1;overflow:auto;overflow-x:hidden;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 12px calc(env(safe-area-inset-bottom) + 14px);align-content:start}
 .ctool{position:relative;height:96px;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 3px var(--k-ink),0 4px 0 rgba(75,46,111,.25);display:grid;place-items:center;padding:4px}
 .ctool svg{width:64px;height:64px}
 .ctool .n{position:absolute;right:6px;top:4px;min-width:26px;height:26px;border-radius:999px;background:var(--k-gold);box-shadow:inset 0 0 0 2px var(--k-ink);font-weight:900;font-size:15px;display:grid;place-items:center}

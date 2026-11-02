@@ -400,7 +400,7 @@
   .sheet h2 button:active { transform: scale(0.9); }
   /* The list fades in under the header rather than being cut off by it. */
   .sheet-body {
-    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px calc(env(safe-area-inset-bottom) + 16px);
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 6px 12px calc(env(safe-area-inset-bottom) + 16px);
     -webkit-mask-image: linear-gradient(180deg, transparent, #000 12px); mask-image: linear-gradient(180deg, transparent, #000 12px);
   }
   .list {
