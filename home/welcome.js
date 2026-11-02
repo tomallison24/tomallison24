@@ -91,7 +91,7 @@
       notes: ['aOS looks at the app window once an app should be on screen: found off to the side, it is put back at once with a word about what was seen, so aOS stays usable while the cause is found',
         'aOS: in Layers, Home\'s grid keeps your most used apps on the top row (and any you keep there: Edit, then tap one), and every other app A to Z under it',
         'aOS: after a swipe back from an app that the phone took as its own back gesture, the next app you opened sometimes stayed off the screen, aOS Home showing in its place and nothing seeming to answer until aOS was closed. Fixed: every app opens on screen again',
-        'Layers: every app\'s icon is a rounded square, as on an iPhone\'s Home Screen, in place of the pebble: on aOS Home and everywhere else an app\'s icon shows in Layers',
+        'Layers: every app\'s icon is a rounded square, as on an iPhone\'s Home Screen, in place of the pebble, with its drawing half as big again: on aOS Home and everywhere else an app\'s icon shows in Layers',
         'Home: every light that dims has its brightness presets (night, 25%, 50%, 75%, full) right on its pill in Lights, one tap each, as on Favorites; its popup keeps the slider',
         'Travel: live status works for flights whose number or date was filled in another way (Frontier\'s emails leave the date out); if it still can\'t ask, the flight says what it asked for',
         'Travel: a flight\'s airline typed as its name ("Frontier") or its number with the airline in it ("F9 3073") is kept as its code and number, so its live status, its name and the calendar have them right; flights already kept that way are put right',

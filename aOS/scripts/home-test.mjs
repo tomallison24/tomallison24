@@ -456,10 +456,10 @@ for (const [w, h, scheme] of [[390, 844, 'light'], [375, 667, 'dark']]) {
   const fit = await pg.evaluate(() => { const rs = [...document.querySelectorAll('#hgrid .orb')].map(e => e.getBoundingClientRect());
     return { big: rs.every(r => r.width >= 44 && r.height >= 44), on: rs.every(r => r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth), sky: !!document.querySelector('#hgsky [data-open="weather"]') && !!document.querySelector('#hgsky [data-open="calendar"]') }; });
   check(fit.big && fit.sky, `buttons 44 pt or more; the weather and what's next on the sky ${tag}`);
-  // each app a pebble in its own colour, its drawing in white at 40% of it (aOS/glyphs.js)
+  // each app a pebble in its own colour, its drawing in white at 60% of it (aOS/glyphs.js)
   const peb = await pg.evaluate(() => [...document.querySelectorAll('#hgrid .orb')].map(o => { const g = o.querySelector('svg.gl'), r = o.getBoundingClientRect();
-    return o.classList.contains('pebble') && !!o.querySelector('svg.peb path') && g && Math.abs(g.getBoundingClientRect().width / r.width - .4) < .02; }));
-  check(peb.length === APPS.length && peb.every(Boolean), `every app is a pebble with its drawing at 40% (${peb.filter(Boolean).length} of ${peb.length}) ${tag}`);
+    return o.classList.contains('pebble') && !!o.querySelector('svg.peb path') && g && Math.abs(g.getBoundingClientRect().width / r.width - .6) < .02; }));
+  check(peb.length === APPS.length && peb.every(Boolean), `every app is a pebble with its drawing at 60% (${peb.filter(Boolean).length} of ${peb.length}) ${tag}`);
   if (h > 800) check(fit.on, `every app on the first screen ${tag}`);
   await pg.evaluate(() => window.aosHome.unread('mail', 3)); await pg.waitForTimeout(100);
   check(await pg.textContent('#hgrid [data-gapp="mail"] em') === '3', `Mail's unread count on its button ${tag}`);
