@@ -1,0 +1,17 @@
+{
+  "name": "Improve",
+  "short_name": "Improve",
+  "description": "Jot down feedback, bugs and ideas about the aOS apps as they come to you, in one list the family shares, to work through in one go.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#241E1A",
+  "theme_color": "#241E1A",
+  "icons": [
+    { "src": "icon-180.png?v=1", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "related_applications": [
+    { "platform": "webapp", "id": "https://tomallison24-news.pages.dev/improve/", "url": "https://tomallison24-news.pages.dev/improve/manifest.webmanifest" }
+  ]
+}

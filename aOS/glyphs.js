@@ -43,6 +43,14 @@ window.aosGlyphs = {
   "defs": "<mask id=\"g-house-cut\" maskUnits=\"userSpaceOnUse\" x=\"0\" y=\"0\" width=\"512\" height=\"512\">\n      <path d=\"M256 120L398 236V376a28 28 0 0 1-28 28H142a28 28 0 0 1-28-28V236z\" fill=\"#fff\" stroke=\"#fff\" stroke-width=\"28\" stroke-linejoin=\"round\"/>\n      <g fill=\"#000\"><rect x=\"214\" y=\"268\" width=\"38\" height=\"38\" rx=\"9\"/><rect x=\"260\" y=\"268\" width=\"38\" height=\"38\" rx=\"9\"/><rect x=\"214\" y=\"314\" width=\"38\" height=\"38\" rx=\"9\"/><rect x=\"260\" y=\"314\" width=\"38\" height=\"38\" rx=\"9\"/></g>\n    </mask>",
   "body": "<rect width=\"512\" height=\"512\" fill=\"#FFFFFF\" mask=\"url(#g-house-cut)\"/>"
  },
+ "improve": {
+  "h": "bd806740646b",
+  "top": "#BB7AB1",
+  "end": "#8A3F7E",
+  "vb": "104 134 288 288",
+  "defs": "<mask id=\"g-improve-cut\" maskUnits=\"userSpaceOnUse\" x=\"0\" y=\"0\" width=\"512\" height=\"512\">\n      <path d=\"M160 136H336a56 56 0 0 1 56 56V304a56 56 0 0 1-56 56H232L160 420V360a56 56 0 0 1-56-56V192a56 56 0 0 1 56-56Z\" fill=\"#fff\"/>\n      <path d=\"M248 314V190M194 244l54-54 54 54\" fill=\"none\" stroke=\"#000\" stroke-width=\"34\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n    </mask>",
+  "body": "<rect width=\"512\" height=\"512\" fill=\"#FFFFFF\" mask=\"url(#g-improve-cut)\"/>"
+ },
  "mail": {
   "h": "177f52136a5b",
   "top": "#597BBF",

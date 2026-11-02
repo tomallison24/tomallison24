@@ -1,7 +1,7 @@
 # The family's Google Sheets
 
-Seven apps keep their records in a Google Sheet: **Fitness, Drinks, Podcasts, Orders, Notes (with
-Places), Travel and Meals**. Each app has **one Sheet for the whole family**, and that Sheet is the
+Eight apps keep their records in a Google Sheet: **Fitness, Drinks, Podcasts, Orders, Notes (with
+Places), Travel, Meals and Improve**. Each app has **one Sheet for the whole family**, and that Sheet is the
 record:
 
 - Every row is marked with whose it is.
@@ -16,6 +16,7 @@ record:
 |---|---|---|
 | Fitness, Drinks, Podcasts, Orders | `personal` | Each person sees only their own rows |
 | Notes (and Places, on Notes' Sheet), Travel, Meals | `family` | Rows are shared by the family, except an item marked **Just me** (`only: true`), which only its own person sees |
+| Improve | `family` | Every row is shared by the family (nothing is Just me, and nothing is dated); only its own person, or the owner, changes or deletes one |
 
 ## How a sync gets to a Sheet
 
@@ -128,7 +129,7 @@ Fitness's is the reference: the sync section of `fitness/app.js`.
 
 ## Setting it up (the owner, once)
 
-For each of the seven Sheets (Notes' is Places' too):
+For each of the seven Sheets made before Improve (Notes' is Places' too):
 
 1. Open the Sheet → **Extensions → Apps Script**.
 2. Paste in the app's new `google-sheet-sync.gs`, keeping your `SECRET` line, and save.
@@ -152,6 +153,10 @@ notifications stop.
 
 The old phrase has been on every phone that synced, and this way it opens nothing any more. Nobody
 else has to do anything: each phone syncs through aOS once its app is signed in.
+
+Improve's Sheet is new: the owner makes it once, from nothing (`improve/README.md`, "Setting up the
+Sheet"), and gives aOS its link and phrase in **Account → Google Sheets → Improve** (there is no
+usual link to fill in).
 
 ## Writing into Notes from another app
 

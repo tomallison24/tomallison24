@@ -1,7 +1,7 @@
 // /sheet/api/<app> - each app's Google Sheet, through aOS. The family's Sheets
 // are the record for Fitness, Drinks, Podcasts, Orders, Notes (and Places, on
-// Notes' Sheet), Travel and Meals: one Sheet an app for the whole family, each
-// row marked with who it belongs to (aOS/SHEETS.md).
+// Notes' Sheet), Travel, Meals and Improve: one Sheet an app for the whole family,
+// each row marked with who it belongs to (aOS/SHEETS.md).
 //
 // The phones never hold a Sheet's link or secret phrase any more: the owner
 // gives them to aOS once (here, kept in the accounts' Workers KV), and every
@@ -30,9 +30,10 @@ import { reply, kv, getJSON, putJSON, sessionUser } from '../../../server/auth.j
 // app -> [its Sheet, personal (each person's own rows) or family (shared, with "Just me" items)]
 export const SHEETS = {
   fitness: ['fitness', 'personal'], drinks: ['drinks', 'personal'], podcasts: ['podcasts', 'personal'], orders: ['orders', 'personal'],
-  notes: ['notes', 'family'], places: ['notes', 'family'], travel: ['travel', 'family'], meals: ['meals', 'family'],
+  notes: ['notes', 'family'], places: ['notes', 'family'], travel: ['travel', 'family'], meals: ['meals', 'family'], improve: ['improve', 'family'],
 };
 // The owner's own Sheets, as the apps had them filled in: the link alone opens nothing (it needs the phrase).
+// (Improve has none yet: the owner pastes its link in aOS, Account > Google Sheets, improve/README.md.)
 const USUAL = {
   fitness: 'https://script.google.com/macros/s/AKfycbzGn0a1Qva6N365vkI8T8yia3sDtOIfeYxHTLU9fivWgu8FOnI4w6cwzH2P1-wPAblu/exec',   // deployed anew with aOS's script (VERSION 3)
   drinks: 'https://script.google.com/macros/s/AKfycbxzpSXXD2t-j7kaNrA3S-kK74uaxC5J6P_OykrOQrdYYww4JCViMrwMnXSVo4Qn3nOO/exec',

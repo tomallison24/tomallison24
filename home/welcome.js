@@ -86,7 +86,7 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
-    { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school'],
+    { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school', 'improve'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
       notes: ['aOS looks at the app window once an app should be on screen: found off to the side, it is put back at once with a word about what was seen, so aOS stays usable while the cause is found',
         'aOS: in Layers, Home\'s grid keeps your most used apps on the top row (and any you keep there: Edit, then tap one), and every other app A to Z under it',
@@ -107,6 +107,7 @@
         'Money reads the deposits in Monarch\'s summary emails (paychecks, interest) as money in, and reads every email again once to pick up the ones it missed',
         'School reads the school\'s ParentSquare emails in Gmail, read-only, on your phone. At the top, the next school day: what to wear or bring, days off on the way to it, and pickup (the usual carpool, or that weekday\'s club). Then what needs you (sign-ups, RSVPs, forms, surveys and payments, soonest due first, with Mark done), the next two weeks and the rest of the year, her class\'s posts and messages to you first, everything else from school below (searchable), and the school\'s other sites, report cards and payments',
         'Calendar has a School layer: days off, events and what\'s due, from School (Settings > Calendars)',
+        'New app: Improve, one list for feedback, bugs and ideas about any aOS app. Type one, pick its kind and app, and tap Add; tap an item to change it, mark it done or delete it. Signed in, the list is kept in the family\'s Google Sheet, where everyone sees every item, so it can all be worked through in one go (the owner sets the Sheet up in aOS, Account > Google Sheets)',
         'On aOS Home, School and Sparkle Kingdom share a new Kids group',
         'School keeps what it read: its posts are saved in its own storage on the phone, not the small space every app shares, so a full phone no longer loses them and makes School read Gmail again from the start; a phone that had lost them reads them again by itself',
         'School: tapping a date from a newsletter opens at its own part of the email (its heading and paragraphs), with Show the whole email to read the rest, scrolled to that part and marked',
@@ -630,7 +631,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'school', 'money', 'house', 'sparkle'];
+  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'school', 'money', 'improve', 'house', 'sparkle'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
@@ -639,7 +640,7 @@
   // (mealsvintage/ and the rest) open the same app (news.yml copies it there).
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', school: 'School', money: 'Money', house: 'Home', sparkle: 'Sparkle Kingdom' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', school: 'School', money: 'Money', improve: 'Improve', house: 'Home', sparkle: 'Sparkle Kingdom' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "clock": {
@@ -1112,6 +1113,36 @@
         }
       ]
     },
+    "improve": {
+      "tag": "Feedback, bugs and ideas for aOS, in one list",
+      "cards": [
+        {
+          "i": "note",
+          "t": "Jot it down",
+          "d": "Type a bug, an improvement or an idea as it comes to you, and tap Add. One tap, and it's in."
+        },
+        {
+          "i": "sliders",
+          "t": "Which app",
+          "d": "Pick its kind and the app it's about, or General. Improve keeps them for the next one."
+        },
+        {
+          "i": "check",
+          "t": "Open and done",
+          "d": "Everything still to do is in Open, newest first. Tap one to change it, mark it done or delete it."
+        },
+        {
+          "i": "people",
+          "t": "Shared with the family",
+          "d": "Signed in, the list is kept in the family's Google Sheet: everyone can add to it, and it can all be worked through in one go."
+        },
+        {
+          "i": "star",
+          "t": "Your look",
+          "d": "Vintage, mid-century modern, Standard in Sea glass, Layers or Tron. Pick one in Settings, and change it any time."
+        }
+      ]
+    },
     "meals": {
       "tag": "Tell Ipsy what you fancy",
       "cards": [
@@ -1543,7 +1574,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, School, Money and Home, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, School, Money, Home and Improve, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     ...(tron() ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' }]),   // Tron is dark only
@@ -2219,6 +2250,13 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: ['#main .rgroup:nth-of-type(2)', '#main'], t: 'What needs you', d: 'Sign-ups, RSVPs, forms and payments, soonest due first. Mark one done when it\'s done.' },
     { sel: ['#main .rgroup:nth-of-type(4)', '#main'], t: 'From the class', d: 'Her teacher\'s posts, her grade\'s, her clubs\' and messages to you come first. Everything else from school waits below.' },
     { sel: '#moreBtn', t: 'Read from your email', d: 'School reads the school\'s ParentSquare emails in Gmail, read-only, on this phone. Connect Gmail in Settings.', g: 'tap' },
+  ] };
+  SPOTS.improve = { stops: [
+    { sel: '#addText', t: 'Jot it down', d: 'Type a bug, an improvement or an idea as it comes to you, and tap Add. One tap, and it’s in.', g: 'tap' },
+    { sel: ['#addApp', '#addKind'], t: 'Which app', d: 'Pick its kind and the app it’s about, or General. Improve keeps them for the next one.', g: 'tap' },
+    { sel: '#showChips', t: 'Open and done', d: 'Everything still to do is in Open, newest first. Tap one to change it, mark it done or delete it.', g: 'tap' },
+    { sel: '#moreBtn', t: 'Shared with the family', d: 'Signed in, the list is kept in the family\'s Google Sheet: everyone can add to it, and it can all be worked through in one go. Sign in here.', g: 'tap' },
+    { sel: '#moreBtn', t: 'Your look', d: 'Vintage, mid-century modern, Standard in Sea glass, Layers or Tron. Pick one in Settings, and change it any time.', g: 'tap' },
   ] };
   SPOTS.money = { stops: [
     { sel: ['#main [data-act="connect"]', '#main .empty'], t: 'This month at a glance', d: 'Connect Gmail and Money reads Monarch’s alert emails: what you’ve spent, the pace for the month, and each category against your usual.', g: 'tap' },
