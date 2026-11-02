@@ -1059,7 +1059,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { const o = JSON.parse(ls.get('mail.token', 'null')); if (o && o.exp > Date.now() && /gmail\.(modify|readonly)|mail\.google\.com/.test(o.scope || '')) return o; } catch {}
     return null;
   }
-  const getToken = () => ownToken() || mailToken();
+  // Mail's sign-in only when it's the same Gmail account as this app's own (or this one has none yet): another
+  // account's inbox isn't where this app's emails are.
+  const sameAccount = () => { const own = ls.get(K.hint, '') || ls.get(K.me, ''), theirs = ls.get('mail.hint', '') || ls.get('mail.me', ''); return !own || !theirs || own.toLowerCase() === theirs.toLowerCase(); };
+  const getToken = () => ownToken() || (sameAccount() && mailToken()) || null;
   // A quiet sign-in happens by itself only if the last one didn't fail in the
   // past 12 hours, so a Google that wants a tap never causes a redirect on every open.
   const mayRenew = () => !!ls.get(K.token + '.ever', '') && Date.now() - +ls.get(K.lastAuth, 0) > 60e3 && Date.now() - +ls.get(K.silentFail, 0) > 12 * H;
@@ -1173,8 +1176,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   async function scan({ loud } = {}) {
     if (st.scanning) return;
     if (!getToken()) {
-      if (mayRenew()) { signIn({ silent: true }); return; }
-      if (loud) openSettings();
+      // Check now, tapped: Google's sign-in, where you can see it (a quiet try fails without a word when Google
+      // wants you to sign in again, and Settings alone said nothing, so the tap seemed to do nothing)
+      if (loud) { if (hasGmail()) toast('Gmail needs you to sign in again.'); signIn(); return; }
+      if (mayRenew()) signIn({ silent: true });
       return;
     }
     clearTimeout(nextPass);
@@ -2186,12 +2191,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // Settings, as in every app (../home/settings.js): Design · Trips · Connected accounts · Ipsy · Your data
   function renderSettings() {
-    const S = AllisonOS.settings, own = ownToken(), viaMail = !own && mailToken(), ever = ls.get(K.token + '.ever', '');
+    const S = AllisonOS.settings, own = ownToken(), viaMail = !own && sameAccount() && mailToken(), ever = ls.get(K.token + '.ever', '');
     const me = ls.get(K.me, ''), last = +ls.get(K.lastScan, 0), n = lookupsThisMonth();
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
     const ml = aiOn() && aiAvail !== false ? modelsLine() : '';
     const gmail = own || viaMail || ever ? [
-      S.info({ id: 'stGmailWho', title: 'Gmail', sub: (me || (viaMail ? 'Mail’s sign-in' : 'Signed in')) + ', read-only.' }),
+      S.info({ id: 'stGmailWho', title: 'Gmail', sub: own || viaMail ? (me || (viaMail ? 'Mail’s sign-in' : 'Signed in')) + ', read-only.' : (me ? me + ': s' : 'S') + 'igned out; Check now signs in again.' }),
       S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
       S.nav({ id: 'stLog', title: 'What Travel read', sub: scanSummary() }),
       S.action({ id: 'stRescan', icon: 'refresh', title: 'Read the last year again', sub: 'Bookings you edited, checked or deleted stay as they are.' }),
@@ -2497,7 +2502,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         flightData, keepLive, boardData,
         // the same monthly allowances on this phone as the app's own look-ups
         allowance: { flight: () => LOOKUPS_A_MONTH - lookupsThisMonth(), countFlight: countLookup, board: () => FIND_A_MONTH - aiUse().find, countBoard: () => { const u = aiUse(); u.find++; aiSave(u); } },
-        gmail, bodies, header, getToken, AuthError,
+        gmail, bodies, header, getToken, hasGmail, AuthError,
         screen() {
           if (!$('bkSheet').hidden && st.booking && !st.isNew) return st.booking.private ? 'a private booking' : 'the booking ' + st.booking.id + ' (' + titleOf(st.booking) + ')';
           const g = !$('tripPage').hidden && st.trip && tripById(st.trip);
