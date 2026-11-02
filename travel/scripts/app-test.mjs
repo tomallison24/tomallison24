@@ -194,8 +194,11 @@ for (const scheme of ['light', 'dark']) {
     // the second card peeks in, so you can see there's more
     const peek = await page.evaluate(() => { const t = document.getElementById('heroTrack').getBoundingClientRect(), c = document.querySelectorAll('#heroTrack > .hero')[1].getBoundingClientRect(); return c.left < t.right && c.left > t.left + t.width / 2; });
     assert.ok(peek, 'the next card shows at the edge');
-    // a chip scrolls to its card
+    // a chip scrolls to its card, its thumb going straight there: no other chip lights up while the cards pass under
+    await page.evaluate(() => { window.__lit = []; const bar = document.getElementById('heroStages');
+      new MutationObserver(() => { const on = bar.querySelector('[aria-pressed="true"]'); if (on) window.__lit.push(on.dataset.stage); }).observe(bar, { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] }); });
     await page.click('#heroStages [data-stage="2"]'); await page.waitForTimeout(700);
+    assert.deepEqual([...new Set(await page.evaluate(() => window.__lit))], ['2'], 'only the tapped chip lights up on the way');
     const shown = () => page.evaluate(() => { const t = document.getElementById('heroTrack'), cs = [...t.children]; const x = t.getBoundingClientRect().left + 14;
       return cs.findIndex(c => Math.abs(c.getBoundingClientRect().left - x) < 4); });
     const inView = await page.evaluate(() => { const t = document.getElementById('heroTrack').getBoundingClientRect(), c = document.querySelectorAll('#heroTrack > .hero')[2].getBoundingClientRect(); return c.left >= t.left - 1 && c.right <= t.right + 1; });
