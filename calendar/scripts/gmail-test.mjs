@@ -14,4 +14,24 @@ assert.equal(bodyText({mimeType:'text/plain',filename:'attachment.txt',body:{dat
 assert.equal(redact('https://example.com/private?secret=1'),'[link to example.com]');
 await assert.rejects(tools.read_email({message_id:'../send'}),/message_id/);
 globalThis.fetch=async()=>new Response('',{status:401}); await assert.rejects(tools.read_email({message_id:'abc'}),/expired/); assert.equal(session(),null);
-console.log('Calendar Gmail tests passed: consent, read-only requests, pagination, redaction, attachments and expiry.');
+// Kept signed in (aOS's server, home/account.js AllisonOS.gmail): once connected, each hour's key comes from the server;
+// still read-only (a wider key is refused) and still asked once a session; a 401 gets one new key; Disconnect stops it.
+const local = new Map(); globalThis.localStorage = { getItem: k => local.has(k) ? local.get(k) : null, setItem: (k,v) => local.set(k,String(v)), removeItem: k => local.delete(k) };
+let renewals = 0, scope = SCOPE;
+globalThis.window = { AllisonOS: { gmail: { on: () => true, renewInto: async ({ kind, store }) => { assert.equal(kind, 'read'); renewals++; localStorage.setItem(store, JSON.stringify({ t: 'KEPT-' + renewals, exp: Date.now() + 3e6, scope })); localStorage.setItem(store + '.until', String(Date.now() + 20 * 864e5)); return true; } } } };
+store.clear();
+await assert.rejects(tools.search_gmail({query:'dentist'},{confirm:async()=>true}), /Connect Gmail/, 'not connected in Calendar: the other apps\' sign-in isn\'t used');
+assert.equal(renewals, 0);
+localStorage.setItem('calendar.gmail.kept.on', '1');
+calls = []; globalThis.fetch = async (u, init) => { calls.push({u,init}); return Response.json(u.pathname.endsWith('/messages') ? {messages:[]} : {}); };
+await tools.search_gmail({query:'dentist'},{confirm:async()=>true});
+assert.equal(renewals, 1); assert.equal(calls[0].init.headers.Authorization, 'Bearer KEPT-1', 'connected: the key from aOS\'s server');
+let asked = 0; store.delete('calendar.gmail.consent');
+assert.equal((await tools.search_gmail({query:'x'},{confirm:async()=>{ asked++; return false; }})).content.declined, true); assert.equal(asked, 1, 'still asked once a session');
+let n = 0; calls = []; globalThis.fetch = async (u, init) => { calls.push({u,init}); return ++n === 1 ? new Response('',{status:401}) : Response.json({messages:[]}); };
+await tools.search_gmail({query:'dentist'},{confirm:async()=>true});
+assert.deepEqual(calls.map(c => c.init.headers.Authorization), ['Bearer KEPT-1', 'Bearer KEPT-2'], 'a 401: one new key, and the read again');
+scope = SCOPE + ' https://www.googleapis.com/auth/gmail.modify'; localStorage.removeItem('calendar.gmail.kept');
+await assert.rejects(tools.search_gmail({query:'dentist'},{confirm:async()=>true}), /Connect Gmail/, 'a key that could do more than read is refused');
+assert.equal(localStorage.getItem('calendar.gmail.kept'), null);
+console.log('Calendar Gmail tests passed: consent, read-only requests, pagination, redaction, attachments and expiry; kept signed in through aOS\'s server.');

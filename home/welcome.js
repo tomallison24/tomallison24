@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school', 'improve'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
-      notes: ['Mail stays signed in to Gmail for 30 days too, like Travel, Orders, School and Money: connect it once (Connect Gmail) and it isn\'t asked again for a month; Settings says until when, and Disconnect Gmail ends Mail\'s alone',
+      notes: ['Ipsy keeps up with Gmail staying signed in: its own checks in Orders, Travel and Money, and its Gmail searches in chats, get a new hour by themselves instead of saying the sign-in ran out; Calendar\'s Ipsy uses the 30-day sign-in too (Connect Gmail once in Calendar); each app\'s Settings says signed in until when, not signed out, while the 30 days last; and Money has the switch to keep Ipsy out of Gmail in chats, like Orders, Travel and Calendar',
+        'Mail stays signed in to Gmail for 30 days too, like Travel, Orders, School and Money: connect it once (Connect Gmail) and it isn\'t asked again for a month; Settings says until when, and Disconnect Gmail ends Mail\'s alone',
         'aOS Account > Updates says which build the phone is on (Build a1b2c3d, with the date), so "did it get the fix?" has an answer',
         'aOS: after the phone\'s own back swipe from an app, the app no longer flashes back over Home for a moment and slides out again; and the next app opened is given a fresh picture, in case the phone kept an old one',
         'aOS looks at the app window once an app should be on screen: found off to the side, it is put back at once with a word about what was seen, so aOS stays usable while the cause is found',

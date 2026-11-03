@@ -390,6 +390,25 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     await page.waitForFunction(() => document.getElementById('tripPage').hidden);
   });
 
+  if (design === 'glass' && scheme === 'light') await step(tag + ': kept signed in, this hour\'s key run out: Ipsy gets a new one from aOS\'s server and reads Gmail, no sign-in', async () => {
+    await ctx.route(BASE + '/aOS/api/gmail/token', route => route.fulfill({ json: { token: 'kept-ipsy', exp: Date.now() + 3500e3, scope: 'https://www.googleapis.com/auth/gmail.readonly', email: 'pat@example.com', until: Date.now() + 20 * 864e5 } }));
+    const auths = [], onReq = r => { if (r.url().startsWith('https://gmail.googleapis.com/')) auths.push(r.headers().authorization); };
+    page.on('request', onReq);
+    await T(() => { localStorage.removeItem('travel.token'); localStorage.setItem('aos.gmail.on', '1'); localStorage.setItem('aos.session', JSON.stringify({ token: 'made-up-session', user: { id: 'u1', name: 'Pat' } })); });
+    await page.click('.ipsy-btn');
+    await page.waitForFunction(() => !document.querySelector('.ipsy-wrap').hidden);
+    const mine = await ask('What was in my United email?', 'I opened the trip');
+    const search = JSON.parse(mine[1].at(-1).content[0].content);
+    assert.equal(search.emails[0].subject, 'Your trip confirmation - KQ7T2M', 'searched, not told the sign-in ran out: ' + mine[1].at(-1).content[0].content.slice(0, 160));
+    assert.ok(auths.length && auths.every(a => a === 'Bearer kept-ipsy'), 'with the key from aOS\'s server: ' + auths.join(', '));
+    page.off('request', onReq);
+    await page.click('.ipsy-x');
+    await page.waitForFunction(() => document.querySelector('.ipsy-wrap').hidden);
+    await page.click('#tpDone');
+    await page.waitForFunction(() => document.getElementById('tripPage').hidden);
+    await T(() => { localStorage.removeItem('aos.gmail.on'); localStorage.removeItem('aos.session'); localStorage.setItem('travel.token', JSON.stringify({ t: 'fake-token', exp: Date.now() + 3600e3, scope: 'https://www.googleapis.com/auth/gmail.readonly' })); });
+  });
+
   await step(tag + ': a bug, logged in the family\'s Improve list from here: kept on the phone while it can\'t reach the Sheet, with Undo', async () => {
     await T(() => localStorage.removeItem('aos.improve.outbox'));
     await page.click('.ipsy-btn'); await page.waitForSelector('#ipsyIn:visible');
