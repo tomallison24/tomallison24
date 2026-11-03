@@ -164,6 +164,10 @@ It's **off** until the owner sets it up; until then the apps sign in on the phon
 
 1. **Google Cloud** ([console.cloud.google.com](https://console.cloud.google.com)), the project whose OAuth client
    ID starts `804406956056-` (APIs & Services → Credentials lists it):
+   - **Google Auth Platform → Branding** first (Google won't publish without it): App name `aOS`, User support
+     email (yours), App home page `https://tomallison24-news.pages.dev/aOS/`, Privacy policy
+     `https://tomallison24-news.pages.dev/aOS/privacy.html` (`aOS/privacy.html`: keep it true to what the apps do),
+     and under Authorised domains `tomallison24-news.pages.dev` if it asks. No logo (a logo needs verification).
    - **Google Auth Platform → Audience → Publish app** (Testing → **In production**). In Testing Google ends a
      refresh token after 7 days. Don't submit it for verification: a family app doesn't need it. Signing in then
      shows "Google hasn't verified this app": **Advanced → Go to … (unsafe)**, once a month.
