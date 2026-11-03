@@ -33,7 +33,6 @@ export const SHEETS = {
   notes: ['notes', 'family'], places: ['notes', 'family'], travel: ['travel', 'family'], meals: ['meals', 'family'], improve: ['improve', 'family'],
 };
 // The owner's own Sheets, as the apps had them filled in: the link alone opens nothing (it needs the phrase).
-// (Improve has none yet: the owner pastes its link in aOS, Account > Google Sheets, improve/README.md.)
 const USUAL = {
   fitness: 'https://script.google.com/macros/s/AKfycbzGn0a1Qva6N365vkI8T8yia3sDtOIfeYxHTLU9fivWgu8FOnI4w6cwzH2P1-wPAblu/exec',   // deployed anew with aOS's script (VERSION 3)
   drinks: 'https://script.google.com/macros/s/AKfycbxzpSXXD2t-j7kaNrA3S-kK74uaxC5J6P_OykrOQrdYYww4JCViMrwMnXSVo4Qn3nOO/exec',
@@ -42,6 +41,7 @@ const USUAL = {
   notes: 'https://script.google.com/macros/s/AKfycbz8kIAKSV-PVYnVX_TvZeSGNiR1t5kqArVzcjnSw7OkiHbyWEmVmxNqoPwFc4oQZRcO/exec',
   travel: 'https://script.google.com/macros/s/AKfycbzEjKlk2PnB_VrMrrPdX6ObNX_kRX2cdxrdfhqjAJFmyzQ8mJEDU9phaKDD_B2CElI1gg/exec',
   meals: 'https://script.google.com/macros/s/AKfycbx7TrC5hNipE0gpjFOMZLRl_mMay1oMDYTkosgPLqvui5wJuOz6WN04iVe1tks-GEmD_w/exec',
+  improve: 'https://script.google.com/macros/s/AKfycbzNXwBYVravxy4JI5iw9usLxAZ9_TqLaAqSUCTwrZlhPIMxl1nFjlu0QwHe9aS-yV7Bnw/exec',
 };
 // Links the owner has since replaced with a new deployment of the same Sheet's script: a kept one moves to the usual link.
 const RETIRED = new Set([
