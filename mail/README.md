@@ -99,7 +99,11 @@ What stands between a hostile email and your mailbox:
 - **Sign-in is short-lived.** Google's token lasts an hour and there is no
   refresh token on the phone. Each sign-in carries a random `state` value
   that must come back unchanged, and the token is wiped from the address bar
-  at once.
+  at once. Once the owner has set up Gmail staying signed in (`aOS/RELEASING.md`,
+  "Gmail stays signed in"), Connect Gmail signs in once through aOS's server
+  instead: the refresh token stays there, sealed, for 30 days, and Mail asks it
+  for each new hour (signed in to the family, Mail's own `gmail.modify` and
+  `gmail.settings.basic`, never the phone's). Disconnect Gmail ends it there too.
 - **It won't run inside another page.** A hostile site could otherwise lay
   the app invisibly under its own buttons and steer taps onto Trash or Block
   (clickjacking). Framed, it shows one line of text and does nothing.

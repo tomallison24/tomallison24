@@ -180,7 +180,7 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
   //   AllisonOS.gmail.renewInto({ kind, store, me })         -> true once an hour-long key is in localStorage[store]
   //                                                            ({ t, exp, scope }, as the app's own sign-in keeps it)
   //   AllisonOS.gmail.start({ kind, hint, back })            -> Google's sign-in address (a tap: may ask for Face ID)
-  //   AllisonOS.gmail.disconnect(email)                         revoked at Google and forgotten on the server
+  //   AllisonOS.gmail.disconnect(email, kind)                   revoked at Google and forgotten on the server (every kind without one)
   const GON = 'aos.gmail.on';
   const gpost = async (path, body, quiet = true) => {
     const r = await authFetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' }, { quiet });
@@ -204,6 +204,6 @@ html[data-theme="dark"] #aos-signin { --s-bg: rgba(24,25,30,.97); --s-text: #fff
     async start({ kind = 'read', hint = '', back = location.pathname + location.search } = {}) {
       try { const j = await gpost('gmail/start', { kind, hint, back }, false); return j && j.url || null; } catch { return null; }
     },
-    disconnect: email => gpost('gmail/disconnect', { email: email || '' }).catch(() => null),
+    disconnect: (email, kind) => gpost('gmail/disconnect', Object.assign({ email: email || '' }, kind ? { kind } : {})).catch(() => null),
   };
 })();

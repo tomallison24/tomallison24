@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school', 'improve'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
-      notes: ['aOS Account > Updates says which build the phone is on (Build a1b2c3d, with the date), so "did it get the fix?" has an answer',
+      notes: ['Mail stays signed in to Gmail for 30 days too, like Travel, Orders, School and Money: connect it once (Connect Gmail) and it isn\'t asked again for a month; Settings says until when, and Disconnect Gmail ends Mail\'s alone',
+        'aOS Account > Updates says which build the phone is on (Build a1b2c3d, with the date), so "did it get the fix?" has an answer',
         'aOS: after the phone\'s own back swipe from an app, the app no longer flashes back over Home for a moment and slides out again; and the next app opened is given a fresh picture, in case the phone kept an old one',
         'aOS looks at the app window once an app should be on screen: found off to the side, it is put back at once with a word about what was seen, so aOS stays usable while the cause is found',
         'aOS: in Layers, Home\'s grid keeps your most used apps on the top row (and any you keep there: Edit, then tap one), and every other app A to Z under it',
