@@ -79,9 +79,16 @@ AllisonOS apps' dates alongside.
 
   Any layer item but Drinks has **Add to the Family calendar**, which opens
   the editor with it filled in.
+- **Calendars** (the button beside Search): which calendars this phone shows,
+  the Family calendar and every layer, each with its switch (the same rows as
+  Settings > Calendars, `calendarRows` in app.js), plus **Show all** and **Show
+  only** one. Kept on this phone (`settings.layers`, `family` among them); the
+  button's label says how many are hidden. The Family calendar can be hidden
+  too: Ipsy still reads it (`st.all`; `st.occ` is what's shown), and saving an
+  event into it shows it again. The big title shrinks to fit beside the four
+  buttons (`fitTitle`) rather than being cut short.
 - **Settings** (drawn by `../home/settings.js`, as in every app): **Design**
-  (below); **Calendars**, the layers' switches (the Family calendar's is on and
-  can't be turned off); **Display**, week starts on Sunday or Monday (Sunday by
+  (below); **Calendars**, the same switches as the Calendars button; **Display**, week starts on Sunday or Monday (Sunday by
   default), 12- or 24-hour time, temperature units and when the Day view opens;
   **New events**, their length and alerts; **Connected accounts**, iCloud's
   status in a sentence, **Check now**, **Look up the calendar again**, and
