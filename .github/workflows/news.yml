@@ -147,6 +147,10 @@ jobs:
           git checkout -q --detach "$live"
           if [ -d "$RUNNER_TEMP/labs" ]; then rm -rf labs && cp -r "$RUNNER_TEMP/labs" labs; fi
           echo "Publishing $live ($(git rev-parse --short HEAD)), with labs/ from $GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+      # Which build a phone is on: aOS's Account > Updates shows it (aOS/app.js reads aOS/build.json),
+      # so "did the phone get the fix?" has an answer. Made here, never in the repository.
+      - name: Stamp the build
+        run: printf '{"sha":"%s","at":"%s"}\n' "$(git rev-parse --short HEAD)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > aOS/build.json
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444   # v5.0.0
         with:
           node-version: 22

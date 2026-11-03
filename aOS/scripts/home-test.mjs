@@ -224,6 +224,7 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   await pg.goBack(); await pg.waitForTimeout(500);
   s = await state();
   check(!s.inApp && s.hash === '' && await pg.evaluate(() => window.__same === 1), `the phone's own back (an iPhone's edge swipe) goes to Home, staying in aOS ${tag}`);
+  check(await pg.evaluate(() => !document.body.classList.contains('snap') && getComputedStyle(document.getElementById('appwin')).transitionDuration !== '0s'), `and the window goes without its slide, its slide back for the next open ${tag}`);
   await pg.locator('.happ[data-open="weather"]').click(); await pg.waitForTimeout(1200);
   await pg.mouse.move(5, 420); await pg.mouse.down(); await pg.mouse.move(280, 420, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(600);
   check(!(await state()).inApp, `a swipe in from the left edge goes back ${tag}`);

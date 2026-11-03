@@ -573,7 +573,7 @@
   html[data-bar="solid"] #barcap { display: block; }
   #appwin { position: fixed; inset: 0; z-index: 40; background: var(--tint, var(--bg)); transform: translateX(105%); transition: transform .38s cubic-bezier(.2,.8,.2,1), box-shadow .38s; }
   body.in-app #appwin, body.dragging #appwin { transform: none; box-shadow: -10px 0 30px rgba(0,0,0,.16); }
-  body.dragging #appwin, body.dragging #appshade { transition: none; }
+  body.dragging #appwin, body.dragging #appshade, body.snap #appwin, body.snap #appshade { transition: none; }   /* snap: the phone's own back already animated it away */
   #stage { position: absolute; inset: 0; }
   .frame { position: absolute; inset: 0; overflow: hidden; }   /* an app never wider than its frame, even if the phone would size it to what it draws */
   .frame[hidden] { display: none; }

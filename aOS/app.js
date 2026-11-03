@@ -367,8 +367,15 @@
         ${fold('fPlan', 'Subscription', 'The family\'s plan', `<div class="group plans" id="plans"></div><p class="note" id="planNote"></p>`, '', 'subscription')}
         ${fold('fNew', 'Updates', r0 ? `${mk(r0.v)} · ${esc(r0.title || '')}` : 'What\'s new', `<div class="group" id="rels">${live.slice(0, 1).map(r => `<div class="rel"><h4>${mk(r.v)} <span class="muted" style="font-weight:400">${esc(r.title || '')}</span></h4><small>${esc(r.date || '')}</small>
           <ul data-ipsy="as-is">${hi(r).map(n => li(n)).join('')}</ul></div>`).join('')}</div>
-          <button type="button" class="soft" data-replay>Replay the welcome</button>`, '', 'whats-new')}
+          <button type="button" class="soft" data-replay>Replay the welcome</button>
+          <p class="note" id="buildNote" hidden></p>`, '', 'whats-new')}
       </div>`, { up: true });
+    // the build this phone is on (aOS/build.json, stamped by the deploy): "Build a1b2c3d, 2 Nov 11:26", for "did it get the fix?"
+    fetch('build.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(b => {
+      const n = el.querySelector('#buildNote'); if (!b || !b.sha || !n) return;
+      const at = new Date(b.at); n.hidden = false;
+      n.textContent = `Build ${b.sha}` + (isNaN(at) ? '' : `, ${at.toLocaleString([], { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`);
+    }).catch(() => {});
     el.addEventListener('click', ev => {
       const f = ev.target.closest('[data-fold]'); if (f) unfold(f);
       // a choice (S.choice): Light or dark, Home layout, a look's intro
