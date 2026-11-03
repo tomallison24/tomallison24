@@ -5,6 +5,8 @@
 //                 open sheet is made of its sections (.st-sec)
 //   title         a button labelled "Settings" opens a sheet named "Settings"
 //   gear          that button is the gear, the same drawing in every app (Orders': a circle in a toothed ring, GEAR)
+//   refresh       every button that refreshes or checks for new things (Refresh, Check now, Look for new …), on the
+//                 main screen and in Settings, draws the same two arrows (REFRESH)
 //   done          the sheet's way out is the ✓ labelled Done, in the head's right corner
 //   design-first  the first section is Design, with the shared picker (aosDesign.picker()); Clock, whose looks
 //                 live in clock/design.js (DESIGN.md rule 14), with its own picker of the four looks
@@ -48,6 +50,7 @@ export const CHECKS = [
   ['shared', 'Settings is home/settings.js'],
   ['title', 'A sheet named Settings'],
   ['gear', 'Settings is the gear'],
+  ['refresh', 'One refresh icon'],
   ['done', '✓ Done in the corner'],
   ['design-first', 'Design first'],
   ['order', 'Sections in order'],
@@ -197,7 +200,7 @@ const OPEN = {
 };
 
 // Everything below runs in the page.
-function pageMain() {
+function pageMain([R, NAME]) {
   const vis = el => { if (!el.getClientRects().length) return false; const s = getComputedStyle(el); return s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity !== 0; };
   const nameOf = el => {
     const lb = el.getAttribute('aria-labelledby');
@@ -207,10 +210,14 @@ function pageMain() {
   const unnamed = root => [...root.querySelectorAll('button, [role="button"], [role="switch"], [role="tab"], a[href]')]
     .filter(el => vis(el) && !el.closest('[aria-hidden="true"]') && !nameOf(el))
     .map(el => el.outerHTML.replace(/\s+/g, ' ').slice(0, 90));
+  const badRefresh = root => { const re = new RegExp(NAME, 'i');   // buttons named like a refresh whose drawing isn't REFRESH
+    return [...root.querySelectorAll('button, [role="button"]')].filter(el => vis(el) && el.querySelector('svg') && re.test(nameOf(el)))
+      .filter(el => { const d = [...el.querySelectorAll('svg path')].map(x => x.getAttribute('d')); return d.length !== R.length || d.some((x, i) => x !== R[i]); })
+      .map(el => '"' + nameOf(el).slice(0, 40) + '" doesn\'t draw the two arrows'); };
   const upper = (document.body.innerText.match(/(^|[^\w])AOS([^\w]|$)/g) || []).length;
-  return { unnamed: unnamed(document.body), upper };
+  return { unnamed: unnamed(document.body), upper, refresh: badRefresh(document.body) };
 }
-function pageSheet() {
+function pageSheet([R, NAME]) {
   const vis = el => { if (!el.getClientRects().length) return false; if (el.closest('details:not([open])') && !el.closest('details:not([open]) > summary')) return false; const s = getComputedStyle(el); return s.visibility !== 'hidden' && s.display !== 'none'; };
   const onScreen = el => { const r = el.getBoundingClientRect(); return vis(el) && r.width > 0 && r.bottom > 40 && r.top < innerHeight - 40; };
   const dlgs = [...document.querySelectorAll('[role="dialog"]')].filter(onScreen).filter(d => !d.closest('#aos-welcome, #aos-signin, .ipsy-bubble'));
@@ -233,12 +240,20 @@ function pageSheet() {
     .filter(el => vis(el) && !el.closest('[aria-hidden="true"]') && !nameOf(el) && !(el.labels && el.labels.length && el.labels[0].innerText.trim()))
     .map(el => el.outerHTML.replace(/\s+/g, ' ').slice(0, 90));
   const switches = [...dlg.querySelectorAll('[role="switch"]')].filter(vis).filter(s => !s.querySelector('.st-sw')).length;
+  const badRefresh = root => { const re = new RegExp(NAME, 'i');   // buttons named like a refresh whose drawing isn't REFRESH
+    return [...root.querySelectorAll('button, [role="button"]')].filter(el => vis(el) && el.querySelector('svg') && re.test(nameOf(el)))
+      .filter(el => { const d = [...el.querySelectorAll('svg path')].map(x => x.getAttribute('d')); return d.length !== R.length || d.some((x, i) => x !== R[i]); })
+      .map(el => '"' + nameOf(el).slice(0, 40) + '" doesn\'t draw the two arrows'); };
   const text = dlg.innerText;
-  return { name: nameOf(dlg), done, labels, subs, loose, unnamed, switches, picker: !!dlg.querySelector('.st-sec .aos-design'),
+  return { refresh: badRefresh(dlg), name: nameOf(dlg), done, labels, subs, loose, unnamed, switches, picker: !!dlg.querySelector('.st-sec .aos-design'),
     looks: [...((dlg.querySelector('.st-sec') || dlg).querySelectorAll('[role="radiogroup"] [role="radio"][data-design]'))].map(b => b.dataset.design), text, upper: (text.match(/(^|[^\w])AOS([^\w]|$)/g) || []).length };
 }
 
 // the gear: Orders' drawing, in every app's Settings button (DESIGN.md rule 13)
+// the refresh: two arrows chasing round a circle, in every button that refreshes or checks for new things (rule 13)
+export const REFRESH = ['M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4', 'M4 3.8v4.6h4.6', 'M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6', 'M20 20.2v-4.6h-4.6'];
+// what such a button is called: its name (aria-label, else its words) starts so
+const REFRESH_NAME = '^(refresh|reload|check (now|again|for new)|look for new|try again|update now|sync now)';
 export const GEAR = 'M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z';
 const ORDER = ['Design', '', 'Connected accounts', 'AI helper', 'Notifications', 'Your data', 'Family account'];
 const rank = l => { const i = ORDER.findIndex(x => x && x.toLowerCase() === l.toLowerCase()); return i < 0 ? 1 : i; };
@@ -268,9 +283,10 @@ async function browserChecks(browser, base, id) {
   try {
     await p.goto(base + '/' + dir(id) + '/');
     await p.waitForTimeout(1500);
-    const main = await p.evaluate(pageMain);
+    const main = await p.evaluate(pageMain, [REFRESH, REFRESH_NAME]);
     r.names = main.unnamed.map(h => 'no name: ' + h);
     r['aos-case'] = main.upper ? [`"AOS" on the main screen (${main.upper}×)`] : [];
+    r.refresh = main.refresh;
     if (NA[id] && NA[id].includes('title')) return r;
 
     // Settings, opened as a person would: the button labelled Settings
@@ -297,7 +313,7 @@ async function browserChecks(browser, base, id) {
     // an app that draws its Settings again as it opens (Weather, Home): opened again, once it has settled
     if (how) await p.evaluate(() => document.querySelectorAll('[role="dialog"] details.st-fold').forEach(d => { d.open = true; }));
     await p.waitForTimeout(200);
-    const s = how ? await p.evaluate(pageSheet) : null;
+    const s = how ? await p.evaluate(pageSheet, [REFRESH, REFRESH_NAME]) : null;
     const none = ['Settings didn\'t open'];
     if (!s) { for (const k of SETTINGS_CHECKS) if (!(k === 'gear' && r.gear)) r[k] = how ? none : ['no button labelled Settings']; return r; }
     r.title = [];
@@ -317,6 +333,7 @@ async function browserChecks(browser, base, id) {
     r['on-off'] = onoff.length ? [`says ${[...new Set(onoff)].join(' and ')}`] : [];
     r['one-sentence'] = !s.labels.length ? ['no shared rows'] : s.subs.filter(t => sentences(t) > 1 || !/[.…?!]["”’)]?$/.test(t)).map(t => (sentences(t) > 1 ? 'more than one sentence: ' : 'no full stop: ') + JSON.stringify(t.slice(0, 70)));
     r.names = r.names.concat(s.unnamed.map(h => 'no name in Settings: ' + h));
+    r.refresh = r.refresh.concat(s.refresh.map(x => 'in Settings: ' + x));
     if (s.upper) r['aos-case'].push(`"AOS" in Settings (${s.upper}×)`);
     return r;
   } catch (e) {

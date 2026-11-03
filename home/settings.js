@@ -193,7 +193,7 @@ html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,2
   const svg = d => `<svg class="st-ic" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
   // the icons an action row can have, one look in every app
   const ICONS = {
-    refresh: svg('<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.6 4.4v4.3h-4.3"/>'),
+    refresh: svg('<path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/>'),   // the one refresh drawing in every app (DESIGN.md rule 13; REFRESH in aOS/scripts/design-check.mjs)
     upload: svg('<path d="M12 14.2V3.8"/><path d="M7.6 7.8 12 3.6l4.4 4.2"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/>'),
     download: svg('<path d="M12 3.8v10.4"/><path d="M7.6 10 12 14.4l4.4-4.4"/><path d="M4 14.6v2.2a3.2 3.2 0 0 0 3.2 3.2h9.6a3.2 3.2 0 0 0 3.2-3.2v-2.2"/>'),
     out: svg('<path d="M14 4.5h3.3a2.2 2.2 0 0 1 2.2 2.2v10.6a2.2 2.2 0 0 1-2.2 2.2H14"/><path d="M10 8 6 12l4 4M6 12h9"/>'),
