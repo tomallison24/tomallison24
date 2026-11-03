@@ -151,14 +151,16 @@ is no plan, and nothing is switched off. Tests: `node aOS/scripts/plan-api-test.
 
 ## Gmail stays signed in
 
-Travel, Orders, School and Money read Gmail on the phone. Signed in on the phone alone, Google gives a key that
+Travel, Orders, School, Money and Mail read Gmail on the phone. Signed in on the phone alone, Google gives a key that
 lasts an hour and can't be renewed, so they asked again every hour. With this set up, the person signs in once
 through aOS's server (`server/gmail.js`, routes `gmail/*` in `functions/aOS/api`): Google gives the server a
 long-lived key (a refresh token), kept **sealed** in the accounts' KV and never sent to a phone; each app asks it
 for an hour-long key when it needs one, signed in to the family, for its own person's Gmail only. **30 days** after
 signing in the server revokes it at Google and deletes it, and the person signs in again (one tap). Disconnect in an
 app, leaving the family, a new Google password or removing it in Google's security settings ends it too. Read-only
-(`gmail.readonly`); the emails are still read on the phone, never kept on the server. Mail doesn't use it yet.
+(`gmail.readonly`) for Travel, Orders, School and Money; Mail's own, kept apart (`gmail.modify` and
+`gmail.settings.basic`, for labels, moves, the Trash and its tags' sender rules), and Mail's Disconnect ends only
+Mail's. The emails are still read on the phone, never kept on the server.
 
 It's **off** until the owner sets it up; until then the apps sign in on the phone as before. Once, in a browser:
 

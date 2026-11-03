@@ -154,12 +154,26 @@ await test('Google refusing it (a new password, removed in Google\'s settings) d
   assert.deepEqual(await getJSON(db, 'gm:u1'), []);
 });
 
+await test('Mail\'s sign-in is its own: gmail.modify with its filters scope, and its Disconnect leaves the read-only one', async () => {
+  const s = new URL((await call('gmail/start', { kind: 'modify', back: '/mail/' }, pat)).body.url);
+  assert.equal(s.searchParams.get('scope'), 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.settings.basic');
+  await call('gmail/back', undefined, null, ON, '?state=' + s.searchParams.get('state') + '&code=good');
+  const r = new URL((await call('gmail/start', { kind: 'read', back: '/travel/' }, pat)).body.url).searchParams.get('state');
+  await call('gmail/back', undefined, null, ON, '?state=' + r + '&code=good');
+  assert.deepEqual((await getJSON(db, 'gm:u1')).map(x => x.kind).sort(), ['modify', 'read']);
+  await call('gmail/disconnect', { email: 'pat@example.com', kind: 'modify' }, pat);
+  assert.deepEqual((await getJSON(db, 'gm:u1')).map(x => x.kind), ['read'], 'only Mail\'s is gone');
+  assert.ok(google.revoked.has('RT-3'), 'Mail\'s revoked at Google');
+  assert.ok(!google.revoked.has('RT-4'), 'the read-only one isn\'t');
+  await call('gmail/disconnect', {}, pat);
+});
+
 await test('Disconnect revokes it at Google and deletes it', async () => {
   const s = new URL((await call('gmail/start', { back: '/orders/' }, pat)).body.url).searchParams.get('state');
   await call('gmail/back', undefined, null, ON, '?state=' + s + '&code=good');
-  assert.equal((await call('gmail/token', {}, pat)).body.token, 'AT-for-3');
+  assert.equal((await call('gmail/token', {}, pat)).body.token, 'AT-for-5');
   await call('gmail/disconnect', { email: 'pat@example.com' }, pat);
-  assert.ok(google.revoked.has('RT-3'));
+  assert.ok(google.revoked.has('RT-5'));
   assert.equal(await db.get('gm:u1'), null);
 });
 

@@ -44,7 +44,7 @@
 //   GET  gmail            (family) { on, accounts: [{ email, kind, until }] } Gmail kept signed in (never a token)
 //   POST gmail/start      (family) { kind, hint, back } -> { url } Google's sign-in, with a code
 //   POST gmail/token      (family) { email, kind } -> { token, exp, scope, email, until } an hour-long key, or { error }
-//   POST gmail/disconnect (family) { email }       -> revoked at Google and deleted here
+//   POST gmail/disconnect (family) { email, kind } -> revoked at Google and deleted here
 //   POST plan             (owner) { id } switches plan (the trial only once), { cancel: true }
 //                         stops it at the end of its month, { resume: true } keeps a cancelled one
 

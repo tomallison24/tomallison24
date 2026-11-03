@@ -152,9 +152,30 @@ function toGoogle(u, silent) {
   try { localStorage.setItem('aos.away', 'mail|' + Date.now()); } catch {}
   window.top.location.replace(u);
 }
+// Gmail kept signed in through aOS's server (home/account.js AllisonOS.gmail): set up there, a tap signs in with a
+// code and the hour-long keys come from the server, so Mail isn't asked again for 30 days. Not set up: the sign-in
+// below, as before. One ask at a time, and after a "no" none for a minute.
+const keepG = () => { const G = window.AllisonOS && window.AllisonOS.gmail; return G && G.on() ? G : null; };
+let keptAsk = null, keptNo = 0;
+function renewKept() {
+  const G = keepG();
+  if (!G || Date.now() - keptNo < 60e3) return Promise.resolve(false);
+  return keptAsk || (keptAsk = G.renewInto({ kind: 'modify', store: K.token, me: K.hint }).catch(() => false)
+    .then(ok => { keptAsk = null; if (!ok) keptNo = Date.now(); return ok; }));
+}
+const keptUntil = () => { const t = +ls.get(K.token + '.until', 0); return keepG() && t > Date.now() ? new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
 function signIn(opts = {}) {
   const id = clientId();
   if (!id) return;
+  // kept signed in: no quiet hour-long sign-in on the phone (it would get round the 30 days); a tap signs in with a
+  // code, through aOS's server
+  if (opts.silent && keepG()) return;
+  if (!opts.silent && !opts.legacy && keepG()) {
+    ls.set(K.lastAuth, String(Date.now()));
+    keepG().start({ kind: 'modify', hint: opts.chooseAccount ? '' : ls.get(K.hint, '') })
+      .then(u => (u ? toGoogle(u, false) : signIn(Object.assign({}, opts, { legacy: true }))));
+    return;
+  }
   const hint = ls.get(K.hint, '');
   const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
   // localStorage, not sessionStorage: on iOS the trip through Google can come
@@ -182,12 +203,14 @@ function signIn(opts = {}) {
 // Google's answer can't be read from here (no-cors), so Sign Out goes ahead
 // whether or not it arrives; the token still dies within the hour.
 function signOut() {
+  const G = keepG();
+  if (G) G.disconnect(ls.get(K.hint, ''), 'modify');   // kept signed in: revoked at Google and forgotten on aOS's server too
   const tok = getToken()?.t;
   if (tok) fetch('https://oauth2.googleapis.com/revoke', {
     method: 'POST', mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', keepalive: true,
     body: new URLSearchParams({ token: tok }),
   }).catch(() => {});
-  for (const k of [K.token, K.token + '.ever', K.state, K.lastAuth, K.silent, K.hint, K.pending, K.unsubbed]) ls.del(k);
+  for (const k of [K.token, K.token + '.ever', K.token + '.until', K.state, K.lastAuth, K.silent, K.hint, K.pending, K.unsubbed]) ls.del(k);
   rowCache.clear();
   try { showCount(0).catch(() => {}); } catch {}
   state.me = null;
@@ -196,6 +219,14 @@ function signOut() {
 
 // Reads #access_token=... off the URL, then puts the URL back how it was.
 function consumeRedirect() {
+  const kept = /^#gmail=(kept|error)(?:&acct=([^&]*))?/.exec(location.hash);   // back from the sign-in through aOS's server
+  if (kept) {
+    history.replaceState(null, '', redirectUri() + location.search);
+    ls.del(K.state); ls.del(K.silent);
+    if (kept[1] !== 'kept') return { error: 'kept_failed' };
+    try { if (kept[2]) ls.set(K.hint, decodeURIComponent(kept[2])); } catch {}
+    return { ok: true, kept: true };
+  }
   const raw = location.hash.slice(1);
   if (!raw || !/(^|&)(access_token|error)=/.test(raw)) return null;
   const p = new URLSearchParams(raw);
@@ -226,8 +257,8 @@ const TIMEOUT = Number(ls.get('mail.timeout', '')) || 20000;
 // once: for requests that create something. If the answer is lost the thing
 // may have been made anyway, so they are never sent twice blindly; the caller
 // looks for it instead.
-async function api(path, { method = 'GET', body, params, tries = 0, once = false, bg = false } = {}) {
-  const tok = getToken();
+async function api(path, { method = 'GET', body, params, tries = 0, once = false, bg = false, renewed = false } = {}) {
+  const tok = getToken() || (await renewKept() && getToken());   // kept signed in: a new hour from aOS's server
   if (!tok) throw new AuthError('signed out');
   if (bg ? bgSlowed() : slowed()) throw new QuotaError('Gmail asked the app to slow down for a minute');   // nothing more until the pause is over
   const url = new URL(API + path);
@@ -235,7 +266,7 @@ async function api(path, { method = 'GET', body, params, tries = 0, once = false
     if (v == null) continue;
     for (const one of Array.isArray(v) ? v : [v]) url.searchParams.append(k, one);
   }
-  const again = () => api(path, { method, body, params, tries: tries + 1, once, bg });
+  const again = () => api(path, { method, body, params, tries: tries + 1, once, bg, renewed });
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT);
   let res, text;
@@ -253,7 +284,11 @@ async function api(path, { method = 'GET', body, params, tries = 0, once = false
     if (!once && tries < 3) { await sleep(500 * 2 ** tries); return again(); }
     throw new Error(ctl.signal.aborted ? 'Gmail took too long to answer' : 'No connection to Gmail');
   }
-  if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
+  if (res.status === 401) {
+    ls.del(K.token);
+    if (!renewed && keepG() && await renewKept()) return api(path, { method, body, params, tries, once, bg, renewed: true });   // refused before it was done: safe to ask again
+    throw new AuthError('token expired');
+  }
   if (!res.ok) {
     const quota = res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text));
     if (quota) {
@@ -1914,6 +1949,7 @@ function viewSetup() {
 }
 
 function viewSignIn() {
+  if (state.renewing) return listSkeleton();   // asking aOS's server for a new hour (kept signed in)
   return '<div class="card panel signin">' +
     '<div class="hero">' + ICON.tag + '</div>' +
     (state.error ? '<p class="note bad">' + esc(state.error) + '</p>' : '') +
@@ -2039,7 +2075,7 @@ function viewSettings() {
     tidyHTML() +
     blockedHTML() +
     T.section('Connected accounts', [
-      T.info({ id: 'stGmailWho', title: 'Gmail', sub: 'Signed in as ' + (state.me || 'your account') + '.' }),
+      T.info({ id: 'stGmailWho', title: 'Gmail', sub: 'Signed in as ' + (state.me || 'your account') + (keptUntil() ? ' until ' + keptUntil() : '') + '.' }),
       T.info({ title: 'Filter permission', value: canFilter() ? 'Granted' : 'Not granted' }),
       T.action({ data: { act: 'signin-pick' }, icon: 'refresh', title: 'Switch account' }),
       T.danger({ data: { act: 'signout' }, icon: 'out', title: 'Disconnect Gmail' }),
@@ -2113,7 +2149,7 @@ function notifyHTML() {
 }
 
 async function pushCall(path, body) {
-  const tok = getToken();
+  const tok = getToken() || (await renewKept() && getToken());
   if (!tok) throw new AuthError('signed out');
   const r = await fetch(pushUrl() + path, {
     method: 'POST', headers: { Authorization: 'Bearer ' + tok.t, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
@@ -2562,7 +2598,7 @@ function buildMime(job) {
 // join alongside the message. Never retried: if the answer is lost the message
 // may already have gone, and a second try would send it twice.
 async function uploadMime(what, raw, meta) {
-  const tok = getToken();
+  const tok = getToken() || (await renewKept() && getToken());
   if (!tok) throw new AuthError('signed out');
   const bnd = 'rel_' + crypto.randomUUID().replace(/-/g, '');
   const body = '--' + bnd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
@@ -4344,10 +4380,20 @@ addEventListener('keydown', e => {
 // Renews an expired sign-in without a screen, once a grant exists. Only one
 // automatic attempt a minute, so an answer of "can't" never turns into a loop.
 function renew() {
+  if (keepG()) {   // kept signed in: a new hour from aOS's server, no trip to Google
+    state.renewing = true; render();
+    renewKept().then(ok => {
+      state.renewing = false; render();
+      if (!ok) return;
+      if (begun) loadList({ force: true, quiet: true }).catch(() => {}); else started();
+    });
+    return;
+  }
   const sinceTry = Date.now() - Number(ls.get(K.lastAuth, 0));
   if (!state.error && !state.notice && sinceTry > 60e3 && ls.get(K.token + '.ever', '')) signIn({ silent: true });
 }
 
+let begun = false;
 (function boot() {
   const want = new URLSearchParams(location.search).get('thread');
   if (want) { ls.set(K.openThread, want); history.replaceState(history.state, '', location.pathname); }
@@ -4357,12 +4403,19 @@ function renew() {
     if (back.silent && /^(interaction|login|consent|account_selection)_required$/.test(back.error)) state.notice = true;
     else state.error = back.error === 'access_denied' ? 'Access was declined.'
       : back.error === 'state_mismatch' ? 'Sign-in could not be verified. Try again.'
+      : back.error === 'kept_failed' ? 'Gmail sign-in didn’t finish. Try again.'
       : 'Google said: ' + back.error;
   }
   render();
 
-  if (clientId() && !getToken()) { renew(); return; }
-  if (!getToken()) return;
+  if (!getToken()) { if (clientId()) renew(); return; }
+  started();
+})();
+
+// Signed in: the profile, labels and rules, the list, and the background jobs. Once a page.
+function started() {
+  if (begun) return;
+  begun = true;
   ls.set(K.token + '.ever', '1');
 
   loadProfile();
@@ -4382,7 +4435,7 @@ function renew() {
       $('#foot').innerHTML = footHTML();
     }).catch(() => {});
   }
-})();
+}
 
 // The glow under a pressed button starts where the finger landed.
 document.addEventListener('pointerdown', e => {
