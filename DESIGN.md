@@ -374,15 +374,24 @@ are line drawings in the accent colour.**
   `--icon` or the accent. **Settings is the gear, the same in every app**:
   Orders' drawing (a circle in a ring of sixteen points), 22 points, its line
   in the button's colour (Weather's small Settings link draws it at 14), the
-  markup in `GEAR` in `aOS/scripts/design-check.mjs`.
+  markup in `GEAR` in `aOS/scripts/design-check.mjs`. **Refresh is the two
+  arrows, the same in every app**: every button that refreshes or checks for new
+  things (Refresh, Check now, Check again, Look for new … in Gmail, Try again)
+  draws two arrows chasing round a circle, `REFRESH` in
+  `aOS/scripts/design-check.mjs` (the `refresh` icon in `home/settings.js` for
+  Settings' rows; Weather draws the same line, not Material's filled arrow), so a
+  person learns one sign for "get the latest".
 - **Enforced:** CI: `check-apps.mjs` (the icons exist and are current);
-  `gear` (the button labelled Settings draws Orders' gear). The other glyphs:
-  Review.
+  `gear` (the button labelled Settings draws Orders' gear); `refresh` (a button
+  named like a refresh, on the main screen or in Settings, draws the two arrows).
+  The other glyphs: Review.
 - **Known gaps:** none.
 
 ![Icons in the four looks](docs/design/icons.png)
 
 ![The gear on each app's Settings button, in the four looks](docs/design/gear.png)
+
+![One refresh, the two arrows, on Travel's and Orders' Gmail buttons and News' Refresh, in the four looks](docs/design/refresh.png)
 
 ## 14. Shared parts: use `home/`, never a copy
 
@@ -415,6 +424,7 @@ checked too), and checks:
 | `shared` | 4, 5, 14: `home/settings.js` loaded before the app's script and in `sw.js` SHELL; the open sheet is its sections, and every switch in it the shared one |
 | `title` | 3, 4: a button labelled Settings opens a sheet named Settings |
 | `gear` | 4, 13: that button draws the gear, Orders' drawing, the same in every app |
+| `refresh` | 13: every button named like a refresh (Refresh, Check now, Check again, Look for new …, Try again), on the main screen and in Settings, draws the two arrows |
 | `done` | 3: the ✓ labelled Done, in the head's right corner, 44 × 44 |
 | `design-first` | 4: Design is the first section, with the shared picker |
 | `order` | 4: the sections in the standard order |
