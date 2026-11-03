@@ -62,7 +62,8 @@
   function redrawAll() { const h = helper(); cells.forEach(c => { if (!c.fixed && c.host.isConnected) drawChar(c, h ? h.who : c.peek); }); onHelper.forEach(fn => { try { fn(h); } catch {} }); }
   new MutationObserver(() => redrawAll()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-look'] });
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const BUILT_LABEL = { get_settings: 'Looking at your settings', change_setting: 'Changing a setting', open_setting: 'Opening Settings' };
+  const BUILT_LABEL = { get_settings: 'Looking at your settings', change_setting: 'Changing a setting', open_setting: 'Opening Settings',
+    log_improvement: 'Logging it in Improve', list_improvements: 'Looking at the Improve list', update_improvement: 'Updating the Improve list' };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);   // a key of the list itself, never 'constructor' or '__proto__'
   const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -568,7 +569,7 @@
     const n = String(name || '');
     if (/^(find|search)(_|$)/.test(n)) return 'scan';
     if (/^(show|open)(_|$)/.test(n)) return 'show';
-    if (/^(create|edit|set|update|add|delete|remove|move|merge|rename|make|accept|discard|tick|tidy|sort|change)_/.test(n)) return 'write';
+    if (/^(create|edit|set|update|add|delete|remove|move|merge|rename|make|accept|discard|tick|tidy|sort|change|log)_/.test(n)) return 'write';
     return 'read';
   }
   function setMood(c, mood) {
@@ -1080,6 +1081,40 @@
   const ACCOUNT = { 'aos.helper': 'helper', 'aos.appearance': 'appearance', 'aos.notifications': 'notifications', 'aos.subscription': 'plan', 'aos.updates': 'updates', 'aos.lost_phone': 'lost', 'aos.replacing_phone': 'move', 'aos.owner_tools': 'owner', 'aos.account': '' };
   const aosTop = () => { try { return window.top !== window && window.top.aosHomeTab ? window.top : (window.aosHomeTab ? window : null); } catch { return window.aosHomeTab ? window : null; } };
   const shown = (id, s) => { const v = s.get(); return s.from ? (s.from(v) ?? v) : v; };
+  // The family's Improve list (server/ipsy.js IMPROVE_TOOLS): a bug, an improvement or an idea logged from the app it's
+  // about, through home/sheet.js (AllisonOS.sheet.improve: Improve's Sheet, else this phone's outbox, which the Improve
+  // app takes in when it opens). Each change shows with Undo.
+  function improveTools(o) {
+    const I = () => AOS.sheet && AOS.sheet.improve;
+    const none = { error: true, content: 'The Improve list can\'t be reached from this app. Ask the person to add it in the Improve app.' };
+    const KIND = { bug: 'Bug', improvement: 'Improvement', idea: 'Idea' };
+    const where = r => r.saved === 'sheet' ? 'Saved in the family\'s Improve list.'
+      : 'Saved on this phone for now: it shows in the Improve app, and goes to the family\'s list ' + (r.why === 'no-sheet' ? 'once Improve\'s Google Sheet is set up in aOS.' : r.why === 'signin' ? 'once the person is signed in.' : 'when it can.');
+    const brief = x => ({ id: x.id, text: x.text, kind: x.kind, app: x.app, status: x.status, added: x.added, ...(x.doneOn ? { done_on: x.doneOn } : {}) });
+    return {
+      log_improvement: async ({ text, kind, app } = {}) => {
+        if (!I()) return none;
+        const r = await I().add({ text, kind, app: app || o.app });
+        if (!r.ok) return { error: true, content: r.why === 'empty' ? 'Give the item some words.' : 'Couldn\'t log it (' + r.why + ').' };
+        return { content: { logged: brief(r.item), where: where(r) },
+          change: { text: KIND[r.item.kind] + ' for Improve: ' + r.item.text, undo: () => I().remove(r.item.id) } };
+      },
+      list_improvements: async ({ status } = {}) => {
+        if (!I()) return none;
+        const r = await I().list({ status });
+        return { content: { from: r.from === 'sheet' ? 'the family\'s Improve list' : 'this phone only (' + (r.why || 'not reachable') + '): items logged here that aren\'t in the family\'s list yet', items: r.items.map(brief) } };
+      },
+      update_improvement: async ({ id, ...c } = {}) => {
+        if (!I()) return none;
+        const r = await I().update(String(id || ''), c);
+        if (!r.ok) return { error: true, content: r.why === 'not-found' ? 'No item with that id. Look with list_improvements.' : 'Couldn\'t change it (' + r.why + ').' };
+        const b = r.before;
+        return { content: { updated: brief(r.item) },
+          change: { text: 'Improve: ' + (c.done === true ? 'done, ' : c.done === false ? 'open again, ' : '') + r.item.text,
+            undo: () => I().update(r.item.id, { text: b.text, kind: b.kind, app: b.app, done: b.status === 'done' }) } };
+      },
+    };
+  }
   function settingsTools(o, closeChat) {
     const later = fn => afterReply.push(fn);
     const here = o.app;
@@ -1133,6 +1168,7 @@
     const K = { chat: 'ipsy.' + o.app + '.chat', ok: 'ipsy.' + o.app + '.ok', hist: 'ipsy.' + o.app + '.history', closed: 'ipsy.' + o.app + '.closed', masks: 'ipsy.' + o.app + '.masks' };
     const BUILT_IN = {
       ...settingsTools(o, () => close()),   // the settings Ipsy may change or show (above)
+      ...improveTools(o),                   // the family's Improve list, from any app (below)
     };
     let messages = [], view = [], busy = false, undos = new Map();
     let showing = false;                  // the list of recent chats is on screen instead of the chat

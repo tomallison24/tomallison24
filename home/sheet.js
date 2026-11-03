@@ -37,6 +37,18 @@
 //                       -> { ok: true, added, already, reopened, ids, list: { id, name } }
 //   AllisonOS.sheet.notes.setDone(id, done)   ticks a reminder off (or back on) -> { ok: true, already? }
 //   AllisonOS.sheet.notes.build               the request builders (pure; notes/scripts/sheet-test.mjs)
+//
+// Improve's Sheet, for Ipsy in any app (home/ipsy.js: log_improvement, list_improvements, update_improvement): a bug,
+// an improvement or an idea, written in Improve's own sync protocol (improve/google-sheet-sync.gs) through
+// /sheet/api/improve, so it is what the Improve app would have sent. Signed out, offline, or before the owner has set
+// Improve's Sheet up, an item waits in aOS's outbox on this phone (localStorage 'aos.improve.outbox', shared
+// code's own key: home/, not the Improve app's storage), sent with the next write that works here, and taken in by
+// the Improve app when it next opens. Never a throw: each resolves { ok, ... } or { ok: false, why }.
+//   AllisonOS.sheet.improve.add({ text, kind?, app? })   -> { ok: true, item, saved: 'sheet' | 'phone', why? }
+//   AllisonOS.sheet.improve.list({ status? })            -> { ok: true, items, from: 'sheet' | 'phone', why? }
+//   AllisonOS.sheet.improve.update(id, { text?, kind?, app?, done? }) -> { ok: true, item, before, saved }
+//   AllisonOS.sheet.improve.remove(id)                    an item just added, taken back (Ipsy's Undo)
+//   AllisonOS.sheet.improve.build                         the request builders (pure; improve/scripts/sheet-test.mjs)
 // Needs ../home/account.js loaded first (in a page; the builders run in Node too).
 (() => {
   'use strict';
@@ -165,6 +177,78 @@
         if (r.body) await notesSync(r.body);
         return { ok: true, already: !!r.already };
       } catch (e) { return fail(e); }
+    },
+  };
+
+  // ---- Improve's Sheet: bugs, improvements and ideas, from Ipsy in any app ----
+  const IMPROVE_APP = 'allison-improve-sync', IMPROVE_V = 1, OUTBOX = 'aos.improve.outbox';
+  const KINDS = ['bug', 'improvement', 'idea'];
+  const ib = {
+    // an item as the Improve app makes one (improve/app.js): its words, kind, the app it's about, open
+    item(o, now, today) {
+      const text = String((o && o.text) || '').replace(/\s+/g, ' ').trim().slice(0, 4000);
+      if (!text) return null;
+      const kind = KINDS.includes(o.kind) ? o.kind : 'improvement';
+      const app = typeof o.app === 'string' && /^[a-z]{2,20}$/.test(o.app) ? o.app : 'general';
+      return { id: now.toString(36) + Math.random().toString(36).slice(2, 8), text, kind, app, status: 'open', added: today, at: now, doneOn: '', updated: now };
+    },
+    // the sync request: what is sent is added or changed, nothing else (the script keeps the rest)
+    sync: (today, items, graves) => ({ action: 'sync', v: IMPROVE_V, window: A.sheet.WINDOW, today, items: items || [], graves: graves || {} }),
+    // a change to an item: its words, kind, app, or done (and when)
+    change(cur, c, now, today) {
+      const it = Object.assign({}, cur);
+      if (typeof c.text === 'string' && c.text.trim()) it.text = c.text.replace(/\s+/g, ' ').trim().slice(0, 4000);
+      if (KINDS.includes(c.kind)) it.kind = c.kind;
+      if (typeof c.app === 'string' && /^[a-z]{2,20}$/.test(c.app)) it.app = c.app;
+      if (typeof c.done === 'boolean') { it.status = c.done ? 'done' : 'open'; it.doneOn = c.done ? (cur.status === 'done' && cur.doneOn) || today : ''; }
+      it.updated = now;
+      return it;
+    },
+  };
+  const store = typeof localStorage !== 'undefined' ? localStorage : null;
+  const outbox = {
+    get() { try { const v = JSON.parse(store.getItem(OUTBOX) || '[]'); return Array.isArray(v) ? v.filter(x => x && typeof x.id === 'string' && typeof x.text === 'string') : []; } catch { return []; } },
+    set(list) { try { if (list.length) store.setItem(OUTBOX, JSON.stringify(list.slice(-200))); else store.removeItem(OUTBOX); } catch {} },
+  };
+  async function improveSync(items, graves) {
+    if (!(acct() && acct().token())) throw new Error('signin');
+    const waiting = outbox.get(), send = [...waiting.filter(w => !items.some(x => x.id === w.id)), ...items];
+    const res = await call('improve', ib.sync(ymd(new Date()), send, graves), false);
+    if (res.app && res.app !== IMPROVE_APP) throw new Error('wrong-app');
+    if (!res.aos) throw new Error('old-script');
+    if (!Array.isArray(res.items)) throw new Error('not-json');
+    outbox.set(outbox.get().filter(w => !send.some(x => x.id === w.id)));   // they're in the Sheet now
+    return res;
+  }
+  const latest = list => { const m = new Map(); for (const x of list) { const c = m.get(x.id); if (!c || (+x.updated || 0) >= (+c.updated || 0)) m.set(x.id, x); } return [...m.values()]; };
+  A.sheet.improve = {
+    build: ib, OUTBOX,
+    async add(o) {
+      const it = ib.item(o || {}, Date.now(), ymd(new Date()));
+      if (!it) return { ok: false, why: 'empty' };
+      try { await improveSync([it]); return { ok: true, item: it, saved: 'sheet' }; }
+      catch (e) { outbox.set([...outbox.get(), it]); return { ok: true, item: it, saved: 'phone', why: e.message }; }
+    },
+    async list(o = {}) {
+      let items, from = 'sheet', why;
+      try { items = latest([...(await improveSync([])).items, ...outbox.get()]); }
+      catch (e) { items = outbox.get(); from = 'phone'; why = e.message; }
+      const st = o.status === 'done' || o.status === 'all' ? o.status : 'open';
+      items = items.filter(x => st === 'all' || (st === 'done') === (x.status === 'done')).sort((a, b) => (+b.at || 0) - (+a.at || 0));
+      return { ok: true, items, from, ...(why ? { why } : {}) };
+    },
+    async update(id, c) {
+      const all = await A.sheet.improve.list({ status: 'all' }), cur = all.items.find(x => x.id === id);
+      if (!cur) return { ok: false, why: 'not-found' };
+      const it = ib.change(cur, c || {}, Date.now(), ymd(new Date()));
+      if (all.from === 'sheet') { try { await improveSync([it]); return { ok: true, item: it, before: cur, saved: 'sheet' }; } catch (e) { return fail(e); } }
+      outbox.set(outbox.get().map(x => x.id === id ? it : x));
+      return { ok: true, item: it, before: cur, saved: 'phone' };
+    },
+    async remove(id) {
+      const was = outbox.get();
+      if (was.some(x => x.id === id)) { outbox.set(was.filter(x => x.id !== id)); return { ok: true }; }
+      try { await improveSync([], { ['items:' + id]: Date.now() }); return { ok: true }; } catch (e) { return fail(e); }
     },
   };
 })();

@@ -2,7 +2,7 @@
 // a new deploy shows up on the next open and the cache is only the fallback.
 // The list itself never passes through here: it lives in this phone's storage,
 // and the calls to the family's Google Sheet (../sheet/api/) are left alone.
-const CACHE = 'improve-v1';
+const CACHE = 'improve-v2';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'icon.svg?v=1', 'icon-glass.svg?v=1', 'icon-180.png?v=1', 'icon-512.png?v=1', 'icon-glass-180.png?v=1', 'icon-glass-512.png?v=1', '../home/slide.js', '../home/settings.js', '../home/account.js', '../home/sheet.js', '../home/welcome.js', '../home/design.js', '../home/sky.js', '../home/names.js'];
 
 self.addEventListener('install', e => {

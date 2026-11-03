@@ -92,6 +92,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!ok && !storeWarned) { storeWarned = true; toast('This phone couldn’t save Improve: its storage is full.'); }
   }
   function save() { track(); persist(); if (signedIn()) scheduleSync(); }
+  // What Ipsy logged in another app while the family's Sheet couldn't be reached (signed out, offline, or before the
+  // owner set it up): aOS's outbox on this phone (home/sheet.js, AllisonOS.sheet.improve), taken in here and emptied.
+  const OUTBOX = 'aos.improve.outbox';
+  function takeOutbox() {
+    let box; try { box = JSON.parse(localStorage.getItem(OUTBOX) || '[]'); } catch { box = []; }
+    if (!Array.isArray(box) || !box.length) return 0;
+    let n = 0;
+    for (const x of box) {
+      if (!okItem(x) || graves['items:' + x.id]) continue;
+      const it = tidy(Object.assign({}, x)), at = items.findIndex(i => i.id === it.id);
+      if (at < 0) { items.push(it); n++; } else if ((+it.updated || 0) > (+items[at].updated || 0)) { items[at] = it; n++; }
+    }
+    try { localStorage.removeItem(OUTBOX); } catch {}
+    if (n) save();
+    return n;
+  }
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   // ---------------------------------------------------------------------
@@ -441,14 +457,19 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Start
   // ---------------------------------------------------------------------
   load();
+  takeOutbox();
   drawPickers();
   render();
   animateIn($('main'));
   // aOS's own list of apps (../home/welcome.js) comes in after this script: the App pickers take it then
   document.addEventListener('DOMContentLoaded', () => { const a = $('addApp').value, k = $('addKind').value; drawPickers(); $('addApp').value = a; $('addKind').value = k; render(); slideShow(true); });
-  window.addEventListener('storage', e => { if (e.key === KEY) { load(); render(); if (st.editing && !itemBody.contains(document.activeElement)) renderItem(); } });
+  window.addEventListener('storage', e => {
+    if (e.key === KEY) { load(); render(); if (st.editing && !itemBody.contains(document.activeElement)) renderItem(); }
+    if (e.key === OUTBOX && e.newValue && takeOutbox()) render();   // Ipsy logged one in another app just now
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
+    if (takeOutbox()) render();
     if (Date.now() - lastSyncAt > 30000) sync(false);
   });
   window.addEventListener('online', () => sync(false));

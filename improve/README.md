@@ -97,6 +97,23 @@ Google Sheets connector, makes the open items' changes (a pull request per
 batch, following `CLAUDE.md`), and tells you which ones it did; mark those done
 in the app (or the owner's phone does, from the list).
 
+## From your helper, in any app
+
+Tell your helper about it wherever you are (Travel, Orders, Notes, aOS Home…): "log a bug: the
+flight card is blank" and it adds the item for you, kind and app filled in (the app you're in,
+unless you say another), with Undo in the chat. It can also read the list ("what's on Improve?")
+and change an item or mark it done when you ask.
+
+- **How:** every helper has three tools (`server/ipsy.js` `IMPROVE_TOOLS`: `log_improvement`,
+  `list_improvements`, `update_improvement`), run on the phone by `home/ipsy.js` through
+  `home/sheet.js` (`AllisonOS.sheet.improve`), which writes in this app's own sync protocol to
+  `/sheet/api/improve`, so what it sends is what Improve would have sent.
+- **Before the Sheet is set up, or signed out or offline:** the item waits in aOS's outbox on the
+  phone (`localStorage` `aos.improve.outbox`, shared code's key), goes to the Sheet with the next
+  write that works, and Improve takes it in when it next opens (and empties the outbox).
+- Tests: `improve/scripts/sheet-test.mjs` (what `home/sheet.js` sends, on the real script) and
+  `travel/scripts/ipsy-test.mjs` (a bug logged from Travel's chat, kept on the phone, and Undo).
+
 ## Files
 
 - `index.html`: the page (Sea glass, then the Vintage block; Layers and Tron
