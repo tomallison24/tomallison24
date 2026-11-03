@@ -155,8 +155,8 @@ The old phrase has been on every phone that synced, and this way it opens nothin
 else has to do anything: each phone syncs through aOS once its app is signed in.
 
 Improve's Sheet is new: the owner makes it once, from nothing (`improve/README.md`, "Setting up the
-Sheet"), and gives aOS its link and phrase in **Account → Google Sheets → Improve** (there is no
-usual link to fill in).
+Sheet"), and gives aOS its phrase in **Account → Google Sheets → Improve** (its link is filled in:
+`USUAL` in `functions/sheet/api`).
 
 ## Writing into Notes from another app
 

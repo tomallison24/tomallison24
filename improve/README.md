@@ -81,8 +81,10 @@ Improve keeps its list in **one Google Sheet for the whole family**
    reads and writes this Sheet). Copy the **Web app URL**
    (`https://script.google.com/macros/s/…/exec`).
 5. In aOS, signed in as the owner: **Account → Owner tools → Google Sheets →
-   Improve → Set up**. Paste the link and the phrase, and **Save**. aOS checks
-   them with the script before it keeps them, and says Connected.
+   Improve → Set up**. The link is filled in already (the owner's deployment,
+   `USUAL` in `functions/sheet/api`; paste another there only if you deployed a
+   new one): give it the phrase, and **Save**. aOS checks them with the script
+   before it keeps them, and says Connected.
 
 That's all: each phone syncs by itself the next time Improve opens signed in.
 To change the phrase later, edit `SECRET`, **Deploy → Manage deployments → ✏️ →
