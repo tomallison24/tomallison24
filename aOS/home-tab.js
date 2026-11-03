@@ -549,7 +549,10 @@
       if (!body.classList.contains('in-app')) bad.push('not in-app');
       if (r.left > 2 || r.right < innerWidth - 2) bad.push(`window at ${Math.round(r.left)}..${Math.round(r.right)} of ${innerWidth}`);
       if (!box) bad.push('no frame'); else if (box.hidden) bad.push('frame hidden');
-      if (!bad.length) return;
+      // in place: the window and its frame are given a fresh layer anyway (will-change on, then off), in case the
+      // browser kept an old picture of them after the phone's own back gesture (seen on an iPhone: the window in
+      // place by every measure, aOS Home still showing under the shade)
+      if (!bad.length) { for (const el of [win, box]) { el.style.willChange = 'transform'; void el.offsetWidth; el.style.willChange = ''; } return; }
       const seen = { at: new Date().toISOString(), app: id, bad, inline: win.style.cssText, shade: $('appshade').style.cssText, cls: body.className, where, drag: ex != null, leaving: !!leaving,
         tint: getComputedStyle(win).backgroundColor, hist: history.length, state: JSON.stringify(history.state), look: document.documentElement.dataset.look || '' };
       try { localStorage.setItem('aos.glitch', JSON.stringify([seen, ...get('aos.glitch', [])].slice(0, 5))); } catch {}
@@ -582,7 +585,9 @@
     const own = leaving && Date.now() - leaving < 1500; leaving = 0;
     if (own) { if (current) remember(); return; }
     const id = appStep() ? history.state.aosApp : null;
-    if (id !== current) show(known(id) ? id : null);
+    // the phone's own back (an iPhone's edge swipe) has animated the page away already: the window goes without
+    // its slide, or the app flashed back over Home at the end of the gesture and slid out a second time
+    if (id !== current) { body.classList.add('snap'); show(known(id) ? id : null); requestAnimationFrame(() => requestAnimationFrame(() => body.classList.remove('snap'))); }
   });
 
   // how much of the window aOS's own controls cover: the status bar and "‹ aOS" on top, the home
