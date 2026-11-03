@@ -8,6 +8,10 @@
 import assert from 'assert/strict';
 import path from 'path';
 import { fakeSheet } from '../../drinks/scripts/fake-sheet.mjs';
+import { createRequire } from 'module';
+// home/sheet.js: what Ipsy in any app sends to Improve's Sheet (AllisonOS.sheet.improve.build)
+createRequire(import.meta.url)('../../home/sheet.js');
+const IB = globalThis.AllisonOS.sheet.improve.build;
 
 const GS = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'google-sheet-sync.gs');
 const SECRET = 'test-secret-phrase';
@@ -148,6 +152,25 @@ test('nothing is dated: every item goes to every phone, however old, and a range
   // a bad id is never kept
   s.post({ action: 'sync', graves: {}, items: [item('a b'), item('x'.repeat(80))] });
   assert.deepEqual(ids(s.post({ action: 'sync', graves: {} }).items), ['new', 'old']);
+});
+
+test('Ipsy, from any app (home/sheet.js): a logged item joins the list without touching the rest; a change and an Undo reach it', () => {
+  const s = mk(TOM);
+  s.post({ action: 'sync', graves: {}, items: [item('a1'), item('a2', { by: 'ella' })] }, ELLA);
+  const it = IB.item({ text: '  The flight card   says nothing ', kind: 'bug', app: 'travel' }, T + 2000, '2026-11-03');
+  assert.deepEqual({ text: it.text, kind: it.kind, app: it.app, status: it.status, added: it.added }, { text: 'The flight card says nothing', kind: 'bug', app: 'travel', status: 'open', added: '2026-11-03' });
+  assert.equal(IB.item({ text: '   ' }, T, '2026-11-03'), null, 'no words, no item');
+  assert.deepEqual([IB.item({ text: 'x', kind: 'nope', app: 'Not An App!' }, T, 'd').kind, IB.item({ text: 'x', app: 'Not An App!' }, T, 'd').app], ['improvement', 'general']);
+  const r = s.post(IB.sync('2026-11-03', [it]), TOM);
+  assert.deepEqual(ids(r.items), ['a1', 'a2', it.id], 'added; the others are still there');
+  assert.equal(r.items.find(x => x.id === it.id).by, 'tom', 'as the person signed in');
+  assert.ok(s.tab('Improve').slice(1).some(row => row.includes('The flight card says nothing')), 'and on the readable tab');
+  const done = IB.change(it, { done: true }, T + 3000, '2026-11-04');
+  assert.deepEqual([done.status, done.doneOn], ['done', '2026-11-04']);
+  assert.equal(s.post(IB.sync('2026-11-04', [done]), TOM).items.find(x => x.id === it.id).status, 'done', 'marked done');
+  assert.equal(IB.change(done, { done: false }, T + 4000, 'd').doneOn, '', 'open again');
+  const gone = s.post(IB.sync('2026-11-04', [], { ['items:' + it.id]: T + 5000 }), TOM);
+  assert.deepEqual(ids(gone.items), ['a1', 'a2'], 'Undo takes it back out');
 });
 
 console.log('\n' + n + ' tests passed');

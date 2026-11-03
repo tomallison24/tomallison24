@@ -167,3 +167,12 @@ list by name (ids are made from a key, so a repeat adds nothing twice) and `setD
 one off or back on. Both resolve `{ ok: false, why }` (signin, no-sheet, offline, ...) rather than
 throw, and never ask for Face ID. Notes merges them on its next open. Meals (Add to Notes), Orders
 (Remind me in Notes) and Calendar (Mark as done) use it.
+
+## Writing into Improve from Ipsy
+
+`AllisonOS.sheet.improve` (`home/sheet.js`) lets Ipsy in any app add to the family's Improve list,
+read it, and change an item, in Improve's own sync protocol through `/sheet/api/improve`:
+`add({ text, kind, app })`, `list({ status })`, `update(id, { text, kind, app, done })` and
+`remove(id)` (Undo). Signed out, offline, or before the owner has set Improve's Sheet up, an item
+waits in `localStorage` `aos.improve.outbox` and goes with the next write that works; the Improve
+app takes the outbox in when it opens. Each resolves `{ ok, ... }` or `{ ok: false, why }`.
