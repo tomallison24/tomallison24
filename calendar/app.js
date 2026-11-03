@@ -90,9 +90,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const settings = Object.assign({
     weekStart: 0, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
-    layers: { holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false },
+    layers: { family: true, holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false },
   }, ls.json(K.settings, {}));
-  settings.layers = Object.assign({ holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false }, settings.layers || {});
+  settings.layers = Object.assign({ family: true, holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false }, settings.layers || {});
   // Weeks start on Sunday, the US way. Settings saved before that kept Monday only as the
   // old default; unless the week start was picked here (weekStartPicked), it moves to Sunday.
   if (!settings.weekStartPicked && settings.weekStart !== 0) { settings.weekStart = 0; try { if (ls.json(K.settings, null)) ls.set(K.settings, JSON.stringify(settings)); } catch {} }
@@ -306,7 +306,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (settings.layers.drinks) out.push(...drinksItems(w));
     if (settings.layers.mail && st.mail && Array.isArray(st.mail.items)) out.push(...st.mail.items.filter(x => x.start >= w.from - 31 * D && x.start < w.to).map(x => Object.assign({}, x, { color: LAYER.mail.color })));
     out.sort((a, b) => (b.allDay - a.allDay) || a.start - b.start || (b.end - b.start) - (a.end - a.start));
-    st.occ = out;
+    st.all = out;   // what Ipsy reads: the Family calendar even while it's hidden here (Calendars), and the layers that are on
+    st.occ = settings.layers.family === false ? out.filter(x => x.kind !== 'family') : out;
   }
   const allDayItem = (kind, id, title, startDate, endDate, extra) => Object.assign({ id, kind, color: LAYER[kind].color, title, sub: '', allDay: true, startDate, endDate: endDate || addDays(startDate, 1), start: dayMs(startDate), end: dayMs(endDate || addDays(startDate, 1)) }, extra || {});
   const timedItem = (kind, id, title, start, end, extra) => Object.assign({ id, kind, color: LAYER[kind].color, title, sub: '', allDay: false, start, end, startDate: ymd(start), endDate: ymd(Math.max(start, end - 1)) }, extra || {});
@@ -629,7 +630,15 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const slide = window.AllisonOS.slide;
   const tabBar = document.querySelector('.tabs');
   const slideTabs = jump => slide(tabBar, tabBar.querySelector('.tab[aria-selected="true"]'), 'tabs', { jump });
-  window.addEventListener('resize', () => slideTabs(true));
+  window.addEventListener('resize', () => { slideTabs(true); fitTitle(); });
+  // The big title (the month, or the weekday) shrinks to fit beside the four buttons rather than being cut short:
+  // "September" in Vintage's 38 points is wider than the room left. Down to 24 points at most, then the ellipsis.
+  function fitTitle() {
+    const t = $('title'); if (!t) return;
+    t.style.fontSize = '';
+    let size = parseFloat(getComputedStyle(t).fontSize) || 32;
+    while (t.scrollWidth > t.clientWidth + 1 && size > 24) { size -= 1; t.style.fontSize = size + 'px'; }
+  }
   let lastView = null;
   function render() {
     for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.view === st.view && !st.searching));
@@ -646,6 +655,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (st.view === 'week') { const ws = weekStartOf(st.sel), we = addDays(ws, 6); t.firstChild.textContent = MONTHS[p.m - 1]; sub.textContent = fmt(noon(ws), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(we), { day: 'numeric', month: 'short', year: 'numeric' }); }
     else { t.firstChild.textContent = MONTHS[p.m - 1]; sub.textContent = st.view === 'list' ? 'Coming up from ' + medDate(listFrom || st.sel) : String(p.y); }
     $('titleBtn').disabled = st.view === 'year';
+    fitTitle();
     main.innerHTML = notice() + ({ day: renderDay, week: renderWeek, month: renderMonth, year: renderYear, list: renderList }[st.view])();
     // The week strip keeps still (no fade in) when only the chosen day moved,
     // so its thumb can be seen sliding.
@@ -839,7 +849,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 
   // ---- Search ----
   function renderSearch() {
-    $('title').firstChild.textContent = 'Search'; $('titleSub').textContent = '';
+    $('title').firstChild.textContent = 'Search'; $('titleSub').textContent = ''; fitTitle();
     const qs = st.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!qs.length) { main.innerHTML = '<div class="empty glass"><strong>Search events</strong></div>'; return; }
     const hits = st.occ.filter(x => matches(x, qs)).sort((a, b) => a.start - b.start).slice(0, 200);
@@ -997,7 +1007,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const lockPage = () => document.documentElement.classList.toggle('locked', [...document.querySelectorAll('.sheetwrap')].some(w => !w.hidden));
   function openSheet(id) { focusStack.push(document.activeElement); $(id).hidden = false; lockPage(); }
   function closeSheet(id) { $(id).hidden = true; lockPage(); const f = focusStack.pop(); if (f && f.focus && document.contains(f)) f.focus(); }
-  const closers = { edSheet: () => cancelEditor(), pickSheet: () => resolvePick(null) };
+  const closers = { edSheet: () => cancelEditor(), pickSheet: () => resolvePick(null), calSheet: () => { closeSheet('calSheet'); $('calBody').innerHTML = ''; } };   // Calendars: its switches gone with it, so Settings' are the only ones on the page
   const closeWrap = w => (closers[w.id] || (() => closeSheet(w.id)))();
   document.querySelectorAll('.sheetwrap').forEach(w => w.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeWrap(w); }));
   if (window.visualViewport) {
@@ -1418,7 +1428,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try {
       const name = await writeEvent(x, f, scope);
       if (name) keepPrivate(name, !!f.private);
-      written('Saved');
+      const hidden = settings.layers.family === false;
+      if (hidden) { settings.layers.family = true; saveSettings(); calBadge(); }
+      written(hidden ? 'Saved; Family shown again' : 'Saved');
     } catch (e) {
       busyPill('');
       toast(errText(e), null, 6000);
@@ -1490,25 +1502,59 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (st.api === 'offline') return 'Offline: showing the events last seen' + (st.lastRefresh ? ' ' + ago(st.lastRefresh) : '') + '.';
     return oneSentence(errText({ code: st.apiError }).replace(/\.$/, '') + (st.calendars && st.calendars.length ? ': calendars there are ' + st.calendars.join(', ') : ''));
   }
+  // Every calendar's switch, the Family calendar first: Settings > Calendars and the Calendars sheet (the button
+  // beside Search) draw the same rows, and a tap in either does the same (toggleLayer). Kept on this phone.
+  const LAYER_ORDER = ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'school', 'news', 'drinks', 'weather'];
+  const layerKey = k => ({ holiday: 'holidays', note: 'notes' }[k] || k);
+  // each calendar's name with its colour beside it, as on the page
+  const named = (name, color, id) => '<i class="st-dot"' + (id ? ' id="' + id + '"' : '') + ' style="--c:' + esc(color) + '" aria-hidden="true"></i><span translate="no">' + esc(name) + '</span>';
+  function calendarRows(S, notes = {}) {
+    const fam = S.toggle({ html: true, title: named(st.calendar && st.calendar.name || 'Family', calColor(), 'stFamily'), sub: 'iCloud, shared with the family.', on: settings.layers.family !== false, data: { layer: 'family' } });
+    return [fam, ...LAYER_ORDER.map(k => {
+      const note = k === 'mail' && notes.mailNote ? notes.mailNote : k === 'weather' && notes.wxNote ? notes.wxNote : k === 'drinks' && notes.drinksNote ? notes.drinksNote : k === 'holiday' || !notes.mailNote ? LAYER[k].sub : layerNote(k);
+      return S.toggle({ html: true, title: named(LAYER[k].name, LAYER[k].color), sub: esc(sentence(note)), on: !!settings.layers[layerKey(k)], data: { layer: layerKey(k) } });
+    })];
+  }
+  const allKeys = () => ['family', ...LAYER_ORDER.map(layerKey)];
+  const hiddenCount = () => allKeys().filter(k => k === 'family' ? settings.layers.family === false : !settings.layers[k]).length;
+  // the Calendars button says how many are hidden (Drinks starts off, so it counts too)
+  function calBadge() {
+    const b = $('calBtn'); if (!b) return;
+    const n = hiddenCount();
+    b.setAttribute('aria-label', 'Calendars' + (n ? ', ' + n + ' hidden' : ''));
+  }
+  function toggleLayer(k, on = k === 'family' ? settings.layers.family === false : !settings.layers[k]) {
+    settings.layers[k] = on; saveSettings();
+    if (LAYER_APPS.includes(k) && on) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => { renderSettings(); renderCalendars(); });
+    if (k === 'drinks') { if (on) loadDrinks(true).then(() => { renderSettings(); renderCalendars(); }); else st.drinks = null; }
+    if (k === 'weather' && on) loadWeather(true);
+  }
+  function showOnly(k) {
+    for (const x of allKeys()) if (x !== k && (x === 'family' ? settings.layers.family !== false : settings.layers[x])) toggleLayer(x, false);
+    if (k === 'family' ? settings.layers.family === false : !settings.layers[k]) toggleLayer(k, true);
+  }
+  function showAll() { for (const x of allKeys()) if (x === 'family' ? settings.layers.family === false : !settings.layers[x]) toggleLayer(x, true); }
+  function renderCalendars(opening = false) {
+    if (!$('calBody')) return;
+    if (!opening && $('calSheet').hidden) { calBadge(); return; }   // closed: its rows stay off the page (Settings has the same ones)
+    const S = AllisonOS.settings, n = hiddenCount();
+    const only = [['', 'Pick one'], ['family', st.calendar && st.calendar.name || 'Family'], ...LAYER_ORDER.map(k => [layerKey(k), LAYER[k].name])];
+    $('calBody').innerHTML = S.section('Show', calendarRows(S), { hint: n ? plural(n, 'calendar') + ' hidden on this phone.' : 'Every calendar is shown.' })
+      + S.section('Quick', [
+        S.action({ id: 'calAll', icon: 'eye', title: 'Show all', sub: 'Every calendar back on.' }),
+        S.select({ id: 'calOnly', title: 'Show only', options: only, value: '' }),
+      ]);
+    calBadge();
+  }
   function renderSettings() {
     const S = AllisonOS.settings, G = window.AllisonOS.calendarGmail;
     const mailNote = !settings.layers.mail ? LAYER.mail.sub : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, to show it here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : LAYER.mail.sub);
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? LAYER.weather.sub : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
-    // each calendar's name with its colour beside it, as on the page
-    const named = (name, color, id) => '<i class="st-dot"' + (id ? ' id="' + id + '"' : '') + ' style="--c:' + esc(color) + '" aria-hidden="true"></i><span translate="no">' + esc(name) + '</span>';
-    const layers = ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'school', 'news', 'drinks', 'weather'].map(k => {
-      const key = { holiday: 'holidays', note: 'notes' }[k] || k;
-      const note = k === 'mail' ? mailNote : k === 'weather' ? wxNote : k === 'drinks' ? drinksNote : k === 'holiday' ? LAYER[k].sub : layerNote(k);
-      return S.toggle({ html: true, title: named(LAYER[k].name, LAYER[k].color), sub: esc(sentence(note)), on: !!settings.layers[key], data: { layer: key } });
-    });
+    const layers = calendarRows(S, { mailNote, drinksNote, wxNote });
     const last = st.lastRefresh;
     $('stBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'stDesign' })) : '')
-      + S.section('Calendars', [
-        // the Family calendar is always shown: a switch that's on, and can't be turned off
-        S.toggle({ html: true, title: named(st.calendar && st.calendar.name || 'Family', calColor(), 'stFamily'), sub: 'iCloud, shared with the family.', on: true, disabled: true, data: { layer: 'family' } }),
-        ...layers,
-      ])
+      + S.section('Calendars', layers)
       + S.section('Display', [
         S.choice({ id: 'stWeekStart', title: 'Week starts on', options: [[0, 'Sunday'], [1, 'Monday']], value: settings.weekStart, data: { set: 'weekStart' } }),
         S.choice({ id: 'stClock', title: 'Time', options: [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']], value: settings.clock, data: { set: 'clock' } }),
@@ -1541,13 +1587,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const b = e.target.closest('button'); if (!b || b.disabled) return;
     const G = window.AllisonOS.calendarGmail, g = G && b.dataset.gmail && G.click(b, S);
     if (g) { if (g !== 'armed') renderSettings(); return; }
-    if (b.dataset.layer) {
-      const k = b.dataset.layer; settings.layers[k] = !settings.layers[k]; saveSettings();
-      if (LAYER_APPS.includes(k) && settings.layers[k]) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => renderSettings());
-      if (k === 'drinks') { if (settings.layers.drinks) loadDrinks(true).then(() => renderSettings()); else st.drinks = null; }
-      if (k === 'weather' && settings.layers.weather) loadWeather(true);
-      rebuild(); render(); renderSettings(); return;
-    }
+    if (b.dataset.layer) { toggleLayer(b.dataset.layer); rebuild(); render(); renderSettings(); calBadge(); return; }
     if (b.id === 'stRefresh') { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadWeather(true); }); }
     else if (b.id === 'stForget') (async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); })();
   });
@@ -1561,11 +1601,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     saveSettings();
   });
   $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); };
+  // Calendars: which to show on this phone, a tap away (the same switches as Settings > Calendars)
+  $('calBtn').onclick = () => { renderCalendars(true); openSheet('calSheet'); };
+  $('calBody').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.layer) toggleLayer(b.dataset.layer);
+    else if (b.id === 'calAll') showAll();
+    else return;
+    rebuild(); render(); renderCalendars();
+  });
+  $('calBody').addEventListener('change', e => {
+    if (e.target.id !== 'calOnly' || !e.target.value) return;
+    showOnly(e.target.value); rebuild(); render(); renderCalendars();
+  });
+  calBadge();
   // Gmail for Ipsy's rows (ipsy-gmail.js, loaded by ipsy-tools.js) are drawn as soon as they're there
   addEventListener('calendar:gmail', renderSettings);
   if (window.AllisonOS.calendarGmail) renderSettings();
   // A new design: the Family calendar's and Notes' colours follow it; Futura and the system font are
   // different widths, so the view bar's sliding thumb is measured again.
+  addEventListener('aos:design', () => requestAnimationFrame(fitTitle));
   addEventListener('aos:design', () => {
     rebuild(); render();
     const fam = $('stFamily'); if (fam) fam.style.setProperty('--c', calColor());

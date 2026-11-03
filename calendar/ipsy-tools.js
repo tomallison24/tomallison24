@@ -52,8 +52,8 @@ window.CalendarIpsy = function (app) {
   const KIND_KEY = { family: 'family', holiday: 'holidays', note: 'notes', travel: 'travel', mail: 'mail', fitness: 'fitness', meals: 'meals', orders: 'orders', school: 'school', news: 'news' };
   const fileOf = id => String(id || '').split('|')[0];
 
-  // ---- what Ipsy may read: the Family calendar and the layers that are on (never Drinks) ----
-  const readable = () => st.occ.filter(x => KIND_KEY[x.kind] && !app.isPrivate(x));
+  // ---- what Ipsy may read: the Family calendar (even while hidden on this phone, Calendars) and the layers that are on (never Drinks) ----
+  const readable = () => (st.all || st.occ).filter(x => KIND_KEY[x.kind] && !app.isPrivate(x));
   const loaded = () => st.win ? { from: app.ymd(st.win.from), to: app.ymd(st.win.to - 1) } : null;
   const calOf = x => x.kind === 'family' ? calName() : app.LAYER[x.kind].name;
   const idOf = x => x.kind === 'family' ? x.name : x.id;
@@ -135,7 +135,7 @@ window.CalendarIpsy = function (app) {
       return { why: 'There is no Family event with id ' + line(id, 80) + ' loaded. Use find_events to get its id.' };
     }
     const comps = I.children(item.cal, 'VEVENT');
-    const x = st.occ.find(o => o.kind === 'family' && o.name === name);
+    const x = (st.all || st.occ).find(o => o.kind === 'family' && o.name === name);
     if (x && app.isPrivate(x)) return { why: 'There is no Family event with id ' + line(id, 80) + ' loaded. Use find_events to get its id.' };
     if (comps.length !== 1 || (x && isRepeating(x)) || comps.some(c => I.prop(c, 'RRULE') || I.props(c, 'RDATE').length || I.prop(c, 'RECURRENCE-ID')))
       return { why: 'That is a repeating event. Ipsy doesn’t change or delete repeating events, or one occurrence of them: the person can do it in the app (tap the event, then Edit or Delete Event), where it asks whether they mean this event only, all future events or all events. Nothing was changed.' };
@@ -213,7 +213,7 @@ window.CalendarIpsy = function (app) {
       const limit = Math.max(1, Math.min(200, Number.isInteger(q.limit) ? q.limit : 60));
       const end = app.addDays(to, 1);
       const list = readable().filter(x => overlaps(x, from, end) && (!cals.length || cals.includes(KIND_KEY[x.kind])) && (!words.length || app.matches(x, words)));
-      const priv = st.occ.filter(x => KIND_KEY[x.kind] && app.isPrivate(x) && overlaps(x, from, end)).length;
+      const priv = (st.all || st.occ).filter(x => KIND_KEY[x.kind] && app.isPrivate(x) && overlaps(x, from, end)).length;
       const out = { from, to, found: list.length, shown: Math.min(limit, list.length), events: list.slice(0, limit).map(brief), ...(priv ? { privateEventsNotShown: priv } : {}) };
       if (!ok) out.note = 'Only ' + (loaded() ? loaded().from + ' to ' + loaded().to : 'what was seen last') + ' could be loaded' + (st.offline ? ' (the phone is offline)' : '') + '; events outside that aren’t here.';
       else if (st.offline) out.note = 'The phone is offline: these are the events last seen.';

@@ -137,7 +137,9 @@ async function retroLook(page, scheme) {
   assert.equal((await q('#fab', ['backgroundColor']))[0], orange, 'the new-event button is solid orange');
   assert.equal((await q('#tabThumb', ['backgroundColor']))[0], 'rgb(227, 167, 47)', 'a mustard thumb under the chosen view');
   assert.equal((await q('.mday.today .n', ['backgroundColor']))[0], orange, 'today is an orange disc');
-  assert.equal((await q('.title', ['fontSize']))[0], '38px');
+  // 38 points, or smaller to fit beside the four buttons (a long month: fitTitle in app.js), never cut short
+  const [tsize, tcut, tfit] = await page.$eval('.title', e => [getComputedStyle(e).fontSize, e.scrollWidth > e.clientWidth + 1, e.style.fontSize]);
+  assert.ok(tfit ? !tcut && parseFloat(tsize) >= 24 && parseFloat(tsize) < 38 : tsize === '38px', 'the title: ' + tsize + (tcut ? ', cut short' : ''));
   assert.equal((await q('.dock .tabs', ['backdropFilter']))[0], 'none');
   // the calendars and layers keep their own colour, from the Retro palette
   const pal = await page.evaluate(() => { const c = getComputedStyle(document.documentElement); return ['--cal', '--hol', '--nt', '--tr', '--ml', '--fit', '--drk'].map(k => c.getPropertyValue(k).trim().toLowerCase()); });
@@ -362,6 +364,40 @@ await test('the year and list views', async () => {
   const t = await page.textContent('#main');
   assert.ok(t.includes('Today') && t.includes('Grandma visiting'), t.slice(0, 300));
   await shot(page, '08-list');
+});
+
+await test('Calendars, beside Search: each calendar shown or hidden on this phone, the Family calendar too; Show only and Show all; Ipsy still reads the Family calendar', async () => {
+  const kinds = () => page.evaluate(() => [...new Set(window.__calendar.st.occ.map(x => x.kind))].sort());
+  assert.equal(await page.getAttribute('#calBtn', 'aria-label'), 'Calendars, 1 hidden', 'Drinks starts off');
+  await page.click('#calBtn');
+  await page.waitForSelector('#calSheet:not([hidden])');
+  assert.equal(await page.textContent('#calLbl'), 'Calendars');
+  assert.equal(await page.getAttribute('#calSheet .sheethead [data-close]', 'aria-label'), 'Done', 'the ✓ in the corner (DESIGN.md rule 3)');
+  const rows = await page.$$eval('#calBody [data-layer]', els => els.map(e => e.dataset.layer));
+  assert.deepEqual(rows.slice(0, 2), ['family', 'holidays']); assert.ok(rows.includes('school') && rows.includes('mail') && rows.length === 12, rows.join());
+  await page.click('#calBody [data-layer="family"]');
+  await page.waitForTimeout(200);
+  let t = await page.textContent('#main');
+  assert.ok(!t.includes('Grandma visiting') && t.includes('Call the plumber'), 'the Family calendar hidden, the layers still there: ' + t.slice(0, 200));
+  assert.equal(await page.getAttribute('#calBtn', 'aria-label'), 'Calendars, 2 hidden');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('allison-calendar-v1-settings')).layers.family), false, 'kept on this phone');
+  assert.ok(await page.evaluate(() => window.__calendar.st.all.some(x => x.kind === 'family')), 'Ipsy still reads the Family calendar (st.all)');
+  await page.selectOption('#calOnly', 'notes');
+  await page.waitForTimeout(200);
+  assert.deepEqual(await kinds(), ['note'], 'Show only Notes');
+  assert.equal(await page.getAttribute('#calBtn', 'aria-label'), 'Calendars, 11 hidden');
+  await page.click('#calAll');
+  await page.waitForTimeout(300);
+  for (const k of ['family', 'note', 'travel', 'fitness', 'holiday']) assert.ok((await kinds()).includes(k), 'Show all: ' + k);
+  assert.equal(await page.getAttribute('#calBtn', 'aria-label'), 'Calendars');
+  await page.click('#calBody [data-layer="drinks"]');   // as it was, for the rest of the test
+  await page.click('#calSheet .sheethead [data-close]');
+  await page.waitForSelector('#calSheet', { state: 'hidden' });
+  t = await page.textContent('#main');
+  assert.ok(t.includes('Grandma visiting'), 'the Family calendar back');
+  await page.click('#setBtn'); await page.waitForSelector('#setSheet:not([hidden])');
+  assert.equal(await page.$eval('#stBody [data-layer="family"]', e => e.disabled), false, 'Settings > Calendars: the Family calendar\'s switch can be turned off too');
+  await page.click('#setSheet .sheethead [data-close]'); await page.waitForSelector('#setSheet', { state: 'hidden' });
 });
 
 await test('switches: a glass thumb slides under the chosen view and day, and hides while searching; Settings\' choices pick at once', async () => {
