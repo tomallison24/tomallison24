@@ -119,7 +119,7 @@ from.
   or Tron), `names.js` (your helper's name where the words say Ipsy), `sky.js` (the Vintage designs' day and night sky),
   `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the AI helper you
   chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
-  `server/ipsy.js`; the helper dresses for the weather from Weather's `wx.cache`, `outfit()`) with `redact.js` before it (personal details stay on the phone: what goes to
+  `server/ipsy.js`; the helper dresses for the weather from Weather's `wx.cache`, `outfit()`; in every app it can log a bug or an idea in Improve, `IMPROVE_TOOLS` through `home/sheet.js` `AllisonOS.sheet.improve`) with `redact.js` before it (personal details stay on the phone: what goes to
   Claude, in Ipsy's chat and in Orders, Travel and Money's email checks, has email addresses,
   phone, card, account and ID numbers as placeholders, put back on the phone) - plus the Welcome Lab. `account.js` also
   holds `AllisonOS.claude`: Claude turned off app by app on a phone (aOS Account > AI helper, or an app's Settings > AI helper,

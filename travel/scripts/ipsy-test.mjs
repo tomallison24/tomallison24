@@ -110,6 +110,12 @@ const R = (msgs, name) => {
 const all = (msgs, name) => msgs.flatMap((m, i) => m.role === 'user' && Array.isArray(m.content) ? m.content.filter(r => r.type === 'tool_result' && msgs[i - 1].content.some(b => b.type === 'tool_use' && b.id === r.tool_use_id && b.name === name)) : []);
 const ids = res => res.trips.flatMap(t => t.bookings);
 const SCRIPT = [
+  // a bug found in Travel, logged in the family's Improve list from Travel's own chat (home/ipsy.js, IMPROVE_TOOLS)
+  [/log a bug/, [
+    () => use(tu('log_improvement', { text: 'The flight card says nothing before take-off', kind: 'bug', app: 'travel' })),
+    () => use(tu('list_improvements', {})),
+    () => said('Logged it for Improve.'),
+  ]],
   [/on time/, [
     () => use(think, { type: 'text', text: 'Let me look.' }, tu('find_trips', {})),
     m => { const ua = ids(R(m, 'find_trips')).find(b => /UA 110/.test(b.what));
@@ -382,6 +388,25 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     assert.match(await page.textContent('#tpBody'), /UA 110/);
     await page.click('#tpDone');
     await page.waitForFunction(() => document.getElementById('tripPage').hidden);
+  });
+
+  await step(tag + ': a bug, logged in the family\'s Improve list from here: kept on the phone while it can\'t reach the Sheet, with Undo', async () => {
+    await T(() => localStorage.removeItem('aos.improve.outbox'));
+    await page.click('.ipsy-btn'); await page.waitForSelector('#ipsyIn:visible');
+    const mine = await ask('Please log a bug: the flight card is blank', 'Logged it for Improve');
+    const logged = R(mine.at(-1), 'log_improvement'), listed = R(mine.at(-1), 'list_improvements');
+    assert.deepEqual([logged.logged.kind, logged.logged.app, logged.logged.status], ['bug', 'travel', 'open']);
+    assert.match(logged.where, /^Saved on this phone for now: it shows in the Improve app, and goes to the family's list once the person is signed in\.$/, logged.where);
+    assert.deepEqual(listed.items.map(x => x.text), ['The flight card says nothing before take-off'], 'and it is on the list');
+    const box = await T(() => JSON.parse(localStorage.getItem('aos.improve.outbox')));
+    assert.deepEqual(box.map(x => [x.text, x.kind, x.app, x.status]), [['The flight card says nothing before take-off', 'bug', 'travel', 'open']], 'waiting in aOS\'s outbox for Improve');
+    assert.ok((await texts(page, '.ipsy-act')).includes('Logging it in Improve'));
+    const ch = (await texts(page, '.ipsy-change')).at(-1);
+    assert.equal(ch, 'Bug for Improve: The flight card says nothing before take-offUndo');
+    await page.locator('.ipsy-change .ipsy-undo').last().click();
+    await page.waitForFunction(() => !localStorage.getItem('aos.improve.outbox'));
+    assert.deepEqual(await snapshot(), before, 'Travel\'s own bookings untouched');
+    await page.click('.ipsy-x'); await page.waitForFunction(() => document.querySelector('.ipsy-wrap').hidden);
   });
 
   await step(tag + ': a question that fails says so and is taken back out of the conversation', async () => {

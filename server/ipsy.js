@@ -89,6 +89,7 @@ export function persona({ app, about, can, rules = [], bold = 'a name', web = tr
 
 What you can do, with tools that run on the person's phone:
 ${L(can)}
+- Log a bug, an improvement or an idea about aOS or any of its apps in the family's Improve list, and look at or update what's on it (log_improvement, list_improvements, update_improvement).
 ${web ? `- Search the web and read pages (web_search, web_fetch), for anything current or outside the app.
 ` : `- Nothing outside the app: you have no web search or web pages here, so say so if a question needs them.
 `}
@@ -123,12 +124,26 @@ export const SETTINGS_TOOLS = [
     input_schema: { type: 'object', properties: { place: { type: 'string', enum: SETTING_PLACES } }, required: ['place'], additionalProperties: false } },
 ];
 
-// web: false sends the app's own tools only, no web search or web pages (Fitness); every Ipsy has SETTINGS_TOOLS.
+// Every Ipsy can also log a bug, an improvement or an idea about aOS or any app in the family's Improve list, and look
+// at or update what's there (home/ipsy.js runs these through home/sheet.js, AllisonOS.sheet.improve: Improve's Sheet,
+// or the phone's outbox until it can be sent), so a bug found in Travel is logged from Travel's own chat.
+export const IMPROVE_APPS = ['general', 'aos', 'mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'school', 'money', 'house', 'sparkle', 'improve'];
+export const IMPROVE_TOOLS = [
+  { name: 'log_improvement', description: 'Add a bug, an improvement or an idea about aOS or one of its apps to the family\'s Improve list, for the owner to have fixed later in one go. Use it when the person reports something wrong, asks for a change, or says to log, note or remember feedback ("log a bug", "add to Improve", "this should…"). One item each, in their words made short and clear: what happens and where, or what they want. app is the app it\'s about (the one you\'re in unless they say another; aos for aOS itself, general when it isn\'t one app). Shows with Undo; don\'t ask first.',
+    input_schema: { type: 'object', properties: { text: { type: 'string', description: 'The item, one or two sentences' }, kind: { type: 'string', enum: ['bug', 'improvement', 'idea'] }, app: { type: 'string', enum: IMPROVE_APPS } }, required: ['text', 'kind', 'app'], additionalProperties: false } },
+  { name: 'list_improvements', description: 'The family\'s Improve list: each item\'s id, words, kind, app, status (open or done) and when it was added. Look here before logging something that may be there already, or when the person asks what is on the list.',
+    input_schema: { type: 'object', properties: { status: { type: 'string', enum: ['open', 'done', 'all'], description: 'Open (the default), done, or all' } }, additionalProperties: false } },
+  { name: 'update_improvement', description: 'Change an item on the Improve list (its id from list_improvements): its words, kind or app, or mark it done (or open again). Only when the person asks. Shows with Undo.',
+    input_schema: { type: 'object', properties: { id: { type: 'string' }, text: { type: 'string' }, kind: { type: 'string', enum: ['bug', 'improvement', 'idea'] }, app: { type: 'string', enum: IMPROVE_APPS }, done: { type: 'boolean' } }, required: ['id'], additionalProperties: false } },
+];
+
+// web: false sends the app's own tools only, no web search or web pages (Fitness); every Ipsy has SETTINGS_TOOLS
+// and IMPROVE_TOOLS.
 export function requestHead({ model, system, tools, web = true }) {
   return {
     model, max_tokens: 16000,
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-    tools: web ? [...tools, ...SETTINGS_TOOLS, ...webTools(model)] : [...tools, ...SETTINGS_TOOLS],
+    tools: web ? [...tools, ...SETTINGS_TOOLS, ...IMPROVE_TOOLS, ...webTools(model)] : [...tools, ...SETTINGS_TOOLS, ...IMPROVE_TOOLS],
     output_config: { effort: 'medium' },
     cache_control: { type: 'ephemeral' },                 // and the conversation so far, as it grows
     ...(FALLBACK_OK.test(model) ? { fallbacks: 'default' } : {}),
