@@ -88,10 +88,12 @@
   const RELEASES = [
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school', 'improve'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
-      notes: ['aOS Account > Updates says which build the phone is on (Build a1b2c3d, with the date), so "did it get the fix?" has an answer',
+      notes: ['Mail stays signed in to Gmail for 30 days too, like Travel, Orders, School and Money: connect it once (Connect Gmail) and it isn\'t asked again for a month; Settings says until when, and Disconnect Gmail ends Mail\'s alone',
+        'aOS Account > Updates says which build the phone is on (Build a1b2c3d, with the date), so "did it get the fix?" has an answer',
         'aOS: after the phone\'s own back swipe from an app, the app no longer flashes back over Home for a moment and slides out again; and the next app opened is given a fresh picture, in case the phone kept an old one',
         'aOS looks at the app window once an app should be on screen: found off to the side, it is put back at once with a word about what was seen, so aOS stays usable while the cause is found',
         'Your helper, in every app: tell it about a bug, an improvement or an idea ("log a bug: the flight card is blank") and it adds it to the Improve list for you, with Undo; it can read the list and mark things done too',
+        'Every app: one refresh sign, two arrows in a circle, on every button that gets the latest (Refresh, Check now, the Gmail buttons in Travel and Orders), in place of the three drawings there were',
         'aOS: in Layers, Home\'s grid keeps your most used apps on the top row (and any you keep there: Edit, then tap one), and every other app A to Z under it',
         'aOS: after a swipe back from an app that the phone took as its own back gesture, the next app you opened sometimes stayed off the screen, aOS Home showing in its place and nothing seeming to answer until aOS was closed. Fixed: every app opens on screen again',
         'Layers: every app\'s icon is a rounded square, as on an iPhone\'s Home Screen, in place of the pebble, with its drawing half as big again: on aOS Home and everywhere else an app\'s icon shows in Layers',

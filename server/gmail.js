@@ -4,7 +4,8 @@
 // key, the refresh token, which stays here, sealed, and is never sent to a phone; the phone asks for an hour-long
 // key when it needs one (POST gmail/token), signed in to the family, for its own Gmail only.
 //
-//   - read-only (gmail.readonly) for Travel, Orders, School and Money; Mail's own scope (gmail.modify) if it asks;
+//   - read-only (gmail.readonly) for Travel, Orders, School and Money; Mail's own (gmail.modify, to label, move and
+//     trash, and gmail.settings.basic, for its tags' sender rules) when Mail asks;
 //   - sealed with AES-GCM under a key made from the client secret (env GOOGLE_CLIENT_SECRET): the KV alone opens
 //     nothing, and the refresh token is useless without that secret anyway;
 //   - DAYS (30) after signing in it's revoked at Google and deleted: the person signs in again, once a month;
@@ -22,7 +23,7 @@ import { getJSON, putJSON, rand, b64u, unb64u } from './auth.js';
 
 export const DAYS = 30;
 export const CLIENT_ID = '804406956056-e91hbdndc4cqgerh9sffl9fmt76nfpua.apps.googleusercontent.com';   // Mail's (mail/app.js)
-export const SCOPES = { read: 'https://www.googleapis.com/auth/gmail.readonly', modify: 'https://www.googleapis.com/auth/gmail.modify' };
+export const SCOPES = { read: 'https://www.googleapis.com/auth/gmail.readonly', modify: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.settings.basic' };
 const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth', TOKEN = 'https://oauth2.googleapis.com/token', REVOKE = 'https://oauth2.googleapis.com/revoke';
 const PROFILE = 'https://gmail.googleapis.com/gmail/v1/users/me/profile';
 const MAX = 4, STATE_SECS = 600;
@@ -109,10 +110,11 @@ export async function token(db, env, me, { email = '', kind = 'read' } = {}, now
   return { token: j.access_token, exp: now + Math.max(60, (+j.expires_in || 3600) - 60) * 1000, scope: j.scope || SCOPES[x.kind], email: x.email, until: x.at + DAYS * 864e5 };
 }
 
-// POST gmail/disconnect { email } (all of them without one): revoked at Google, deleted here
-export async function disconnect(db, env, me, { email = '' } = {}, f = fetch) {
+// POST gmail/disconnect { email, kind } (all of them without an email; every kind without one): revoked at Google,
+// deleted here. Mail names its kind, so signing out of Mail leaves Travel's read-only sign-in alone.
+export async function disconnect(db, env, me, { email = '', kind = '' } = {}, f = fetch) {
   const list = (await getJSON(db, 'gm:' + me.id)) || [];
-  const gone = list.filter(x => !email || sameEmail(x.email, email)), kept = list.filter(x => !gone.includes(x));
+  const gone = list.filter(x => (!email || sameEmail(x.email, email)) && (!kind || x.kind === kind)), kept = list.filter(x => !gone.includes(x));
   for (const x of gone) await revoke(env, x, f);
   if (kept.length) await putJSON(db, 'gm:' + me.id, kept); else await db.delete('gm:' + me.id);
   return { ok: true, removed: gone.length };
