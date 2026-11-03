@@ -163,7 +163,7 @@ window.OrdersIpsy = function (app) {
   const gmailOn = () => !PV || PV.gmail('orders');
   async function mail(path, params) {
     if (!gmailOn()) fail(PV.gmailOff('Orders'));
-    if (!app.getToken()) fail(app.hasGmail && app.hasGmail() ? 'Gmail is connected in Orders, but its sign-in has run out on this phone (Google asks again every hour or so). The person can tap Check now in Settings (the gear) to sign in again.' : 'Gmail isn’t connected in Orders on this phone. The person can connect it in Settings (the gear), Connect Gmail.');
+    if (!app.getToken() && !(app.renew && await app.renew())) fail(app.hasGmail && app.hasGmail() ? 'Gmail is connected in Orders, but its sign-in has run out on this phone (Google asks again every hour or so). The person can tap Check now in Settings (the gear) to sign in again.' : 'Gmail isn’t connected in Orders on this phone. The person can connect it in Settings (the gear), Connect Gmail.');
     try { return await app.gmail(path, params); }
     catch (e) { if (e instanceof app.AuthError) fail('Gmail’s sign-in has run out on this phone. The person can sign in again in Settings (the gear), Connect Gmail.'); throw e; }
   }
@@ -343,7 +343,7 @@ window.OrdersIpsy = function (app) {
       const rets = all.filter(o => o.ret && o.ret.status && o.ret.status !== 'refunded').length;
       return 'Orders has ' + all.length + ' orders' + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + open + ' on the way' + (rets ? ', ' + rets + ' return' + (rets === 1 ? '' : 's') + ' not yet refunded' : '') + (check ? ', ' + check + ' marked Check details' : '') + '. '
         + (o && !seen(o) ? 'On screen: a private order.' : o ? 'On screen: the order ' + o.id + ' from ' + (o.store || 'an unnamed store') + '.' : 'On screen: ' + app.screen() + '.')
-        + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, AI helper).' : app.getToken() ? '' : app.hasGmail && app.hasGmail() ? ' Gmail is connected, but its sign-in has run out: Check now in Settings signs in again.' : ' Gmail isn’t connected right now.');
+        + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, AI helper).' : app.getToken() || (app.kept && app.kept()) ? '' : app.hasGmail && app.hasGmail() ? ' Gmail is connected, but its sign-in has run out: Check now in Settings signs in again.' : ' Gmail isn’t connected right now.');
     },
     intro: 'Hi, I’m Ipsy! I can find an order, fix its details, keep track of a return, merge duplicates, clear out old ones, check your Gmail for anything missing, or look something up on the web.',
     placeholder: 'Ask Ipsy about your orders',

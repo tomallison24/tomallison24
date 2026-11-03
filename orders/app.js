@@ -943,7 +943,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const when = o => (o.source && o.source.date) || 0;
   async function autoCheck() { updating('check', true); try { await autoCheckNow(); } finally { updating('check', false); } }
   async function autoCheckNow() {
-    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !getToken() || !claudeOn() || !autoOn()) return;
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !claudeOn() || !autoOn()) return;
+    if (!getToken() && !(await renewKept())) return;   // kept signed in: a new hour from aOS's server
+    if (autoBusy || st.aiBusy || st.scanning) return;
     const tried = new Set(ls.json(K.ipsyTried, []));
     const due = orders.filter(o => !o.private && !o.hide && kindOn(o) && (needsCheck(o) || isOpen(o)) && o.source && o.source.msgId && !tried.has(o.id + ':' + o.source.msgId))
       .sort((a, b) => needsCheck(b) - needsCheck(a) || when(b) - when(a));
@@ -1242,8 +1244,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ls.set(K.token + '.ever', '1'); ls.del(K.silentFail);
     return { ok: true };
   }
-  async function gmail(path, params, tries = 0) {
-    const tok = getToken();
+  async function gmail(path, params, tries = 0, renewed = false) {
+    let tok = getToken();
+    if (!tok && await renewKept()) tok = getToken();   // kept signed in: a new hour from aOS's server (Ipsy's checks and tools too)
     if (!tok) throw new AuthError('signed out');
     const url = new URL(GMAIL + path);
     for (const [k, v] of Object.entries(params || {})) if (v != null) url.searchParams.set(k, v);
@@ -1252,7 +1255,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { res = await fetch(url, { headers: { Authorization: 'Bearer ' + tok.t }, signal: ctl.signal }); text = await res.text(); }
     catch { clearTimeout(timer); if (tries < 2) { await sleep(600 * 2 ** tries); return gmail(path, params, tries + 1); } throw new Error('No connection to Gmail'); }
     clearTimeout(timer);
-    if (res.status === 401) { if (tok === ownToken()) ls.del(K.token); throw new AuthError('expired'); }
+    if (res.status === 401) { const own = ownToken(); if (own && own.t === tok.t) ls.del(K.token); if (!renewed && keepG() && await renewKept()) return gmail(path, params, tries, true); throw new AuthError('expired'); }   // the hour ran out mid-way: once more with a new one   // ownToken() parses afresh each call, so compare the token, not the object
     if (res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text))) { if (tries < 2) { await sleep(2500 + Math.random() * 1500); return gmail(path, params, tries + 1); } throw new Error('Gmail asked to slow down. Try again in a minute.'); }
     if (res.status >= 500 && tries < 2) { await sleep(800 * 2 ** tries); return gmail(path, params, tries + 1); }
     if (!res.ok) { let m = text.slice(0, 160); try { m = JSON.parse(text).error.message; } catch {} throw new Error(m || 'Gmail returned ' + res.status); }
@@ -1388,7 +1391,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     // Packages are always read: a switch that's on and can't be turned off
     const kindRows = KIND_ROWS.map(([k, t, sub]) => S.toggle({ title: t, sub: sub + '.', on: k === 'package' || kinds[k] !== false, disabled: k === 'package', data: { kind: k } }));
     const gmail = own || viaMail || ever ? [
-      S.info({ id: 'stGmailWho', html: true, title: 'Gmail', sub: own || viaMail ? (me ? '<span translate="no">' + esc(me) + '</span>' : viaMail ? 'Mail’s sign-in' : 'Signed in') + ', read-only' + (own && keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : (me ? '<span translate="no">' + esc(me) + '</span>: s' : 'S') + 'igned out; Check now signs in again.' }),
+      S.info({ id: 'stGmailWho', html: true, title: 'Gmail', sub: own || keptUntil() || viaMail ? (me ? '<span translate="no">' + esc(me) + '</span>' : viaMail && !keptUntil() ? 'Mail’s sign-in' : 'Signed in') + ', read-only' + (keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : (me ? '<span translate="no">' + esc(me) + '</span>: s' : 'S') + 'igned out; Check now signs in again.' }),
       S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
       S.action({ id: 'stRescan', icon: 'refresh', title: 'Read the last year again', sub: 'Orders you edited, checked or deleted stay as they are.' }),
       own || ever ? S.danger({ id: 'stOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
@@ -1722,7 +1725,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       app: 'orders', name: 'Orders', endpoint: '../orders/api/ipsy', headers: { 'X-Orders': '1' }, slot: document.querySelector('.dock > span'),
       ...window.OrdersIpsy({
         P, get orders() { return orders; }, set orders(v) { orders = v; }, save, render, todayStr, isOpen, needsCheck, checkReason, kindOn,
-        gmail, bodies, header, getToken, hasGmail, AuthError, openOrder, lookBack, current: () => (!$('opage').hidden && st.order) || null,
+        gmail, bodies, header, getToken, hasGmail, renew: renewKept, kept: () => !!keepG(), AuthError, openOrder, lookBack, current: () => (!$('opage').hidden && st.order) || null,
         closeOrder: id => { if (st.order && st.order.id === id) { st.order = null; closeSheet('opage'); } },
         refreshOrder: () => { if (st.order && !orders.includes(st.order)) { const o = orders.find(x => x.id === st.order.id); if (o) { st.order = o; renderOrder(); } else { st.order = null; closeSheet('opage'); } } },
         screen: () => st.q ? 'search results' + (orders.some(o => o.private || o.hide) ? '' : ' for "' + st.q + '"') : TAB_NAMES[st.tab] || 'the order list',   // a search could name a private order

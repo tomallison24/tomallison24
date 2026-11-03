@@ -111,7 +111,7 @@ const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'me
 export const SETTING_IDS = ['theme', 'look', 'favorites', 'calendar.week_start', 'calendar.time', 'calendar.temperature', 'calendar.day_view_opens_at',
   ...['holidays', 'notes', 'travel', 'mail', 'fitness', 'drinks', 'weather', 'meals', 'orders', 'news'].map(l => 'calendar.show_' + l), 'calendar.new_event_length', 'calendar.new_event_alert',
   'clock.24_hour', 'clock.seconds', 'clock.face', 'weather.units', 'podcasts.skip_back', 'podcasts.skip_forward', 'podcasts.when_episode_ends', 'fitness.step_goal', 'fitness.move_goal',
-  ...['pickup', 'food', 'digital', 'other'].map(k => 'orders.count_' + k), ...['orders', 'travel', 'calendar'].map(a => 'ipsy.gmail_' + a),
+  ...['pickup', 'food', 'digital', 'other'].map(k => 'orders.count_' + k), ...['orders', 'travel', 'calendar', 'money'].map(a => 'ipsy.gmail_' + a),
   'orders.ipsy_keeps_orders_up_to_date', 'travel.ipsy_fills_in', ...SET_APPS.map(id => 'design_' + id), 'helper.character', 'helper.name', 'helper.dress_for_weather'];
 export const SETTING_PLACES = ['aos.helper', 'aos.appearance', 'aos.notifications', 'aos.subscription', 'aos.updates', 'aos.lost_phone', 'aos.replacing_phone', 'aos.owner_tools', 'aos.account', ...SET_APPS];
 export const SETTINGS_TOOLS = [

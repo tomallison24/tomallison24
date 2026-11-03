@@ -124,9 +124,11 @@ window.MoneyIpsy = function (app) {
   // ---- a charge Monarch missed, from the reader's Gmail: searched only when asked, added only on Yes ----
   const clip = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').trim().slice(0, n);
   const read = new Map();                   // emails read in this chat: id -> { text, subject, date } (what an addition may come from)
+  const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
   async function mail(path, params) {
+    if (PV && !PV.gmail('money')) fail(PV.gmailOff('Money'));
     if (!app.isReader || !app.isReader()) fail('Only ' + (app.reader() || 'the family member who reads Monarch\'s emails') + '\'s phone reads email for Money, so Ipsy can search Gmail only there. Say so.');
-    if (!app.getToken()) fail('Gmail isn\'t connected in Money on this phone. They can connect it in Money\'s Settings.');
+    if (!app.getToken() && !(app.renew && await app.renew())) fail('Gmail isn\'t connected in Money on this phone. They can connect it in Money\'s Settings.');
     try { return await app.gmail(path, params); }
     catch (e) { if (e instanceof app.AuthError) fail('Gmail\'s sign-in has run out on this phone. They can sign in again in Money\'s Settings.'); throw e; }
   }

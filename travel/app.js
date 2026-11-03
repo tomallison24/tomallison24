@@ -1262,8 +1262,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ls.set(K.token + '.ever', '1'); ls.del(K.silentFail);
     return { ok: true };
   }
-  async function gmail(path, params, tries = 0) {
-    const tok = getToken();
+  async function gmail(path, params, tries = 0, renewed = false) {
+    let tok = getToken();
+    if (!tok && await renewKept()) tok = getToken();   // kept signed in: a new hour from aOS's server (Ipsy's checks and tools too)
     if (!tok) throw new AuthError('signed out');
     const url = new URL(GMAIL + path);
     for (const [k, v] of Object.entries(params || {})) if (v != null) url.searchParams.set(k, v);
@@ -1272,7 +1273,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try { res = await fetch(url, { headers: { Authorization: 'Bearer ' + tok.t }, signal: ctl.signal }); text = await res.text(); }
     catch { clearTimeout(timer); if (tries < 2) { await sleep(600 * 2 ** tries); return gmail(path, params, tries + 1); } throw new Error('No connection to Gmail'); }
     clearTimeout(timer);
-    if (res.status === 401) { const own = ownToken(); if (own && own.t === tok.t) ls.del(K.token); throw new AuthError('expired'); }   // ownToken() parses afresh each call, so compare the token, not the object
+    if (res.status === 401) { const own = ownToken(); if (own && own.t === tok.t) ls.del(K.token); if (!renewed && keepG() && await renewKept()) return gmail(path, params, tries, true); throw new AuthError('expired'); }   // the hour ran out mid-way: once more with a new one   // ownToken() parses afresh each call, so compare the token, not the object
     if (res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text))) { if (tries < 2) { await sleep(2500 + Math.random() * 1500); return gmail(path, params, tries + 1); } throw new Error('Gmail asked to slow down. Try again in a minute.'); }
     if (res.status >= 500 && tries < 2) { await sleep(800 * 2 ** tries); return gmail(path, params, tries + 1); }
     if (!res.ok) { let m = text.slice(0, 160); try { m = JSON.parse(text).error.message; } catch {} throw new Error(m || 'Gmail returned ' + res.status); }
@@ -2102,7 +2103,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   let autoBusy = false, signinSaid = false;
   async function ipsyAutoCheck() { updating('check', true); try { await ipsyAutoCheckNow(); } finally { updating('check', false); } ipsyVerify(); }
   async function ipsyAutoCheckNow() {
-    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken() || window.__travelNoAuto) return;   // __travelNoAuto: tests only
+    if (!ipsy || autoBusy || st.aiBusy || st.scanning || !aiOn() || window.__travelNoAuto) return;   // __travelNoAuto: tests only
+    if (!getToken() && !(await renewKept())) return;   // kept signed in: a new hour from aOS's server
+    if (autoBusy || st.aiBusy || st.scanning) return;
     const tried = new Set(ls.json(K.ipsyTried, [])), tag = b => b.id + ':' + b.source.msgId;
     const todo = bookings.filter(b => !b.private && myMail(b) && !b.edited && b.status !== 'cancelled' && !b.ride && !staleUndated(b)
       && !(startOf(b) && isPast(b)) && P.missingFields(b).length && !tried.has(tag(b))).slice(0, 10);
@@ -2140,7 +2143,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   let verifyBusy = false, verifyMore = false;
   async function ipsyVerify() { updating('verify', true); try { await ipsyVerifyNow(); } finally { updating('verify', false); } }
   async function ipsyVerifyNow() {
-    if (!ipsy || verifyBusy || autoBusy || st.aiBusy || st.scanning || !aiOn() || !getToken() || window.__travelNoAuto || window.__travelNoVerify) return;   // tests only
+    if (!ipsy || verifyBusy || autoBusy || st.aiBusy || st.scanning || !aiOn() || window.__travelNoAuto || window.__travelNoVerify) return;   // tests only
+    if (!getToken() && !(await renewKept())) return;   // kept signed in: a new hour from aOS's server
+    if (verifyBusy || autoBusy || st.aiBusy || st.scanning) return;
     if (!verifyMore && Date.now() - +ls.get(K.verifyAt, 0) < 20 * 6e4) return;
     verifyMore = false;
     const t = s => String(s || '9999');
@@ -2392,7 +2397,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const PV = window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;
     const ml = aiOn() && aiAvail !== false ? modelsLine() : '';
     const gmail = own || viaMail || ever ? [
-      S.info({ id: 'stGmailWho', title: 'Gmail', sub: own || viaMail ? (me || (viaMail ? 'Mail’s sign-in' : 'Signed in')) + ', read-only' + (own && keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : (me ? me + ': s' : 'S') + 'igned out; Check now signs in again.' }),
+      S.info({ id: 'stGmailWho', title: 'Gmail', sub: own || keptUntil() || viaMail ? (me || (viaMail && !keptUntil() ? 'Mail’s sign-in' : 'Signed in')) + ', read-only' + (keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : (me ? me + ': s' : 'S') + 'igned out; Check now signs in again.' }),
       S.action({ id: 'stScan', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
       S.nav({ id: 'stLog', title: 'What Travel read', sub: scanSummary() }),
       S.action({ id: 'stRescan', icon: 'refresh', title: 'Read the last year again', sub: 'Bookings you edited, checked or deleted stay as they are.' }),
@@ -2699,7 +2704,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         flightData, liveAsk, keepLive, boardData,
         // the same monthly allowances on this phone as the app's own look-ups
         allowance: { flight: () => LOOKUPS_A_MONTH - lookupsThisMonth(), countFlight: countLookup, board: () => FIND_A_MONTH - aiUse().find, countBoard: () => { const u = aiUse(); u.find++; aiSave(u); } },
-        gmail, bodies, header, getToken, hasGmail, AuthError,
+        gmail, bodies, header, getToken, hasGmail, renew: renewKept, kept: () => !!keepG(), AuthError,
         screen() {
           if (!$('bkSheet').hidden && st.booking && !st.isNew) return st.booking.private ? 'a private booking' : 'the booking ' + st.booking.id + ' (' + titleOf(st.booking) + ')';
           const g = !$('tripPage').hidden && st.trip && tripById(st.trip);

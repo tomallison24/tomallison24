@@ -86,6 +86,7 @@ await test('the sign-in is Google\'s, with a code: offline, read-only, consent, 
   assert.equal(q.get('scope'), 'https://www.googleapis.com/auth/gmail.readonly');
   assert.equal(q.get('redirect_uri'), SITE + '/aOS/api/gmail/back');
   assert.equal(q.get('login_hint'), 'pat@example.com');
+  assert.equal(q.get('include_granted_scopes'), null, 'only this kind\'s permission, not what was granted before');
   state = q.get('state'); assert.ok(state.length >= 20);
 });
 
@@ -155,16 +156,18 @@ await test('Google refusing it (a new password, removed in Google\'s settings) d
 });
 
 await test('Mail\'s sign-in is its own: gmail.modify with its filters scope, and its Disconnect leaves the read-only one', async () => {
+  const r = new URL((await call('gmail/start', { kind: 'read', back: '/travel/' }, pat)).body.url).searchParams.get('state');
+  await call('gmail/back', undefined, null, ON, '?state=' + r + '&code=good');                                  // RT-3, read-only
   const s = new URL((await call('gmail/start', { kind: 'modify', back: '/mail/' }, pat)).body.url);
   assert.equal(s.searchParams.get('scope'), 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.settings.basic');
-  await call('gmail/back', undefined, null, ON, '?state=' + s.searchParams.get('state') + '&code=good');
-  const r = new URL((await call('gmail/start', { kind: 'read', back: '/travel/' }, pat)).body.url).searchParams.get('state');
-  await call('gmail/back', undefined, null, ON, '?state=' + r + '&code=good');
-  assert.deepEqual((await getJSON(db, 'gm:u1')).map(x => x.kind).sort(), ['modify', 'read']);
+  await call('gmail/back', undefined, null, ON, '?state=' + s.searchParams.get('state') + '&code=good');      // RT-4, Mail's, now first
+  assert.deepEqual((await getJSON(db, 'gm:u1')).map(x => x.kind), ['modify', 'read']);
+  assert.equal((await call('gmail/token', { kind: 'read' }, pat)).body.token, 'AT-for-3', 'a reader gets the read-only one, though Mail\'s is first');
+  assert.equal((await call('gmail/token', { kind: 'modify' }, pat)).body.token, 'AT-for-4');
   await call('gmail/disconnect', { email: 'pat@example.com', kind: 'modify' }, pat);
   assert.deepEqual((await getJSON(db, 'gm:u1')).map(x => x.kind), ['read'], 'only Mail\'s is gone');
-  assert.ok(google.revoked.has('RT-3'), 'Mail\'s revoked at Google');
-  assert.ok(!google.revoked.has('RT-4'), 'the read-only one isn\'t');
+  assert.ok(google.revoked.has('RT-4'), 'Mail\'s revoked at Google');
+  assert.ok(!google.revoked.has('RT-3'), 'the read-only one isn\'t');
   await call('gmail/disconnect', {}, pat);
 });
 

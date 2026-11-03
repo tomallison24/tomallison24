@@ -60,7 +60,7 @@ export async function start(db, env, me, site, { kind = 'read', hint = '', back:
   await putJSON(db, 'gmst:' + state, { uid: me.id, kind, back: safeBack(to), nonce }, STATE_SECS);
   const u = new URL(AUTH);
   u.search = new URLSearchParams({
-    client_id: clientId(env), redirect_uri: back(site), response_type: 'code', scope: SCOPES[kind], include_granted_scopes: 'true',
+    client_id: clientId(env), redirect_uri: back(site), response_type: 'code', scope: SCOPES[kind],   // just this kind's: not what Mail was granted too
     access_type: 'offline', prompt: 'consent', state, ...(hint ? { login_hint: String(hint).slice(0, 120) } : {}),
   });
   return { url: u.toString(), cookie: COOKIE + '=' + nonce + '; Path=/aOS/api/gmail; HttpOnly; Secure; SameSite=Lax; Max-Age=' + STATE_SECS };
@@ -96,7 +96,8 @@ async function revoke(env, x, f = fetch) { try { await post(f, REVOKE, { token: 
 // { error: 'none' | 'expired' | 'revoked' } when the person has to sign in again.
 export async function token(db, env, me, { email = '', kind = 'read' } = {}, now = Date.now(), f = fetch) {
   const list = (await getJSON(db, 'gm:' + me.id)) || [];
-  const x = list.find(y => covers(y.kind, kind) && (!email || sameEmail(y.email, email)));
+  const mine = y => !email || sameEmail(y.email, email);
+  const x = list.find(y => y.kind === kind && mine(y)) || list.find(y => covers(y.kind, kind) && mine(y));   // its own kind first: read-only for the apps that only read
   if (!x) return { error: 'none' };
   const drop = async () => putJSON(db, 'gm:' + me.id, list.filter(y => y !== x));
   if (now - x.at > DAYS * 864e5) { await revoke(env, x, f); await drop(); return { error: 'expired' }; }

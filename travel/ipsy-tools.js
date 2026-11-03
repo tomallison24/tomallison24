@@ -95,7 +95,7 @@ window.TravelIpsy = function (app) {
   const gmailOn = () => !PV || PV.gmail('travel');
   async function mail(path, params) {
     if (!gmailOn()) fail(PV.gmailOff('Travel'));
-    if (!app.getToken()) fail(app.hasGmail && app.hasGmail() ? 'Gmail is connected in Travel, but its sign-in has run out on this phone (Google asks again every hour or so). The person can tap Check now in Settings (the gear) to sign in again.' : 'Gmail isn’t connected in Travel on this phone. The person can connect it in Settings (the gear), Connect Gmail.');
+    if (!app.getToken() && !(app.renew && await app.renew())) fail(app.hasGmail && app.hasGmail() ? 'Gmail is connected in Travel, but its sign-in has run out on this phone (Google asks again every hour or so). The person can tap Check now in Settings (the gear) to sign in again.' : 'Gmail isn’t connected in Travel on this phone. The person can connect it in Settings (the gear), Connect Gmail.');
     try { return await app.gmail(path, params); }
     catch (e) { if (e instanceof app.AuthError) fail('Gmail’s sign-in has run out on this phone. The person can sign in again in Settings (the gear), Connect Gmail.'); throw e; }
   }
@@ -333,7 +333,7 @@ window.TravelIpsy = function (app) {
       const groups = trips(), up = groups.filter(g => !g.past), next = up[0], check = checkList().length, priv = privCount();
       return 'Travel has ' + plural(app.bookings.filter(seen).length, 'booking') + ' in ' + plural(groups.length, 'trip') + (priv ? ' (plus ' + priv + ' private ' + (priv === 1 ? 'one' : 'ones') + ' you can’t see)' : '') + ': ' + up.length + ' coming up'
         + (next ? ' (the next: ' + next.name + ', ' + range(next) + ')' : '') + (check ? ', ' + check + ' to check' : '') + '. '
-        + 'On screen: ' + app.screen() + '.' + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, AI helper).' : app.getToken() ? '' : app.hasGmail && app.hasGmail() ? ' Gmail is connected, but its sign-in has run out: Check now in Settings signs in again.' : ' Gmail isn’t connected right now.');
+        + 'On screen: ' + app.screen() + '.' + (!gmailOn() ? ' Gmail is turned off for Ipsy here (Settings, AI helper).' : app.getToken() || (app.kept && app.kept()) ? '' : app.hasGmail && app.hasGmail() ? ' Gmail is connected, but its sign-in has run out: Check now in Settings signs in again.' : ' Gmail isn’t connected right now.');
     },
     intro: 'Hi, I’m Ipsy! I can tell you about your trips, fix or add a booking, check any flight live (delays, gates, where it is), find a flight number, look through your Gmail, or look something up on the web.',
     placeholder: 'Ask Ipsy about your trips',

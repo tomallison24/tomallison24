@@ -648,12 +648,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const emailText = b => { const t = b.html ? P.htmlText(b.html) : P.decode(b.text || ''); const k = t.search(/If you have any questions|This email was sent to|You can update your\s+notification/i); return (k > 0 ? t.slice(0, k) : t).slice(0, 1500); };
   // Once a day, on the reader's phone: this month's transactions not checked yet, 20 to a call (POST check).
   const checkOn = () => ls.get(K.checkOff, '') !== '1';
+  const PVm = () => window.AllisonOS && window.AllisonOS.ipsy && window.AllisonOS.ipsy.privacy;   // Ipsy's Gmail, on or off in chats (Settings, AI helper)
   // Claude turned off for Money on this phone (Settings > AI helper, Use Claude in Money; ../home/account.js): no check, no ideas
   const claudeOn = () => !(window.AllisonOS && AllisonOS.claude) || AllisonOS.claude.on('money');
   const CLAUDE_OFF = 'Claude is turned off for Money on this phone (Settings, AI helper).';
   async function dailyCheck(o) { updating('check', true); try { return await dailyCheckNow(o); } finally { updating('check', false); } }
   async function dailyCheckNow({ loud } = {}) {
     if (!claudeOn()) { if (loud) toast(CLAUDE_OFF); return; }
+    if (!getToken()) await renewKept();   // kept signed in: a new hour from aOS's server
     if (st.checking || !signedIn() || !st.server || !st.server.reader || !getToken()) { if (loud) toast(!getToken() ? 'Connect Gmail first, so Ipsy can read the emails.' : 'Only the phone that reads Monarch’s emails can check them.'); return; }
     if (!loud && (!checkOn() || D.checkDay === today())) return;
     const todo = C.toCheck(D.tx, today());
@@ -991,8 +993,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       S.danger({ id: 'monarchOut', icon: 'out', title: 'Disconnect Monarch' }),
     ];
   }
-  async function gmail(path, params, tries = 0) {
-    const tok = getToken();
+  async function gmail(path, params, tries = 0, renewed = false) {
+    let tok = getToken();
+    if (!tok && await renewKept()) tok = getToken();   // kept signed in: a new hour from aOS's server (Ipsy's checks and tools too)
     if (!tok) throw new AuthError('signed out');
     const url = new URL(GMAIL + path);
     for (const [k, v] of Object.entries(params || {})) if (v != null) url.searchParams.set(k, v);
@@ -1005,6 +1008,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       // Mail's token refused: left to Mail, not used again this session; Money's own, if any, has its turn
       if (tok.mail) { st.mailBad = tok.t; if (ownToken()) return gmail(path, params, tries); }
       else ls.del(K.token);
+      if (!renewed && keepG() && await renewKept()) return gmail(path, params, tries, true);   // the hour ran out mid-way: once more with a new one
       throw new AuthError('expired');
     }
     if (res.status === 429 || (res.status === 403 && /rate ?limit|quota/i.test(text))) { if (tries < 2) { await sleep(2500 + Math.random() * 1500); return gmail(path, params, tries + 1); } throw new Error('Gmail asked to slow down. Try again in a minute.'); }
@@ -1254,9 +1258,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (reader && monarchOn()) { const m = st.monarch; html += S.section('Monarch', monarchRows(S), F({ id: 'monarchSec', open: !!monarchPasting(), value: !m ? '' : m.connected ? 'Connected' : monarchPasting() ? 'Finish connecting' : 'Not connected', hint: 'A read-only test: nothing changes in Monarch.' })); }
     if (!viewer) {
       const tok = getToken(), own = !!ls.get(K.token + '.ever', '');   // Mail's sign-in, or Money's own (ever: there's one to disconnect)
-      const who = tok && tok.mail ? 'Mail’s sign-in' : ls.get(K.hint, '') || 'Connected';
+      const who = tok && tok.mail ? 'Mail’s sign-in' : ls.get(K.hint, '') || 'Signed in';
       html += S.section('Connected accounts', hasGmail() ? [
-        S.info({ id: 'gmailWho', title: 'Gmail', sub: who + ', read-only.' }),
+        S.info({ id: 'gmailWho', title: 'Gmail', sub: tok || keptUntil() ? (keptUntil() ? ls.get(K.hint, '') || 'Signed in' : who) + ', read-only' + (keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : (ls.get(K.hint, '') ? ls.get(K.hint, '') + ': s' : 'S') + 'igned out; Check now signs in again.' }),
         S.action({ id: 'readNow', icon: 'refresh', title: 'Check now', sub: D.readAt ? 'Last checked ' + ago(D.readAt) + '.' : 'Not checked yet.' }),
         S.action({ id: 'readAgain', icon: 'mail', title: 'Read the last 5 years again', sub: 'Every Monarch email, from the start.' }),
         own ? S.danger({ id: 'gmailOut', icon: 'out', title: 'Disconnect Gmail' }) : '',
@@ -1266,6 +1270,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const lc = D.lastCheck, ideas = sees && signed && s && s.can;
     html += S.section('AI helper', [
       S.claude('money'),
+      reader && PVm() ? S.toggle({ id: 'ipsyGmail', title: 'Ipsy can search Gmail', sub: 'Lets Ipsy search and read your email in chats (only Monarch’s charges are ever added).', on: PVm().gmail('money') }) : '',
       reader ? S.toggle({ id: 'checkOn', title: 'Check each day', sub: 'Ipsy checks each new transaction against its Monarch email; what passed is never checked again.', on: checkOn() }) : '',
       reader ? S.action({ id: 'checkNow', icon: 'refresh', title: 'Check now', sub: lc ? 'Last checked ' + ago(lc.at) + ': ' + plural(lc.n, 'transaction') + (lc.fixed ? ', ' + plural(lc.fixed, 'correction') : '') + (lc.flagged ? ', ' + lc.flagged + ' to look at' : '') + '.' : 'Not checked yet.' }) : '',
       ideas ? S.action({ id: 'ideasNow', icon: 'list', title: 'Ask Ipsy for ideas', sub: 'Categories to merge and merchants to move; it looks once a month too, and nothing changes until you accept.' }) : '',
@@ -1301,6 +1306,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (t.closest('#readNow')) { closeSheet('setSheet'); scan({ loud: true }); return; }
     if (t.closest('#readAgain')) { closeSheet('setSheet'); scan({ loud: true, again: true }); return; }
     if (t.closest('#checkOn')) { ls.set(K.checkOff, checkOn() ? '1' : ''); renderSettings(); return; }
+    if (t.closest('#ipsyGmail') && PVm()) { PVm().gmail('money', !PVm().gmail('money')); renderSettings(); return; }
     if (t.closest('#checkNow')) { closeSheet('setSheet'); dailyCheck({ loud: true }); return; }
     if (t.closest('#ideasNow')) { closeSheet('setSheet'); setView('month'); askIdeas({ loud: true }); return; }
     const ur = t.closest('[data-unrule]');
@@ -1499,7 +1505,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       ...window.MoneyIpsy({
         calc: C, view: () => st.T || view(), raw: () => D.tx, settings, today, reader: () => D.reader,
         // a charge Monarch missed, from this phone's Gmail (the reader's only), added once the person says Yes
-        isReader: () => !!(st.server && st.server.reader), gmail, bodies, header, getToken, AuthError, htmlText: P.htmlText, addTx: addFound, removeTx: removeFound,
+        isReader: () => !!(st.server && st.server.reader), gmail, bodies, header, getToken, renew: renewKept, kept: () => !!keepG(), AuthError, htmlText: P.htmlText, addTx: addFound, removeTx: removeFound,
         alerts: () => C.openAlerts(D.alerts, D.tx, settings().dismissed, today()),
         screen: () => (VIEWS.find(v => v.id === st.view) || { name: st.view }).name + (st.view !== 'repeats' ? ', ' + monthName(st.ym) : '')
           + (!$('txSheet').hidden && st.txId && !st.list ? ', a transaction open (' + ((byId(st.txId) || {}).merchant || '') + ')' : !$('txSheet').hidden && st.list ? ', a list open (' + st.list.title + ')' : ''),

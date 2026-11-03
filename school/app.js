@@ -421,7 +421,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.toggle({ id: 'cWx', title: 'Weather at drop-off and pickup', sub: 'Uses Weather’s place, or where this phone is.', on: prefs.weather !== 'off' }),
       ], { hint: 'A club on a weekday changes that day’s pickup time.' })
       + S.section('Connected accounts', hasGmail() ? [
-        S.info({ id: 'gState', title: 'Gmail', sub: tok ? (who ? 'Reading ' + who + (keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : 'Signed in.') : 'Signed out; it signs in again when School opens.' }),
+        S.info({ id: 'gState', title: 'Gmail', sub: tok || keptUntil() ? (who ? 'Reading ' + who + (keptUntil() ? ', signed in until ' + keptUntil() : '') + '.' : 'Signed in.') : 'Signed out; it signs in again when School opens.' }),
         S.action({ id: 'scanBtn', icon: 'refresh', title: 'Check now', sub: lastLine }),
         S.action({ id: 'rereadBtn', icon: 'mail', title: 'Read the last year again', sub: 'Keeps what you marked done or moved.' }),
         ls.get(K.token + '.ever', '') ? S.danger({ id: 'gOut', icon: 'out', title: 'Disconnect Gmail', sub: 'What School has read stays on this phone.' }) : '',
