@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>aOS privacy policy</title>
+<!-- The privacy policy Google's consent screen links to (Google Auth Platform > Branding), and anyone can read.
+     Keep it true to what the apps do: change it when they read, keep or send something new. -->
+<style>
+  :root { --bg: #F4F1EA; --card: #FFFFFF; --text: #1C1D21; --muted: rgba(28,29,33,.66); --edge: rgba(28,29,33,.1);
+    --pastel: linear-gradient(100deg, #6FA597 0%, #8193BC 34%, #BE918F 67%, #BC9C68 100%); }
+  @media (prefers-color-scheme: dark) { :root { --bg: #15171B; --card: #1E2127; --text: #F2F2F4; --muted: rgba(235,235,245,.66); --edge: rgba(255,255,255,.1);
+    --pastel: linear-gradient(100deg, #A9D3C7 0%, #B9C6E0 34%, #E3C5C3 67%, #E9D6B4 100%); } }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; padding: calc(env(safe-area-inset-top) + 28px) 16px calc(env(safe-area-inset-bottom) + 40px); }
+  main { max-width: 680px; margin: 0 auto; }
+  .mark { font-size: 44px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; margin: 0 0 6px; }
+  .mark span { background: var(--pastel); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 10px 0 4px; letter-spacing: -.4px; }
+  .when { color: var(--muted); margin: 0 0 22px; font-size: 15px; }
+  section { background: var(--card); border-radius: 20px; box-shadow: inset 0 0 0 1px var(--edge); padding: 18px 20px; margin: 0 0 14px; }
+  h2 { font-size: 19px; margin: 0 0 8px; letter-spacing: -.2px; }
+  p, li { margin: 0 0 10px; }
+  ul { margin: 0; padding-left: 20px; }
+  li:last-child, p:last-child { margin-bottom: 0; }
+  a { color: inherit; text-underline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="mark" aria-hidden="true"><span>aOS</span></p>
+  <h1>Privacy policy</h1>
+  <p class="when">aOS (AllisonOS) is a private set of apps made for one family. Last updated 3 November 2026.</p>
+
+  <section>
+    <h2>Who it's for</h2>
+    <p>aOS is used only by members of one family, each signed in with their own family account (a passkey). It isn't offered to the public, shows no ads and has no analytics or trackers.</p>
+  </section>
+
+  <section>
+    <h2>Your Gmail</h2>
+    <p>Some apps read your Gmail, only after you connect it yourself:</p>
+    <ul>
+      <li><b>Travel, Orders, School and Money</b> read it <b>read-only</b> (Google's <code>gmail.readonly</code> permission), to find bookings, orders, school news and spending.</li>
+      <li><b>Mail</b> is an email app: it reads your mail and can label, archive and delete it, and manage your Gmail filters, when you ask it to.</li>
+    </ul>
+    <p>What these apps read from your email is kept <b>on your phone</b>. It isn't stored on aOS's server, sold, or used for advertising.</p>
+    <p>If you choose to stay signed in to Gmail, aOS's server keeps the key Google gives for that (a refresh token), encrypted, for at most 30 days, and uses it only to give your own phone a fresh one-hour key. It's deleted when you disconnect Gmail, after 30 days, or when you leave the family.</p>
+  </section>
+
+  <section>
+    <h2>The AI helper</h2>
+    <p>Some features use Anthropic's Claude to read text for you: the AI helper's chat, and Orders, Travel and Money's checks of new emails. Before anything is sent, email addresses and phone, card, account and ID numbers are replaced with placeholders on your phone. Claude can be turned off app by app (Settings, AI helper); with it off, nothing from that app is sent.</p>
+  </section>
+
+  <section>
+    <h2>What's kept on aOS's server</h2>
+    <p>Your family account (your name and your passkey's public key), the settings you choose to have follow you between devices, what you share with the family (a shared calendar, lists, plans), and, if you stay signed in, your encrypted Gmail key. It runs on Cloudflare.</p>
+  </section>
+
+  <section>
+    <h2>Google user data</h2>
+    <p>aOS's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is used only to show you your own email in these apps and to do what you ask; it isn't transferred to others except as described above to provide those features, isn't used for advertising, and isn't read by people.</p>
+  </section>
+
+  <section>
+    <h2>Your choices</h2>
+    <ul>
+      <li>Disconnect Gmail in any app's Settings, or remove aOS's access at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
+      <li>Each app's Settings has Delete all data, which erases what it keeps on your phone.</li>
+      <li>The family's owner can remove an account, which deletes everything kept for it on the server.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    <p>Ask the family member who runs aOS (the owner of the family account).</p>
+  </section>
+</main>
+</body>
+</html>
