@@ -211,14 +211,14 @@ const playing = s => s.mood === 'playing';
 const live = s => s.mood === 'playing' || s.mood === 'paused';
 
 // ---- the five drawings ----
-const METER_N = 22;
+const METER_N = 20;   // one bar for every 5%
 const rnd = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
 const KINDS = {
   line: { name: 'Before', why: 'Today\'s hairline and white knob, for comparison: it works, but it is the slider every app has.', inner: () => '<i></i>' },
   wedge: { name: 'Wedge', why: 'The volume icon\'s ramp: thin when quiet, tall when loud, filled to the level with a cut mark you drag. Reads as volume before you read the number.',
     inner: () => '<span class="w"><b></b></span><i></i>' },
-  meter: { name: 'Meter', why: 'A VU ladder of bars rising left to right, lit to the level. While the speaker plays, the lit bars bounce like a level meter; paused, they hold still.',
-    inner: (id, sm) => Array.from({ length: sm ? 16 : METER_N }, (_, i, a, n = sm ? 16 : METER_N) => `<b style="--h:${Math.round(28 + 72 * i / (n - 1))}%;--d:${(0.32 + rnd(i, id.length) * 0.5).toFixed(2)}s;--dl:-${(rnd(i, 3) * 0.6).toFixed(2)}s"></b>`).join('') },
+  meter: { name: 'Meter', why: 'A VU ladder of 20 bars rising left to right, each one 5%. Tap a bar to set the level there, or drag across them; slide off the left end for silent. While the speaker plays, the lit bars bounce like a level meter; paused, they hold still.',
+    inner: (id, sm) => Array.from({ length: METER_N }, (_, i) => `<b style="--h:${Math.round(28 + 72 * i / (METER_N - 1))}%;--d:${(0.32 + rnd(i, id.length) * 0.5).toFixed(2)}s;--dl:-${(rnd(i, 3) * 0.6).toFixed(2)}s"></b>`).join('') },
   groove: { name: 'Groove', why: 'A record groove that swells as it gets louder: calm at the quiet end, wide at the loud end, and it runs while the music plays. The dot rides the line.',
     inner: () => '<svg viewBox="0 0 200 32" preserveAspectRatio="none" aria-hidden="true"><path class="base"/><path class="lit"/></svg><i></i>' },
   tuner: { name: 'Tuner', why: 'An old radio\'s dial: the scale slides under a fixed needle as you drag, numbers every ten. Fine control, and the needle shows the level without a separate number.',
@@ -241,7 +241,7 @@ function groovePath(v, phase, k) {
 function paint(el) {
   const id = el.dataset.vc, v = get(id).vol, f = v / 100, kind = el.dataset.kind;
   el.style.setProperty('--v', f); el.setAttribute('aria-valuenow', v);
-  if (kind === 'meter') { const bs = el.querySelectorAll('b'); bs.forEach((b, i) => { const on = (i + 0.5) / bs.length <= f; b.classList.toggle('on', on); b.classList.toggle('hot', on && i >= bs.length * 0.85); }); }
+  if (kind === 'meter') { const lit = Math.round(v / 5); el.querySelectorAll('b').forEach((b, i) => { b.classList.toggle('on', i < lit); b.classList.toggle('hot', i < lit && i >= 17); }); }   // a level a speaker reports between steps (38) lights the nearest (40); the number stays exact
   if (kind === 'tuner') el.style.setProperty('--vv', v);
   if (kind === 'knob') { const n = el.querySelector('.n'); if (n) n.textContent = v; }
   if (kind === 'groove') drawGroove(el, el.closest('.playing') ? performance.now() / 600 : 0);
@@ -295,6 +295,8 @@ function setVol(id, v) {
   document.querySelectorAll('.vc').forEach(el => { if (el.dataset.vc === id || el.dataset.vc === 'grp' || (id === 'grp' && GRP.members.includes(el.dataset.vc))) paint(el); });
 }
 
+// Where the finger is, as a level. The meter goes in 5% steps: a bar is 5%, the one under the finger and every one before it lit; left of the first, silent.
+const at = (d, x) => { const f = (x - d.r.left) / d.r.width; return d.kind === 'meter' ? (f <= 0 ? 0 : Math.min(METER_N, Math.floor(f * METER_N) + 1) * 5) : f * 100; };
 // Dragging: the bars, wedge, groove and line follow the finger; the tuner and the knob turn by how far you move.
 let drag = null, moved = false;
 document.addEventListener('pointerdown', e => {
@@ -311,10 +313,10 @@ document.addEventListener('pointermove', e => {
   moved = true; drag.el.classList.add('dragging');
   if (drag.kind === 'knob') setVol(drag.id, drag.v + (dx - dy) * 100 / 160);
   else if (drag.kind === 'tuner') setVol(drag.id, drag.v - dx / parseFloat(getComputedStyle(drag.el).getPropertyValue('--u')));
-  else setVol(drag.id, (e.clientX - drag.r.left) / drag.r.width * 100);
+  else setVol(drag.id, at(drag, e.clientX));
 });
 document.addEventListener('pointerup', e => {
-  if (drag && !moved && !drag.rel) setVol(drag.id, (e.clientX - drag.r.left) / drag.r.width * 100);   // a tap on the bars, wedge, groove or line sets the level there
+  if (drag && !moved && !drag.rel) setVol(drag.id, at(drag, e.clientX));   // a tap on the bars, wedge, groove or line sets the level there
   if (drag) drag.el.classList.remove('dragging');
   drag = null; setTimeout(() => { moved = false; }, 0);
 });
@@ -322,7 +324,7 @@ document.addEventListener('pointercancel', () => { if (drag) drag.el.classList.r
 document.addEventListener('keydown', e => {
   const el = e.target.closest && e.target.closest('.vc'); if (!el) return;
   const d = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5 }[e.key];
-  if (d) { e.preventDefault(); setVol(el.dataset.vc, get(el.dataset.vc).vol + d); }
+  if (d) { e.preventDefault(); const v = get(el.dataset.vc).vol + d; setVol(el.dataset.vc, el.dataset.kind === 'meter' ? Math.round(v / 5) * 5 : v); }
 });
 document.addEventListener('click', e => {
   const lk = e.target.closest('.seg [data-look]');
