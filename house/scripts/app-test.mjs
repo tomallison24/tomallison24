@@ -533,6 +533,8 @@ for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']])
   await test('Speakers: a chip on Not playing opens that speaker\'s popup', async () => {
     await page.locator('#v-speakers .mqchip', { hasText: 'Nest Mini' }).click(); await page.waitForTimeout(500);
     assert.equal((await page.textContent('#dTitle')).trim(), 'Nest Mini');
+    assert.equal(await page.locator('#devWrap .uhero .mcover.lg').count(), 1, 'the popup has the cover, big');
+    assert.equal(await page.locator('#devWrap .vinyl').count(), 0, 'and no record');
     assert.deepEqual(errors, []);
   });
   await ctx.close();

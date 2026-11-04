@@ -325,8 +325,8 @@ dashboard's comments record a quirk, the app keeps it:
   together share the leader's, its meter at the loudest one's level, moving
   them all by as much, with each speaker's own meter under it; the rest fold
   into one Not playing card of chips that open their popups. The TVs have the
-  same card, one each. The popup keeps the glass record with the album art,
-  turning while playing, the art tinting the sky. In the popup: seek, ±15 s, mute, volume presets, shuffle,
+  same card, one each. The popup has the same cover, big (200px; it had a
+  glass record until 2026-11-04), the art tinting the sky. In the popup: seek, ±15 s, mute, volume presets, shuffle,
   repeat, crossfade, loudness, favourites (`sensor.sonos_favorites` ships disabled:
   empty until it is turned on), the sleep timer, tone, grouping, House party
   and Hand off (two taps); the Arc's home theatre settings; the
