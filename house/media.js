@@ -6,7 +6,7 @@
 //     while it plays). Only what is playing (or paused, or on the TV) gets a card;
 //     speakers grouped together share the leader's, with each one's own meter
 //     under it; the rest fold into one "Not playing" card of chips. The popup
-//     keeps the glass record with the art as its label, turning while playing;
+//     has the same cover, big (it had a glass record until 2026-11-04);
 //     the art, blurred, tints the sky (half while playing, less when paused)
 //   - a Sonos is "TV" when its source is TV (or it plays the TV stream); the
 //     LG TV whenever it is on
@@ -146,18 +146,11 @@ function mediaFamily(cfg) {
       const names = r.group.filter(e => e !== p.ent).map(e => (PLAYERS.find(x => x.ent === e) || { name: e }).name);
       return (r.group[0] === p.ent ? 'With ' : 'Following ') + names.join(', ');
     },
-    // The card's cover: the album art, square; without art, the player's colour and what it plays.
-    cover(p, r) {
+    // The cover: the album art, square (lg: the popup's); without art, the player's colour and what it plays.
+    cover(p, r, size = '') {
       const a = this.acc(p, r);
       const bg = r.art ? `background-image:url('${esc(r.art)}')` : `background:radial-gradient(circle at 35% 30%, rgba(${a},0.95), rgba(${a},0.45))`;
-      return `<div class="mcover${r.art ? '' : ' none'}" style="${bg}">${r.art ? '' : svg(p.kind === 'tv' || r.tv ? 'tv' : p.kind === 'atv' ? 'apps' : 'music', 26)}</div>`;
-    },
-    // The popup's record: the art as its label, grooves catching the light.
-    vinyl(p, r, size) {
-      const a = this.acc(p, r), spin = r.playing && !r.tv;
-      const label = r.art ? `style="background-image:url('${esc(r.art)}')"` : `style="background:radial-gradient(circle at 35% 30%, rgba(${a},0.95), rgba(${a},0.45))"`;
-      const glyph = r.art ? '' : svg(p.kind === 'tv' || r.tv ? 'tv' : p.kind === 'atv' ? 'apps' : 'music', size === 'lg' ? 40 : 22);
-      return `<div class="vinyl ${size}${spin ? ' spin' : ''}${r.mood === 'paused' ? ' paused' : ''}" style="--a:${a}"><div class="rec"><i class="grooves"></i><div class="lab" ${label}>${glyph}</div></div>${size === 'lg' ? `<i class="arm${spin ? ' on' : ''}"></i>` : ''}</div>`;
+      return `<div class="mcover${size ? ' ' + size : ''}${r.art ? '' : ' none'}" style="--a:${a};${bg}">${r.art ? '' : svg(p.kind === 'tv' || r.tv ? 'tv' : p.kind === 'atv' ? 'apps' : 'music', size === 'lg' ? 64 : 26)}</div>`;
     },
     fx(p, r, top) {
       const a = this.acc(p, r);
@@ -261,7 +254,7 @@ function mediaFamily(cfg) {
       return {
         title: p.name, accent: a, fx: this.fx(p, r, 150), pill: pillHTML2(pill),
         parts: [
-          ['hero', `<div class="uhero">${this.vinyl(p, r, 'lg')}<div class="dg-title">${w.title}</div><div class="dg-sub">${w.sub}</div>
+          ['hero', `<div class="uhero">${this.cover(p, r, 'lg')}<div class="dg-title">${w.title}</div><div class="dg-sub">${w.sub}</div>
             ${this.withWho(p, r) ? `<div class="alerts" style="justify-content:center"><span class="alert">${svg('group', 13)}${esc(this.withWho(p, r))}</span></div>` : ''}</div>`],
           r.dur > 0 && r.can('seek') && !r.tv ? ['seek', sliderHTML('seek', Math.round(r.pos), 0, Math.round(r.dur), 1, { cls: 'seek', tint: a, label: mmss(r.pos), shown: mmss(r.dur), aria: 'Position', dis })] : null,
           p.kind !== 'tv' ? ['transport', `<div class="transport">
