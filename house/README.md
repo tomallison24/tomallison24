@@ -321,12 +321,14 @@ dashboard's comments record a quirk, the app keeps it:
   under them, the volume a meter of 20 bars at 5% each (tap a bar, or drag
   across; off the left end is silent; a level between steps lights the
   nearest, the number beside it exact; the lit bars bounce while it plays).
-  Only the speakers playing, paused or on the TV get a card; speakers grouped
-  together share the leader's, its meter at the loudest one's level, moving
-  them all by as much, with each speaker's own meter under it; the rest fold
-  into one Not playing card of chips that open their popups. The TVs have the
+  Every speaker has a card: the ones playing, paused or on the TV a full one;
+  speakers grouped together share the leader's, its meter at the loudest one's
+  level, moving them all by as much, with each speaker's own meter under it;
+  the rest a slim one (a small cover that plays it, the name and state, and
+  the meter; until 2026-11-04 they were chips under Not playing). The TVs have the
   same card, one each. The popup has the same cover, big (200px; it had a
-  glass record until 2026-11-04), the art tinting the sky. In the popup: seek, ±15 s, mute, volume presets, shuffle,
+  glass record until 2026-11-04), the art tinting the sky, and its volume is
+  the same meter, big (it was a slider until 2026-11-04). In the popup: seek, ±15 s, mute, volume presets, shuffle,
   repeat, crossfade, loudness, favourites (`sensor.sonos_favorites` ships disabled:
   empty until it is turned on), the sleep timer, tone, grouping, House party
   and Hand off (two taps); the Arc's home theatre settings; the

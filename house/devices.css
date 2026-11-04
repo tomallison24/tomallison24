@@ -281,17 +281,26 @@
 .mmem { display: flex; align-items: center; gap: 12px; padding-left: 48px; }
 .mmem span { width: 58px; flex: none; font-size: 12.5px; font-weight: 600; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mmem .vmeter { margin-right: 38px; }
-/* Not playing: every speaker that isn't, as chips; a tap opens its popup */
-.dg.mquiet { cursor: default; }
-.mquiet .dg-in { gap: 10px; }
-.mq-h { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; opacity: .7; }
-.mq-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.mqchip { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 6px; border-radius: 999px; font-size: 14px; font-weight: 600;
-  background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.16); transition: transform .18s; }
-.mqchip:active { transform: scale(0.95); }
-.mqchip i { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(var(--a),0.85); color: rgba(20,20,24,0.8); }
-.mqchip small { font-size: 12px; font-weight: 500; opacity: .6; }
-.mqchip.off { opacity: .5; }
+/* A speaker not playing: a slim card - its cover (a tap plays) beside its name and state, its meter under them */
+.mcard.slim .dg-in { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 4px; }
+.mcard.slim .mtop { display: contents; }
+.mcard.slim [data-r="hero"] { grid-row: 1 / 3; }
+.mcard.slim [data-r="btn"], .mcard.slim [data-r="mem"] { display: none; }
+.mcard.slim .dg-info { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.mcard.slim .dg-title { display: none; }
+.mcard.slim .dg-sub { margin-top: 0; }
+.mcard.slim .mctl { grid-column: 2; min-width: 0; }
+.mcard.slim .vmeter { height: 26px; padding: 3px 0; }
+.mcover.sm { width: 44px; height: 44px; border-radius: 10px; }
+.mslim-cv { position: relative; }
+.mcplay { position: absolute; inset: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff;
+  background: rgba(20,16,12,0.34); transition: transform .18s, background .2s; }
+.mcplay:active { transform: scale(0.92); }
+/* The popup's volume: the same meter, big */
+.mvol .mvbox { flex: 1; min-width: 0; }
+.mvol .vnum { font: inherit; opacity: 1; min-width: 0; }
+.vmeter.lg { height: 46px; gap: 4px; padding: 4px 4px 2px; }
+.mvol.playing .vmeter:not(.held) b.on { animation: vm-bounce var(--d) ease-in-out var(--dl) infinite alternate; }
 .transport { display: flex; align-items: center; justify-content: space-between; margin: 18px 6px 4px; }
 .volrow { display: flex; align-items: flex-end; gap: 12px; }
 .volrow .gsl { flex: 1; min-width: 0; }
@@ -726,7 +735,7 @@
     .mcover { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.088), 0 10px 20px -12px rgba(30,40,60,0.3); }
     .mcover.lg { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.088), 0 22px 40px -18px rgba(30,40,60,0.3), 0 0 40px -14px rgba(var(--a),0.45); }
     .vmeter b { background: rgba(28,32,40,0.105); }
-    .mqchip { background: rgba(28,32,40,0.06); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.088); }
+    .mcplay { color: var(--text); }
     .shield { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4), 0 0 18px -6px rgba(var(--a),0.6); }
     .armbtn { background: rgba(28,32,40,0.105); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.45); }
     .armbtn.on { background: rgba(28,32,40,0.075); }

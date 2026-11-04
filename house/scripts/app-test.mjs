@@ -485,20 +485,25 @@ for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']])
   });
   await ctx.close();
 }
-{ // Speakers: Quiet stack (labs/speakers) - a card for what plays, a group on one card, the rest as chips; the volume a meter in 5% steps
+{ // Speakers (labs/speakers): a full card for what plays, a group on one card, a slim card for the rest; the volume a meter in 5% steps
   const { ctx, page, errors } = await phone('dark');
   await page.click('#vtop [data-view="media"]'); await page.waitForTimeout(600);
   const card = id => `#v-speakers [data-dv="speakers:${id}"]`;
   const meter = (id, key = id) => `${card(id)} .vmeter[data-v="${key}"]`;
   const now = sel => page.$eval(sel, m => [Number(m.getAttribute('aria-valuenow')), m.querySelectorAll('b.on').length]);
-  const tapBar = async (sel, i) => { const b = await page.locator(sel).boundingBox(); await page.mouse.click(b.x + b.width * (i + 0.5) / 20, b.y + b.height / 2); await page.waitForTimeout(250); };
-  await test('Speakers: what plays has a card, Kitchen and Office share one, the rest are chips on Not playing', async () => {
-    const shown = await page.$$eval('#v-speakers .mcard', cs => cs.filter(c => !c.hidden).map(c => c.dataset.dv.split(':')[1]));
-    assert.deepEqual(shown, ['kt', 'lo', 'ar'], 'the group (led by Kitchen), the paused Lounge and the Arc on the TV');
+  const tapBar = async (sel, i) => { await page.$eval(sel, m => m.scrollIntoView({ block: 'center' })); const b = await page.locator(sel).boundingBox(); await page.mouse.click(b.x + b.width * (i + 0.5) / 20, b.y + b.height / 2); await page.waitForTimeout(250); };
+  await test('Speakers: every speaker has a card - Kitchen and Office share one, and the ones not playing are slim', async () => {
+    const shown = await page.$$eval('#v-speakers .mcard', cs => cs.filter(c => !c.hidden).map(c => c.dataset.dv.split(':')[1] + (c.classList.contains('slim') ? ':slim' : '')));
+    assert.deepEqual(shown, ['kt', 'lo', 'ar', 'mv:slim', 'nm:slim'], 'the group (led by Kitchen), the paused Lounge, the Arc on the TV; the Move and the Nest Mini slim');
     assert.match(await page.textContent(card('kt') + ' .dg-name'), /Kitchen \+ Office/);
     assert.equal(await page.locator(card('kt') + ' .mmem').count(), 2, 'each grouped speaker\'s own meter under the group\'s');
-    const chips = await page.$$eval('#v-speakers .mquiet .mqchip', bs => bs.map(b => b.textContent.trim()));
-    assert.deepEqual(chips, ['MoveAsleep', 'Nest Mini']);
+    assert.match(await page.textContent(card('mv') + ' .dg-sub'), /Asleep/);
+    assert.match(await page.textContent(card('nm') + ' .dg-sub'), /Not playing/);
+    assert.equal(await page.locator(card('mv') + ' .mcplay').count(), 0, 'nothing to play on a speaker asleep');
+    assert.equal(await page.locator(card('mv') + ' .vmeter.dis').count(), 1);
+    assert.equal(await page.locator(card('nm') + ' .mcplay').count(), 1, 'the Nest Mini\'s cover plays it');
+    const h = await page.$eval(card('nm'), c => c.getBoundingClientRect().height);
+    assert.ok(h < 100, 'a slim card is one row: ' + h);
     assert.equal(await page.locator('#v-speakers .mcard .vinyl').count(), 0, 'the cover, not the record, on the cards');
     assert.equal(await page.locator(card('kt') + ' .mcover').count(), 1);
   });
@@ -530,9 +535,18 @@ for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']])
     assert.deepEqual(await now(meter('kt', 'of')), [20, 4]);
     assert.deepEqual(await now(meter('kt', 'kt')), [50, 10]);
   });
-  await test('Speakers: a chip on Not playing opens that speaker\'s popup', async () => {
-    await page.locator('#v-speakers .mqchip', { hasText: 'Nest Mini' }).click(); await page.waitForTimeout(500);
+  await test('Speakers: a slim card\'s meter sets its level; its name opens the popup, whose volume is the meter too', async () => {
+    await tapBar(meter('nm'), 5);
+    assert.deepEqual(await now(meter('nm')), [30, 6]);
+    await page.click(card('nm') + ' .dg-name'); await page.waitForTimeout(500);
     assert.equal((await page.textContent('#dTitle')).trim(), 'Nest Mini');
+    const pm = '#devWrap .vmeter.lg[data-v="nm"]';
+    assert.equal(await page.locator(pm + ' b').count(), 20, 'the popup\'s volume is the 20-bar meter');
+    assert.equal(await page.locator('#devWrap input[type="range"][data-a="vol"]').count(), 0, 'not a slider');
+    assert.deepEqual(await now(pm), [30, 6]);
+    await tapBar(pm, 13);
+    assert.deepEqual(await now(pm), [70, 14]);
+    assert.equal((await page.textContent('#devWrap .mvol .vnum')).trim(), '70');
     assert.equal(await page.locator('#devWrap .uhero .mcover.lg').count(), 1, 'the popup has the cover, big');
     assert.equal(await page.locator('#devWrap .vinyl').count(), 0, 'and no record');
     assert.deepEqual(errors, []);
