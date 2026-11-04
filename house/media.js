@@ -3,10 +3,12 @@
 //   - the card (Quiet stack, picked in labs/speakers): the album art as a square
 //     cover, the play button beside it, and under them Next and the volume as a
 //     meter of 20 bars, 5% each (tap a bar, or drag across; the lit bars bounce
-//     while it plays). Only what is playing (or paused, or on the TV) gets a card;
-//     speakers grouped together share the leader's, with each one's own meter
-//     under it; the rest fold into one "Not playing" card of chips. The popup
-//     has the same cover, big (it had a glass record until 2026-11-04);
+//     while it plays). Every speaker has a card: what is playing (or paused, or
+//     on the TV) a full one; the rest a slim one, one row of a small cover (a
+//     tap plays), the name and the state, and the meter. Speakers grouped
+//     together share the leader's card, with each one's own meter under it.
+//     The popup has the same cover, big (it had a glass record until
+//     2026-11-04), and the same meter, big, for its volume;
 //     the art, blurred, tints the sky (half while playing, less when paused)
 //   - a Sonos is "TV" when its source is TV (or it plays the TV stream); the
 //     LG TV whenever it is on
@@ -54,7 +56,7 @@ const METER = 20;
 function meterHTML(key, vol, tint, o = {}) {
   const v = vol == null ? null : Math.round(vol * 100), lit = v == null ? 0 : Math.round(v / 5);
   const bars = Array.from({ length: METER }, (_, i) => `<b class="${i < lit ? 'on' : ''}${i < lit && i >= 17 ? ' hot' : ''}" style="--h:${Math.round(28 + 72 * i / (METER - 1))}%;--d:${(0.32 + ((i * 7) % 11) / 22).toFixed(2)}s;--dl:-${(((i * 5) % 7) / 10).toFixed(1)}s"></b>`).join('');
-  return `<div class="vmeter${o.sm ? ' sm' : ''}${o.dis ? ' dis' : ''}" data-a="vol5" data-v="${key}" role="slider" tabindex="${o.dis ? -1 : 0}" aria-label="${esc(o.aria || 'Volume')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v == null ? 0 : v}"${o.dis ? ' aria-disabled="true"' : ''} style="--tint:${tint}">${bars}</div>`;
+  return `<div class="vmeter${o.sm ? ' sm' : ''}${o.lg ? ' lg' : ''}${o.dis ? ' dis' : ''}" data-a="vol5" data-v="${key}" role="slider" tabindex="${o.dis ? -1 : 0}" aria-label="${esc(o.aria || 'Volume')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v == null ? 0 : v}"${o.dis ? ' aria-disabled="true"' : ''} style="--tint:${tint}">${bars}</div>`;
 }
 const meterAt = (m, x) => { const b = m.getBoundingClientRect(), f = (x - b.left) / b.width; return f <= 0 ? 0 : Math.min(METER, Math.floor(f * METER) + 1) * 5; };
 function meterShow(m, v) {
@@ -150,7 +152,7 @@ function mediaFamily(cfg) {
     cover(p, r, size = '') {
       const a = this.acc(p, r);
       const bg = r.art ? `background-image:url('${esc(r.art)}')` : `background:radial-gradient(circle at 35% 30%, rgba(${a},0.95), rgba(${a},0.45))`;
-      return `<div class="mcover${size ? ' ' + size : ''}${r.art ? '' : ' none'}" style="--a:${a};${bg}">${r.art ? '' : svg(p.kind === 'tv' || r.tv ? 'tv' : p.kind === 'atv' ? 'apps' : 'music', size === 'lg' ? 64 : 26)}</div>`;
+      return `<div class="mcover${size ? ' ' + size : ''}${r.art ? '' : ' none'}" style="--a:${a};${bg}">${r.art ? '' : svg(p.kind === 'tv' || r.tv ? 'tv' : p.kind === 'atv' ? 'apps' : 'music', size === 'lg' ? 64 : size === 'sm' ? 18 : 26)}</div>`;
     },
     fx(p, r, top) {
       const a = this.acc(p, r);
@@ -176,38 +178,27 @@ function mediaFamily(cfg) {
     },
 
     mount(el) {
-      el.innerHTML = cfg.list.map(p => this.shell(p)).join('')
-        + (cfg.quiet ? `<article class="dg mquiet" data-dv="${cfg.id}:quiet" hidden><div class="dg-in"><div class="mq-h">NOT PLAYING</div><div class="mq-chips" data-r="quiet"></div></div></article>` : '');
+      el.innerHTML = cfg.list.map(p => this.shell(p)).join('');
       // The seek bar moves with the song while a popup is open.
       setInterval(() => { if (openD && openD.f === this && !rangeHeld) { const p = cfg.list.find(x => x.id === openD.id); if (p && this.read(p).playing) renderDev(); } }, 1000);
     },
     render() {
       let n = 0;
       const R = new Map(cfg.list.map(p => [p.id, this.read(p)]));
-      // Quiet stack: what plays (or is paused, or on the TV) gets a card; a speaker
-      // following another one that has a card is on that card; the rest are chips.
+      // Speakers: what plays (or is paused, or on the TV) has a full card, the rest a slim one;
+      // a speaker following another one that plays is on that one's card.
       const live = r => !r.offline && (r.playing || r.mood === 'paused' || r.tv);
       const leader = (p, r) => { if (r.group.length < 2) return p; const L = cfg.list.find(x => x.ent === r.group[0]); return L && live(R.get(L.id)) ? L : p; };
-      const quiet = [];
       for (const p of cfg.list) {
         const r = R.get(p.id);
         if (r.playing || (p.kind === 'tv' && r.on)) n++;
-        let shown = true, members = null;
-        if (cfg.quiet) {
-          shown = live(r) && leader(p, r) === p;
-          if (!live(r)) quiet.push([p, r]);
+        let shown = true, members = null, slim = false;
+        if (cfg.slim) {
+          shown = leader(p, r) === p; slim = !live(r);
           const ms = r.group.map(e => cfg.list.find(x => x.ent === e)).filter(Boolean);
-          if (shown && ms.length > 1) members = ms.map(x => [x, R.get(x.id)]);
+          if (shown && !slim && ms.length > 1) members = ms.map(x => [x, R.get(x.id)]);
         }
-        for (const card of cardsOf(cfg.id + ':' + p.id)) { card.hidden = !shown; if (shown) this.paint(card, p, r, members); }
-      }
-      if (cfg.quiet) {
-        const q = this.el.querySelector('.mquiet');
-        q.hidden = !quiet.length;
-        put(q.querySelector('[data-r="quiet"]'), quiet.map(([p, r]) => {
-          const word = r.offline ? (p.id === 'mv' ? 'Asleep' : 'Offline') : r.state === 'off' ? 'Off' : '';
-          return `<button class="mqchip${r.offline ? ' off' : ''}" data-a="qopen" data-v="${p.id}" style="--a:${this.acc(p, r)}" aria-label="${esc(p.name)}${word ? ', ' + word : ''}: all of its controls"><i>${svg(r.offline ? 'wifi' : 'music', 13)}</i><b translate="no">${esc(p.name)}</b>${word ? `<small>${word}</small>` : ''}</button>`;
-        }).join(''));
+        for (const card of cardsOf(cfg.id + ':' + p.id)) { card.hidden = !shown; if (shown) this.paint(card, p, r, members, slim); }
       }
       this.sum = cfg.summary(n);
     },
@@ -216,9 +207,22 @@ function mediaFamily(cfg) {
         <div class="mtop"><div data-r="hero"></div><div class="dg-info" data-r="info"></div><div data-r="btn"></div></div>
         <div class="dg-ctl mctl" data-r="ctl"></div><div data-r="mem"></div>`, 'mcard'); },
     // members: a group's speakers ([p, reading] each, this one first among them), or null.
-    paint(card, p, r = this.read(p), members = null) {
+    // slim: a speaker not playing - one row of its cover (a tap plays), its name and state, and its meter.
+    paint(card, p, r = this.read(p), members = null, slim = false) {
       const R = k => card.querySelector(`[data-r="${k}"]`), w = this.words(p, r);
+      card.classList.toggle('slim', slim);
       put(R('fx'), this.fx(p, r, 60));
+      if (slim) {
+        const a = this.acc(p, r), word = r.offline ? (p.id === 'mv' ? 'Asleep' : 'Offline') : r.state === 'off' ? 'Off' : 'Not playing';
+        put(R('hero'), `<div class="mslim-cv">${this.cover(p, r, 'sm')}${r.offline || !r.can('pause') ? '' : `<button class="mcplay" data-a="pp" aria-label="Play ${esc(p.name)}">${svg('play', 16)}</button>`}</div>`);
+        put(R('info'), infoHTML2(p.name, '', word));
+        put(R('btn'), '');
+        put(R('ctl'), r.can('vol') ? meterHTML(p.id, r.vol, a, { aria: p.name + ' volume', dis: r.offline }) + `<span class="vnum">${r.vol == null ? '--' : Math.round(r.vol * 100)}</span>` : '');
+        put(R('mem'), '');
+        card.classList.toggle('offline', r.offline); card.classList.toggle('muted', r.muted); card.classList.remove('playing');
+        shadow(card, a);
+        return;
+      }
       put(R('hero'), this.cover(p, r));
       const who = members ? '' : this.withWho(p, r), bat = p.battery && !gone(p.battery) ? `${svg('battery', 13)}${Math.round(num(p.battery))}%` : '';
       put(R('info'), infoHTML2(members ? members.map(([x]) => x.name).join(' + ') : p.name, w.title, w.sub, (who || bat || r.muted) ? `<div class="alerts">${r.muted ? `<span class="alert">${svg('mute', 13)}Muted</span>` : ''}${who ? `<span class="alert">${svg('group', 13)}${esc(who)}</span>` : ''}${bat ? `<span class="alert">${bat}</span>` : ''}</div>` : ''));
@@ -263,7 +267,7 @@ function mediaFamily(cfg) {
               ${pwrBtn(r.playing, a, r.playing ? 'Pause' : 'Play', { a: 'pp', icon: r.playing ? 'pause' : 'play', dis: dis || r.tv || !r.can('pause'), wait: tWaiting(r.d, 'state') }).replace('class="pwr', 'class="pwr big')}
               <button class="disc" data-a="seek15" data-v="15" aria-label="Forward 15 seconds"${dis || r.tv || !r.can('seek') || !r.dur ? ' disabled' : ''}>${svg('fwd15', 22)}</button>
               <button class="disc" data-a="next" aria-label="Next"${dis || r.tv || !r.can('next') ? ' disabled' : ''}>${svg('next', 22)}</button></div>`] : null,
-          r.can('vol') ? ['vol', `<div class="volrow">${sliderHTML('vol', r.vol == null ? 0 : Math.round(r.vol * 100), 0, 100, 1, { label: 'VOLUME', shown: r.vol == null ? '--' : Math.round(r.vol * 100) + '%', unit: '%', tint: a, dis })}
+          r.can('vol') ? ['vol', `<div class="volrow mvol${r.playing && !r.tv ? ' playing' : ''}"><div class="mvbox"><span class="gsl-top"><span>VOLUME</span><b><span class="vnum">${r.vol == null ? '--' : Math.round(r.vol * 100)}</span>%</b></span>${meterHTML(p.id, r.vol, a, { lg: true, aria: p.name + ' volume', dis })}</div>
             ${r.can('mute') ? `<button class="disc${r.muted ? ' lit' : ''}${tWaiting(r.d, 'mute') ? ' wait' : ''}" data-a="mute" aria-pressed="${r.muted}" aria-label="${r.muted ? 'Unmute' : 'Mute'}"${dis ? ' disabled' : ''}>${svg(r.muted ? 'mute' : 'vol', 20)}</button>` : ''}</div>`
             + (sonos ? chipsHTML('vpre', [[15, '15'], [25, '25'], [50, '50'], [75, '75'], [100, '100']], r.vol == null ? null : r.vol * 100, { near: 3, dis }) : '')] : null,
           p.kind === 'atv' ? ['apps', lbl('APPS') + `<div class="tiles nodrag">${p.apps.map(x => `<button class="tile${A.source === x || A.app_name === x ? ' on' : ''}" data-a="app" data-v="${esc(x)}"${dis ? ' disabled' : ''}>${asIs(x)}</button>`).join('')}</div>`] : null,
@@ -304,7 +308,6 @@ function mediaFamily(cfg) {
       return ms > 0 ? { left, mins: Number(m[2]) } : null;
     },
     act(id, a, b) {
-      if (a === 'qopen') return openDev(this, b.dataset.v);   // a chip on Not playing: that speaker's popup
       if (a === 'vol5') return;   // the meter's taps and drags are its own (meterSet)
       const p = cfg.list.find(x => x.id === id), r = this.read(p), d = r.d, e = p.ent;
       const send = (f, svc, data, v) => { if (f) { tset(d, f, v); render(); } return tsend(d, 'media_player', svc, { entity_id: e, ...data }, f ? [f] : []); };
@@ -357,7 +360,7 @@ function mediaFamily(cfg) {
 }
 
 mediaFamily({
-  id: 'speakers', name: 'Speakers', icon: 'speaker', group: 'Media', order: 1, list: SPEAKERS, quiet: true,
+  id: 'speakers', name: 'Speakers', icon: 'speaker', group: 'Media', order: 1, list: SPEAKERS, slim: true,
   summary: n => n ? n + ' playing' : 'Quiet',
   samples(e) {
     const now = new Date().toISOString(), K = 'media_player.kitchen_sonos_kitchen_sonos', O = 'media_player.office_sonos_office_sonos';
