@@ -73,15 +73,8 @@
   .art.moon { background: radial-gradient(circle at 66% 34%, #F6E7BC 0 15%, rgba(246,231,188,0.35) 16%, transparent 24%), linear-gradient(170deg, #263452 0%, #6B4D6A 55%, #D08348 100%); }
   .art.blue { background: linear-gradient(90deg, transparent 0 62%, rgba(255,255,255,0.85) 62% 64%, transparent 64%), linear-gradient(160deg, #0F2D5A 0%, #2D6CA8 60%, #7FB3D8 100%); }
   .art.none { background: radial-gradient(circle at 35% 30%, rgba(var(--a),0.95), rgba(var(--a),0.45)); color: rgba(20,20,24,0.75); }
-  .sl { position: relative; width: 84px; height: 64px; flex: none; }
+  .sl { position: relative; width: 64px; height: 64px; flex: none; }   /* the cover only */
   .sl .art { position: absolute; left: 0; top: 0; width: 64px; height: 64px; border-radius: 10px; z-index: 1; box-shadow: 0 8px 18px -10px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.08); }
-  .rec { position: absolute; left: 3px; top: 3px; width: 58px; height: 58px; border-radius: 50%; transition: left .7s cubic-bezier(.2,.8,.2,1);
-    background: repeating-radial-gradient(circle, rgba(255,255,255,0.045) 0 1px, transparent 1px 3px), radial-gradient(circle, #0E0E10 0%, #18181C 30%, #0D0D0F 31%, #1B1B20 60%, #0F0F12 100%);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); }
-  .rec::after { content: ''; position: absolute; inset: 40%; border-radius: 50%; background: rgba(var(--a),0.9); }
-  .rec.spin { animation: spin 9s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .sl.out .rec { left: 24px; }
   .sl .st { position: absolute; left: 4px; bottom: 4px; z-index: 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: rgba(15,12,9,0.6); color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   .sl .st.on { background: rgb(var(--a)); color: var(--ink); }
   .sl .st svg { width: 11px; height: 11px; }
@@ -163,13 +156,13 @@
   .knobs label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
   .vc.dragging + .vn, .vc.dragging .n { color: rgb(var(--a)); }
 
-  @media (prefers-reduced-motion: reduce) { .rec.spin, .playing .vc-meter b.on { animation: none; } .sl .rec, .vc-tuner .scale { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .playing .vc-meter b.on { animation: none; } .vc-tuner .scale { transition: none; } }
 </style>
 </head>
 <body>
 <main>
   <h1>Speaker volume</h1>
-  <p class="lede">The Quiet stack card you picked, with five volume controls in place of the plain slider. Drag any of them; tap play to see the ones that move with the music. <a href="../">Back to the cards</a></p>
+  <p class="lede">The Quiet stack card you picked (the cover only, no record), with five volume controls in place of the plain slider. Drag any of them; tap play to see the ones that move with the music. <a href="../">Back to the cards</a></p>
   <div class="bar">
     <div class="seg" role="group" aria-label="Look">
       <button data-look="vintage" aria-pressed="true">Vintage</button>
@@ -264,7 +257,7 @@ const ppBtn = s => `<button class="pp ${playing(s) ? 'on' : ''}" data-pp="${s.id
 const nxBtn = s => `<button class="nx" aria-label="Next"${!live(s) ? ' disabled' : ''}>${I.next}</button>`;
 function card(kind, s, names) {
   const knob = kind === 'knob', grp = s.id === 'grp';
-  const sleeve = `<div class="sl ${live(s) ? 'out' : ''}"><div class="rec ${playing(s) ? 'spin' : ''}"></div>${art(s)}${knob && s.mood !== 'tv' ? `<button class="st ${playing(s) ? 'on' : ''}" data-pp="${s.id}" aria-label="${playing(s) ? 'Pause' : 'Play'}">${playing(s) ? I.pause : I.play}</button>` : ''}</div>`;
+  const sleeve = `<div class="sl">${art(s)}${knob && s.mood !== 'tv' ? `<button class="st ${playing(s) ? 'on' : ''}" data-pp="${s.id}" aria-label="${playing(s) ? 'Pause' : 'Play'}">${playing(s) ? I.pause : I.play}</button>` : ''}</div>`;
   const head = `<div class="top">${sleeve}<div class="txt"><div class="eyebrow">${esc(names)} ›</div><div class="title">${esc(s.title)}</div><div class="sub">${esc(s.sub)}</div></div>${knob ? vc(kind, s.id) : ppBtn(s)}</div>`;
   const row = knob ? '' : `<div class="bot">${nxBtn(s)}${vc(kind, s.id)}${kind === 'tuner' ? '' : `<span class="vn" data-vn="${s.id}"></span>`}</div>`;
   const members = !grp ? '' : knob
