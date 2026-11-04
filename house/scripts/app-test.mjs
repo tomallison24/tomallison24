@@ -485,6 +485,58 @@ for (const [size, design] of [[[1024, 768], 'glass'], [[744, 1133], 'vintage']])
   });
   await ctx.close();
 }
+{ // Speakers: Quiet stack (labs/speakers) - a card for what plays, a group on one card, the rest as chips; the volume a meter in 5% steps
+  const { ctx, page, errors } = await phone('dark');
+  await page.click('#vtop [data-view="media"]'); await page.waitForTimeout(600);
+  const card = id => `#v-speakers [data-dv="speakers:${id}"]`;
+  const meter = (id, key = id) => `${card(id)} .vmeter[data-v="${key}"]`;
+  const now = sel => page.$eval(sel, m => [Number(m.getAttribute('aria-valuenow')), m.querySelectorAll('b.on').length]);
+  const tapBar = async (sel, i) => { const b = await page.locator(sel).boundingBox(); await page.mouse.click(b.x + b.width * (i + 0.5) / 20, b.y + b.height / 2); await page.waitForTimeout(250); };
+  await test('Speakers: what plays has a card, Kitchen and Office share one, the rest are chips on Not playing', async () => {
+    const shown = await page.$$eval('#v-speakers .mcard', cs => cs.filter(c => !c.hidden).map(c => c.dataset.dv.split(':')[1]));
+    assert.deepEqual(shown, ['kt', 'lo', 'ar'], 'the group (led by Kitchen), the paused Lounge and the Arc on the TV');
+    assert.match(await page.textContent(card('kt') + ' .dg-name'), /Kitchen \+ Office/);
+    assert.equal(await page.locator(card('kt') + ' .mmem').count(), 2, 'each grouped speaker\'s own meter under the group\'s');
+    const chips = await page.$$eval('#v-speakers .mquiet .mqchip', bs => bs.map(b => b.textContent.trim()));
+    assert.deepEqual(chips, ['MoveAsleep', 'Nest Mini']);
+    assert.equal(await page.locator('#v-speakers .mcard .vinyl').count(), 0, 'the cover, not the record, on the cards');
+    assert.equal(await page.locator(card('kt') + ' .mcover').count(), 1);
+  });
+  await test('Speakers: the meter is 20 bars of 5%; a level between steps lights the nearest, the number exact', async () => {
+    assert.equal(await page.locator(meter('lo') + ' b').count(), 20);
+    assert.deepEqual(await now(meter('lo')), [25, 5]);
+    assert.deepEqual(await now(meter('kt', 'grp')), [32, 6], 'a group\'s level is its loudest speaker\'s (Kitchen, 32%)');
+    assert.equal((await page.textContent(card('kt') + ' .vnum')).trim(), '32');
+  });
+  await test('Speakers: a tap lights the bar under it and every one before it; a drag goes in 5% steps, off the left end silent', async () => {
+    await tapBar(meter('lo'), 9);
+    assert.deepEqual(await now(meter('lo')), [50, 10]);
+    assert.equal((await page.textContent(card('lo') + ' .vnum')).trim(), '50');
+    const b = await page.locator(meter('lo')).boundingBox();
+    await page.mouse.move(b.x + b.width * 0.5, b.y + b.height / 2); await page.mouse.down();
+    await page.mouse.move(b.x + b.width * 0.71, b.y + b.height / 2, { steps: 6 });
+    assert.deepEqual(await now(meter('lo')), [75, 15], 'it follows the finger');
+    await page.mouse.move(b.x - 20, b.y + b.height / 2, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(250);
+    assert.deepEqual(await now(meter('lo')), [0, 0]);
+    await page.focus(meter('lo')); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(150);
+    assert.deepEqual(await now(meter('lo')), [10, 2], 'the arrow keys step 5%');
+    assert.ok(await page.evaluate(() => document.activeElement.matches('.vmeter[data-v="lo"]')), 'and the focus stays on it');
+  });
+  await test('Speakers: the group\'s meter moves both speakers by as much; each one\'s own moves only it', async () => {
+    await tapBar(meter('kt', 'grp'), 9);   // 32 -> 50: Kitchen 50, Office 20 + 18 = 38
+    assert.deepEqual(await now(meter('kt', 'kt')), [50, 10]);
+    assert.deepEqual(await now(meter('kt', 'of')), [38, 8]);
+    await tapBar(meter('kt', 'of'), 3);
+    assert.deepEqual(await now(meter('kt', 'of')), [20, 4]);
+    assert.deepEqual(await now(meter('kt', 'kt')), [50, 10]);
+  });
+  await test('Speakers: a chip on Not playing opens that speaker\'s popup', async () => {
+    await page.locator('#v-speakers .mqchip', { hasText: 'Nest Mini' }).click(); await page.waitForTimeout(500);
+    assert.equal((await page.textContent('#dTitle')).trim(), 'Nest Mini');
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
 await browser.close();
 server.close();
 console.log(passed + ' tests passed');

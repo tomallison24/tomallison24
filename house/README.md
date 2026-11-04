@@ -315,12 +315,21 @@ dashboard's comments record a quirk, the app keeps it:
   tap each, as on the dashboard's LP1 pill (they were in the popup until
   2026-11-02); its popup has the slider and the lamps in its group. The TV strip has the
   dashboard's swatches and Custom.
-- **Speakers and TV** (SN3, `media.yaml`): a glass record with the album art,
-  turning while playing, the art tinting the sky. Play / pause, skip, volume
-  on the card; seek, ±15 s, mute, volume presets, shuffle, repeat,
-  crossfade, loudness, favourites (`sensor.sonos_favorites` ships disabled:
+- **Speakers and TV** (SN3, `media.yaml`): the card is Quiet stack (picked in
+  `labs/speakers`, 2026-11-04; the Signal dashboard keeps its record): the
+  album art as a square cover, play / pause beside it, and Next and the volume
+  under them, the volume a meter of 20 bars at 5% each (tap a bar, or drag
+  across; off the left end is silent; a level between steps lights the
+  nearest, the number beside it exact; the lit bars bounce while it plays).
+  Only the speakers playing, paused or on the TV get a card; speakers grouped
+  together share the leader's, its meter at the loudest one's level, moving
+  them all by as much, with each speaker's own meter under it; the rest fold
+  into one Not playing card of chips that open their popups. The TVs have the
+  same card, one each. The popup keeps the glass record with the album art,
+  turning while playing, the art tinting the sky. In the popup: seek, ±15 s, mute, volume presets, shuffle,
+  repeat, crossfade, loudness, favourites (`sensor.sonos_favorites` ships disabled:
   empty until it is turned on), the sleep timer, tone, grouping, House party
-  and Hand off (two taps) in the popup; the Arc's home theatre settings; the
+  and Hand off (two taps); the Arc's home theatre settings; the
   Apple TV's apps; the LG's power and sources. What each player can do is
   what it reports to Home Assistant.
 - **Cameras** (`security.yaml`): Arm / Disarm (one tap, as on the dashboard),
