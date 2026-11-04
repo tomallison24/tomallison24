@@ -1,6 +1,12 @@
 // MEDIA: the Signal dashboard's SN3 cards (ha-config, views_signal/media.yaml)
 // as two views, Speakers and TV. Same rules:
-//   - a glass record with the album art as its label, turning while playing;
+//   - the card (Quiet stack, picked in labs/speakers): the album art as a square
+//     cover, the play button beside it, and under them Next and the volume as a
+//     meter of 20 bars, 5% each (tap a bar, or drag across; the lit bars bounce
+//     while it plays). Only what is playing (or paused, or on the TV) gets a card;
+//     speakers grouped together share the leader's, with each one's own meter
+//     under it; the rest fold into one "Not playing" card of chips. The popup
+//     keeps the glass record with the art as its label, turning while playing;
 //     the art, blurred, tints the sky (half while playing, less when paused)
 //   - a Sonos is "TV" when its source is TV (or it plays the TV stream); the
 //     LG TV whenever it is on
@@ -41,6 +47,62 @@ const mmss = s => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 6
 // What a player reports (a title, an artist, a source): shown as it is, in any language.
 const asIs = s => `<span translate="no">${esc(s)}</span>`;
 const tone = (acc, k) => '#' + acc.split(',').map((v, i) => Math.round([0x16, 0x17, 0x1B][i] + (Number(v) - [0x16, 0x17, 0x1B][i]) * k).toString(16).padStart(2, '0')).join('');
+
+// The volume as a meter: 20 bars rising left to right, 5% each, lit to the level.
+// A level between steps (38%) lights the nearest bar (40%); the number beside it stays exact.
+const METER = 20;
+function meterHTML(key, vol, tint, o = {}) {
+  const v = vol == null ? null : Math.round(vol * 100), lit = v == null ? 0 : Math.round(v / 5);
+  const bars = Array.from({ length: METER }, (_, i) => `<b class="${i < lit ? 'on' : ''}${i < lit && i >= 17 ? ' hot' : ''}" style="--h:${Math.round(28 + 72 * i / (METER - 1))}%;--d:${(0.32 + ((i * 7) % 11) / 22).toFixed(2)}s;--dl:-${(((i * 5) % 7) / 10).toFixed(1)}s"></b>`).join('');
+  return `<div class="vmeter${o.sm ? ' sm' : ''}${o.dis ? ' dis' : ''}" data-a="vol5" data-v="${key}" role="slider" tabindex="${o.dis ? -1 : 0}" aria-label="${esc(o.aria || 'Volume')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v == null ? 0 : v}"${o.dis ? ' aria-disabled="true"' : ''} style="--tint:${tint}">${bars}</div>`;
+}
+const meterAt = (m, x) => { const b = m.getBoundingClientRect(), f = (x - b.left) / b.width; return f <= 0 ? 0 : Math.min(METER, Math.floor(f * METER) + 1) * 5; };
+function meterShow(m, v) {
+  const lit = Math.round(v / 5);
+  m.querySelectorAll('b').forEach((b, i) => { b.classList.toggle('on', i < lit); b.classList.toggle('hot', i < lit && i >= 17); });
+  m.setAttribute('aria-valuenow', v);
+  const n = m.parentElement.querySelector('.vnum'); if (n) n.textContent = v;
+}
+function meterSet(m, v) {
+  const host = m.closest('[data-dv]'); if (!host) return;
+  const [fid, id] = host.dataset.dv.split(':'), f = FAMILIES.find(x => x.id === fid);
+  if (f && f.vol5) f.vol5(id, m.dataset.v, v);
+}
+// A tap lights the bar under it and every one before it; a drag across goes in 5% steps,
+// and off the left end is silent. Up and down still scrolls (touch-action: pan-y), and
+// the meter is held (rangeHeld) while the finger is on it, so nothing redraws under it.
+let mDrag = null;
+document.addEventListener('pointerdown', e => {
+  const m = e.target.closest && e.target.closest('.vmeter');
+  if (!m || m.classList.contains('dis')) return;
+  mDrag = { m, x: e.clientX, y: e.clientY, moved: false, v: null }; rangeHeld = m;
+}, { passive: true });
+document.addEventListener('pointermove', e => {
+  if (!mDrag) return;
+  const dx = e.clientX - mDrag.x, dy = e.clientY - mDrag.y;
+  if (!mDrag.moved) {
+    if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+    if (Math.abs(dy) > Math.abs(dx)) { mDrag = null; rangeHeld = null; return; }   // a scroll
+    mDrag.moved = true; mDrag.m.classList.add('held');
+  }
+  mDrag.v = meterAt(mDrag.m, e.clientX); meterShow(mDrag.m, mDrag.v);
+}, { passive: true });
+document.addEventListener('pointerup', e => {
+  if (!mDrag) return;
+  const { m, moved } = mDrag, v = moved ? mDrag.v : meterAt(m, e.clientX);
+  mDrag = null; rangeHeld = null; m.classList.remove('held');
+  if (v != null) { meterShow(m, v); meterSet(m, v); }
+});
+document.addEventListener('pointercancel', () => { if (!mDrag) return; mDrag.m.classList.remove('held'); mDrag = null; rangeHeld = null; render(); });
+document.addEventListener('keydown', e => {
+  const m = e.target.closest && e.target.closest('.vmeter'); if (!m || m.classList.contains('dis')) return;
+  const d = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5 }[e.key]; if (!d) return;
+  e.preventDefault();
+  const v = Math.max(0, Math.min(100, Math.round((Number(m.getAttribute('aria-valuenow')) + d) / 5) * 5));
+  const host = m.closest('[data-dv]'), key = m.dataset.v;
+  meterShow(m, v); meterSet(m, v);
+  const again = host && host.querySelector(`.vmeter[data-v="${key}"]`); if (again && again !== m) again.focus();   // redrawn: keep the focus on it
+});
 
 function mediaFamily(cfg) {
   return family({
@@ -84,7 +146,13 @@ function mediaFamily(cfg) {
       const names = r.group.filter(e => e !== p.ent).map(e => (PLAYERS.find(x => x.ent === e) || { name: e }).name);
       return (r.group[0] === p.ent ? 'With ' : 'Following ') + names.join(', ');
     },
-    // The record: the art as its label, grooves catching the light.
+    // The card's cover: the album art, square; without art, the player's colour and what it plays.
+    cover(p, r) {
+      const a = this.acc(p, r);
+      const bg = r.art ? `background-image:url('${esc(r.art)}')` : `background:radial-gradient(circle at 35% 30%, rgba(${a},0.95), rgba(${a},0.45))`;
+      return `<div class="mcover${r.art ? '' : ' none'}" style="${bg}">${r.art ? '' : svg(p.kind === 'tv' || r.tv ? 'tv' : p.kind === 'atv' ? 'apps' : 'music', 26)}</div>`;
+    },
+    // The popup's record: the art as its label, grooves catching the light.
     vinyl(p, r, size) {
       const a = this.acc(p, r), spin = r.playing && !r.tv;
       const label = r.art ? `style="background-image:url('${esc(r.art)}')"` : `style="background:radial-gradient(circle at 35% 30%, rgba(${a},0.95), rgba(${a},0.45))"`;
@@ -95,43 +163,78 @@ function mediaFamily(cfg) {
       const a = this.acc(p, r);
       return skyHTML(this.sky(p, r), a, { pool: r.playing ? 'breathe' : r.mood === 'tv' ? 'pulse' : '', poolA: r.mood === 'tv' ? 0.14 : 0.1, art: r.playing || r.mood === 'paused' ? r.art : '', artPaused: r.mood === 'paused', seed: 61 }, top);
     },
-    controls(p, r) {
+    // Beside the cover: play or pause (the TV: its power).
+    button(p, r) {
       const a = this.acc(p, r);
-      if (p.kind === 'tv') return pwrBtn(r.on, a, (r.on ? 'Turn off ' : 'Turn on ') + p.name, { a: 'tvpower', dis: r.offline, wait: tWaiting(r.d, 'state') })
-        + `<div class="srcline">${r.on && r.A.source ? asIs(r.A.source) : r.on ? 'On' : 'Off'}</div>`;
-      const dis = r.offline || r.tv;
-      return pwrBtn(r.playing, a, r.playing ? 'Pause' : 'Play', { a: 'pp', icon: r.playing ? 'pause' : 'play', dis: dis || !r.can('pause'), wait: tWaiting(r.d, 'state') })
-        + `<button class="disc sm" data-a="next" aria-label="Next"${dis || !r.can('next') ? ' disabled' : ''}>${svg('next', 20)}</button><i class="hair"></i>`
-        + (r.can('vol') ? sliderHTML('vol', r.vol == null ? 0 : Math.round(r.vol * 100), 0, 100, 1, { cls: 'thin vol', tint: a, aria: p.name + ' volume', unit: '%', dis: r.offline }) : '<span class="srcline">No volume</span>');
+      if (p.kind === 'tv') return pwrBtn(r.on, a, (r.on ? 'Turn off ' : 'Turn on ') + p.name, { a: 'tvpower', dis: r.offline, wait: tWaiting(r.d, 'state') });
+      return pwrBtn(r.playing, a, r.playing ? 'Pause' : 'Play', { a: 'pp', icon: r.playing ? 'pause' : 'play', dis: r.offline || r.tv || !r.can('pause'), wait: tWaiting(r.d, 'state') });
+    },
+    // Under it: Next and the volume meter (a group's: its loudest speaker's level).
+    controls(p, r, members) {
+      const a = this.acc(p, r);
+      if (p.kind === 'tv') return `<div class="srcline">${r.on && r.A.source ? asIs(r.A.source) : r.on ? 'On' : 'Off'}</div>`;
+      const dis = r.offline || r.tv, gv = members ? Math.max(...members.map(([, mr]) => mr.vol || 0)) : r.vol;
+      return `<button class="disc sm" data-a="next" aria-label="Next"${dis || !r.can('next') ? ' disabled' : ''}>${svg('next', 20)}</button>`
+        + (r.can('vol') ? meterHTML(members ? 'grp' : p.id, gv, a, { aria: (members ? 'Group' : p.name) + ' volume', dis: r.offline }) + `<span class="vnum">${gv == null ? '--' : Math.round(gv * 100)}</span>` : '<span class="srcline">No volume</span>');
+    },
+    // A group's card: each speaker's own meter under the group's.
+    membersHTML(members) {
+      return `<div class="mmems">${members.map(([x, mr]) => `<div class="mmem"><span translate="no">${esc(x.name)}</span>${meterHTML(x.id, mr.vol, this.acc(x, mr), { sm: true, aria: x.name + ' volume', dis: mr.offline })}</div>`).join('')}</div>`;
     },
 
     mount(el) {
-      el.innerHTML = cfg.list.map(p => this.shell(p)).join('');
+      el.innerHTML = cfg.list.map(p => this.shell(p)).join('')
+        + (cfg.quiet ? `<article class="dg mquiet" data-dv="${cfg.id}:quiet" hidden><div class="dg-in"><div class="mq-h">NOT PLAYING</div><div class="mq-chips" data-r="quiet"></div></div></article>` : '');
       // The seek bar moves with the song while a popup is open.
       setInterval(() => { if (openD && openD.f === this && !rangeHeld) { const p = cfg.list.find(x => x.id === openD.id); if (p && this.read(p).playing) renderDev(); } }, 1000);
     },
     render() {
       let n = 0;
+      const R = new Map(cfg.list.map(p => [p.id, this.read(p)]));
+      // Quiet stack: what plays (or is paused, or on the TV) gets a card; a speaker
+      // following another one that has a card is on that card; the rest are chips.
+      const live = r => !r.offline && (r.playing || r.mood === 'paused' || r.tv);
+      const leader = (p, r) => { if (r.group.length < 2) return p; const L = cfg.list.find(x => x.ent === r.group[0]); return L && live(R.get(L.id)) ? L : p; };
+      const quiet = [];
       for (const p of cfg.list) {
-        const r = this.read(p);
+        const r = R.get(p.id);
         if (r.playing || (p.kind === 'tv' && r.on)) n++;
-        for (const card of cardsOf(cfg.id + ':' + p.id)) this.paint(card, p);
+        let shown = true, members = null;
+        if (cfg.quiet) {
+          shown = live(r) && leader(p, r) === p;
+          if (!live(r)) quiet.push([p, r]);
+          const ms = r.group.map(e => cfg.list.find(x => x.ent === e)).filter(Boolean);
+          if (shown && ms.length > 1) members = ms.map(x => [x, R.get(x.id)]);
+        }
+        for (const card of cardsOf(cfg.id + ':' + p.id)) { card.hidden = !shown; if (shown) this.paint(card, p, r, members); }
+      }
+      if (cfg.quiet) {
+        const q = this.el.querySelector('.mquiet');
+        q.hidden = !quiet.length;
+        put(q.querySelector('[data-r="quiet"]'), quiet.map(([p, r]) => {
+          const word = r.offline ? (p.id === 'mv' ? 'Asleep' : 'Offline') : r.state === 'off' ? 'Off' : '';
+          return `<button class="mqchip${r.offline ? ' off' : ''}" data-a="qopen" data-v="${p.id}" style="--a:${this.acc(p, r)}" aria-label="${esc(p.name)}${word ? ', ' + word : ''}: all of its controls"><i>${svg(r.offline ? 'wifi' : 'music', 13)}</i><b translate="no">${esc(p.name)}</b>${word ? `<small>${word}</small>` : ''}</button>`;
+        }).join(''));
       }
       this.sum = cfg.summary(n);
     },
     // One card, wherever it is (its own view; on Favorites a speaker playing is a Running Now chip).
     shell(p) { return cardHTML(cfg.id + ':' + p.id, `
-        <div class="dg-top"><div data-r="hero"></div><div class="dg-info" data-r="info"></div></div>
-        <div class="dg-ctl mctl" data-r="ctl"></div>`, 'mcard'); },
-    paint(card, p) {
-      const r = this.read(p), R = k => card.querySelector(`[data-r="${k}"]`), w = this.words(p, r);
+        <div class="mtop"><div data-r="hero"></div><div class="dg-info" data-r="info"></div><div data-r="btn"></div></div>
+        <div class="dg-ctl mctl" data-r="ctl"></div><div data-r="mem"></div>`, 'mcard'); },
+    // members: a group's speakers ([p, reading] each, this one first among them), or null.
+    paint(card, p, r = this.read(p), members = null) {
+      const R = k => card.querySelector(`[data-r="${k}"]`), w = this.words(p, r);
       put(R('fx'), this.fx(p, r, 60));
-      put(R('hero'), this.vinyl(p, r, 'sm'));
-      const who = this.withWho(p, r), bat = p.battery && !gone(p.battery) ? `${svg('battery', 13)}${Math.round(num(p.battery))}%` : '';
-      put(R('info'), infoHTML2(p.name, w.title, w.sub, (who || bat || r.muted) ? `<div class="alerts">${r.muted ? `<span class="alert">${svg('mute', 13)}Muted</span>` : ''}${who ? `<span class="alert">${svg('group', 13)}${esc(who)}</span>` : ''}${bat ? `<span class="alert">${bat}</span>` : ''}</div>` : ''));
-      put(R('ctl'), this.controls(p, r));
+      put(R('hero'), this.cover(p, r));
+      const who = members ? '' : this.withWho(p, r), bat = p.battery && !gone(p.battery) ? `${svg('battery', 13)}${Math.round(num(p.battery))}%` : '';
+      put(R('info'), infoHTML2(members ? members.map(([x]) => x.name).join(' + ') : p.name, w.title, w.sub, (who || bat || r.muted) ? `<div class="alerts">${r.muted ? `<span class="alert">${svg('mute', 13)}Muted</span>` : ''}${who ? `<span class="alert">${svg('group', 13)}${esc(who)}</span>` : ''}${bat ? `<span class="alert">${bat}</span>` : ''}</div>` : ''));
+      put(R('btn'), this.button(p, r));
+      put(R('ctl'), this.controls(p, r, members));
+      put(R('mem'), members ? this.membersHTML(members) : '');
       card.classList.toggle('offline', r.offline);
       card.classList.toggle('muted', r.muted);
+      card.classList.toggle('playing', r.playing && !r.tv);   // the meter's lit bars bounce
       shadow(card, this.acc(p, r));
     },
 
@@ -208,6 +311,8 @@ function mediaFamily(cfg) {
       return ms > 0 ? { left, mins: Number(m[2]) } : null;
     },
     act(id, a, b) {
+      if (a === 'qopen') return openDev(this, b.dataset.v);   // a chip on Not playing: that speaker's popup
+      if (a === 'vol5') return;   // the meter's taps and drags are its own (meterSet)
       const p = cfg.list.find(x => x.id === id), r = this.read(p), d = r.d, e = p.ent;
       const send = (f, svc, data, v) => { if (f) { tset(d, f, v); render(); } return tsend(d, 'media_player', svc, { entity_id: e, ...data }, f ? [f] : []); };
       if (a === 'pp') return send('state', 'media_play_pause', {}, r.playing ? 'paused' : 'playing');
@@ -236,6 +341,17 @@ function mediaFamily(cfg) {
       if (a === 'tvpower') return send('state', r.on ? 'turn_off' : 'turn_on', {}, r.on ? 'off' : 'on');
       if (a === 'turnoff') return send('state', 'turn_off', {}, 'off');
     },
+    // The meter: one speaker's level, or a group's (key 'grp' on the leader's card). A group's
+    // level is its loudest speaker's; moving it moves every speaker in it by as much.
+    vol5(id, key, v) {
+      const set = (x, to) => { const d = dv(cfg.id, x.id, x.name); to = Math.max(0, Math.min(1, Math.round(to * 100) / 100)); tset(d, 'vol', to); tsend(d, 'media_player', 'volume_set', { entity_id: x.ent, volume_level: to }, ['vol']); };
+      if (key === 'grp') {
+        const lead = cfg.list.find(x => x.id === id), ms = this.read(lead).group.map(e => cfg.list.find(x => x.ent === e)).filter(x => x && !this.read(x).offline);
+        const top = Math.max(...ms.map(x => this.read(x).vol || 0)), dlt = v / 100 - top;
+        for (const x of ms) set(x, (this.read(x).vol || 0) + dlt);
+      } else { const x = cfg.list.find(q => q.id === key); if (x) set(x, v / 100); }
+      render();
+    },
     slide(id, a, v, el) {
       const p = cfg.list.find(x => x.id === id), d = this.read(p).d;
       if (a === 'vol') { tset(d, 'vol', v / 100); return tsend(d, 'media_player', 'volume_set', { entity_id: p.ent, volume_level: v / 100 }, ['vol']); }
@@ -248,7 +364,7 @@ function mediaFamily(cfg) {
 }
 
 mediaFamily({
-  id: 'speakers', name: 'Speakers', icon: 'speaker', group: 'Media', order: 1, list: SPEAKERS,
+  id: 'speakers', name: 'Speakers', icon: 'speaker', group: 'Media', order: 1, list: SPEAKERS, quiet: true,
   summary: n => n ? n + ' playing' : 'Quiet',
   samples(e) {
     const now = new Date().toISOString(), K = 'media_player.kitchen_sonos_kitchen_sonos', O = 'media_player.office_sonos_office_sonos';

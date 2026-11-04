@@ -251,9 +251,8 @@
 .swatch:active { transform: scale(0.92); }
 .swatch:disabled { opacity: .3; }
 
-/* ---- media: the record ---- */
+/* ---- media: the record (the popup's) ---- */
 .vinyl { position: relative; width: var(--s); height: var(--s); flex: none; }
-.vinyl.sm { --s: 96px; }
 .vinyl.lg { --s: 200px; margin: 0 auto; }
 .vinyl .rec { position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
   background: radial-gradient(circle, #0E0E10 0%, #18181C 30%, #0D0D0F 31%, #1B1B20 60%, #0F0F12 100%);
@@ -268,10 +267,45 @@
 .vinyl .arm { position: absolute; right: -6%; top: -4%; width: 42%; height: 6px; border-radius: 3px; transform-origin: 92% 50%; transform: rotate(-42deg);
   background: linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.85)); box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: transform .9s cubic-bezier(.2,.8,.2,1); }
 .vinyl .arm.on { transform: rotate(-14deg); }
-.mcard .dg-top { grid-template-columns: auto 1fr; }
-.mctl { gap: 10px; }
-.mctl .gsl { flex: 1; min-width: 0; }
-.dvc.muted .vinyl { filter: saturate(0.3); }
+/* ---- media: the card (Quiet stack): the cover, play beside it, Next and the volume meter under them ---- */
+.mcard .dg-in { gap: 10px; }
+.mtop { display: flex; align-items: center; gap: 14px; }
+.mtop .dg-info { flex: 1; min-width: 0; }
+.mtop .dg-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcover { width: 64px; height: 64px; flex: none; border-radius: 12px; background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center; color: rgba(20,20,24,0.75);
+  box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.16), 0 10px 20px -12px rgba(0,0,0,0.75); }
+.dvc.muted .mcover { filter: saturate(0.3); }
+.mctl { gap: 12px; }
+.vnum { flex: none; min-width: 26px; text-align: right; font-size: 13px; font-weight: 600; opacity: .7; font-variant-numeric: tabular-nums; }
+/* The meter: 20 bars rising left to right, 5% each, lit in the player's colour (the loudest three paler) */
+.vmeter { position: relative; flex: 1; min-width: 0; height: 34px; display: flex; align-items: flex-end; gap: 3px; padding: 5px 0;
+  touch-action: pan-y; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.vmeter.sm { height: 26px; gap: 2px; padding: 4px 0; }
+.vmeter b { flex: 1; height: var(--h); border-radius: 2px; background: rgba(255,255,255,0.14); transform-origin: 50% 100%; transition: background-color .12s; }
+.vmeter b.on { background: rgb(var(--tint)); }
+.vmeter b.on.hot { background: color-mix(in srgb, rgb(var(--tint)) 55%, white); }
+.vmeter.dis { opacity: .35; cursor: default; }
+.vmeter:focus-visible { outline: 2px solid rgba(var(--tint),0.8); outline-offset: 3px; border-radius: 6px; }
+/* while it plays, the lit bars bounce like a level meter (still while a finger is on it) */
+.mcard.playing .vmeter:not(.held) b.on { animation: vm-bounce var(--d) ease-in-out var(--dl) infinite alternate; }
+@keyframes vm-bounce { to { transform: scaleY(.45); } }
+/* a group's card: each speaker's own meter under the group's */
+.mmems { display: grid; gap: 2px; margin-top: -4px; }
+.mmem { display: flex; align-items: center; gap: 12px; padding-left: 48px; }
+.mmem span { width: 58px; flex: none; font-size: 12.5px; font-weight: 600; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mmem .vmeter { margin-right: 38px; }
+/* Not playing: every speaker that isn't, as chips; a tap opens its popup */
+.dg.mquiet { cursor: default; }
+.mquiet .dg-in { gap: 10px; }
+.mq-h { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; opacity: .7; }
+.mq-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mqchip { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 6px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.16); transition: transform .18s; }
+.mqchip:active { transform: scale(0.95); }
+.mqchip i { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(var(--a),0.85); color: rgba(20,20,24,0.8); }
+.mqchip small { font-size: 12px; font-weight: 500; opacity: .6; }
+.mqchip.off { opacity: .5; }
 .transport { display: flex; align-items: center; justify-content: space-between; margin: 18px 6px 4px; }
 .volrow { display: flex; align-items: flex-end; gap: 12px; }
 .volrow .gsl { flex: 1; min-width: 0; }
@@ -427,14 +461,13 @@
   .fins.sm { --n: 27px; --p: 13px; }
   .rotor.sm .hub b { font-size: 19px; }
   .varc.sm .num b { font-size: 26px; }
-  .vinyl.sm { --s: 80px; }
   .shade.sm { --s: 80px; }
   .swatches { gap: 4px; }
   .tiles.four { grid-template-columns: 1fr 1fr; }
   .toners { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rotor *, .rotor, .vinyl *, .hlamp *, .lp-halo, .fins *, .dv-art, .dv-star, .cbadge i, .sysalert { animation: none !important; }
+  .rotor *, .rotor, .vinyl *, .hlamp *, .lp-halo, .fins *, .dv-art, .dv-star, .cbadge i, .sysalert, .vmeter b { animation: none !important; }
 }
 
 /* ---- the six views and their sections ---- */
@@ -709,6 +742,9 @@
               conic-gradient(from 30deg, rgba(255,255,255,0.0) 0deg, rgba(255,255,255,0.56) 40deg, rgba(255,255,255,0.0) 80deg, rgba(255,255,255,0.0) 180deg, rgba(255,255,255,0.4) 220deg, rgba(255,255,255,0.0) 260deg); }
     .vinyl .lab { box-shadow: 0 0 0 2px rgba(30,40,60,0.2); }
     .vinyl .arm { background: linear-gradient(90deg, rgba(255,255,255,0.78), rgba(255,255,255,0.78)); box-shadow: 0 2px 6px rgba(30,40,60,0.2); }
+    .mcover { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.088), 0 10px 20px -12px rgba(30,40,60,0.3); }
+    .vmeter b { background: rgba(28,32,40,0.105); }
+    .mqchip { background: rgba(28,32,40,0.06); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.088); }
     .shield { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.4), 0 0 18px -6px rgba(var(--a),0.6); }
     .armbtn { background: rgba(28,32,40,0.105); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.45); }
     .armbtn.on { background: rgba(28,32,40,0.075); }
@@ -729,6 +765,7 @@
     .runchip { background: rgba(28,32,40,0.053); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.066); }
     .ag { background: linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.143), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(30,40,60,0.28); }
     .ag.lit { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.495), inset 0 1px 0 #fff, 0 0 24px -6px rgba(var(--c),0.8); }
+    .awaypill { box-shadow: inset 0 0 0 0.5px rgba(160,230,180,0.5), inset 0 1px 0.5px rgba(255,255,255,0.5), 0 0 22px -4px rgba(var(--c),0.55), 0 10px 24px -12px rgba(30,40,60,0.28); }
     .wxpill { background: linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.143), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(30,40,60,0.28); }
     .actrow + .actrow { border-top: 0.5px solid rgba(28,32,40,0.064); }
     .estrip { background: linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.143), inset 0 1px 0.5px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.1), 0 10px 24px -12px rgba(30,40,60,0.28); }
@@ -736,10 +773,6 @@
     .es-list { border-top: 0.5px solid rgba(28,32,40,0.08); }
     .es-item + .es-item { border-top: 0.5px solid rgba(28,32,40,0.056); }
     .alert.sched { background: rgba(28,32,40,0.105); }
-    .awaypill { background: linear-gradient(180deg, rgba(120,200,140,0.34), rgba(120,200,140,0.12)); box-shadow: inset 0 0 0 0.5px rgba(40,110,60,0.35), inset 0 1px 0.5px rgba(255,255,255,0.6), 0 0 22px -4px rgba(var(--c),0.6), 0 10px 24px -12px rgba(30,40,60,0.25); }
-    .away-dot { background: #2E9E55; box-shadow: 0 0 8px rgba(46,158,85,0.7); } .away-dot::after { background: #2E9E55; }
-    .awaypill > svg, .alert.eco svg, .away-note svg { color: #2E8B57; }
-    .alert.eco { background: rgba(60,160,90,0.2); }
     .sstep.now { background: rgba(28,32,40,0.09); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.3); }
     .bgopt { background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.12)); box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.132), inset 0 1px 0.5px rgba(255,255,255,0.45), 0 10px 24px -12px rgba(30,40,60,0.28); }
     .bg-tick { background: rgba(28,32,40,0.075); }
@@ -751,6 +784,10 @@
     .tone.on i { box-shadow: inset 0 0 0 0.5px rgba(28,32,40,0.275), 0 0 0 2px rgba(255,255,255,0.85); }
   }
   /* LIGHT-END */
+  /* The volume meter in light mode (by hand): the lit bars a little deeper, so a pale player colour still reads on frosted white */
+  @media (prefers-color-scheme: light) {
+    .vmeter b.on, .vmeter b.on.hot { background: color-mix(in srgb, rgb(var(--tint)) 72%, rgb(28,32,40)); }
+  }
   /* The night and full chips in light mode (by hand, after the generated block): an indigo wash / amber wash at rest, the same midnight blue / gold when on */
   @media (prefers-color-scheme: light) {
     .chips .chip2.night { color: #4A55A8; background: rgba(70,85,180,0.09); box-shadow: inset 0 0 0 0.5px rgba(70,85,180,0.22); }
