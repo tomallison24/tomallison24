@@ -503,6 +503,17 @@ take-off; before that, when it starts ("Status from Thu 4:04 PM"); signed out,
 flight's Check again asks for Face ID); and "Status unavailable", "No status
 yet" or "Status paused this month" when there is none.
 
+How late a flight is (`bestTime` and `liveView` in `app.js`): AeroDataBox gives
+each end a scheduled time and, when it has them, a revised time (the airline's
+or the airport's word) and a predicted one (its own). The revised time counts
+when it differs from the schedule; one that only repeats it isn't news, and
+then the prediction counts, as a delay often shows there first. Before
+take-off, a later landing counts too. Late by 15 minutes or more is "Delayed";
+5 to 14, "Late". When a flight number flies more than one leg that day, the
+leg between the booking's airports is used, else the one leaving nearest the
+booking's time. (Until 2026-11-08 only the departure's revised time counted,
+so a delay that was only predicted, or only on the landing, read as On time.)
+
 Keeping it free: each flight is looked up only from 36 hours before take-off
 until it lands, at most every 10 minutes in the last 6 hours and hourly
 before that; the server keeps each answer for 10 minutes so both phones share

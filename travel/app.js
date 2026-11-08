@@ -82,7 +82,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const QUERY = '-in:chats -in:spam -in:trash -category:promotions {label:Travel ' + SUBJECTS.map(s => 'subject:' + s).join(' ') + ' ' + SENDERS.map(s => 'from:' + s).join(' ') + '}';
   // Bump QUERY_V whenever the reader (parse.js) or QUERY changes: the next scan then reads the last year again, once, and what the old
   // reader made of those emails is rebuilt (travel/scripts/reader-version-test.mjs fails if parse.js changes and this does not).
-  const QUERY_V = '7';
+  const QUERY_V = '8';
 
   const I = {
     lock: '<svg class="lk" viewBox="0 0 24 24"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg>',
@@ -1503,7 +1503,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (data.error) live[b.id] = { at: Date.now(), error: data.error, asked: ask ? ask.no + ' on ' + ask.date : '' };
     else {
       const legs = (data.legs || []).filter(l => !l.cargo);
-      const leg = legs.find(l => l.departure.iata === b.from) || legs.find(l => l.arrival.iata === b.to) || legs[0] || null;
+      // A number can fly more than one leg a day: the one between the booking's airports, else from or to one of them,
+      // else (no airports known, as in a check-in email) the one leaving nearest the booking's time
+      const near = () => { const t = startT(b); return isNaN(t) ? legs[0] : legs.slice().sort((x, y) => Math.abs(legUtc(x) - t) - Math.abs(legUtc(y) - t))[0]; };
+      const legUtc = l => { const s = l.departure && l.departure.scheduled; const v = s && utc(s.utc); return isNaN(v) || !v ? Infinity : v; };
+      const leg = (b.from && b.to && legs.find(l => l.departure.iata === b.from && l.arrival.iata === b.to))
+        || (b.from && legs.find(l => l.departure.iata === b.from)) || (b.to && legs.find(l => l.arrival.iata === b.to)) || near() || null;
       live[b.id] = { at: Date.now(), leg, found: !!leg };
     }
     saveLive();
@@ -1517,14 +1522,25 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   const utc = s => { const t = Date.parse(String(s || '').replace(' ', 'T').replace(/Z$/, ':00Z').replace(/:(\d\d):00Z$/, ':$1:00Z')); return isNaN(t) ? Date.parse(String(s || '').replace(' ', 'T')) : t; };
   const localHM = s => { const m = /\d\d:\d\d/.exec(String(s || '')); if (!m) return ''; const [h, mi] = m[0].split(':').map(Number); return new Date(2000, 0, 1, h, mi).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  // The latest word on one end of a leg: its revised time when the airline or airport has moved it; else AeroDataBox's
+  // predicted time (a revised time that only repeats the schedule isn't news, and a delay can show in the prediction
+  // first); else whatever there is.
+  function bestTime(e) {
+    if (!e) return null;
+    const s = e.scheduled && utc(e.scheduled.utc), r = e.revised && utc(e.revised.utc);
+    if (e.revised && !(s && r === s)) return e.revised;
+    return e.predicted || e.revised || e.scheduled || null;
+  }
+  // Minutes late at one end (negative: early).
+  const lateAt = e => { const s = e && e.scheduled && utc(e.scheduled.utc), b = bestTime(e), t = b && utc(b.utc); return s && t ? Math.round((t - s) / 6e4) : 0; };
   // What to show for a flight's live status, or null.
   function liveView(b) {
     const x = live[b.id];
     if (!x || !x.leg) return null;
     const l = x.leg, d = l.departure || {}, a = l.arrival || {};
-    const sched = d.scheduled && utc(d.scheduled.utc), best = (d.revised || d.predicted) && utc((d.revised || d.predicted).utc);
-    const late = sched && best ? Math.round((best - sched) / 6e4) : 0;
-    const s = String(l.status || '').toLowerCase();
+    // Late leaving; before take-off, a later landing counts too (a delay can show on the arrival first)
+    const s = String(l.status || '').toLowerCase(), up = !/departed|enroute|approaching|arrived/.test(s);
+    const late = Math.max(lateAt(d), up ? lateAt(a) : -Infinity);
     let text = 'Scheduled', cls = 'info';
     if (/cancel/.test(s)) { text = 'Canceled'; cls = 'bad'; }
     else if (/divert/.test(s)) { text = 'Diverted'; cls = 'bad'; }
@@ -1534,7 +1550,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (/gateclosed/.test(s)) { text = 'Gate closed'; cls = 'warn'; }
     else if (late >= 15 || /delay/.test(s)) { text = late > 0 ? 'Delayed ' + (late >= 60 ? Math.floor(late / 60) + ' h ' + (late % 60 ? late % 60 + ' min' : '') : late + ' min') : 'Delayed'; cls = 'warn'; }
     else if (/checkin/.test(s)) { text = 'Check-in open'; cls = 'ok'; }
-    else if (/expected|scheduled/.test(s)) { text = late > 4 ? 'Late ' + late + ' min' : 'On time'; cls = late > 4 ? 'warn' : 'ok'; }
+    else if (late > 4) { text = 'Late ' + late + ' min'; cls = 'warn'; }
+    else if (/expected|scheduled/.test(s)) { text = 'On time'; cls = 'ok'; }
     return { text: text.trim(), cls, late, gate: d.gate, terminal: d.terminal, arrGate: a.gate, arrTerminal: a.terminal, belt: a.belt, l, at: x.at };
   }
   // What a flight's card says about its status, always something for an upcoming flight with a number: the live status,
@@ -1582,8 +1599,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (v) {
       const d = v.l.departure || {}, a = v.l.arrival || {};
       const cell = (label, big, small, old) => '<div class="cell"><span>' + esc(label) + '</span><b>' + esc(big || '—') + '</b>' + (old ? '<s>' + esc(old) + '</s>' : '') + (small ? '<i>' + esc(small) + '</i>' : '') + '</div>';
-      const t = e => { const best = e.revised || e.predicted || e.scheduled; return best ? localHM(best.local) : ''; };
-      const was = e => (e.revised || e.predicted) && e.scheduled && localHM((e.revised || e.predicted).local) !== localHM(e.scheduled.local) ? localHM(e.scheduled.local) : '';
+      const t = e => { const best = bestTime(e); return best ? localHM(best.local) : ''; };
+      const was = e => { const best = bestTime(e); return best && e.scheduled && best !== e.scheduled && localHM(best.local) !== localHM(e.scheduled.local) ? localHM(e.scheduled.local) : ''; };
       h += '<div class="grid2">' + cell('Departs ' + (d.iata || b.from || ''), t(d), [d.terminal ? 'Terminal ' + d.terminal : '', d.gate ? 'Gate ' + d.gate : ''].filter(Boolean).join(' · '), was(d))
         + cell('Lands ' + (a.iata || b.to || ''), t(a), [a.terminal ? 'Terminal ' + a.terminal : '', a.gate ? 'Gate ' + a.gate : '', a.belt ? 'Bags: belt ' + a.belt : ''].filter(Boolean).join(' · '), was(a)) + '</div>';
       h += '<p class="hint" style="margin:0">Checked ' + esc(ago(v.at)) + (v.l.aircraft ? ' · ' + esc(v.l.aircraft) : '') + '. Local times.</p>';
