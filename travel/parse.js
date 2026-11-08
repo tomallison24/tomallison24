@@ -362,7 +362,10 @@
     const conf = findConf(text);
     const dates = realDates(text, ref);
     const inDate = i => dates.some(d => i >= d.i && i < d.end);
-    const timesIn = (a, b) => findTimes(text.slice(a, b)).map(t => ({ ...t, i: a + t.i, end: a + t.end })).filter(t => !inDate(t.i));
+    // A time labelled as boarding ("Boarding Closes 1:26 PM", Delta's trip details; "Boarding begins", "Board by") or as
+    // check-in closing isn't when the flight leaves: taken for it, the real departure was read as the arrival.
+    const notFlightTime = i => /\b(?:board(?:ing)?(?:\s+(?:closes?|begins?|starts?|time|opens?))?|board\s+by|(?:doors?|check[- ]?in)\s+clos(?:es|e|ing))\s*[:\-–]?\s*(?:at\s*)?$/i.test(text.slice(Math.max(0, i - 40), i));
+    const timesIn = (a, b) => findTimes(text.slice(a, b)).map(t => ({ ...t, i: a + t.i, end: a + t.end })).filter(t => !inDate(t.i) && !notFlightTime(t.i));
     // Which way round the email is written: details after each flight number
     // (most), or before it, with the number last (Frontier's check-in mails).
     const first = firsts[0];

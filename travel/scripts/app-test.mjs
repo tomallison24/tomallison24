@@ -107,12 +107,19 @@ for (const scheme of ['light', 'dark']) {
     return m ? route.fulfill({ json: gmailMessage(m) }) : route.fulfill({ status: 404, json: { error: { message: 'not found' } } });
   });
   const lookups = [], drives = [];
+  let quiet = false;
+  const at = ms => new Date(+soon + ms);   // the airline's delay not in the revised time yet: Expected, revised = scheduled, the prediction later
   await ctx.route(BASE + '/travel/api/**', route => {
     const u = new URL(route.request().url());
     if (route.request().headers()['x-travel'] !== '1') return route.fulfill({ status: 404, json: { error: 'not-found' } });
     if (u.pathname.endsWith('/ping')) return route.fulfill({ json: { ok: true, status: true } });
     if (u.pathname.endsWith('/drive')) { drives.push(Object.fromEntries(u.searchParams)); return route.fulfill({ json: { ok: true, min: 25, km: 21.4 } }); }
     lookups.push(u.searchParams.get('no') + '@' + u.searchParams.get('date'));
+    if (quiet) return route.fulfill({ json: { ok: true, found: true, legs: [
+      { number: 'UA 1234', status: 'Arrived', cargo: false, departure: { iata: 'ORD', scheduled: { utc: utc(at(-6 * 36e5)), local: loc(at(-6 * 36e5)) } }, arrival: { iata: 'DEN', scheduled: { utc: utc(at(-4 * 36e5)), local: loc(at(-4 * 36e5)) } } },
+      { number: 'UA 1234', status: 'Expected', cargo: false,
+        departure: { iata: 'DEN', scheduled: { utc: utc(soon), local: loc(soon) }, revised: { utc: utc(soon), local: loc(soon) }, predicted: { utc: utc(at(49 * 6e4)), local: loc(at(49 * 6e4)) } },
+        arrival: { iata: 'BOS', scheduled: { utc: utc(arrive), local: loc(arrive) } } }] } });
     return route.fulfill({ json: { ok: true, found: true, legs: [{ number: 'UA 1234', status: 'Delayed', cargo: false, aircraft: 'Boeing 737-900',
       departure: { iata: 'DEN', scheduled: { utc: utc(soon), local: loc(soon) }, revised: { utc: utc(late), local: loc(late) }, terminal: 'West', gate: 'B32' },
       arrival: { iata: 'BOS', scheduled: { utc: utc(arrive), local: loc(arrive) }, terminal: 'B', gate: 'B9', belt: '4' } }] } });
@@ -178,6 +185,14 @@ for (const scheme of ['light', 'dark']) {
       { airlineCode: 'FRONTIER', flightNo: 'F93073', dep: '2026-11-02T16:04' },   // the airline's name typed in the edit sheet
     ].map(b => window.__travel.liveAsk({ type: 'flight', ...b })));
     assert.deepEqual(asks, Array(5).fill({ no: 'F93073', date: '2026-11-02' }), JSON.stringify(asks));
+  });
+  await step(scheme + ': a delay only in the prediction (the revised time still the schedule) shows as Delayed, on the right leg', async () => {
+    quiet = true;
+    await page.evaluate(() => { for (const x of Object.values(window.__travel.live)) x.at = Date.now() - 15 * 6e4; document.dispatchEvent(new Event('visibilitychange')); });
+    await page.waitForFunction(() => /Delayed 49 min/.test((document.querySelector('.hero .st') || {}).textContent || ''), null, { timeout: 5000 });
+    quiet = false;
+    await page.evaluate(() => { for (const x of Object.values(window.__travel.live)) x.at = Date.now() - 15 * 6e4; document.dispatchEvent(new Event('visibilitychange')); });
+    await page.waitForFunction(() => /Delayed 35 min/.test((document.querySelector('.hero .st') || {}).textContent || ''), null, { timeout: 5000 });
   });
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'trips-' + scheme + '.png') });
 

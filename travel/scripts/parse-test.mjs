@@ -193,6 +193,14 @@ test('Frontier check-in: each flight\'s details come before "Flight Number:"', (
   ]);
 });
 
+test('Delta trip details: "Boarding Closes" before the departure time is not the departure', () => {
+  const html = rows('CONFIRMATION #', 'ABC123', 'Prepare For Takeoff', 'To Raleigh, NC', 'Flight 1 of 1', 'DL5400', 'Boarding Closes 1:26 PM',
+    '1:41 PM1h 28m', 'Sun, Nov 08', '3:09 PM', 'CVG-', '-', 'RDU', 'Cincinnati, OH', 'Raleigh, NC', 'Your Onboard Experience', 'Seat',
+    'Remember boarding closes 15 minutes prior to departure.');
+  const { list } = one({ html, subject: 'Your CVG > RDU Trip Details', from: 'DeltaAirLines@t.delta.com', date: Date.parse('2026-11-05') }, 'flight');
+  assert.deepEqual(list.map(b => [b.airlineCode, b.flightNo, b.from, b.to, b.dep, b.arr]), [['DL', '5400', 'CVG', 'RDU', '2026-11-08T13:41', '2026-11-08T15:09']]);
+});
+
 test('Frontier booking: "Departs CLE … Arrives RDU", not the seats list below ("RDU-CLE 13F")', () => {
   const html = rows('Booking Confirmation: MNBVCX', 'Departing Flight: September 7, 2026', 'Flight', '#3073', 'Departs', 'RDU', '3:32 PM', 'Raleigh/Durham',
     'Arrives', 'CLE', '5:15 PM', 'Cleveland', 'Return Trip: September 11, 2026', 'Flight', '#3074', 'Departs', 'CLE', '1:34 PM', 'Cleveland',
