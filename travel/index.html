@@ -529,6 +529,10 @@ svg.fs{fill:currentColor}
 .herodone{position:absolute;top:6px;right:6px;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;color:var(--muted);transition:transform .18s var(--ease),color .2s}
 .herodone svg{width:30px;height:30px;padding:6px;box-sizing:border-box;border-radius:50%;box-shadow:inset 0 0 0 1.5px currentColor;background:var(--pill)}
 .herodone:active{transform:scale(.9);color:var(--text)}
+/* Directions to the card's place (Apple Maps), bottom right, as the tick is top right */
+.heronav{position:absolute;bottom:6px;right:6px;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;color:var(--tint, var(--text));transition:transform .18s var(--ease)}
+.heronav svg{width:30px;height:30px;padding:6px;box-sizing:border-box;border-radius:50%;background:var(--pill);box-shadow:inset 0 0 0 1.5px currentColor}
+.heronav:active{transform:scale(.9)}
 /* the parking pass under the Next cards, with its own tick (app.js, heroHTML) */
 .qrslot{position:relative;margin:10px 0 0}
 .qrslot > .qrbtn{margin:0;padding-right:56px}

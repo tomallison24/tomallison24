@@ -95,6 +95,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     plane: '<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>',
     mail: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5" width="18.4" height="14" rx="3.4"/><path d="M3.6 7.4l7.2 5a2 2 0 0 0 2.4 0l7.2-5"/></svg>',
     map: '<svg viewBox="0 0 24 24"><path d="M12 21s-6.6-5.6-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.4-6.6 11-6.6 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+    nav: '<svg viewBox="0 0 24 24"><path d="M20 4L4.6 10.7a.6.6 0 0 0 .1 1.1l6 1.6 1.6 6a.6.6 0 0 0 1.1.1z"/></svg>',
     parking: '<svg viewBox="0 0 24 24"><rect x="3.8" y="3.8" width="16.4" height="16.4" rx="3.6"/><path d="M9.6 17V7.4h3.3a2.8 2.8 0 0 1 0 5.6H9.6"/></svg>',
     qr: '<svg viewBox="0 0 24 24"><rect x="3.6" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="14" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="3.6" y="14" width="6.4" height="6.4" rx="1.2"/><path d="M14 14h2.6v2.6H14zM17.8 17.8h2.6v2.6h-2.6zM14 19.6v.8M19.6 14h.8"/></svg>',
     tick: '<svg viewBox="0 0 24 24" class="b"><path d="M4.6 12.8l4.3 4.3a.7.7 0 0 0 1 0L19.4 7.6"/></svg>',
@@ -537,9 +538,26 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     kayakCars: (place, a, b) => 'https://www.kayak.com/cars/' + encodeURIComponent(place || '') + (a ? '/' + a + (b ? '/' + b : '') : ''),
     national: () => 'https://www.nationalcar.com/',
     maps: q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q),
+    directions: q => 'https://maps.apple.com/?daddr=' + encodeURIComponent(q) + '&dirflg=d',   // Apple Maps, driving directions from here
     mailApp: threadId => '../mail/?thread=' + encodeURIComponent(threadId),
     gmailWeb: msgId => 'https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(msgId),
   };
+  // Where a booking's directions go (Apple Maps), or '': the hotel (its name and address), the car's pick-up (its return
+  // once it's out), the parking lot, a flight's airport (where it leaves from; where it lands once it has left), a ride's
+  // drop-off.
+  function navTarget(b) {
+    const now = Date.now(), airport = code => code ? (P.AIRPORTS[code] && P.AIRPORTS[code] !== code ? P.AIRPORTS[code] + ' ' : '') + code + ' Airport' : '';
+    if (b.status === 'cancelled') return '';
+    if (b.type === 'hotel') return [b.name, b.address || b.city].filter(Boolean).join(', ');
+    if (b.type === 'car') { const out = b.pickup && moment(b.pickup, b.pickupIso) <= now; return (out && b.dropPlace) || b.pickupPlace || ''; }
+    // the airport by its code ("Denver DEN Airport"): fromName and toName are the cities, which would route to the middle of town
+    const port = (code, name) => airport(code) || (name ? (/airport/i.test(name) ? name : name + ' Airport') : '');
+    if (b.type === 'flight') return startT(b) > now ? port(b.from, b.fromName) : port(b.to, b.toName);
+    if (b.parking) return [b.place, b.airport && airport(b.airport)].filter(Boolean).join(', ');
+    if (b.ride && b.place) return b.place.split(' → ').pop();
+    return b.place || '';
+  }
+  const navLink = (b, cls) => { const q = navTarget(b); return q ? '<a class="' + cls + '" href="' + esc(LINKS.directions(q)) + '" target="_blank" rel="noopener noreferrer" aria-label="Directions to ' + esc(q) + ' in Maps">' + I.nav + '</a>' : ''; };
   const linkRow = (href, title, sub, icon, keep) => '<a class="rowbtn" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer"><span class="ic">' + (icon || I.search) + '</span><span>' + esc(title) + (sub ? '<span class="sub"' + (keep ? ' translate="no"' : '') + '>' + esc(sub) + '</span>' : '') + '</span></a>';   // keep: the sub is the family's (a place), left as it is in Russian
   // A place in words for a search: a city name beats an airport code.
   const placeWords = x => (P.AIRPORTS[String(x || '').toUpperCase()] || x || '').replace(/ (JFK|LaGuardia|O'Hare|Midway|Hobby|Heathrow|Gatwick|Orly)$/i, '');
@@ -670,7 +688,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const asOf = x ? (inflight.has(next.id) ? 'Checking…' : 'Checked ' + ago(x.at)) : '';
     if (pill) h += '<div class="meta">' + pill + (asOf ? '<span class="asof">' + esc(asOf) + '</span>' : '') + '</div>';
     // its tick: done with this stage, off the Next cards (beside the card, not in it: a button can't hold a button)
-    return '<div class="heroslot">' + h + '</button><button class="herodone" type="button" data-done="' + esc(next.id) + '" aria-label="Done: take ' + esc(STAGE[stageOf(next)] ? STAGE[stageOf(next)].toLowerCase() : 'this') + ' off the Next cards">' + I.tick + '</button></div>';
+    return '<div class="heroslot">' + h + '</button>' + navLink(next, 'heronav') + '<button class="herodone" type="button" data-done="' + esc(next.id) + '" aria-label="Done: take ' + esc(STAGE[stageOf(next)] ? STAGE[stageOf(next)].toLowerCase() : 'this') + ' off the Next cards">' + I.tick + '</button></div>';
   }
   // A trip's next flight's status, for its card: "UA 123 · On time" from 36 hours before take-off, "Status from Thu 4:04 PM"
   // before that, or why there is none (flightState).
@@ -964,6 +982,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       rows.push(linkRow(LINKS.gmailWeb(b.source.msgId), 'Open in Gmail', 'In the browser', I.ext));
     }
     const place = b.type === 'hotel' ? [b.name, b.address].filter(Boolean).join(', ') : b.type === 'car' ? b.pickupPlace : b.type === 'other' ? b.place : '';
+    const goTo = !st.isNew && navTarget(b);
+    if (goTo) rows.push(linkRow(LINKS.directions(goTo), 'Directions', goTo + ' · Apple Maps', I.nav, true));
     if (place) rows.push(linkRow(LINKS.maps(place), 'Map', place, I.map, true));
     if (!st.isNew && startOf(b)) rows.push('<button class="rowbtn" type="button" id="bkCal"><span class="ic">' + I.cal + '</span><span>Add to calendar</span></button>');
     if (b.type === 'flight' && b.from && b.to) rows.push(linkRow(LINKS.googleFlights(b.from, b.to, (b.dep || '').slice(0, 10)), 'This route on Google Flights', b.from + ' → ' + b.to, I.search, true));
@@ -2734,5 +2754,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
 
   // For the tests (travel/scripts/app-test.mjs) only.
-  window.__travel = { layer: LAYER, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, liveWhy, liveAsk, heroTick, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
+  window.__travel = { layer: LAYER, navTarget, get bookings() { return bookings; }, get trips() { return trips; }, graves: () => graves, sync, pruneFrom, loadOlder, setJustMe, checkEdit, upsert, groupTrips, ics, liveView, flightState, liveWhy, liveAsk, heroTick, live, render, arrival, scan, save, smartPass, syncCalendar, aiPass, findNumbers, checkList, undated, checkTrip, applyCheck, P, startT, endT, keepLive, calLayer };
 })();
