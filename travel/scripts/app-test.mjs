@@ -150,6 +150,12 @@ for (const scheme of ['light', 'dark']) {
     await page.waitForSelector('.hero');
     const hero = await page.textContent('.hero');
     assert.match(hero, /DEN/); assert.match(hero, /BOS/); assert.match(hero, /UA 1234/);
+    // Directions (Apple Maps) to where the card is: before take-off, the airport it leaves from; a hotel, its name and address
+    const nav = await page.$eval('.heroslot .heronav', a => ({ href: a.href, label: a.getAttribute('aria-label'), blank: a.target }));
+    assert.match(nav.href, /^https:\/\/maps\.apple\.com\/\?daddr=.*DEN%20Airport&dirflg=d$/, nav.href);
+    assert.ok(/^Directions to .*DEN Airport in Maps$/.test(nav.label) && nav.blank === '_blank', JSON.stringify(nav));
+    const hotelNav = await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.type === 'hotel'); return window.__travel.navTarget(b); });
+    assert.match(hotelNav, /^Courtyard Boston/, 'a hotel: its name and address: ' + hotelNav);
   });
   await step(scheme + ': asks for live status for the flight leaving today only', async () => {
     await page.waitForFunction(() => document.querySelector('.hero .st'), null, { timeout: 5000 });

@@ -610,6 +610,15 @@ None of these formats is published by the sites; they are the addresses the
 sites themselves use. If one stops filling in the search, it still opens the
 site.
 
+**Directions** (`navTarget` in `app.js`): each Next card has a navigate arrow
+(bottom right; the tick is top right), and a booking's page a Directions row,
+that open Apple Maps with driving directions from where you are
+(`maps.apple.com/?daddr=…&dirflg=d`, Apple's documented Maps link) to the
+card's place: a hotel's name and address; a rental car's pick-up (its return
+once you have it); a parking pass's lot; a flight's airport by its code
+("Denver DEN Airport": where it leaves from, and where it lands once it has
+left); a ride's drop-off. A card with no place has no arrow.
+
 ## How it's built
 
 - **No build step.** `index.html` is the page and its look (Notes' style
