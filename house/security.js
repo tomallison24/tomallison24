@@ -48,7 +48,7 @@ family({
     const thumb = String(attr(c.cam, 'thumbnail') || ''), ts = Number((/[?&]ts=(\d+)/.exec(thumb) || [])[1]) || null;
     const s = st(c.cam);
     return { d, on, badge: !on ? 'off' : sys.armed ? 'active' : 'standby', ts, offline: gone(c.cam),
-      pic: haPic(attr(c.cam, 'entity_picture'), ts || (s && s.lu)), motion: isOn(c.motion) };
+      pic: haPic(attr(c.cam, 'entity_picture'), ts || (s && s.lu)), motion: isOn(c.motion), low: isOn(c.battery) };
   },
   // A pause under way: { mins (left, or null when not known), m (asked for) },
   // or null when there is none.
@@ -110,7 +110,7 @@ family({
   paintCam(el, c) {
     const sys = this.sys(), r = this.cam(c);
     put(el.querySelector('[data-r="fx"]'), skyHTML(grad('#17181A', '#212326', '#33363B'), '190,194,204', {}));
-    put(el.querySelector('[data-r="snap"]'), this.snap(c.name, r.pic, r.badge, this.ageOf(c, r), r.motion && r.on ? `<span class="cmotion">${svg('motion', 14)}Motion</span>` : ''));
+    put(el.querySelector('[data-r="snap"]'), this.snap(c.name, r.pic, r.badge, this.ageOf(c, r), r.motion && r.on || r.low ? `<span class="cflags">${r.motion && r.on ? `<span class="cmotion">${svg('motion', 14)}Motion</span>` : ''}${r.low ? `<span class="cbatt">${svg('battery', 13)}Low battery</span>` : ''}</span>` : ''));
     put(el.querySelector('[data-r="ctl"]'), `<button class="ghost" data-a="snapshot"${r.offline ? ' disabled' : ''}>${svg('iris', 18)}Snapshot</button>
       <button class="ghost sw-pill${r.on ? ' on' : ''}${tWaiting(r.d, 'sw') ? ' wait' : ''}" data-a="motion" role="switch" aria-checked="${r.on}"${gone(c.sw) ? ' disabled' : ''}>${svg('motion', 18)}Motion${accentSw(r.on, sys.armed ? PAL.on : PAL.amber)}</button>`);
     const pz = el.querySelector('[data-r="pause"]');

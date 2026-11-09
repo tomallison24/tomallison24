@@ -336,7 +336,8 @@ dashboard's comments record a quirk, the app keeps it:
   what it reports to Home Assistant.
 - **Cameras** (`security.yaml`): Arm / Disarm (one tap, as on the dashboard),
   the indoor motion alert (tap to silence), the Blink cameras' latest
-  stills with ACTIVE / STANDBY / OFF, how old each still is, Snapshot (Blink
+  stills with ACTIVE / STANDBY / OFF, how old each still is, Low battery on the
+  still when `binary_sensor.<cam>_battery` is on (Blink reports only low or OK), Snapshot (Blink
   sends stills, not video; a new one takes ~8 s), motion detection, and
   pausing it for 30 min to 4 h - on the Yard's card itself, as it is used
   often, and in every camera's popup. While a pause runs, the minutes left
