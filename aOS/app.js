@@ -42,7 +42,7 @@
     money: [['once', 'Your Google account, on the phone that gets Monarch\'s emails'], ['ok', 'Your family account (Face ID), to see it once it\'s shared with you']],
     improve: [['ok', 'Your family account (Face ID), to share the list with the family']],
     house: [['ok', 'Your family\'s Home Assistant address, filled in'], ['once', 'Your own Home Assistant token']],
-    school: [['once', 'Your Google account, on the phone that gets the school\'s emails'], ['ok', 'Your family account (Face ID), to show school dates in Calendar']],
+    school: [['once', 'Your Google account, on the phone that gets the school\'s emails'], ['ok', 'Your family account (Face ID), to show no-school days in Calendar']],
     sparkle: [['ok', 'Nothing for the children'], ['once', 'A grown-up signs in with Face ID, to keep progress on every phone (optional)']],
   };
   // ✓ Installed: an app opened from your Home Screen in the last 90 days, signed in

@@ -100,8 +100,8 @@ test('a newsletter’s dates for other grades are left out; ones for hers, or fo
   const all = S.sections(read([NEWS]), { now: at('2026-11-01', 9), me: { ...ME, grade: null } }).year.map(e => e.title);
   assert.ok(all.includes('3rd Grade Wax Museum') && all.includes('Camp Packing Night'), 'no grade: everything');
   // and Calendar's School layer is the same
-  const c = S.calendarItems(read([NEWS]), { now: at('2026-11-01', 9), me: ME }).map(e => e.title);
-  assert.ok(c.includes('Family Bingo Night') && !c.includes('3rd Grade Wax Museum') && !c.includes('Camp Packing Night'), c.join(' | '));
+  const c = S.calendarItems(read([NEWS]), { now: at('2026-11-01', 9), me: ME });
+  assert.ok(!c.some(e => e.date === '2026-11-12'), 'no school for 5th grade isn’t a day off for her: ' + c.map(e => e.date).join(' | '));
 });
 
 test('a newsletter read before its dates kept their grades is sorted the same', () => {
@@ -219,11 +219,11 @@ test('old asks leave Needs you', () => {
   assert.ok(!s.needs.some(x => /Book Buddies|Week 13/.test(x.title)), s.needs.map(x => x.title).join(' | '));
 });
 
-test('Calendar’s School layer: days off, events and what’s due, without sign-in links', () => {
+test('Calendar’s School layer: the no-school days only, without sign-in links', () => {
   const c = S.calendarItems(read(F.ALL), { me: ME });
   assert.ok(c.some(e => e.kind === 'off' && e.date === '2026-10-30'));
   assert.ok(c.some(e => e.kind === 'off' && e.date === '2026-11-25'));
-  assert.ok(c.some(e => e.title === 'Autumn Music Showcase at 6:00 PM' && e.time === '18:00'));
+  assert.ok(c.length && c.every(e => e.kind === 'off' && /^No school · /.test(e.title)), 'only days off: ' + c.map(e => e.title).join(' | '));
   assert.ok(!JSON.stringify(c).includes('parentsquare.com'), 'no links');
   assert.ok(!c.some(e => /Basketball/.test(e.title)));
 });

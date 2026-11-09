@@ -67,9 +67,9 @@ your settings, and a short copy of the last 120 days' posts (no words) for aOS H
 An email counts as read only while its posts are saved, so one whose posts were lost is read again by itself. **Back up everything** saves it all as a
 file; **Import a backup** brings one back.
 
-**Calendar's School layer**: signed in to your family account, School sends Calendar a short list:
-days off, events (with their time when the post gave one) and what's due, with no links (ParentSquare's
-links carry a sign-in token). It goes to your own account (`AllisonOS.layer.share('school', …)`,
+**Calendar's School layer**: signed in to your family account, School sends Calendar the no-school
+days only ("No school · Relief Friday"), with no links (ParentSquare's links carry a sign-in token).
+Events and what's due stay in School: in Calendar they made it too cluttered. It goes to your own account (`AllisonOS.layer.share('school', …)`,
 `POST /aOS/api/layer`), only when it changed, and only you can read it.
 
 ## Gmail

@@ -163,7 +163,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     fitness: { name: 'Fitness', color: 'var(--fit)', sub: 'Workouts logged in Fitness' },
     meals: { name: 'Meals', color: 'var(--mls)', sub: 'Breakfasts, lunches and dinners from the family’s plan in Meals' },
     orders: { name: 'Orders', color: 'var(--ord)', sub: 'Deliveries, pickups and returns from Orders' },
-    school: { name: 'School', color: 'var(--sch)', sub: 'Days off, events and what’s due, from School' },
+    school: { name: 'School', color: 'var(--sch)', sub: 'No-school days, from School' },
     news: { name: 'News', color: 'var(--nws)', sub: 'Fixtures of the teams you follow in News' },
     drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your drinks and alcohol-free days, seen only by you' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast on each day' },
@@ -533,21 +533,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     return layerItems('orders').filter(x => inDays(w, x.date) && ORDER_KIND[x.kind])
       .map(x => allDayItem('orders', 'ord|' + x.id + '|' + x.kind, ORDER_KIND[x.kind] + ': ' + (x.store || 'Order'), x.date, null, { sub: x.what ? String(x.what).slice(0, 120) : 'Orders', link: '../orders/?open=' + encodeURIComponent(x.id), icon: 'box' }));
   }
-  // School: days off, events and what's due ("No school · Relief Friday", "Due: Book Buddies"), all-day unless
-  // the post gave a time (then an hour); the post opens in School
-  const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  // School: only the days off ("No school · Relief Friday"), all-day; events and what's due stay in School (they
+  // cluttered the calendar). An older School may still send them: they're left out here too. Opens School.
   function schoolItems(w) {
-    const out = [];
-    for (const x of layerItems('school')) {
-      if (!isDay(x.date) || !x.title) continue;
-      const end = isDay(x.end) && x.end > x.date ? x.end : x.date;
-      if (dayMs(end) < w.from - D || dayMs(x.date) >= w.to) continue;
-      const extra = { sub: 'School', link: '../school/' + (x.item ? '?item=' + encodeURIComponent(x.item) : ''), icon: 'pencil' }, title = String(x.title).slice(0, 120);
-      const t = HHMM.exec(x.time || '');
-      if (t && end === x.date) { const s = dayMs(x.date) + (+t[1] * 60 + +t[2]) * MIN; out.push(timedItem('school', 'sch|' + x.id, title, s, s + H, extra)); }
-      else out.push(allDayItem('school', 'sch|' + x.id, title, x.date, addDays(end, 1), extra));
-    }
-    return out;
+    return layerItems('school').filter(x => x.kind === 'off' && inDays(w, x.date) && x.title)
+      .map(x => allDayItem('school', 'sch|' + x.id, String(x.title).slice(0, 120), x.date, null, { sub: 'School', link: '../school/', icon: 'pencil' }));
   }
   // News: fixtures of the teams you follow, two hours each; the match page in News when it names one on this site, else Scores
   const samePath = u => typeof u === 'string' && /^(\.\.\/|\/(?!\/))[^\s]*$/.test(u);

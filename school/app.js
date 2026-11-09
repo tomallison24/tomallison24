@@ -14,7 +14,7 @@
 //   report cards and payments.
 // - Read from Gmail on the phone, read-only (gmail.readonly), as Orders does: Mail's Google client,
 //   its own sign-in, or Mail's and Orders' when they're in the same storage (inside aOS). sort.js
-//   does the reading; nothing leaves the phone except Calendar's School layer, sent to your own
+//   does the reading; nothing leaves the phone except Calendar's School layer (the no-school days), sent to your own
 //   family account when you're signed in (AllisonOS.layer, ../home/welcome.js).
 // - Settings: Design · Your child · After school · Connected accounts · Your data · Family account.
 
@@ -433,8 +433,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.danger({ id: 'wipeBtn', title: 'Delete all data', sub: 'From this phone; your Gmail is not touched.' }),
       ])
       + S.section('Family account', [
-        S.info({ id: 'acctState', title: signedIn() ? 'Signed in' : 'Not signed in', sub: signedIn() ? 'School’s dates show in your Calendar.' : 'Sign in to show school dates in Calendar.' }),
-        !signedIn() && A() ? S.action({ id: 'signInBtn', icon: 'face', title: 'Sign in with Face ID', sub: 'Shows school dates in Calendar.' }) : '',
+        S.info({ id: 'acctState', title: signedIn() ? 'Signed in' : 'Not signed in', sub: signedIn() ? 'No-school days show in your Calendar.' : 'Sign in to show no-school days in Calendar.' }),
+        !signedIn() && A() ? S.action({ id: 'signInBtn', icon: 'face', title: 'Sign in with Face ID', sub: 'Shows no-school days in Calendar.' }) : '',
       ]);
   }
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); };
@@ -459,7 +459,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (e.target.closest('#exportBtn')) { backup(); return; }
     if (e.target.closest('#importBtn')) { $('importFile').value = ''; $('importFile').click(); return; }
     if (e.target.closest('#signInBtn')) {
-      try { await A().signIn(); toast('Signed in. School’s dates go to your Calendar.'); ls.del('aos.layer.school'); shareLayer(); renderMore(); }
+      try { await A().signIn(); toast('Signed in. No-school days go to your Calendar.'); ls.del('aos.layer.school'); shareLayer(); renderMore(); }
       catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
       return;
     }
@@ -711,7 +711,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch {} finally { wxBusy = false; }
   }
 
-  // Calendar's School layer: days off, events and what's due, in your own family account
+  // Calendar's School layer: the no-school days only, in your own family account
   // (../home/welcome.js AllisonOS.layer; sent only when it changed, and only signed in).
   function shareLayer() {
     const L = window.AllisonOS && AllisonOS.layer;

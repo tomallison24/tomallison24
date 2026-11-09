@@ -233,6 +233,7 @@ await test('Calendar’s School layer goes to your family account, signed in, wi
   const got = sent.find(b => b.app === 'school');
   assert.ok(got, 'sent');
   assert.ok(got.data.items.some(x => x.kind === 'off' && x.date === '2026-10-30'));
+  assert.ok(got.data.items.every(x => x.kind === 'off'), 'only the no-school days');
   assert.ok(!JSON.stringify(got).includes('parentsquare.com'));
   await ctx.close();
 });

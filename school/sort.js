@@ -459,14 +459,12 @@
     return { today, top, needs, coming, year, cls, rest, records, paid, off };
   }
 
-  // What Calendar shows (its School layer): days off, events and what's due, for the child; no links
-  // with sign-in tokens in them.
+  // What Calendar shows (its School layer): only the days off, for the child (events and what's due
+  // cluttered the calendar, so they stay in School); no links with sign-in tokens in them.
   function calendarItems(items, opts) {
     const s = sections(items, Object.assign({}, opts, { now: new Date(Date.now() - 30 * DAY) }));
     const out = [];
     for (const [d, why] of s.off) out.push({ id: 'off|' + d, date: d, title: 'No school · ' + why, kind: 'off' });
-    for (const e of s.year) if (e.kind !== 'noschool') out.push({ id: 'ev|' + e.id + '|' + e.d, date: e.d, end: e.end || undefined, time: e.time || undefined, title: e.title.slice(0, 120), kind: e.kind, item: e.id });
-    for (const x of s.needs) if (x.due) out.push({ id: 'due|' + x.id, date: x.due, title: 'Due: ' + x.title.slice(0, 110), kind: 'due', item: x.id });
     const had = new Set();
     return out.filter(e => { const k = e.date + '|' + norm(e.title); return had.has(k) ? false : (had.add(k), true); }).slice(0, 400);
   }

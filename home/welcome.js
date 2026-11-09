@@ -87,7 +87,7 @@
   // ===========================================================================
   const RELEASES = [
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school', 'improve'],
-      highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'School dates show in Calendar'],
+      highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'No-school days show in Calendar'],
       notes: ['Calendar: a Calendars button beside Search picks which calendars to show on this phone (the Family calendar, School, Travel, Notes and the rest), with Show only one and Show all; the Family calendar can be hidden too (Ipsy still sees it), and saving an event shows it again. Settings > Calendars has the same switches',
         'Ipsy keeps up with Gmail staying signed in: its own checks in Orders, Travel and Money, and its Gmail searches in chats, get a new hour by themselves instead of saying the sign-in ran out; Calendar\'s Ipsy uses the 30-day sign-in too (Connect Gmail once in Calendar); each app\'s Settings says signed in until when, not signed out, while the 30 days last; and Money has the switch to keep Ipsy out of Gmail in chats, like Orders, Travel and Calendar',
         'Mail stays signed in to Gmail for 30 days too, like Travel, Orders, School and Money: connect it once (Connect Gmail) and it isn\'t asked again for a month; Settings says until when, and Disconnect Gmail ends Mail\'s alone',
@@ -117,7 +117,7 @@
         'Money: connecting Monarch directly is put away for now (Monarch didn\'t let aOS sign in); Money keeps reading Monarch\'s emails',
         'Money reads the deposits in Monarch\'s summary emails (paychecks, interest) as money in, and reads every email again once to pick up the ones it missed',
         'School reads the school\'s ParentSquare emails in Gmail, read-only, on your phone. At the top, the next school day: what to wear or bring, days off on the way to it, and pickup (the usual carpool, or that weekday\'s club). Then what needs you (sign-ups, RSVPs, forms, surveys and payments, soonest due first, with Mark done), the next two weeks and the rest of the year, her class\'s posts and messages to you first, everything else from school below (searchable), and the school\'s other sites, report cards and payments',
-        'Calendar has a School layer: days off, events and what\'s due, from School (Settings > Calendars)',
+        'Calendar has a School layer: the no-school days, from School (Settings > Calendars). Events and what\'s due stay in School, so the calendar stays clear',
         'New app: Improve, one list for feedback, bugs and ideas about any aOS app. Type one, pick its kind and app, and tap Add; tap an item to change it, mark it done or delete it. Signed in, the list is kept in the family\'s Google Sheet, where everyone sees every item, so it can all be worked through in one go (the owner sets the Sheet up in aOS, Account > Google Sheets)',
         'On aOS Home, School and Sparkle Kingdom share a new Kids group',
         'School keeps what it read: its posts are saved in its own storage on the phone, not the small space every app shares, so a full phone no longer loses them and makes School read Gmail again from the start; a phone that had lost them reads them again by itself',
@@ -137,7 +137,7 @@
         'Travel, Orders, School and Money can stay signed in to Gmail for 30 days instead of an hour, once the owner sets it up (aOS/RELEASING.md, Gmail stays signed in): you sign in once a month, and Disconnect ends it',
         'Mail: a tag can be kept out of the inbox (Manage Tags, In inbox / Out of inbox): its mail goes straight to the tag, which is in the mailbox menu, and what was in the inbox moves there, with Undo'],
       apps: {
-        calendar: { highlights: ['A School layer: days off, events and what\'s due', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
+        calendar: { highlights: ['A School layer: the no-school days', 'New in aOS: School, your child\'s school in one place. Get it in aOS'] },
       } },
     { v: '2.2', date: '2026-10-25', title: 'Meet your helper', look: 'vintage', intro: 'ipsy',
       highlights: ['Ipsy is yours now: pick a helper and give it a name', 'It acts out its work: reading, glasses on to search, writing', 'Mia is one of five helpers to pick from'],
