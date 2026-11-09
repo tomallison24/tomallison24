@@ -396,6 +396,16 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
   await ctx.close();
 }
+{ // Cameras: a low battery shows on the camera's still, as on the Signal dashboard
+  const { ctx, page, errors } = await phone('dark');
+  await test('Cameras: a low battery shows on its still', async () => {
+    // the sample: the Living Room camera's battery is low, the others are fine
+    assert.match(await page.textContent('[data-dv="cams:living_room"] .snap .cbatt'), /Low battery/);
+    for (const k of ['yard', 'garage', 'kitchen']) assert.equal(await page.locator(`[data-dv="cams:${k}"] .snap .cbatt`).count(), 0, k);
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
 { // never side to side: something a real device draws wider than the phone (a long name in a row that doesn't shrink) can't make the page slide sideways
   const { ctx, page, errors } = await phone('light');
   await test('a device drawn wider than the phone: the page still never scrolls sideways', async () => {
