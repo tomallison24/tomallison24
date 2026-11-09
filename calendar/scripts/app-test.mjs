@@ -374,7 +374,7 @@ await test('Calendars, beside Search: each calendar shown or hidden on this phon
   assert.equal(await page.textContent('#calLbl'), 'Calendars');
   assert.equal(await page.getAttribute('#calSheet .sheethead [data-close]', 'aria-label'), 'Done', 'the ✓ in the corner (DESIGN.md rule 3)');
   const rows = await page.$$eval('#calBody [data-layer]', els => els.map(e => e.dataset.layer));
-  assert.deepEqual(rows.slice(0, 2), ['family', 'holidays']); assert.ok(!rows.includes('school') && rows.includes('mail') && rows.length === 11, rows.join());
+  assert.deepEqual(rows.slice(0, 2), ['family', 'holidays']); assert.ok(rows.includes('school') && rows.includes('mail') && rows.length === 12, rows.join());
   await page.click('#calBody [data-layer="family"]');
   await page.waitForTimeout(200);
   let t = await page.textContent('#main');
@@ -385,7 +385,7 @@ await test('Calendars, beside Search: each calendar shown or hidden on this phon
   await page.selectOption('#calOnly', 'notes');
   await page.waitForTimeout(200);
   assert.deepEqual(await kinds(), ['note'], 'Show only Notes');
-  assert.equal(await page.getAttribute('#calBtn', 'aria-label'), 'Calendars, 10 hidden');
+  assert.equal(await page.getAttribute('#calBtn', 'aria-label'), 'Calendars, 11 hidden');
   await page.click('#calAll');
   await page.waitForTimeout(300);
   for (const k of ['family', 'note', 'travel', 'fitness', 'holiday']) assert.ok((await kinds()).includes(k), 'Show all: ' + k);

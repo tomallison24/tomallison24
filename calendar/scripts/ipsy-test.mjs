@@ -231,7 +231,7 @@ for (const [design, scheme] of [['glass', 'light'], ['vintage', 'dark'], ['glass
     assert.deepEqual(free.json.days.find(d => d.date === D(1)).free, [{ from: '17:00', to: '22:00', minutes: 300 }]);
     assert.equal(writes().length, 0, 'nothing written');
     // what the server was sent: the app's note, then the question
-    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .*\. Calendar shows the Family calendar \(iCloud, shared with the family\) and these layers: US Holidays, Notes, Travel, Mail, Fitness, Meals, Orders, News\. Loaded: \d{4}-\d\d-\d\d to \d{4}-\d\d-\d\d\. The phone’s time zone: America\/Denver\. On screen: the Month view, \w+ \d{4}\.(?: You are this person’s helper[^\]]*)?\]$/);
+    assert.match(sent[0][0].content[0].text, /^\[From the app: today is \w+day, .*\. Calendar shows the Family calendar \(iCloud, shared with the family\) and these layers: US Holidays, Notes, Travel, Mail, Fitness, Meals, Orders, School, News\. Loaded: \d{4}-\d\d-\d\d to \d{4}-\d\d-\d\d\. The phone’s time zone: America\/Denver\. On screen: the Month view, \w+ \d{4}\.(?: You are this person’s helper[^\]]*)?\]$/);
   });
 
   await step(tag + ': adding asks first with exactly what will happen; Yes adds it as a new file; Undo deletes it with its etag', async () => {

@@ -21,7 +21,7 @@
   School - the school's ParentSquare emails as one page, most urgent first: the next school day (what
   to wear or bring, days off, pickup), what needs you, the next two weeks, what the class says,
   everything else, and the school's other sites. Read from Gmail on the phone, read-only, as Orders
-  does; nothing is sent anywhere (Remind me in Notes adds to the family's Notes). Code: app.js,
+  does; nothing is sent anywhere but Calendar's School layer, the no-school days (your own family account). Code: app.js,
   and sort.js for the reading (tested in Node: school/scripts/sort-test.mjs). README.md says more.
   Four designs, picked in Settings > Design or aOS: Vintage (the default, <style id="vintage">),
   Standard (Sea glass, the main <style>), and Layers and Tron (generated from Vintage).
@@ -503,7 +503,7 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 
 <script src="../home/slide.js"></script>
 <script src="../home/settings.js"></script>
-<script src="../home/account.js"></script>   <!-- family accounts: signing in, for Remind me in Notes -->
+<script src="../home/account.js"></script>   <!-- family accounts: signing in, for Calendar's School layer -->
 <script src="../home/sheet.js"></script>   <!-- Remind me: a reminder in the family's Notes, through its Sheet (aOS/SHEETS.md) -->
 <script src="sort.js"></script>
 <script src="ipsy-tools.js"></script>   <!-- Ipsy in aOS: School's tools, run here (School has no chat of its own) -->

@@ -12,7 +12,7 @@
 //   POST signout-others   (family)             -> every other session of yours ends; a new token for this one
 //                         { erase: true }      -> and each of those apps erases aOS's data from its phone the
 //                                                 next time it opens online (GET state says erase: true)
-//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail, Meals, Orders, News;
+//   POST layer            (family) { app, data } -> what that app shows in your Calendar (Notes, Travel, Fitness, Mail, Meals, Orders, School, News;
 //                                                  'travelv' and 'notesv' are the Vintage designs of Travel and Notes: GET layer
 //                                                  shows each as part of its app)
 //   GET  layer            (family)             -> your own layers, for Calendar
@@ -70,7 +70,7 @@ const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts
 // own storage, so Calendar can't read theirs: each app keeps a copy of just what
 // Calendar shows in your own account (layer:<app>:<you>), only you can read it, and
 // it's written only when it changed (KV writes are scarce on the free plan).
-const LAYERS = ['notes', 'travel', 'fitness', 'mail', 'meals', 'orders', 'news'];
+const LAYERS = ['notes', 'travel', 'fitness', 'mail', 'meals', 'orders', 'school', 'news'];
 // Travel's Vintage design keeps its bookings under its own name, so the two Travel apps never overwrite each
 // other; Calendar only knows Travel, so GET layer shows the two together (travelBookings).
 const LAYER_APPS = [...LAYERS, 'travelv', 'notesv'];

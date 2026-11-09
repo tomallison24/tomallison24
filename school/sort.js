@@ -459,6 +459,17 @@
     return { today, top, needs, coming, year, cls, rest, records, paid, off };
   }
 
+  // What Calendar shows (its School layer): only the days off, for the child (events and what's due
+  // cluttered the calendar, so they stay in School); no links with sign-in tokens in them.
+  function calendarItems(items, opts) {
+    const s = sections(items, Object.assign({}, opts, { now: new Date(Date.now() - 30 * DAY) }));
+    const out = [];
+    for (const [d, why] of s.off) out.push({ id: 'off|' + d, date: d, title: 'No school · ' + why, kind: 'off' });
+    const had = new Set();
+    return out.filter(e => { const k = e.date + '|' + norm(e.title); return had.has(k) ? false : (had.add(k), true); }).slice(0, 400);
+  }
+
+
   // The school's other sites, from the links its emails carry (the newest of each): grades, the lunch
   // menu, reading minutes and the rest. Found, never typed in, so nothing about a school is in this code.
   const SITES = [
@@ -539,5 +550,5 @@
     return { text: text.slice(start, end).trim(), start, end };
   }
 
-  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, child, audience, daysOff, isSchoolDay, focusDay, pickup, wxAt, sections, sites, excerpt, WEEKDAYS, MONTHS };
+  root.SchoolSort = { ymd, noon, addDays, dow, between, decode, htmlToText, clean, parseDates, timeOf, clock, gradesIn, kindOf, readEmail, eventsList, detect, child, audience, daysOff, isSchoolDay, focusDay, pickup, wxAt, sections, calendarItems, sites, excerpt, WEEKDAYS, MONTHS };
 })(typeof window !== 'undefined' ? window : globalThis);

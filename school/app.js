@@ -14,8 +14,8 @@
 //   report cards and payments.
 // - Read from Gmail on the phone, read-only (gmail.readonly), as Orders does: Mail's Google client,
 //   its own sign-in, or Mail's and Orders' when they're in the same storage (inside aOS). sort.js
-//   does the reading; nothing leaves the phone (Remind me in Notes adds a reminder to the family's
-//   Notes, signed in). School's dates no longer go to Calendar: they cluttered it.
+//   does the reading; nothing leaves the phone except Calendar's School layer (the no-school days), sent to your own
+//   family account when you're signed in (AllisonOS.layer, ../home/welcome.js).
 // - Settings: Design · Your child · After school · Connected accounts · Your data · Family account.
 
 // Refuse to run inside another site's frame; this same site may (see Mail's app.js for why).
@@ -251,6 +251,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (siteRows.length) h += sec('Links', group(siteRows), i++);
 
     main.innerHTML = h;
+    shareLayer();
     loadWeather(false);
   }
 
@@ -432,8 +433,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.danger({ id: 'wipeBtn', title: 'Delete all data', sub: 'From this phone; your Gmail is not touched.' }),
       ])
       + S.section('Family account', [
-        S.info({ id: 'acctState', title: signedIn() ? 'Signed in' : 'Not signed in', sub: signedIn() ? 'Remind me in Notes is ready.' : 'Sign in to use Remind me in Notes.' }),
-        !signedIn() && A() ? S.action({ id: 'signInBtn', icon: 'face', title: 'Sign in with Face ID', sub: 'For Remind me in Notes.' }) : '',
+        S.info({ id: 'acctState', title: signedIn() ? 'Signed in' : 'Not signed in', sub: signedIn() ? 'No-school days show in your Calendar.' : 'Sign in to show no-school days in Calendar.' }),
+        !signedIn() && A() ? S.action({ id: 'signInBtn', icon: 'face', title: 'Sign in with Face ID', sub: 'Shows no-school days in Calendar.' }) : '',
       ]);
   }
   $('moreBtn').onclick = () => { renderMore(); openSheet('moreSheet'); };
@@ -458,7 +459,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (e.target.closest('#exportBtn')) { backup(); return; }
     if (e.target.closest('#importBtn')) { $('importFile').value = ''; $('importFile').click(); return; }
     if (e.target.closest('#signInBtn')) {
-      try { await A().signIn(); toast('Signed in.'); renderMore(); }
+      try { await A().signIn(); toast('Signed in. No-school days go to your Calendar.'); ls.del('aos.layer.school'); shareLayer(); renderMore(); }
       catch (err) { toast(err && err.name === 'NotAllowedError' ? 'No passkey found, or canceled. Set up your account in aOS first.' : 'Couldn’t sign in.'); }
       return;
     }
@@ -710,6 +711,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     } catch {} finally { wxBusy = false; }
   }
 
+  // Calendar's School layer: the no-school days only, in your own family account
+  // (../home/welcome.js AllisonOS.layer; sent only when it changed, and only signed in).
+  function shareLayer() {
+    const L = window.AllisonOS && AllisonOS.layer;
+    if (!L || !L.share || !items.length) return;
+    try { L.share('school', { items: P.calendarItems(items, { me: me(), done, moved }) }); } catch {}
+  }
+
   // ---------------------------------------------------------------------
   // The busy pill, sheets and the toast (as in Drinks)
   // ---------------------------------------------------------------------
@@ -800,11 +809,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (getToken() && scanDue()) setTimeout(() => scan({ loud: false }), 600);
     else if (!getToken() && keepG() && scanDue()) setTimeout(() => scan({ loud: false }), 600);   // kept signed in
     else if (!getToken() && mayRenew() && scanDue()) setTimeout(() => signIn({ silent: true }), 800);
-    // ?item=<id> opens that post (a link from elsewhere, or an old one from Calendar).
+    // Opened from Calendar's School layer: ?item=<id> opens that post.
     const q = new URLSearchParams(location.search).get('item');
     if (q && byId(q)) openItem(q);
   });
-  window.addEventListener('load', () => { setTimeout(() => loadWeather(false), 900); });
+  window.addEventListener('load', () => { setTimeout(shareLayer, 1500); setTimeout(() => loadWeather(false), 900); });
   // Another frame or tab of School changed something: the small parts at once, the posts from IndexedDB
   window.addEventListener('storage', e => { if (!e.key || !e.key.startsWith(KEY)) return; load(); if (e.key === K.items && idbOk) loadItems().then(render); else render(); });
   // Back to the app: the time of day moves the top card (3:15), and there may be new mail.

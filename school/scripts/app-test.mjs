@@ -2,7 +2,7 @@
 // 2026, 7 pm): the empty page and Connect Gmail; the six sections from made-up ParentSquare emails
 // (fixtures.mjs, read by the real sort.js); Mark done with Undo; a post's sheet with its links; moving
 // a post; Everything else's search; the rest of the year; Settings in the standard order, and a club
-// changing the pickup line; ?item= links; both designs; dark mode;
+// changing the pickup line; ?item= from Calendar; Calendar's School layer; both designs; dark mode;
 // and nothing tripping the page's Content Security Policy. No phone talks to Google here.
 //
 // Needs Playwright with Chromium (npm i -g playwright):
@@ -215,11 +215,26 @@ await test('Settings: the standard sections, and a club changes that day’s pic
   await ctx.close();
 });
 
-await test('?item= opens that post', async () => {
+await test('?item= opens that post (from Calendar’s School layer)', async () => {
   const { ctx, page } = await newPage('light', seeded());
   await open(page, '/school/?item=d1:3');
   await page.waitForSelector('#itemSheet:not([hidden])');
   assert.match(await page.textContent('#itemBody'), /Character Dress Up/);
+  await ctx.close();
+});
+
+await test('Calendar’s School layer goes to your family account, signed in, with no links', async () => {
+  const { ctx, page } = await newPage('light', seeded({ 'aos.session': JSON.stringify({ token: 'made-up-session', user: { id: 'u1', name: 'Pat' } }) }));
+  const sent = [];
+  await ctx.route('**/aOS/api/layer', async route => { if (route.request().method() === 'POST') sent.push(JSON.parse(route.request().postData() || '{}')); await route.fulfill({ status: 200, body: '{"ok":true}' }); });
+  await open(page);
+  await page.evaluate(() => window.__school.render());
+  await page.waitForTimeout(5500);   // shared 1.5 s after load, sent 3 s after the last change (home/welcome.js)
+  const got = sent.find(b => b.app === 'school');
+  assert.ok(got, 'sent');
+  assert.ok(got.data.items.some(x => x.kind === 'off' && x.date === '2026-10-30'));
+  assert.ok(got.data.items.every(x => x.kind === 'off'), 'only the no-school days');
+  assert.ok(!JSON.stringify(got).includes('parentsquare.com'));
   await ctx.close();
 });
 
