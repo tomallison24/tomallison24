@@ -45,7 +45,7 @@ the post's groups and words (`audience`):
 A post for the whole school can still hold dates for one grade, so each date is sorted too (`forGrade`):
 a newsletter's date line that names other grades ("3rd Grade Wax Museum", "Middle School Dance", "Pre-K
 Picnic"), or sits under a short heading that does ("**5th Grade Corner**", until the next heading or
-paragraph), is left out of Coming up, the rest of the year, the days off and Calendar's School layer; so is
+paragraph), is left out of Coming up, the rest of the year and the days off; so is
 a date a post gives only on lines for other grades ("1st grade: Wednesday, November 4"). A date that names
 no grade, or names hers, is kept: when the emails don't say, it stays. Pre-K, TK and preschool are not
 Kindergarten. With no grade known (Settings > Your child, or the emails), nothing is left out.
@@ -67,10 +67,8 @@ your settings, and a short copy of the last 120 days' posts (no words) for aOS H
 An email counts as read only while its posts are saved, so one whose posts were lost is read again by itself. **Back up everything** saves it all as a
 file; **Import a backup** brings one back.
 
-**Calendar's School layer**: signed in to your family account, School sends Calendar a short list:
-days off, events (with their time when the post gave one) and what's due, with no links (ParentSquare's
-links carry a sign-in token). It goes to your own account (`AllisonOS.layer.share('school', …)`,
-`POST /aOS/api/layer`), only when it changed, and only you can read it.
+**Calendar**: School's dates don't show in Calendar (they made it too cluttered); School sends
+nothing to Calendar.
 
 ## Gmail
 
@@ -113,7 +111,7 @@ the email's text part, or its HTML when there's none. Then, when the page draws:
 
 ## Working with the other apps
 
-- **Calendar**: the School layer (above).
+- **Calendar**: none: School's dates stay in School (above).
 - **Mail**: every post has **Open in Mail** (its email's thread in Mail) beside **Open in Gmail**.
 - **aOS Home**: the morning brief has School's line when the school day is today or tomorrow ("Tomorrow
   at school: Wear Pink on THURSDAY and 2 more"), a day off, and what's due by tomorrow; the Ipsy bar's
@@ -144,7 +142,7 @@ the email's text part, or its HTML when there's none. Then, when the page draws:
 ## Tests
 
 ```
-node school/scripts/sort-test.mjs      # the reading: digests, kinds, whose, dates, school days, sections, Calendar's layer
+node school/scripts/sort-test.mjs      # the reading: digests, kinds, whose, dates, school days, sections
 node school/scripts/app-test.mjs       # the page at iPhone size: the sections, a post, Mark done and Undo, Remind me, the weather, Ipsy's tools, Settings, both designs
 ```
 
