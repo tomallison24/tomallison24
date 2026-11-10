@@ -222,7 +222,7 @@ family({
       const s = this.autoState(a), name = s.lit && a.onName ? a.onName : a.name;
       return `<div class="agw${s.lit ? ' lit' : ''}" style="--c:${a.acc}"><i class="ag-glow"></i>
         <button class="ag${s.lit ? ' lit' : ''}${tWaiting(s.d, 'lit') || tWaiting(s.d, 'on') ? ' wait' : ''}" data-a="auto" data-v="${a.id}" aria-pressed="${s.lit}"${s.dis ? ' disabled' : ''}>
-        <span class="ag-disc">${svg(a.icon, 24)}</span><span class="ag-name"${a.script ? ' translate="no"' : ''}>${esc(name)}</span></button></div>`;
+        <span class="ag-disc">${svg(a.icon, 30)}</span><span class="ag-name"${a.script ? ' translate="no"' : ''}>${esc(name)}</span></button></div>`;
     }).join(''));
     this.renderYard();
     this.sum = [away ? 'Away' : '', this.run.length ? this.run.length + ' running' : away ? '' : 'Nothing running'].filter(Boolean).join(' · ');
