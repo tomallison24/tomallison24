@@ -4,3 +4,8 @@ news/data/
 
 # made by the deploy (.github/workflows/news.yml), never in the repository
 aOS/build.json
+
+# Claude Code's personal settings: its "Yes, and don't ask again" approvals are saved here word for word,
+# so a command with a password or key in it would be committed. Claude Code only ignores it on the machine
+# that made it (global git excludes), so it is ignored here for every clone and cloud session.
+.claude/settings.local.json
