@@ -396,6 +396,15 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
   await ctx.close();
 }
+{ // Favorites: an automation's name has room for its descenders (Futura's g and p were cut off at line-height 1.15)
+  const { ctx, page, errors } = await phone('dark', { design: 'vintage' });
+  await test('Favorites: automation names leave room below the letters', async () => {
+    const [lh, fs, pb] = await css(page, '#g-fav .ag-name', ['lineHeight', 'fontSize', 'paddingBottom']);
+    assert.ok(parseFloat(lh) / parseFloat(fs) >= 1.25 && parseFloat(pb) >= 2, `line-height ${lh}, font-size ${fs}, padding-bottom ${pb}`);
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
 { // Cameras: a low battery shows on the camera's still, as on the Signal dashboard
   const { ctx, page, errors } = await phone('dark');
   await test('Cameras: a low battery shows on its still', async () => {
