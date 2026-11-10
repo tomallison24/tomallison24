@@ -524,7 +524,9 @@
 .ag:disabled { opacity: .4; }
 .ag.wait { opacity: .75; }
 .ag-disc { flex: none; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; transition: color .3s; }
-.ag-name { font-size: 14px; font-weight: 600; line-height: 1.15; min-width: 0; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* line-height 1.3 and a little padding below: the name hides what overflows (two lines at most), and Vintage's Futura
+   on iPhone has deep descenders that 1.15 cut off (the g of Goodnight, 2026-11-10) */
+.ag-name { font-size: 14px; font-weight: 600; line-height: 1.3; padding-bottom: 2px; min-width: 0; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .ag.lit { background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.78)); color: #1A1A1C;
   box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.9), inset 0 1px 0 #fff, 0 0 24px -6px rgba(var(--c),0.8); }
 .ag.lit .ag-disc { color: rgb(var(--c)); filter: saturate(1.4) brightness(.8); }
