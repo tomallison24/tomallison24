@@ -121,6 +121,7 @@
         'Home: a Blink camera whose battery is low says Low battery on its picture, as on the Signal dashboard',
         'Home: the automation tiles on Favorites are bigger, still three to a row: taller, with a larger icon and name',
         'Home: the TV Strip is in Living Room now, not Lounge, as on the Signal dashboard',
+        'Home: each room\'s lights open with All lights, a slider and presets that set every light in the room at once',
         'New app: Improve, one list for feedback, bugs and ideas about any aOS app. Type one, pick its kind and app, and tap Add; tap an item to change it, mark it done or delete it. Signed in, the list is kept in the family\'s Google Sheet, where everyone sees every item, so it can all be worked through in one go (the owner sets the Sheet up in aOS, Account > Google Sheets)',
         'On aOS Home, School and Sparkle Kingdom share a new Kids group',
         'School keeps what it read: its posts are saved in its own storage on the phone, not the small space every app shares, so a full phone no longer loses them and makes School read Gmail again from the start; a phone that had lost them reads them again by itself',

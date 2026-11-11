@@ -419,6 +419,26 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
   await ctx.close();
 }
+{ // Lights: a room's All lights pill sets every light in it that dims (not the Fireplace), and reads their average
+  const { ctx, page, errors } = await phone('dark');
+  await test('Lights: a room\'s All lights pill sets every light in it that dims, at once', async () => {
+    await page.click('#vtop [data-view="lights"]'); await page.waitForTimeout(400);
+    await page.click('#g-lights [data-room="living"] [data-a="fold"]'); await page.waitForTimeout(700);
+    const all = '[data-dv="lights:dim/living"]';
+    assert.ok(await page.$eval(all, e => e.closest('.lpills').firstElementChild.contains(e)), 'first in the drawer');
+    assert.match(await page.textContent(all + ' .lp-val'), /^3 of 4 · \d+%$/, 'the sample: three of the four dimmable lights on');
+    await page.click(all + ' .chip2[data-v="25"]');
+    await page.waitForFunction(s => document.querySelector(s + ' .lp-val')?.textContent === '25%', all, { timeout: 5000 });
+    const ids = ['light.floor_lamps', 'light.morocco', 'light.spotlight', 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi'];
+    assert.deepEqual(await page.evaluate(ids => ids.map(id => [val(id), Math.round(attr(id, 'brightness') / 2.55)]), ids), ids.map(() => ['on', 25]));
+    assert.equal(await page.evaluate(() => val('light.living_room_fireplace_lights_socket')), 'on', 'the Fireplace (on/off only) is left as it was');
+    assert.equal(await page.getAttribute(all + ' .chip2[data-v="25"]', 'aria-pressed'), 'true');
+    for (const r of ['lounge', 'kitchen', 'outdoor']) assert.equal(await page.locator(`[data-dv="lights:dim/${r}"]`).count(), 1, r + ' has one');
+    for (const r of ['sofia', 'md']) assert.equal(await page.locator(`[data-dv="lights:dim/${r}"]`).count(), 0, r + ': one light, no All lights pill');
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
 { // Cameras: a low battery shows on the camera's still, as on the Signal dashboard
   const { ctx, page, errors } = await phone('dark');
   await test('Cameras: a low battery shows on its still', async () => {

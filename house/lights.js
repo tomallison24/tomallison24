@@ -15,6 +15,11 @@
 //     current brightness (so it doesn't jump to full), Custom runs
 //     script.signal_tv_strip_custom_color (the last colour held 3 s that was
 //     not a preset, kept in input_text.signal_tv_strip_custom_hs)
+//   - a room with two or more lights that dim opens with an "All lights" pill (2026-11-11): its slider and
+//     presets set every one of them at once (light.turn_on with brightness_pct; on/off-only ones, the
+//     Fireplace, are left alone), and it reads their average while any is on. Signal has the same pill,
+//     on a light group per room (ha-config configuration.yaml, light.all_<room>_lights); this one sends
+//     to the lights themselves, so it doesn't wait for that group.
 // The groups are helpers in Home Assistant, so a group's members are read from
 // its entity_id attribute, falling back to the dashboard's drawer lists.
 'use strict';
@@ -49,6 +54,9 @@ const L_CHIPS = () => L_PRESETS.map(([v, l]) => v === 1 ? [v, svg('night', 16), 
 const L_NAMES = { 'light.tom_lamp': "Tom's Lamp", 'light.elena_lamp': "Elena's Lamp" };
 const L_ALL = {};
 for (const r of L_ROOMS) for (const [id, name, members, kind] of r.lights) L_ALL[id] = { id, name, members, kind, room: r.id };
+// A room's lights that dim (not the on/off-only ones), and the rooms that get an "All lights" pill: two or more of them.
+const L_DIMS = R => R.lights.filter(([, , , kind]) => kind !== 'onoff').map(x => x[0]);
+const L_ALLPILL = R => L_DIMS(R).length >= 2;
 const L_SWATCH = [['white', 'White', '255,255,255', null], ['warm', 'Warm White', '255,217,168', [30, 25]], ['red', 'Red', '255,59,48', [0, 100]],
   ['green', 'Green', '52,199,89', [120, 100]], ['blue', 'Blue', '59,130,246', [220, 100]], ['purple', 'Purple', '168,85,247', [280, 100]]];
 const L_STRIP = 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi', L_CUSTOM = 'input_text.signal_tv_strip_custom_hs';
@@ -112,7 +120,7 @@ family({
     el.innerHTML = `<div class="hsplit" data-dv="lights:house"></div>` + L_ROOMS.map(R => `
       <div class="lroom" data-room="${R.id}">
         <div class="rbar" data-dv="lights:room/${R.id}"></div>
-        <div class="lpwrap"><div class="lpills">${R.lights.map(([id], i) => `<div class="lpw" style="--i:${i}"><i class="lglow"></i><article class="lp dvc" data-dv="lights:${id}"></article></div>`).join('')}</div></div>
+        <div class="lpwrap"><div class="lpills">${L_ALLPILL(R) ? `<div class="lpw rdw" style="--i:0"><article class="lp dvc rdim" data-dv="lights:dim/${R.id}"></article></div>` : ''}${R.lights.map(([id], i) => `<div class="lpw" style="--i:${i + (L_ALLPILL(R) ? 1 : 0)}"><i class="lglow"></i><article class="lp dvc" data-dv="lights:${id}"></article></div>`).join('')}</div></div>
       </div>`).join('');
   },
   render() {
@@ -124,6 +132,7 @@ family({
       box.classList.toggle('folded', folded);
       box.classList.toggle('lit', R.lights.some(([id]) => this.read(id).on));
       for (const [id] of R.lights) if (this.read(id).on) n++;
+      for (const el of cardsOf('lights:dim/' + R.id)) this.paintDim(el, R);
     }
     // Every pane, here and on Favorites (Tom's and Elena's lamps).
     for (const p of document.querySelectorAll('.lp[data-dv^="lights:light."]')) this.paint(p, p.dataset.dv.slice(7));
@@ -144,7 +153,31 @@ family({
     glow.style.opacity = r.on ? 1 : 0;
   },
 
+  // A room's "All lights" pill: what its dimmable lights are at. Their average while any is on; a preset
+  // is lit only when every one of them is on and within 2% of it.
+  roomDim(R) {
+    const rs = L_DIMS(R).map(id => this.read(id)).filter(r => !r.offline && !r.onoff), on = rs.filter(r => r.on);
+    const avg = on.length ? Math.round(on.reduce((a, r) => a + r.bri, 0) / on.length) : null;
+    const same = on.length === rs.length && on.length && on.every(r => Math.abs(r.bri - avg) <= 2) ? avg : null;
+    return { rs, on, avg, same, dis: !rs.length };
+  },
+  paintDim(el, R) {
+    const m = this.roomDim(R), lit = m.on.length > 0;
+    put(el, `<span class="lp-badge rd-ic" aria-hidden="true"${lit ? ` style="background:rgb(${L_TINT.c});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)"` : ''}>${svg('sun', 22)}</span>
+      <div class="lp-mid"><div class="lp-row"><span class="lp-name">All lights</span><span class="lp-val">${lit ? (m.on.length < m.rs.length ? `${m.on.length} of ${m.rs.length} · ` : '') + m.avg + '%' : 'Off'}</span></div>
+      ${sliderHTML('bri', lit ? m.avg : 1, 1, 100, 1, { tint: L_TINT.c, cls: 'thin', unit: '%', aria: `All of the ${R.name}'s lights, brightness`, dis: m.dis })}
+      ${chipsHTML('chip', L_CHIPS(), m.same, { near: 2, dis: m.dis, cls: 'lp-chips' })}</div>`);
+    el.classList.toggle('on', lit);
+  },
+  setRoom(R, v) {
+    const list = this.roomDim(R).rs.map(r => r.L.id); if (!list.length) return;
+    for (const id of list) { const d = this.read(id).d; tset(d, 'power', 'on'); tset(d, 'bri', v); }
+    render();
+    return fire(R.name, 'light', 'turn_on', { entity_id: list, brightness_pct: v });
+  },
+
   sheet(id) {
+    if (id.startsWith('dim/')) return null;   // the room's All lights pill has no popup: it is all on the pill
     const r = this.read(id), L = r.L, ms = this.members(L), tint = r.on ? r.pc : PAL.on;
     const memberRows = ms.map(m => {
       const q = this.read(m), nm = L_NAMES[m] || (attr(m, 'friendly_name') || m.replace(/^light\./, '').replace(/_/g, ' ')).replace(/^\w/, c => c.toUpperCase());
@@ -198,6 +231,7 @@ family({
   },
   act(id, a, b) {
     if (id === 'house') return this.setMany(L_HOUSE, a === 'houseOn');
+    if (id.startsWith('dim/')) { if (a === 'chip') return this.setRoom(L_ROOMS.find(x => x.id === id.slice(4)), Number(b.dataset.v)); return; }
     if (id.startsWith('room/')) {
       const R = L_ROOMS.find(x => x.id === id.slice(5)), list = R.lights.map(x => x[0]);
       if (a === 'room') return this.setMany(list, !list.some(x => this.read(x).on));
@@ -223,6 +257,7 @@ family({
     }
   },
   slide(id, a, v, el) {
+    if (id.startsWith('dim/')) return a === 'bri' ? this.setRoom(L_ROOMS.find(x => x.id === id.slice(4)), v) : undefined;
     if (a === 'bri') return this.setPower(id, true, { brightness_pct: v });
     if (a === 'mbri') return this.setPower(el.dataset.v, true, { brightness_pct: v });
   },

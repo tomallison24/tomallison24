@@ -314,7 +314,12 @@ dashboard's comments record a quirk, the app keeps it:
   light that dims, the 1 / 25 / 50 / 75 / 100% presets right on the pill, one
   tap each, as on the dashboard's LP1 pill (they were in the popup until
   2026-11-02); its popup has the slider and the lamps in its group. The TV strip has the
-  dashboard's swatches and Custom.
+  dashboard's swatches and Custom, and sits in Living Room (2026-11-11; it was in Lounge).
+  A room with two or more lights that dim (Living Room, Lounge, Kitchen, Outdoor) opens with
+  an **All lights** pill: a sun for its badge, a slider and the same presets, setting every
+  one of those lights at once (not the Fireplace, which is on / off only) and reading their
+  average ("3 of 4 · 51%" while some are off). It sends to the lights themselves; Signal's
+  pill is on a light group per room (`light.all_<room>_lights`, `configuration.yaml`).
 - **Speakers and TV** (SN3, `media.yaml`): the card is Quiet stack (picked in
   `labs/speakers`, 2026-11-04; the Signal dashboard keeps its record): the
   album art as a square cover, play / pause beside it, and Next and the volume
