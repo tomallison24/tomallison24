@@ -405,6 +405,20 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
   await ctx.close();
 }
+{ // Lights: the TV strip sits in Living Room, not Lounge (as on the Signal dashboard)
+  const { ctx, page, errors } = await phone('dark');
+  await test('Lights: the TV Strip is in Living Room, not Lounge', async () => {
+    await page.click('#vtop [data-view="lights"]'); await page.waitForTimeout(400);
+    await page.click('#g-lights [data-room="living"] [data-a="fold"]');
+    await page.click('#g-lights [data-room="lounge"] [data-a="fold"]');
+    await page.waitForTimeout(700);
+    const strip = 'lights:light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi';
+    const room = await page.$eval(`#g-lights .lp[data-dv="${strip}"]`, e => e.closest('[data-room]')?.dataset.room);
+    assert.equal(room, 'living');
+    assert.deepEqual(errors, []);
+  });
+  await ctx.close();
+}
 { // Cameras: a low battery shows on the camera's still, as on the Signal dashboard
   const { ctx, page, errors } = await phone('dark');
   await test('Cameras: a low battery shows on its still', async () => {

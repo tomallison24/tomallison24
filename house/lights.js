@@ -23,11 +23,11 @@ const L_ROOMS = [
     ['light.floor_lamps', 'Floor Lamps', ['light.floor_lamp_1', 'light.floor_lamp_2']],
     ['light.morocco', 'Morocco', ['light.morocco_1', 'light.morocco_2', 'light.morocco_3']],
     ['light.living_room_fireplace_lights_socket', 'Fireplace', null, 'onoff'],
-    ['light.spotlight', 'Spotlight']] },
+    ['light.spotlight', 'Spotlight'],
+    ['light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi', 'TV Strip', null, 'strip']] },   // in Living Room since 2026-11-11 (was Lounge), as on Signal
   { id: 'lounge', name: 'Lounge', icon: 'tv', lights: [
     ['light.cocktail_main', 'Cocktail Lights', ['light.cocktail_main_1', 'light.cocktail_main_2']],
     ['light.tv_lamps', 'TV Lamps', ['light.tv_lamp_1', 'light.tv_lamp_2']],
-    ['light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi', 'TV Strip', null, 'strip'],
     ['light.bar_main_light_1', 'Bar Main Light'],
     ['light.side_lamps', 'Side Lamps', ['light.side_lamp_1', 'light.side_lamp_2']]] },
   { id: 'kitchen', name: 'Kitchen', icon: 'kitchen', lights: [
