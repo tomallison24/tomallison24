@@ -386,7 +386,7 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border: 0; bord
   let tt;
   const toast = t => { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => el.classList.remove('show'), 1800); };
   document.addEventListener('click', e => { const a = e.target.closest('.app'); if (!a) return;
-    if (a.dataset.id === 'house') openHouse(); else toast(`Only Home opens in this mock-up`); });
+    if (a.dataset.id === 'house') location.href = '../aos-home/'; else toast(`Only Home opens in this mock-up`); });
   $('ask').onclick = () => toast('Ipsy isn\'t in this mock-up');
 
   // ---- The Home app ----
@@ -445,7 +445,7 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border: 0; bord
   $('thermo').onclick = () => openSheet('tsheet');
   $('labBtn').onclick = () => openSheet('lsheet');
   $('hset').onclick = () => openSheet('lsheet');
-  $('goHome').onclick = openHouse;
+  $('goHome').onclick = () => { location.href = '../aos-home/'; };
   $('scrim').onclick = closeSheets;
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
