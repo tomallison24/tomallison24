@@ -1,7 +1,8 @@
 // aOS 2's Home (aOS/home-tab.js): every app inside aOS. At iPhone size, Vintage and Sea glass, light
 // and dark:
 //   - Home first, in place of Apps: the Ipsy bar, Favorites with the Weather and Calendar widgets,
-//     and every app as an icon in groups, so one tap opens any app
+//     and every app as an icon in one card four across, A to Z, so one tap opens any app; hold one and
+//     drag it to move it (kept, A to Z puts them back), a hold never opens it
 //   - the widgets: Weather's forecast fetched again when aOS opens or comes back and it's over 10
 //     minutes old; drawn again, nothing that didn't change is replaced, and nothing under a finger
 //   - the Ipsy bar finds the app as you type (Return opens it) and what's in the apps, never a
@@ -117,25 +118,65 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(await pg.locator('.quick').isHidden() && await pg.locator('#home .hbtn').count() === 1, `nothing floats over Home; only Today by the account ${tag}`);
   await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 600; }); await pg.waitForTimeout(100);
   check(await pg.evaluate(() => document.getElementById('scroller').scrollTop > 0 && scrollY === 0), `Home scrolls in its own box: the page itself stays put ${tag}`);
-  // every app one tap away: all of them as icons, the first three groups on the first screen
+  // every app one tap away: all of them as icons, A to Z, four across, starting on the first screen
   const apps = await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ')].map(a => a.dataset.open));
+  const names = await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ b')].map(b => b.textContent));
   check(apps.length === APPS.length && new Set(apps).size === APPS.length, `every app, once each, as an icon (${apps.length}) ${tag}`);
+  check(JSON.stringify(names) === JSON.stringify(names.slice().sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))) && await pg.locator('#spaces h3').count() === 0, `A to Z, no groups (${names.slice(0, 4).join(', ')}…) ${tag}`);
+  const cols = await pg.evaluate(() => new Set([...document.querySelectorAll('#spaces .happ')].map(a => Math.round(a.getBoundingClientRect().left))).size);
+  check(cols === 4, `four across (${cols}) ${tag}`);
   await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 0; });
-  const below = await pg.evaluate(() => Math.round(document.querySelector('#spaces .hcat:nth-child(2)').getBoundingClientRect().top));
-  check(below < 844, `Every app starts on the first screen (${below}px) ${tag}`);
-  // your day (the brief): folded to one row with room under the Ipsy bar; a tap opens it, kept after a reload
+  const below = await pg.evaluate(() => Math.round(document.querySelector('#spaces').getBoundingClientRect().top));
+  check(below < 844 - 90, `Every app starts on the first screen (${below}px) ${tag}`);
+  // hold an app, then drag it: it moves there and stays there; a hold opens nothing; A to Z puts them back
+  {
+    const at = id => pg.evaluate(id => { const r = document.querySelector(`#spaces [data-open="${id}"] .ic`).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, id);
+    const first = apps[0], third = apps[2];
+    await pg.locator(`#spaces [data-open="${first}"]`).scrollIntoViewIfNeeded();
+    const a = await at(first), c = await at(third);
+    await pg.mouse.move(a.x, a.y); await pg.mouse.down(); await pg.waitForTimeout(550);
+    const lifted = await pg.evaluate(() => !!document.querySelector('#spaces .happ.lift') && document.getElementById('spaces').classList.contains('arranging'));
+    for (let i = 1; i <= 8; i++) { await pg.mouse.move(a.x + (c.x - a.x) * i / 8, a.y + (c.y - a.y) * i / 8); await pg.waitForTimeout(30); }
+    await pg.mouse.up(); await pg.waitForTimeout(450);
+    const moved = await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ')].map(x => x.dataset.open));
+    check(lifted && moved.indexOf(first) === 2 && moved.length === apps.length && !(await state()).inApp, `held, ${first} lifts; dragged, it goes third, and nothing opens (${moved.slice(0, 4).join()}) ${tag}`);
+    check(JSON.stringify(await pg.evaluate(() => JSON.parse(localStorage.getItem('aos.home.order')))) === JSON.stringify(moved) && await pg.isVisible('#azBtn'), `the order is kept, and A to Z shows ${tag}`);
+    await pg.reload(); await pg.waitForTimeout(900);
+    check(JSON.stringify(await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ')].map(x => x.dataset.open))) === JSON.stringify(moved), `still there after a reload ${tag}`);
+    await pg.click('#azBtn'); await pg.waitForTimeout(200);
+    check(JSON.stringify(await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ')].map(x => x.dataset.open))) === JSON.stringify(apps) && await pg.locator('#azBtn').isHidden(), `A to Z puts them back ${tag}`);
+    // a quick drag that never held is a scroll: nothing moves
+    const b = await at(apps[1]);
+    await pg.mouse.move(b.x, b.y); await pg.mouse.down(); await pg.mouse.move(b.x + 120, b.y, { steps: 4 }); await pg.waitForTimeout(500); await pg.mouse.up(); await pg.waitForTimeout(200);
+    check(JSON.stringify(await pg.evaluate(() => [...document.querySelectorAll('#spaces .happ')].map(x => x.dataset.open))) === JSON.stringify(apps) && await pg.evaluate(() => !localStorage.getItem('aos.home.order') || localStorage.getItem('aos.home.order') === '[]'), `moved before it lifts, nothing is moved ${tag}`);
+    if ((await state()).inApp) { await pg.click('#appback'); await pg.waitForTimeout(500); }
+  }
+  // your day (the brief): folded to one row with room under the Ipsy bar; a tap opens it smoothly; it's folded again
+  // whenever you come back to Home (a reload, back from Today); no trip card under it
   await pg.evaluate(() => { const p = x => String(x).padStart(2, '0'), d = new Date(); localStorage.setItem('allison-notes-v1', JSON.stringify({ notes: [], todos: [{ id: 'bt', title: 'Bins out', date: d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) }] })); });
   await pg.reload(); await pg.waitForTimeout(900);
   const fold = () => pg.evaluate(() => { const c = document.querySelector('#hbrief .brief'), bar = document.getElementById('askIpsy').getBoundingClientRect();
-    return c && { gap: Math.round(c.getBoundingClientRect().top - bar.bottom), open: c.classList.contains('open'), aria: c.querySelector('[data-brief]').getAttribute('aria-expanded'), lines: c.querySelector('.blines .bl') ? c.querySelector('.blines .bl').offsetHeight : -1 }; });
+    return c && { gap: Math.round(c.getBoundingClientRect().top - bar.bottom), open: c.classList.contains('open'), aria: c.querySelector('[data-brief]').getAttribute('aria-expanded'), lines: Math.round(c.querySelector('.blines').getBoundingClientRect().height), seen: getComputedStyle(c.querySelector('.blines')).visibility }; });
   const f0 = await fold();
-  check(f0 && f0.gap >= 12 && !f0.open && f0.aria === 'false' && f0.lines === 0, `your day starts folded to one row, ${f0 && f0.gap}px under the Ipsy bar ${tag}`);
-  await pg.click('#hbrief [data-brief]'); await pg.waitForTimeout(150);
+  check(f0 && f0.gap >= 12 && !f0.open && f0.aria === 'false' && f0.lines === 0 && f0.seen === 'hidden', `your day starts folded to one row, ${f0 && f0.gap}px under the Ipsy bar ${tag}`);
+  check(await pg.locator('#hbrief .trip, #hbrief [data-tripgo]').count() === 0, `no trip card on Home ${tag}`);
+  await pg.click('#hbrief [data-brief]'); await pg.waitForTimeout(500);
   const f1 = await fold();
+  check(f1.open && f1.aria === 'true' && f1.lines > 0 && f1.seen === 'visible', `a tap opens it (${f1.lines}px) ${tag}`);
   await pg.reload(); await pg.waitForTimeout(900);
   const f2 = await fold();
-  check(f1.open && f1.aria === 'true' && f1.lines > 0 && f2.open && f2.lines > 0, `a tap opens it, and it stays open after a reload ${tag}`);
-  await pg.click('#hbrief [data-brief]'); await pg.evaluate(() => { localStorage.removeItem('allison-notes-v1'); localStorage.removeItem('aos.brief.open'); });
+  check(!f2.open && f2.lines === 0, `opening aOS again, it's folded ${tag}`);
+  await pg.click('#hbrief [data-brief]'); await pg.waitForTimeout(100);
+  await pg.locator('#home .hbtn[data-tab="today"]').click(); await pg.waitForTimeout(300);
+  await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(500);
+  const f3 = await fold();
+  check(!f3.open && f3.aria === 'false', `back on Home from Today, it's folded again ${tag}`);
+  await pg.click('#hbrief [data-brief]'); await pg.waitForTimeout(100);
+  await pg.locator('#spaces [data-open="clock"]').click(); await pg.waitForTimeout(700);
+  await pg.click('#appback'); await pg.waitForTimeout(700);
+  const f4 = await fold();
+  check(!f4.open && f4.aria === 'false', `back on Home from an app, it's folded again ${tag}`);
+  await pg.evaluate(() => { localStorage.removeItem('allison-notes-v1'); });
   await pg.reload(); await pg.waitForTimeout(900);
   // Favorites: Weather and Calendar as widgets, four other apps beside them
   const favIds = await pg.evaluate(() => [...document.querySelectorAll('#favs .fav')].map(f => f.dataset.open));

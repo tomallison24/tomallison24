@@ -8,7 +8,8 @@
 //   - Favorites: Weather and Calendar as widgets (today's weather, what's next), with four apps:
 //     the ones you pin (Edit, up to four), then the apps you open most (the last 14 days, kept on
 //     this phone: aos.home.used), then a starting four.
-//   - Every app, as icons in a few groups: one tap opens any app. Mail's shows its unread count.
+//   - Every app, in one card four across: A to Z, or the order you put them in (hold an app a moment, then drag it;
+//     aos.home.order, which follows you between devices; A to Z puts them back). Mail's shows its unread count.
 //   - No dock, and nothing floats over Home; on Today (or Search), Home floats at the bottom.
 //   - Or Thumb arc (Account > Appearance > Home layout, aos.home.layout): Home, Mail, Weather and
 //     Calendar on an inner ring and four favorites on an outer one, in the bottom corner your thumb
@@ -53,22 +54,25 @@
   acts.className = 'hacts';
   acts.innerHTML = `<button type="button" class="hbtn" data-tab="today" aria-label="Today">${document.querySelector('.tabs [data-tab="today"] svg').outerHTML}</button>`;
   head.append(acts); acts.append(acct);
-  let tab = 'home';
+  let tab = 'home', briefOpen = false;   // briefOpen: the brief on Home (paintBrief, below)
+  let hold = null, quiet = 0;   // an app held in Every app, to move it; until when a click is its drop's, not a tap (below)
+  const arranging = () => !!(hold && hold.on);
   const showTab = window.aosTabs.show;
-  window.aosTabs.show = t => { showTab(t); tab = t; paintQuick(); if (t === 'home') fitArc(); };
+  window.aosTabs.show = t => { if (t !== tab) foldBrief(); showTab(t); tab = t; paintQuick(); if (t === 'home') fitArc(); };
   acts.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) window.aosTabs.show(b.dataset.tab); });
   showTab('home');   // (the apps along the bottom are drawn with Home, below)
 
-  const SPACES = [
-    ['Family', ['calendar', 'meals', 'notes', 'house', 'orders']],
-    ['Every day', ['weather', 'news', 'mail', 'clock', 'podcasts']],
-    ['Out and about', ['travel', 'places']],
-    ['You', ['fitness', 'drinks', 'money', 'improve']],
-    ['Kids', ['sparkle', 'school']],
-  ].map(([t, ids]) => [t, ids.filter(id => D.APPS.includes(id))]);
-  const ALL = SPACES.flatMap(s => s[1]);
+  // the apps on Home (aOS itself isn't one of them)
+  const ALL = ['calendar', 'meals', 'notes', 'house', 'orders', 'weather', 'news', 'mail', 'clock', 'podcasts', 'travel', 'places',
+    'fitness', 'drinks', 'money', 'improve', 'sparkle', 'school'].filter(id => D.APPS.includes(id));
   const known = id => ALL.includes(id);
   const name = id => D.NAMES[id] || id;
+  const az = ids => ids.slice().sort((a, b) => name(a).localeCompare(name(b), 'en', { sensitivity: 'base' }));
+  // Every app's order: A to Z, or the order you put them in (aos.home.order); an app that's new since goes at the end, A to Z
+  const ORDER = 'aos.home.order';
+  const readOrder = () => { const o = get(ORDER, []); return Array.isArray(o) ? [...new Set(o.filter(known))] : []; };
+  let order = readOrder();
+  const everyOrder = () => [...order, ...az(ALL.filter(id => !order.includes(id)))];
   const tag = id => (D.TOURS[id] && D.TOURS[id].tag) || '';
   // each app's icon in its own design (design.<app>, ../home/design.js: nothing kept means Vintage),
   // the design it opens in here
@@ -168,7 +172,7 @@
   // The forecast is fetched again when Weather's last one is over 10 minutes old (aOS/home-find.js).
   const onHome = () => !current && tab === 'home' && document.visibilityState === 'visible';
   const freshen = () => { if (window.aosFind && aosFind.refreshWeather) aosFind.refreshWeather().then(got => { if (got) paintHome(); }, () => {}); };
-  addEventListener('visibilitychange', () => { if (onHome()) { paintHome(); freshen(); } syncPrefs(); });
+  addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') foldBrief(); if (onHome()) { paintHome(); freshen(); } syncPrefs(); });
   setInterval(() => { if (onHome() && !editing()) { paintHome(); freshen(); } }, 60e3);
   // Settings that follow you between your devices (aOS/prefs-sync.js): on opening aOS, coming back to it
   // or leaving it, and back on Home from an app (where most of them change). What came from another
@@ -189,6 +193,7 @@
         try { const l = localStorage.getItem('aos.look'); if (window.aosLook && /^(vintage|glass|layers|grid)$/.test(l || '') && aosLook.get() !== l) aosLook.set(l); } catch {}
         if (W.theme) W.theme.set(W.theme.read());
         pins = readPins();
+        order = readOrder();
         setLayout(readLayout(), false);
       } else if (frames[id]) { const f = frames[id].firstChild; if (f.moving) { f.moving = false; point(f, `../${id}/`); } }
     }
@@ -226,7 +231,7 @@
   }
   // an app's icon, with Mail's unread count on it
   const ic = id => { const n = unread[id] || 0;
-    return `<span class="ic"><img src="${icon(id)}" alt="">${n ? `<em class="unread" aria-hidden="true">${n > 99 ? '99+' : n}</em>` : ''}</span>`; };
+    return `<span class="ic"><img src="${icon(id)}" alt="" draggable="false">${n ? `<em class="unread" aria-hidden="true">${n > 99 ? '99+' : n}</em>` : ''}</span>`; };
   const label = id => esc(name(id)) + (unread[id] ? `, ${unread[id]} unread` : '');
   function paintHome(now = false) {   // now: a change you just made (a pin, back on Home), drawn at once
     if (!now && (down || Date.now() - upAt < 450)) { clearTimeout(later); later = setTimeout(paintHome, 500); return; }   // a finger on the screen: once it's lifted
@@ -245,33 +250,35 @@
         <img src="${icon('calendar')}" alt=""><span>${next
           ? `<em>Next · ${esc(next.when)}</em><b translate="no">${esc(next.title)}</b><small>${next.then ? 'Then ' + esc(next.then) : next.where ? `<span translate="no">${esc(next.where)}</span>` : 'Nothing after it today'}</small>`
           : `<em>Calendar</em><b>Nothing else today</b><small>Open for the week ahead</small>`}</span></button>` : ''));
-    setHTML($('spaces'), SPACES.filter(s => s[1].length).map(([title, ids]) => `<div class="hcat${ids.length <= 2 ? ' half' : ''}"><h3>${esc(title)}</h3><div class="hg" style="--n:${ids.length <= 2 ? 2 : 5}">${ids.map(id =>
-      `<div class="happ" role="button" tabindex="0" data-open="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join('')}</div></div>`).join(''));
+    if (arranging()) return;   // an app held and moving: drawn again once it's put down
+    $('azBtn').hidden = !order.length;
+    setHTML($('spaces'), everyOrder().map(id =>
+      `<div class="happ" role="button" tabindex="0" data-open="${id}" data-every="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join(''));
   }
-  // ---- the morning brief and the next trip (aOS/home-find.js brief): worked out on the phone each time Home is
-  // drawn, in both layouts; a line opens its app, and Get ready asks Ipsy in aOS to do the trip's chores (each
-  // change it makes shows with Undo). The brief starts folded to one row (its apps' icons and how many things);
-  // a tap on that row opens or folds it, kept on the phone (aos.brief.open) ----
-  let tripAsk = '', briefOpen = get('aos.brief.open', false) === true;
+  // ---- the brief (aOS/home-find.js brief): worked out on the phone each time Home is drawn, in every layout; a line
+  // opens its app. It's folded to one row (its apps' icons and how many things); a tap on that row opens or folds it.
+  // It's folded again whenever you come back to Home: opening aOS, back from an app or from Today, back on the phone.
+  // (The next trip's card under it, from brief().trip, is gone: the owner asked for it off Home.) ----
+  function foldBrief() {
+    if (!briefOpen) return;
+    briefOpen = false;
+    const c = document.querySelector('#hbrief .brief'); if (!c) return;
+    c.classList.remove('open'); c.querySelector('[data-brief]').setAttribute('aria-expanded', 'false');
+  }
+  try { localStorage.removeItem('aos.brief.open'); } catch {}   // it used to be kept open
   const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
   function paintBrief(b) {
-    const lines = b ? b.lines.filter(l => known(l.app)) : [], t = b && b.trip;
-    tripAsk = t ? t.ask : '';
+    const lines = b ? b.lines.filter(l => known(l.app)) : [];
     const hour = new Date().getHours(), part = hour < 12 ? 'This morning' : hour < 17 ? 'This afternoon' : 'This evening';
     const apps = [...new Set(lines.map(l => l.app))].slice(0, 4), many = lines.length === 1 ? '1 thing' : lines.length + ' things';
     setHTML($('hbrief'), (lines.length ? `<div class="wid brief${briefOpen ? ' open' : ''}" style="--c:${appHue('calendar')}">
         <button type="button" class="bhead" data-brief aria-expanded="${briefOpen}" aria-controls="blines" aria-label="${part}: ${many}"><em>${part}</em><span class="bsum" aria-hidden="true">${apps.map(a => `<img src="${icon(a)}" alt="">`).join('')}<b>${many}</b>${CHEV}</span></button>
-        <div class="blines" id="blines">${lines.map(l =>
-        `<button type="button" class="bl" data-open="${l.app}" aria-label="${esc(name(l.app))}: ${esc(l.text)}"><img src="${icon(l.app)}" alt=""><span translate="no">${esc(l.text)}</span></button>`).join('')}</div></div>` : '')
-      + (t && known('travel') ? `<div class="wid trip" style="--c:${appHue('travel')}"><em>${esc(t.starts)}</em><b translate="no">${esc(t.name)}</b><small>${esc(t.dates)}</small>
-        <ul>${[t.deliveries.length ? `📦 ${t.deliveries.length === 1 ? 'A delivery' : t.deliveries.length + ' deliveries'} due while you're away: ${esc(t.deliveries.slice(0, 3).join(', '))}` : '',
-          t.dinners ? `🍽 ${t.dinners === 1 ? 'A dinner' : t.dinners + ' dinners'} planned for those days` : '', t.events ? `📅 ${t.events === 1 ? 'An event' : t.events + ' events'} on the calendar then` : ''].filter(Boolean).map(x => `<li>${x}</li>`).join('')}</ul>
-        ${window.AllisonOS && AllisonOS.ipsy ? `<button type="button" class="tgo" data-tripgo>Get ready with Ipsy</button>` : ''}</div>` : ''));
+        <div class="blines" id="blines"><div class="bin">${lines.map((l, i) =>
+        `<button type="button" class="bl" data-open="${l.app}" style="--i:${i}" aria-label="${esc(name(l.app))}: ${esc(l.text)}"><img src="${icon(l.app)}" alt=""><span translate="no">${esc(l.text)}</span></button>`).join('')}</div></div></div>` : ''));
   }
   $('hbrief').addEventListener('click', e => {
     const head = e.target.closest('[data-brief]');
-    if (head) { briefOpen = !briefOpen; put('aos.brief.open', briefOpen); head.parentNode.classList.toggle('open', briefOpen); head.setAttribute('aria-expanded', briefOpen); return; }
-    if (e.target.closest('[data-tripgo]') && tripAsk) { e.stopPropagation(); let I = null; try { I = ipsy; } catch {} if (I) I.prompt(tripAsk); } });   // Ipsy is mounted further down
+    if (head) { briefOpen = !briefOpen; head.parentNode.classList.toggle('open', briefOpen); head.setAttribute('aria-expanded', briefOpen); } });
 
   // ---- Layers' grid ----
   // Every app as a pebble in its own colour with its drawing in white (pebble, below). The top row is yours: the apps
@@ -342,7 +349,7 @@
   const SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>';
   const ARC = { w: 390, h: 400, cx: 346, cy: 350, inner: 160, outer: 258, r1: 210, r2: 310, at: [5, 29, 53, 77] };
   function paintArc(wx, next) {
-    const favs = favorites(), rest = ALL.filter(id => !RING.includes(id) && !favs.some(f => f.id === id));
+    const favs = favorites(), rest = everyOrder().filter(id => !RING.includes(id) && !favs.some(f => f.id === id));
     // the time of what's next, for its badge: 4:30 (not 4:30 PM), Now while it's on, none for tomorrow or all day
     const soon = w => /^\d/.test(w || '') ? w.replace(/\s?[AP]M$/i, '') : /^Now\b/.test(w || '') ? 'Now' : '';
     setHTML($('hglance'), (known('weather') ? `<button type="button" data-open="weather" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}"><img src="${icon('weather')}" alt=""><span>${wx ? `<b>${esc(wx.temp)}</b> <i>${esc(wx.text)}</i>` : 'Open for the forecast'}</span></button>` : '')
@@ -400,6 +407,92 @@
     const f = e.target.closest('[data-fav]'); if (f && editing()) return togglePin(f.dataset.fav);
     const g = e.target.closest('[data-gapp]'); if (g && editing()) { e.stopPropagation(); return gridTap(g.dataset.gapp); }   // stopped here: the grid is drawn again, so the tap's button is gone by the time aOS's own handler sees it
   });
+  // ---- Every app: hold an app a moment, then drag it to where you want it ----
+  // It lifts under your finger and the others make room as it passes; let go and it's put down there. The order is
+  // kept (aos.home.order) and follows you to your other devices; A to Z (beside Every app) puts them back.
+  // Held still and let go, nothing opens. Moving before it lifts is a scroll, as ever.
+  const every = $('spaces'), scroller = $('scroller');
+  const HOLD_MS = 380, SLOP = 9;
+  every.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.happ');
+    if (!el || e.target.closest('[data-pin]') || e.button > 0 || hold) return;
+    hold = { el, id: el.dataset.every, pid: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, on: false };
+    hold.t = setTimeout(lift, HOLD_MS);
+  });
+  function lift() {
+    if (!hold) return;
+    const items = [...every.children], top0 = scroller.scrollTop;
+    // where each place in the grid is (its middle, in the page as it scrolls), and how far from its middle the finger took it
+    hold.slots = items.map(it => { const r = it.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 + top0 }; });
+    const r = hold.el.getBoundingClientRect();
+    hold.ox = hold.x0 - (r.left + r.width / 2); hold.oy = hold.y0 - (r.top + r.height / 2);
+    hold.on = true; hold.at = items.indexOf(hold.el); hold.from = hold.at;
+    every.classList.add('arranging'); hold.el.classList.add('lift');
+    try { navigator.vibrate && navigator.vibrate(8); } catch {}
+    follow();
+  }
+  // the held app under the finger
+  function follow() {
+    const s = hold.slots[hold.at], dy = scroller.scrollTop;
+    hold.el.style.transform = `translate(${hold.x - hold.ox - s.x}px, ${hold.y - hold.oy - (s.y - dy)}px)`;
+  }
+  // the place nearest the finger: the held app moves there, the others slide to make room
+  function moveTo() {
+    const dy = scroller.scrollTop, fx = hold.x - hold.ox, fy = hold.y - hold.oy + dy;
+    let to = hold.at, best = Infinity;
+    hold.slots.forEach((s, i) => { const d = (s.x - fx) ** 2 + (s.y - fy) ** 2; if (d < best) { best = d; to = i; } });
+    if (to !== hold.at) {
+      const items = [...every.children], first = new Map(items.map(it => [it, it.getBoundingClientRect()]));
+      every.insertBefore(hold.el, items.filter(x => x !== hold.el)[to] || null);
+      hold.at = to;
+      for (const it of items) {
+        if (it === hold.el) continue;
+        const a = first.get(it), b = it.getBoundingClientRect();
+        if (Math.abs(a.left - b.left) < 1 && Math.abs(a.top - b.top) < 1) continue;
+        it.classList.remove('settle'); it.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px)`;
+        void it.offsetWidth; it.classList.add('settle'); it.style.transform = '';
+      }
+    }
+    follow();
+  }
+  // near the top or bottom of the screen, Home scrolls along with you
+  function edgeScroll() {
+    if (!arranging()) return;
+    const h = innerHeight, v = hold.y < 110 ? -Math.ceil((110 - hold.y) / 10) : hold.y > h - 110 ? Math.ceil((hold.y - (h - 110)) / 10) : 0;
+    if (v) { const was = scroller.scrollTop; scroller.scrollTop += v; if (scroller.scrollTop !== was) moveTo(); }
+    requestAnimationFrame(edgeScroll);
+  }
+  addEventListener('pointermove', e => {
+    if (!hold || e.pointerId !== hold.pid) return;
+    hold.x = e.clientX; hold.y = e.clientY;
+    if (!hold.on) { if (Math.hypot(hold.x - hold.x0, hold.y - hold.y0) > SLOP) letGo(false); return; }
+    if (!hold.scrolling) { hold.scrolling = true; requestAnimationFrame(edgeScroll); }
+    moveTo();
+  });
+  // once it's lifted, the finger moves the app, not the page (iOS asks the touch itself)
+  addEventListener('touchmove', e => { if (arranging()) e.preventDefault(); }, { passive: false });
+  every.addEventListener('contextmenu', e => { if (hold) e.preventDefault(); });
+  addEventListener('pointerup', e => { if (hold && e.pointerId === hold.pid) letGo(true); });
+  addEventListener('pointercancel', e => { if (hold && e.pointerId === hold.pid) letGo(true); });
+  function letGo(keep) {
+    const h = hold; hold = null; clearTimeout(h.t);
+    if (!h.on) return;
+    quiet = Date.now() + 500;   // the click that follows a hold isn't a tap
+    const el = h.el;
+    el.classList.remove('lift'); el.classList.add('settle'); el.style.transform = '';
+    every.classList.remove('arranging');
+    setTimeout(() => { for (const it of every.children) { it.classList.remove('settle'); it.style.transform = ''; } }, 300);
+    if (keep && h.at !== h.from) {
+      const now = [...every.children].map(it => it.dataset.every);
+      order = az(ALL).join() === now.join() ? [] : now;   // back as A to Z: nothing to keep
+      put(ORDER, order); syncPrefs();
+      every._html = null;
+      $('azBtn').hidden = !order.length;
+    }
+  }
+  addEventListener('click', e => { if (Date.now() < quiet) { e.preventDefault(); e.stopPropagation(); } }, true);
+  $('azBtn').onclick = () => { order = []; put(ORDER, order); syncPrefs(); paintHome(true); toast('Every app, A to Z'); };
+
   // the icons that aren't buttons themselves (their pin is): Return or Space opens the app
   $('home').addEventListener('keydown', e => { const o = e.target.closest('.happ'); if (o && e.target === o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(o.dataset.open); } });
   // anywhere in aOS (Home, an app's page): data-open opens that app inside aOS
@@ -519,6 +612,7 @@
     if (id && !frames[id]) load(id, at);
     else { if (id && id !== prev) recheck(id); if (id && at) point(frames[id].firstChild, `../${id}/` + at); }
     current = id;
+    if (current) foldBrief();   // folded for when you come back
     if (current) { used = used.filter(x => x !== current); used.push(current); if (current !== prev) noteUse(current); }
     clearTimeout(hideT);
     if (!current && prev) hideT = setTimeout(() => { if (!current) reveal(null); }, 400);   // it slides out first
@@ -707,7 +801,10 @@
   // What's in the apps comes from aOS/home-find.js, read from this phone. Return opens the top hit;
   // with no app to open, it asks Ipsy.
   const q = $('hq');
-  const words = id => [name(id), tag(id), (SPACES.find(s => s[1].includes(id)) || [''])[0]].join(' ').toLowerCase();
+  // the groups Home once had, still words that find their apps ("kids", "family")
+  const GROUPS = { family: 'calendar meals notes house orders', 'every day': 'weather news mail clock podcasts', 'out and about': 'travel places', you: 'fitness drinks money improve', kids: 'sparkle school' };
+  const group = id => (Object.entries(GROUPS).find(([, ids]) => ids.split(' ').includes(id)) || [''])[0];
+  const words = id => [name(id), tag(id), group(id)].join(' ').toLowerCase();
   function findApps(t) {
     t = t.trim().toLowerCase(); if (!t) return [];
     const rank = id => { const n = name(id).toLowerCase();
