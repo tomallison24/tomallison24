@@ -61,7 +61,7 @@ const MOVE_MAX = 5 * 1024 * 1024, MOVE_DAYS = 2;       // all of aOS's, moving t
 // world clocks, alarms, Bedtime, settings and recent timers, Calendar's settings, each app's design, aOS's
 // look, light or dark, Favorites and your helper (Ipsy, and its name); and which Google account Mail uses, and that Gmail is connected (so
 // Mail signs in to it by itself on a new device). Never a sign-in, a token or what a device keeps for itself.
-export const PREF_ITEM = /^(wx\.(places|units|view)|allison-clock-v1#(cities|alarms|sleep|set|tsound|recents)|allison-calendar-v1-settings|allison-fitness-v1-(step|move)-goal|allison-podcasts-v1#set|allison-orders-v1#kinds|mail\.hint|mail\.token\.ever|design\.[a-z]{2,16}|aos\.look|aos\.lang|aos\.home\.picks|aos\.helper|home\.settings#theme)$/;
+export const PREF_ITEM = /^(wx\.(places|units|view)|allison-clock-v1#(cities|alarms|sleep|set|tsound|recents)|allison-calendar-v1-settings|allison-fitness-v1-(step|move)-goal|allison-podcasts-v1#set|allison-orders-v1#kinds|mail\.hint|mail\.token\.ever|design\.[a-z]{2,16}|aos\.look|aos\.lang|aos\.home\.(picks|order)|aos\.helper|home\.settings#theme)$/;
 const PREF_MAX = 64 * 1024, PREFS_MAX = 192 * 1024;
 const pub = u => u && { id: u.id, name: u.name, role: u.role };
 // the apps aOS offers (home/welcome.js APPS), for "installed"

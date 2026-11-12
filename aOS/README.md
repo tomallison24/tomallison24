@@ -154,19 +154,25 @@ pastel stop that slides between them, and your avatar top right.
   invite link or the owner's first set-up opens it by itself, and
   `../aOS/#whats-new` (the apps' update screens link there) opens it at Updates.
 
-## The morning brief and the next trip
+## The brief
 
-At the top of Home (both layouts), `aOS/home-find.js` `brief()` works out, each time Home is drawn and
+At the top of Home (every layout), `aOS/home-find.js` `brief()` works out, each time Home is drawn and
 only on the phone (nothing is sent anywhere, no AI is asked), a card of today in a line an app: how many
 events, rain likely where Weather is, deliveries due and pickups waiting (Orders, not hidden ones),
 tonight's dinner (Meals) and reminders due or late (Notes); six lines at most, each opening its app.
+It's folded to one row (This morning, afternoon or evening, its apps' icons and how many things); a tap
+opens it, and it's folded again whenever you come back to Home (opening aOS, back from an app or Today).
 
-Under it, when the next trip (Travel's bookings back to back, within two days of each other) starts within
-a week or is under way, a trip card: where, the dates, deliveries due while away, dinners planned and
-events on the calendar for those days. **Get ready with Ipsy** asks Ipsy in aOS to help get ready (the
-forecast there, a packing list in Notes, the deliveries, dinners and calendar): Ipsy does it with the
-apps' own tools, so each change shows with Undo, and anything that asks first still asks.
-`aOS/scripts/find-test.mjs` tests both, on any day.
+`brief()` still works out the next trip (`trip`), but Home no longer shows a card for it (the owner asked
+for it off Home). `aOS/scripts/find-test.mjs` tests both, on any day.
+
+## Every app
+
+Under Favorites (Classic), every app in one card, four across, A to Z by name. Hold an app a moment and
+it lifts: drag it and the others slide out of its way; let go and it stays there (`aos.home.order`, which
+follows you between devices; an app that's new since goes at the end). **A to Z** beside the heading
+puts them back. Moving before it lifts is a scroll, and a hold never opens the app. Thumb arc's "Everything
+else" follows the same order.
 
 ## Versions, welcomes and walkthroughs
 

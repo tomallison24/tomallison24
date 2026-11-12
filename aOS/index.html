@@ -426,30 +426,27 @@
   .wid.cal em { display: block; font-style: normal; font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
   .wid.cal b { display: block; margin-top: 2px; font-size: 18px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wid.cal small { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* the morning brief and the next trip, on Home: a widget card each (aOS/home-tab.js paintBrief) */
+  /* the brief on Home: a widget card (aOS/home-tab.js paintBrief), folded to one row; it opens and folds smoothly */
   #hbrief { display: grid; gap: 10px; margin: 14px 0; }
   #hbrief:empty { display: none; }
-  .wid.brief { padding: 4px 8px; }
+  .wid.brief { padding: 4px 8px; transition: padding .3s; }
   .wid.brief.open { padding-bottom: 8px; }
   .wid.brief .bhead { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 8px; text-align: left; }
   .wid.brief .bhead em { flex: 1; font-style: normal; font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
   .wid.brief .bsum { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
-  .wid.brief .bsum img { width: 20px; height: 20px; border-radius: 6px; }
+  .wid.brief .bsum img { width: 20px; height: 20px; border-radius: 6px; transition: opacity .2s, transform .25s; }
   .wid.brief .bsum b { margin-left: 4px; font-weight: 600; white-space: nowrap; }
-  .wid.brief .bsum svg { width: 16px; height: 16px; transition: transform .25s; }
+  .wid.brief .bsum svg { width: 16px; height: 16px; transition: transform .3s cubic-bezier(.3,1.4,.5,1); }
   .wid.brief.open .bsum svg { transform: rotate(180deg); }
-  .wid.brief.open .bsum img { display: none; }
-  .wid.brief .blines { width: 100%; }
-  .wid.brief:not(.open) .blines { display: none; }
-  .wid.trip > em { display: block; padding: 0 8px 4px; font-style: normal; font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
-  .wid.brief .bl { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 14px; font-size: 15px; line-height: 1.3; text-align: left; }
+  .wid.brief.open .bsum img { opacity: 0; transform: scale(.6); }
+  .wid.brief .blines { display: grid; grid-template-rows: 0fr; width: 100%; visibility: hidden; transition: grid-template-rows .32s cubic-bezier(.2,.8,.2,1), visibility 0s .32s; }
+  .wid.brief.open .blines { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows .32s cubic-bezier(.2,.8,.2,1); }
+  .wid.brief .bin { min-height: 0; overflow: hidden; }
+  .wid.brief .bl { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 14px; font-size: 15px; line-height: 1.3; text-align: left; opacity: 0; transform: translateY(-6px); transition: opacity .2s, transform .2s; }
+  .wid.brief.open .bl { opacity: 1; transform: none; transition: opacity .3s calc(.04s * var(--i, 0) + .06s), transform .3s calc(.04s * var(--i, 0) + .06s); }
   .wid.brief .bl img { flex: none; width: 24px; height: 24px; border-radius: 7px; }
   .wid.brief .bl span { min-width: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .wid.trip { padding: 14px 16px; gap: 2px; }
-  .wid.trip b { font-size: 20px; font-weight: 650; }
-  .wid.trip small { font-size: 13px; color: var(--muted); }
-  .wid.trip ul { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; line-height: 1.5; }
-  .wid.trip .tgo { margin-top: 10px; padding: 9px 14px; border-radius: 999px; font-size: 14px; font-weight: 650; background: var(--accent); color: var(--on); }
+  @media (prefers-reduced-motion: reduce) { .wid.brief, .wid.brief .blines, .wid.brief.open .blines, .wid.brief .bl, .wid.brief.open .bl, .wid.brief .bsum img, .wid.brief .bsum svg { transition: none; } }
   /* an app's icon, with its name under it: a favorite, or one in Every app */
   .fav, .happ { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; text-align: center; cursor: pointer; }
   .fav b, .happ b { display: block; max-width: 100%; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -468,11 +465,20 @@
   @keyframes jiggle { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
   .fav .pin svg, .hpin svg { display: block; width: 100%; height: 100%; }
   .hint { margin: -2px 2px 12px; font-size: 14px; color: var(--muted); }
-  /* Every app: each group a card of icons; a group of two shares its row with another */
-  .hcats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .hcat { grid-column: 1 / -1; min-width: 0; padding: 14px 6px 12px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
-  .hcat.half { grid-column: auto; }
-  .hcat h3 { margin: 0 10px 10px; font-size: 15px; font-weight: 650; }
+  /* Every app: one card, four across, A to Z or the order you put them in (hold an app, then drag it: aOS/home-tab.js) */
+  .hall { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 4px; padding: 16px 6px 14px; border-radius: 24px; background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); }
+  .hall .happ { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+  .hall .happ img { -webkit-user-drag: none; }
+  .hall .happ .ic img { width: 58px; height: 58px; border-radius: 16px; }
+  /* held: the icon lifts and follows your finger; the others make room as it passes (and shiver a little, as on an iPhone) */
+  .hall .happ.lift { z-index: 5; transition: none; pointer-events: none; }
+  .hall .happ.lift .ic { transform: scale(1.14); filter: drop-shadow(0 10px 16px rgba(0,0,0,.28)); transition: transform .18s cubic-bezier(.3,1.5,.5,1), filter .18s; }
+  .hall .happ.lift b { opacity: 0; }
+  .hall.arranging .happ:not(.lift) .ic { animation: jiggle .26s ease-in-out infinite alternate; }
+  .hall.arranging .happ:nth-child(2n):not(.lift) .ic { animation-delay: -.13s; }
+  .hall .happ.settle { transition: transform .26s cubic-bezier(.2,.9,.25,1.1); }
+  #azBtn[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .hall.arranging .happ .ic { animation: none; } .hall .happ.settle, .hall .happ.lift .ic { transition: none; } }
   .hg { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 14px 2px; }
   /* Thumb arc (aOS/home-tab.js, html[data-home="arc"]): the fixed four on an inner ring and four favorites on an outer one,
      in the bottom corner your thumb rests on (data-hand="left": the other), every other app above them; the rest of Home gives way */
@@ -955,12 +961,12 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <button type="button" class="hqx" id="hqx" aria-label="Clear" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div id="hfound" class="hres" aria-live="polite" hidden></div>
   <div id="hmain">
-    <div id="hbrief"></div>   <!-- the morning brief and the next trip (aOS/home-find.js brief, drawn by home-tab.js) -->
+    <div id="hbrief"></div>   <!-- the brief (aOS/home-find.js brief, drawn by home-tab.js) -->
     <div class="sec"><h2>Favorites</h2><button type="button" id="favEdit">Edit</button></div>
     <p class="hint" id="favHint" hidden>Tap a star to pin an app, up to four. The rest fill in with the apps you use most.</p>
     <div class="favs" id="favs"></div>
-    <div class="sec"><h2>Every app</h2></div>
-    <div class="hcats" id="spaces"></div>
+    <div class="sec"><h2>Every app</h2><button type="button" id="azBtn" hidden>A to Z</button></div>
+    <div class="hcat hall" id="spaces" aria-label="Every app. Hold an app, then drag it to move it"></div>
     <!-- Thumb arc (Account > Appearance > Home layout): what's next, every other app, and the two rings in the corner -->
     <div class="arconly hglance" id="hglance"></div>
     <div class="sec arconly"><h2>Everything else</h2><button type="button" id="arcEdit">Edit</button></div>
