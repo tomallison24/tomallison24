@@ -58,7 +58,7 @@
   let hold = null, quiet = 0;   // an app held in Every app, to move it; until when a click is its drop's, not a tap (below)
   const arranging = () => !!(hold && hold.on);
   const showTab = window.aosTabs.show;
-  window.aosTabs.show = t => { if (t !== tab) foldBrief(); showTab(t); tab = t; paintQuick(); if (t === 'home') fitArc(); };
+  window.aosTabs.show = t => { const was = tab; if (t !== tab) foldBrief(); showTab(t); tab = t; paintQuick(); if (t === 'home') fitArc(); if (t === 'home' && was !== 'home' && !current) ripple(null); };
   acts.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) window.aosTabs.show(b.dataset.tab); });
   showTab('home');   // (the apps along the bottom are drawn with Home, below)
 
@@ -277,6 +277,29 @@
     setHTML($('spaces'), everyOrder().map(id =>
       `<div class="happ" role="button" tabindex="0" data-open="${id}" data-every="${id}" aria-label="${label(id)}">${ic(id)}${pinnable(id) ? `<button type="button" class="hpin${pins.includes(id) ? ' on' : ''}" data-pin="${id}" aria-label="${pins.includes(id) ? 'Unpin' : 'Pin'} ${esc(name(id))}">${STAR(pins.includes(id))}</button>` : ''}<b>${esc(name(id))}</b></div>`).join(''));
   }
+  // ---- the ripple: back on Home, its icons and widgets come in as a ripple ----
+  // Back from an app, out from that app's icon (on screen, wherever it is on Home); back from Today, or when its icon
+  // isn't on screen, a wave down from the top. Each one fades up and grows a little past its size, then settles; the
+  // further from where it starts, the later. Only what's on screen; none with Reduce Motion, while you move an app or in Edit.
+  // after: how long before it starts (the app's window sliding away), its icons hidden from the start.
+  let tapped = null;   // the icon you opened the app with (the click handler, below)
+  const RIPPLE = '#favs > *, #spaces > .happ, #hgrid > .gapp, #hgsky > *, #hglance > *, #hrest > .happ, #harc > button';
+  function ripple(from, after = 0) {
+    try { if (matchMedia('(prefers-reduced-motion: reduce)').matches || editing() || arranging() || !Element.prototype.animate) return; } catch { return; }
+    const els = [...document.querySelectorAll(RIPPLE)].filter(el => { const r = el.getBoundingClientRect(); return r.width && r.bottom > 0 && r.top < innerHeight; });
+    if (!els.length) return;
+    const o = from && (els.includes(tapped) && tapped.dataset.open === from ? tapped : els.find(el => el.dataset.open === from && !el.classList.contains('wid'))), or = o && o.getBoundingClientRect();
+    const cx = or ? or.left + or.width / 2 : 0, cy = or ? or.top + or.height / 2 : 0;
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      const d = or ? Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy) : Math.max(0, r.top) + r.left * .25;
+      for (const a of el.getAnimations()) if (a.id === 'ripple') a.cancel();
+      const a = el.animate([{ opacity: 0, transform: 'scale(.78) translateY(12px)' }, { opacity: 1, transform: 'scale(1.04)', offset: .7 }, { opacity: 1, transform: 'none' }],
+        { duration: 460, delay: after + Math.min(d * .75, 520), easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'backwards' });
+      a.id = 'ripple';
+    }
+  }
+
   // ---- the brief (aOS/home-find.js brief): worked out on the phone each time Home is drawn, in every layout; a line
   // opens its app. It's folded to one row (its apps' icons and how many things); a tap on that row opens or folds it.
   // It's folded again whenever you come back to Home: opening aOS, back from an app or from Today, back on the phone.
@@ -575,6 +598,7 @@
     const o = e.target.closest('[data-open]');
     if (!o || e.target.closest('[data-pin], [data-app]') || (editing() && o.closest('#favs, #harc, #hgrid'))) return;
     e.preventDefault();
+    tapped = o;   // where the ripple starts from, on the way back
     if (o.closest('#hfound')) { const at = o.dataset.at; clearFind(); show(o.dataset.open, at); } else show(o.dataset.open);
   });
 
@@ -698,7 +722,7 @@
     if (prev && prev !== current && restartLater.delete(prev)) whenFree(prev, () => restart(prev));   // a look that came while it was on screen
     body.classList.toggle('in-app', !!current);
     $('appwin').setAttribute('aria-hidden', String(!current));
-    if (!current) { paintHome(true); if (prev) syncPrefs(); }   // an app's design may have changed its icon; and its settings follow you
+    if (!current) { paintHome(true); if (prev) { syncPrefs(); ripple(prev, 200); } }   // back on Home: it ripples in from the app you left   // an app's design may have changed its icon; and its settings follow you
     remember();
     tint();
     if (current) watch(current);

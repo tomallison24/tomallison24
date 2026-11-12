@@ -12,6 +12,7 @@
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
 //   - pull to refresh at the top of Home; counts on Notes and Orders (what's due); the Weather widget's sky as it is outside
+//   - back on Home from an app, its icons ripple in out from that app's icon
 //   - Thumb arc (Home layout): the fixed four and four favorites on two rings in the corner, every app on the
 //     first screen (a small phone too), the orb going to the Ipsy bar, Edit, the left hand, and Classic again
 //   - Layers' grid (Classic, in Layers): every app as a pebble, the top row your pins, Edit swaps two and
@@ -294,9 +295,16 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   const pill = await pg.locator('#appback').boundingBox();
   check(pill && pill.y < 50 && pill.x < 30, `"‹ aOS" floats in the top left corner ${tag}`);
 
-  await pg.locator('#appback').click(); await pg.waitForTimeout(600);
+  await pg.locator('#appback').click(); await pg.waitForTimeout(30);
+  // back on Home, it ripples in out from Notes: Notes first, the rest later the further they are from it, then all of it settled
+  const rip = await pg.evaluate(() => { const at = el => { const a = el.getAnimations().find(x => x.id === 'ripple'); return a ? a.effect.getTiming().delay : null; };
+    const els = [...document.querySelectorAll('#spaces > .happ')].filter(el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; });
+    const n = document.querySelector('#spaces > .happ[data-open="notes"]'), ds = els.map(at);
+    return { notes: at(n), all: ds.every(d => d != null), min: Math.min(...ds), max: Math.max(...ds), hidden: getComputedStyle(els.find(e => e !== n)).opacity }; });
+  check(rip.all && rip.notes === rip.min && rip.max > rip.notes && +rip.hidden < .5, `back on Home, the icons ripple in out from Notes (${rip.notes} to ${rip.max} ms) ${tag}`);
+  await pg.waitForTimeout(1300);
   s = await state();
-  check(!s.inApp && s.hash === '' && await pg.isVisible('#home'), `"‹ aOS" goes back ${tag}`);
+  check(!s.inApp && s.hash === '' && await pg.isVisible('#home') && await pg.evaluate(() => !document.getAnimations().some(a => a.id === 'ripple' && a.playState === 'running')), `"‹ aOS" goes back ${tag}`);
   await pg.evaluate(() => { window.__same = 1; aosHomeTab.show('notes'); }); await pg.waitForTimeout(500);
   await pg.goBack(); await pg.waitForTimeout(500);
   s = await state();

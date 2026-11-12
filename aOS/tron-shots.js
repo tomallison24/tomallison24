@@ -104,6 +104,7 @@
 
   function fire() {
     if (shot || !on()) return false;
+    try { if (document.getAnimations().some(x => x.id === 'ripple' && x.playState === 'running')) return false; } catch {}   // Home still rippling in (aOS/home-tab.js): its boxes are moving
     const list = boxes(); if (!list.length) return false;
     const h = head();
     // one of the two nearest boxes (not the last one shot at, when there's another), so the paths stay short
