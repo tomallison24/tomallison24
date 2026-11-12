@@ -18,7 +18,7 @@
   const setAt = (path, v) => { const ks = path.split('.'), last = ks.pop(), o = ks.reduce((o, k) => o[k], H); o[last] = v; };
   const parse = v => v === 'true' ? true : v === 'false' ? false : v === 'null' ? null : /^-?\d+(\.\d+)?$/.test(v) ? +v : v;
 
-  // ---- The look (labs/aos-look's settings carry over) ----
+  // ---- The look: Light or dark and the glass, kept on this phone ----
   const mq = matchMedia('(prefers-color-scheme: dark)');
   const look = { theme: get('labs.aoslook.theme', 'auto'), glass: +get('labs.aoslook.glass', 50) };
   function applyLook() {
@@ -318,7 +318,7 @@
   function vMore() {
     const L = [['security', 'shield', 'var(--red)'], ['around', 'house', 'var(--teal)'], ['autos', 'sync', 'var(--indigo)']];
     return group(L.map(([v, icn, c]) => row({ btn: `data-go="${v}"`, icon: icn, c, title: VIEWS[v].name, sub: summary(v), chev: true })))
-      + lbl('This test page') + group([row({ btn: 'data-open="settings:"', icon: 'gear', c: 'var(--ink3)', title: 'Settings', chev: true }), row({ btn: 'data-act="toAos"', icon: 'grid', c: 'var(--blue)', title: 'Back to aOS', sub: 'labs/aos-look', chev: true })]);
+      + lbl('This test page') + group([row({ btn: 'data-open="settings:"', icon: 'gear', c: 'var(--ink3)', title: 'Settings', chev: true }), row({ btn: 'data-act="toLabs"', icon: 'grid', c: 'var(--blue)', title: 'Back to Labs', chev: true })]);
   }
 
   // ---- Security ----
@@ -568,7 +568,7 @@
       + lbl('Home Assistant') + group([row({ icon: 'house', c: 'var(--teal)', title: 'Status', v: 'Preview' }), row({ btn: 'data-act="toast" data-v="Connecting is in the real Home app"', icon: 'link', c: 'var(--blue)', title: 'Connect', chev: true })])
       + lbl('Appearance') + `<div class="seg" role="group">${[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => `<button data-act="theme" data-v="${v}" aria-pressed="${look.theme === v}">${l}</button>`).join('')}</div>`
       + lbl('Glass') + `<div class="group" style="padding:6px 16px"><div class="hd" style="min-height:52px"><span class="small muted">Clear</span>${rng('data-ract="glass" aria-label="Glass, clear to tinted"', look.glass, 0, 100, 'var(--blue)')}<span class="small muted">Tinted</span></div></div>`
-      + `<p class="note">The same as aOS's Lab: every pane follows it.</p>`
+      + `<p class="note">Every pane follows it.</p>`
       + lbl('Try') + group([row({ icon: 'leaf', c: 'var(--green)', title: "Everyone's away", sub: 'Shows the Away pill and the Nests in Eco', right: sw(H.away, 'data-tog="away" data-then="away"', "Everyone's away") }),
         row({ btn: 'data-act="reset"', icon: 'sync', c: 'var(--ink3)', title: 'Start the sample again' })])
       + lbl('Security') + group([row({ btn: 'data-act="toast" data-v="Not in this test page"', icon: 'key', c: 'var(--ink3)', title: 'Settings PIN', chev: true }), row({ btn: 'data-act="toast" data-v="Not in this test page"', icon: 'share', c: 'var(--blue)', title: 'Share Home', chev: true }),
@@ -588,8 +588,8 @@
   function render() {
     const v = VIEWS[UI.view];
     $('title').textContent = v.name; $('mini').textContent = v.name; $('sum').textContent = summary(UI.view);
-    $('back').innerHTML = ic('left', 22, 2.4) + (v.parent ? 'More' : 'aOS');
-    $('back').setAttribute('aria-label', v.parent ? 'Back to More' : 'Back to aOS');
+    $('back').innerHTML = ic('left', 22, 2.4) + (v.parent ? 'More' : 'Labs');
+    $('back').setAttribute('aria-label', v.parent ? 'Back to More' : 'Back to Labs');
     $('view').innerHTML = { fav: vFav, climate: vClimate, lights: vLights, media: vMedia, more: vMore, security: vSecurity, around: vAround, autos: vAutos }[UI.view]();
     const tab = v.parent || UI.view;
     $('tabs').innerHTML = Object.entries(VIEWS).filter(([, x]) => x.tab).map(([id, x]) => `<button role="tab" data-tab="${id}" aria-selected="${id === tab}">${ic(id === tab && id === 'fav' ? 'star' : id === 'fav' ? 'starO' : x.icon, 25)}${x.name}</button>`).join('');
@@ -667,7 +667,7 @@
     sendBug() { const t = ($('bugText') || {}).value || ''; if (!t.trim()) return toast('Say what went wrong first'); log('Bug report', t.trim().slice(0, 40), 'routine'); closeSheet(); toast('Logged. Thank you'); },
     theme(el) { look.theme = el.dataset.v; put('labs.aoslook.theme', look.theme); applyLook(); },
     reset() { location.reload(); },
-    toAos() { location.href = '../aos-look/'; },
+    toLabs() { location.href = '../'; },
     toast(el) { toast(el.dataset.v); },
   };
   const RACT = {
@@ -693,7 +693,7 @@
     render();
   });
   $('shDone').onclick = closeSheet; $('scrim').onclick = closeSheet;
-  $('back').onclick = () => { const v = VIEWS[UI.view]; if (v.parent) go(v.parent); else location.href = '../aos-look/'; };
+  $('back').onclick = () => { const v = VIEWS[UI.view]; if (v.parent) go(v.parent); else location.href = '../'; };
   $('gear').onclick = () => openSheet('settings', '');
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && UI.sheet) closeSheet(); });
 
