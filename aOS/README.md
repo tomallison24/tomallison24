@@ -174,6 +174,18 @@ follows you between devices; an app that's new since goes at the end). **A to Z*
 puts them back. Moving before it lifts is a scroll, and a hold never opens the app. Thumb arc's "Everything
 else" follows the same order.
 
+## Counts, the weather's sky and pull to refresh
+
+- **Counts on the icons**: Mail's unread (as before), and what the brief counts (`aosFind.badges()`): deliveries due
+  today and pickups waiting on Orders, reminders due today or late on Notes. In every layout.
+- **The Weather widget's sky** (Classic): as it is outside (`aosFind.weather().kind`, Weather's own condition):
+  the sun glowing, stars twinkling at night (in Vintage the sun turns into a pale moon, and dims behind clouds,
+  rain, snow or fog), clouds drifting, rain or snow falling, a flash of lightning, the wind. Drawn in the widget's
+  own ink, behind what it says; still, with Reduce Motion.
+- **Pull to refresh**: at the top of Home, pull down and let go. The refresh sign comes down, turns and spins while
+  the forecast is fetched again (when over a minute old), Mail's count read again and your settings from your
+  other devices brought in; then Home is drawn again. Pulled too little, it springs back.
+
 ## Versions, welcomes and walkthroughs
 
 All of it is in `../home/welcome.js`, which every app loads with its own name

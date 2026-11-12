@@ -229,21 +229,43 @@
     quick.hidden = tab === 'home';
     if (!quick.firstChild) { quick.innerHTML = `<button type="button" class="qhome" aria-label="${HOME}">${HOME_SVG}</button>`; quick.firstChild.onclick = () => window.aosTabs.show('home'); }
   }
-  // an app's icon, with Mail's unread count on it
-  const ic = id => { const n = unread[id] || 0;
+  // an app's icon, with its count on it: Mail's unread, and what the brief counts (aOS/home-find.js badges):
+  // deliveries due today and pickups waiting on Orders, reminders due today or late on Notes
+  let due = {};
+  const count = id => unread[id] || due[id] || 0;
+  const COUNTED = { mail: n => n + ' unread', orders: n => n + ' due today or waiting', notes: n => n + (n === 1 ? ' reminder' : ' reminders') + ' due' };
+  const ic = id => { const n = count(id);
     return `<span class="ic"><img src="${icon(id)}" alt="" draggable="false">${n ? `<em class="unread" aria-hidden="true">${n > 99 ? '99+' : n}</em>` : ''}</span>`; };
-  const label = id => esc(name(id)) + (unread[id] ? `, ${unread[id]} unread` : '');
+  const label = id => { const n = count(id); return esc(name(id)) + (n ? ', ' + (COUNTED[id] ? COUNTED[id](n) : n + ' new') : ''); };
+  // the Weather widget's sky, as it is outside (aosFind.weather().kind, Weather's own words): the sun glowing, stars
+  // twinkling, clouds drifting, rain or snow falling, a flash of lightning, the wind. Each drop has its place and pace
+  // worked out from its number, so the widget drawn again is the same and isn't replaced (setHTML).
+  const SKY = { sunny: 'sun', 'clear-night': 'stars', partlycloudy: 'sun clouds', cloudy: 'clouds', fog: 'clouds fog', rainy: 'clouds rain', pouring: 'clouds rain heavy',
+    'lightning-rainy': 'clouds rain flash', lightning: 'clouds flash', snowy: 'clouds snow', 'snowy-rainy': 'clouds rain snow', hail: 'clouds snow', windy: 'wind', 'windy-variant': 'wind clouds' };
+  function sky(kind) {
+    const has = (SKY[kind] || '').split(' ').filter(Boolean); if (!has.length) return '';
+    const bits = (cls, n, f) => Array.from({ length: n }, (_, i) => `<i class="${cls}" style="${f(i)}"></i>`).join('');
+    const at = (i, k) => ((i * k) % 97) / 97;   // 0..1, spread out
+    return `<span class="wsky ${has.join(' ')}" aria-hidden="true">`
+      + (has.includes('stars') ? bits('st', 9, i => `left:${8 + at(i, 37) * 84}%;top:${6 + at(i, 59) * 60}%;--d:${(-at(i, 23) * 3).toFixed(2)}s`) : '')
+      + (has.includes('clouds') ? bits('cl', 2, i => `top:${14 + i * 26}%;--d:${-i * 9}s;--t:${26 + i * 8}s`) : '')
+      + (has.includes('rain') ? bits('rn', has.includes('heavy') ? 22 : 14, i => `left:${at(i, 41) * 100}%;--d:${(-at(i, 67) * 1.2).toFixed(2)}s;--t:${(0.7 + at(i, 29) * 0.5).toFixed(2)}s`) : '')
+      + (has.includes('snow') ? bits('sn', 12, i => `left:${at(i, 43) * 100}%;--d:${(-at(i, 71) * 6).toFixed(2)}s;--t:${(4 + at(i, 31) * 3).toFixed(2)}s`) : '')
+      + (has.includes('wind') ? bits('wd', 3, i => `top:${30 + i * 18}%;--d:${-i * 1.1}s`) : '')
+      + '</span>';
+  }
   function paintHome(now = false) {   // now: a change you just made (a pin, back on Home), drawn at once
     if (!now && (down || Date.now() - upAt < 450)) { clearTimeout(later); later = setTimeout(paintHome, 500); return; }   // a finger on the screen: once it's lifted
     $('hdate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     paintQuick();
     const F = window.aosFind || {}, wx = F.weather ? F.weather() : null, next = F.next ? F.next() : null;
+    try { due = F.badges ? F.badges() : {}; } catch { due = {}; }
     paintBrief(F.brief ? F.brief() : null);
     if (arc()) return paintArc(wx, next);
     if (gridOn()) return paintGrid(wx, next);
     const tiles = favorites().map(f => `<button type="button" class="fav${f.why === 'pin' ? ' pinned' : ''}" data-open="${f.id}" data-fav="${f.id}" aria-label="${label(f.id)}">${ic(f.id)}<i class="pin" aria-hidden="true">${STAR(f.why === 'pin')}</i><b>${esc(name(f.id))}</b></button>`).join('');
-    setHTML($('favs'), (known('weather') ? `<button type="button" class="wid wx" data-open="weather" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
-        <span class="wh"><img src="${icon('weather')}" alt="">${wx && wx.place ? esc(wx.place) : 'Weather'}</span>
+    setHTML($('favs'), (known('weather') ? `<button type="button" class="wid wx" data-open="weather" data-kind="${wx ? esc(wx.kind || '') : ''}" style="--c:${appHue('weather')}" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}">
+        ${sky(wx && wx.kind)}<span class="wh"><img src="${icon('weather')}" alt="">${wx && wx.place ? esc(wx.place) : 'Weather'}</span>
         <span class="big">${wx ? esc(wx.temp) : '–'}</span><small>${wx ? esc(wx.text) : 'Open for the forecast'}</small>${wx && wx.hilo ? `<small>${esc(wx.hilo)}</small>` : ''}</button>` : '')
       + tiles
       + (known('calendar') ? `<button type="button" class="wid cal" data-open="calendar" style="--c:${appHue('calendar')}" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">
@@ -331,7 +353,7 @@
         ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Today</b><span>Nothing else on</span>'}</button>` : ''));
     setHTML($('hgrid'), order.map((id, i) => (i === 4 ? '<i class="grule" aria-hidden="true"></i>' : '')
       + `<button type="button" class="gapp${ed && gridPins().includes(id) ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--ink-${id}, var(--sp-every));--pale:var(--pale-${id}, var(--orb-on))" aria-label="${label(id)}${ed ? ': keep on the top row' : ''}"${ed ? ` aria-pressed="${gridPins().includes(id)}"` : ''}>`
-      + `<span class="orb${window.aosGlyphs && aosGlyphs[id] ? ' pebble' : ''}">${pebble(id)}</span>${unread[id] && !ed ? `<em aria-hidden="true">${unread[id] > 99 ? '99+' : unread[id]}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
+      + `<span class="orb${window.aosGlyphs && aosGlyphs[id] ? ' pebble' : ''}">${pebble(id)}</span>${count(id) && !ed ? `<em aria-hidden="true">${count(id) > 99 ? '99+' : count(id)}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));
   }
   // In Edit, a tap keeps an app on the top row (one of your pins) or lets it go back to its place, A to Z
   function gridTap(id) {
@@ -492,6 +514,59 @@
   }
   addEventListener('click', e => { if (Date.now() < quiet) { e.preventDefault(); e.stopPropagation(); } }, true);
   $('azBtn').onclick = () => { order = []; put(ORDER, order); syncPrefs(); paintHome(true); toast('Every app, A to Z'); };
+
+  // ---- pull to refresh: at the top of Home, pull down and let go ----
+  // The forecast is fetched again (when the last one is over a minute old), Mail's count read again, your settings
+  // from your other devices brought in, and Home drawn again: the brief, the widgets, the counts on the icons.
+  // Pulled less than far enough, it just springs back.
+  const PULL = 72, pullEl = document.createElement('div');
+  pullEl.id = 'hpull'; pullEl.setAttribute('aria-hidden', 'true');
+  pullEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/></svg>';
+  body.append(pullEl);
+  let pull = null, refreshing = false;
+  const homeEl = $('home');
+  const pulled = d => d < PULL ? d * .55 : PULL * .55 + (d - PULL) * .18;   // it gets harder the further it goes
+  function drawPull(d) {
+    const y = pulled(d);
+    homeEl.style.transform = y ? `translateY(${y}px)` : '';
+    pullEl.style.opacity = Math.min(1, d / PULL).toFixed(2);
+    pullEl.style.transform = `translateY(${(y * .5).toFixed(1)}px) rotate(${Math.round(d * 3)}deg)`;
+    pullEl.classList.toggle('ready', d >= PULL);
+  }
+  function springBack() {
+    for (const el of [homeEl, pullEl]) el.classList.add('pullback');
+    homeEl.style.transform = ''; pullEl.style.opacity = '0'; pullEl.style.transform = '';
+    pullEl.classList.remove('ready', 'spin');
+    setTimeout(() => { for (const el of [homeEl, pullEl]) el.classList.remove('pullback'); }, 350);
+  }
+  async function refreshHome() {
+    refreshing = true;
+    for (const el of [homeEl, pullEl]) el.classList.add('pullback');
+    homeEl.style.transform = `translateY(${Math.round(PULL * .55)}px)`; pullEl.style.transform = `translateY(${Math.round(PULL * .27)}px)`;
+    pullEl.classList.add('spin');
+    const F = window.aosFind || {};
+    const got = await Promise.all([F.refreshWeather ? F.refreshWeather({ force: true }).catch(() => false) : false, new Promise(r => setTimeout(r, 700))]).then(r => r[0]);
+    readUnread(); syncPrefs(); paintHome(true);
+    if (!got && !navigator.onLine) toast('Offline: this is what\'s on the phone');
+    springBack(); refreshing = false;
+  }
+  scroller.addEventListener('touchstart', e => {
+    pull = null;
+    if (current || tab !== 'home' || refreshing || e.touches.length !== 1 || scroller.scrollTop > 0 || editing() || $('hq').value) return;
+    pull = { x0: e.touches[0].clientX, y0: e.touches[0].clientY, d: 0, on: false };
+  }, { passive: true });
+  addEventListener('touchmove', e => {
+    if (!pull || arranging()) return;
+    const t = e.touches[0], dx = t.clientX - pull.x0, dy = t.clientY - pull.y0;
+    if (!pull.on) {
+      if (dy > 8 && dy > Math.abs(dx) && scroller.scrollTop <= 0) { pull.on = true; pull.y0 = t.clientY; }
+      else { if (dy < -4 || Math.abs(dx) > 10) pull = null; return; }
+    }
+    e.preventDefault();
+    pull.d = Math.max(0, t.clientY - pull.y0); drawPull(pull.d);
+  }, { passive: false });
+  const endPull = () => { const p = pull; pull = null; if (!p || !p.on) return; if (p.d >= PULL) refreshHome(); else springBack(); };
+  addEventListener('touchend', endPull); addEventListener('touchcancel', endPull);
 
   // the icons that aren't buttons themselves (their pin is): Return or Space opens the app
   $('home').addEventListener('keydown', e => { const o = e.target.closest('.happ'); if (o && e.target === o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(o.dataset.open); } });

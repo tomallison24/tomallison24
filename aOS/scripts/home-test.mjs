@@ -11,6 +11,7 @@
 //     clear of it (welcome.js takes aOS's insets as the app's safe-area spacing), no "add me" steps
 //   - "‹ aOS" and a swipe in from the left edge go back; holding it lists the other open apps
 //   - Favorites, mixed: a pin first, then the most used, then the starting four
+//   - pull to refresh at the top of Home; counts on Notes and Orders (what's due); the Weather widget's sky as it is outside
 //   - Thumb arc (Home layout): the fixed four and four favorites on two rings in the corner, every app on the
 //     first screen (a small phone too), the orb going to the Ipsy bar, Edit, the left hand, and Classic again
 //   - Layers' grid (Classic, in Layers): every app as a pebble, the top row your pins, Edit swaps two and
@@ -186,6 +187,41 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(await pg.textContent('#spaces [data-open="mail"] .unread') === '7', `Mail's unread count on its icon ${tag}`);
   await pg.evaluate(() => window.aosHome.unread('mail', 0));
   check(await pg.locator('#home .unread').count() === 0, `none once it's all read ${tag}`);
+  // pull to refresh: at the top, pull down and let go; Home is drawn again with what's new (here, a reminder due and a
+  // pickup waiting, counted on Notes and Orders), the forecast fetched again even under 10 minutes old; pulled too little, nothing
+  {
+    const cdp = await ctx.newCDPSession(pg);
+    const touch = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: 200, y }] });
+    const pullBy = async d => { await touch('touchStart', 300); for (let i = 1; i <= 10; i++) { await touch('touchMove', 300 + d * i / 10); await pg.waitForTimeout(16); } };
+    await pg.evaluate(() => { document.getElementById('scroller').scrollTop = 0; window.__forced = null; const F = window.aosFind, was = F.refreshWeather;
+      F.refreshWeather = o => { window.__forced = !!(o && o.force); return Promise.resolve(false); };
+      const p = x => String(x).padStart(2, '0'), d = new Date(), t = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+      localStorage.setItem('allison-notes-v1', JSON.stringify({ notes: [], todos: [{ id: 'r1', title: 'Bins out', date: t }] }));
+      localStorage.setItem('allison-orders-v1', JSON.stringify({ orders: [{ id: 'o1', store: 'Costco', status: 'pickup' }] })); });
+    await pullBy(40);
+    const short = await pg.evaluate(() => ({ moved: !!document.getElementById('home').style.transform, ready: document.getElementById('hpull').classList.contains('ready') }));
+    await touch('touchEnd'); await pg.waitForTimeout(400);
+    check(short.moved && !short.ready && await pg.evaluate(() => window.__forced === null && !document.getElementById('home').style.transform), `pulled a little, Home follows and springs back, nothing fetched ${tag}`);
+    await pullBy(200);
+    const far = await pg.evaluate(() => ({ ready: document.getElementById('hpull').classList.contains('ready'), op: +getComputedStyle(document.getElementById('hpull')).opacity }));
+    await touch('touchEnd'); await pg.waitForTimeout(150);
+    const spin = await pg.evaluate(() => document.getElementById('hpull').classList.contains('spin'));
+    await pg.waitForTimeout(1200);
+    check(far.ready && far.op > .9 && spin && await pg.evaluate(() => window.__forced === true), `pulled far enough, the refresh sign spins and the forecast is fetched again ${tag}`);
+    check(await pg.textContent('#spaces [data-open="notes"] .unread') === '1' && await pg.textContent('#spaces [data-open="orders"] .unread') === '1'
+      && /1 reminder due/.test(await pg.getAttribute('#spaces [data-open="notes"]', 'aria-label')) && /1 due today or waiting/.test(await pg.getAttribute('#spaces [data-open="orders"]', 'aria-label')),
+      `then Home is new: a reminder due counted on Notes, a pickup on Orders ${tag}`);
+    check(await pg.evaluate(() => !document.getElementById('home').style.transform && !document.getElementById('hpull').classList.contains('spin')), `and it all goes back up ${tag}`);
+    await pg.evaluate(() => { localStorage.removeItem('allison-notes-v1'); localStorage.removeItem('allison-orders-v1'); });
+    await cdp.detach();
+  }
+  // the Weather widget's sky, as it is outside: rain falling when it's raining
+  await pg.evaluate(() => { const k = '35.780,-78.638'; localStorage.setItem('wx.here', JSON.stringify({ lat: 35.78, lon: -78.638, name: 'Raleigh' }));
+    localStorage.setItem('wx.cache', JSON.stringify({ [k]: { cur: { tF: 58, c: 'rainy' }, fetchedAt: Date.now(), daily: [], hourly: [] } })); });
+  await pg.reload(); await pg.waitForTimeout(900);
+  check(await pg.getAttribute('#favs .wid.wx', 'data-kind') === 'rainy' && await pg.locator('#favs .wid.wx .wsky.rain .rn').count() === 14 && await pg.evaluate(() => getComputedStyle(document.querySelector('.wsky .rn')).animationName) === 'wrain'
+    && await pg.locator('#home .unread').count() === 0, `raining: the Weather widget has rain falling in it, and no counts are left over ${tag}`);
+  await pg.evaluate(() => { localStorage.removeItem('wx.here'); localStorage.removeItem('wx.cache'); });
   await pg.locator('#home .hbtn[data-tab="today"]').click(); await pg.waitForTimeout(400);
   check(await pg.isVisible('#today') && await pg.locator('.quick .qhome').isVisible(), `Today, from beside the account; Home floats at the bottom there ${tag}`);
   await pg.locator('.quick .qhome').click(); await pg.waitForTimeout(400);
