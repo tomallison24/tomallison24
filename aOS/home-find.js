@@ -1,11 +1,15 @@
 // What aOS Home reads from the apps, on this phone: every app is on this same site, so inside aOS they
 // share one storage, and Home can read what each app keeps without opening it. Nothing is sent anywhere.
 //
-//   aosFind.weather()  -> { temp: '64°', text: 'Sunny', hilo: 'H 70° L 52°', place } or null
-//                        from Weather's own cache (wx.*)
-//   aosFind.refreshWeather() -> true once a new forecast is in: fetched with Weather's own code
+//   aosFind.weather()  -> { temp: '64°', text: 'Sunny', hilo: 'H 70° L 52°', place, kind: 'sunny' } or null
+//                        from Weather's own cache (wx.*); kind: Weather's condition ('clear-night' at night),
+//                        for the widget's sky (aOS/home-tab.js)
+//   aosFind.refreshWeather({ force }) -> true once a new forecast is in: fetched with Weather's own code
 //                        (../weather/data.js) for Weather's place, when its last one is over 10 minutes
-//                        old (as Weather does), and kept in Weather's cache, so Weather opens with it too
+//                        old (as Weather does; force: over a minute, Home's pull to refresh), and kept in
+//                        Weather's cache, so Weather opens with it too
+//   aosFind.badges()   -> { orders: n, notes: n }: the counts on Home's icons, as the brief counts them:
+//                        deliveries due today and pickups waiting (Orders), reminders due today or late (Notes)
 //   aosFind.next()     -> { when: '4:00 PM', title, then: '6:30 PM · Dinner', where } or null
 //                        the next thing on the Family calendar, today or tomorrow (Calendar's .ics,
 //                        turned into occurrences by ../calendar/ical.js, as Calendar does)
@@ -40,13 +44,13 @@
   const ok = b => b && b.cur && Array.isArray(b.daily) && Number.isFinite(b.cur.tF);
   const okPlace = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lon);
   let fetching = null;
-  function refreshWeather() {
+  function refreshWeather({ force = false } = {}) {
     if (fetching) return fetching;
     if (typeof WXD === 'undefined' || !navigator.onLine) return Promise.resolve(false);
     const here = get('wx.here'), places = get('wx.places'), p = okPlace(here) ? here : Array.isArray(places) && okPlace(places[0]) ? places[0] : null;
     if (!p) return Promise.resolve(false);   // Weather hasn't found a place yet: it asks for one, aOS doesn't
     const k = keyOf(p), was = (get('wx.cache') || {})[k];
-    if (ok(was) && Date.now() - (was.fetchedAt || 0) < 10 * 60e3) return Promise.resolve(false);
+    if (ok(was) && Date.now() - (was.fetchedAt || 0) < (force ? 60e3 : 10 * 60e3)) return Promise.resolve(false);
     return (fetching = WXD.fetchBase(p.lat, p.lon).then(base => {
       if (!ok(base) || !Array.isArray(base.hourly)) return false;
       const cache = get('wx.cache'), all = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : {};
@@ -65,10 +69,11 @@
     const tz = b.tz || undefined, inTz = t => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date(t)); } catch { return ymd(new Date(t)); } };
     const today = inTz(Date.now()), d = b.daily.find(x => x && Number.isFinite(x.t) && inTz(x.t * 1000) >= today);
     const hour = new Date().getHours(), night = hour < 6 || hour >= 20;
-    let text = WORDS[night && b.cur.c === 'sunny' ? 'clear-night' : b.cur.c] || '';
+    const kind = night && b.cur.c === 'sunny' ? 'clear-night' : WORDS[b.cur.c] ? b.cur.c : '';
+    let text = WORDS[kind] || '';
     const age = Date.now() - (b.fetchedAt || 0);
     if (age > 3 * 3600e3) text = (text ? text + ', ' : '') + 'as of ' + (age > 20 * 3600e3 ? day(b.fetchedAt) : time(b.fetchedAt));
-    return { temp: deg(b.cur.tF), text, hilo: d && Number.isFinite(d.hF) && Number.isFinite(d.lF) ? `H ${deg(d.hF)} L ${deg(d.lF)}` : '', place: (b === at(here) && here.name) || b.place || '' };
+    return { temp: deg(b.cur.tF), text, hilo: d && Number.isFinite(d.hF) && Number.isFinite(d.lF) ? `H ${deg(d.hF)} L ${deg(d.lF)}` : '', place: (b === at(here) && here.name) || b.place || '', kind };
   }
 
   // ---- Calendar: the Family calendar's events, as Calendar keeps them (allison-calendar-v1-items) ----
@@ -264,5 +269,14 @@
     return { lines: lines.slice(0, 6), trip };
   }
 
-  window.aosFind = { weather, refreshWeather, next, search, brief };
+  // the counts on Home's icons (aOS/home-tab.js): what the brief has a line for, as a number
+  function badges() {
+    const t = ymd(new Date()), os = orders();
+    const n = get('allison-notes-v1');
+    return {
+      orders: os.filter(o => o.status === 'pickup' || (o.eta && o.eta <= t && (o.etaEnd || o.eta) >= t)).length,
+      notes: n && Array.isArray(n.todos) ? n.todos.filter(x => x && !x.done && x.date && x.date <= t).length : 0,
+    };
+  }
+  window.aosFind = { weather, refreshWeather, next, search, brief, badges };
 })();

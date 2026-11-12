@@ -420,6 +420,30 @@
   .wid.wx .big { margin-top: auto; font-size: 46px; font-weight: 400; letter-spacing: -.03em; line-height: 1; }
   .wid.wx small { display: block; margin-top: 6px; font-size: 13px; line-height: 1.3; color: var(--muted); }
   .wid.wx small + small { margin-top: 1px; white-space: nowrap; }
+  /* the Weather widget's sky (aOS/home-tab.js sky): as it is outside, drawn in the widget's own ink, behind what it says */
+  .wid > .wsky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; color: currentColor; }
+  .wsky i { position: absolute; display: block; }
+  .wid.wx[data-kind="sunny"]::before { animation: wsun 7s ease-in-out infinite; }
+  @keyframes wsun { 50% { transform: scale(1.1); } }
+  /* Vintage's sun: dimmed behind clouds, rain, snow or fog, and a pale moon on a clear night */
+  html[data-look="vintage"] .wid.wx:is([data-kind="cloudy"], [data-kind="fog"], [data-kind^="rainy"], [data-kind="pouring"], [data-kind^="lightning"], [data-kind^="snowy"], [data-kind="hail"])::before { opacity: .4; }
+  html[data-look="vintage"] .wid.wx[data-kind="clear-night"]::before { background: #EFE6CF; box-shadow: 0 0 30px rgba(239,230,207,.35); }
+  .wsky .st { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .2; animation: wtwinkle 3s ease-in-out var(--d) infinite; }
+  @keyframes wtwinkle { 50% { opacity: .75; transform: scale(1.4); } }
+  .wsky .cl { left: 0; width: 120px; height: 34px; border-radius: 17px; background: currentColor; opacity: .09; animation: wcloud var(--t) linear var(--d) infinite; }
+  .wsky .cl::before { content: ''; position: absolute; left: 26px; top: -18px; width: 50px; height: 44px; border-radius: 50%; background: inherit; }
+  .wsky.fog .cl { height: 22px; width: 190px; opacity: .13; }
+  @keyframes wcloud { from { transform: translateX(-130px); } to { transform: translateX(380px); } }
+  .wsky .rn { top: 0; width: 1.5px; height: 16px; border-radius: 1px; background: currentColor; opacity: .3; animation: wrain var(--t) linear var(--d) infinite; }
+  .wsky.heavy .rn { height: 22px; opacity: .38; }
+  @keyframes wrain { from { transform: translate(0, -30px) rotate(12deg); } to { transform: translate(-36px, 200px) rotate(12deg); } }
+  .wsky .sn { top: 0; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .4; animation: wsnow var(--t) linear var(--d) infinite; }
+  @keyframes wsnow { from { transform: translate(0, -10px); } 50% { transform: translate(12px, 90px); } to { transform: translate(-4px, 190px); } }
+  .wsky.flash::after { content: ''; position: absolute; inset: 0; background: #FFFFFF; opacity: 0; animation: wflash 8s linear infinite; }
+  @keyframes wflash { 0%, 90%, 93%, 96%, 100% { opacity: 0; } 91.5% { opacity: .35; } 94.5% { opacity: .22; } }
+  .wsky .wd { left: 0; width: 70px; height: 2px; border-radius: 1px; background: currentColor; opacity: 0; animation: wwind 2.6s ease-in var(--d) infinite; }
+  @keyframes wwind { 0% { transform: translateX(-80px); opacity: 0; } 30% { opacity: .3; } 100% { transform: translateX(360px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .wsky i, .wsky::after, .wid.wx[data-kind="sunny"]::before { animation: none !important; } .wsky .rn, .wsky .sn, .wsky .wd { display: none; } }
   .wid.cal { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 84px; padding: 12px 16px 12px 14px; }
   .wid.cal > img { flex: none; width: 52px; height: 52px; border-radius: 14px; }
   .wid.cal > span { flex: 1; min-width: 0; }
@@ -478,6 +502,16 @@
   .hall.arranging .happ:nth-child(2n):not(.lift) .ic { animation-delay: -.13s; }
   .hall .happ.settle { transition: transform .26s cubic-bezier(.2,.9,.25,1.1); }
   #azBtn[hidden] { display: none; }
+  /* pull to refresh (aOS/home-tab.js): the refresh sign comes down from the top as you pull, turns, and spins while it gets the latest */
+  #hpull { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 8px); z-index: 40; display: grid; place-items: center; width: 38px; height: 38px; margin-left: -19px; border-radius: 50%;
+    background: var(--solid); color: var(--muted); box-shadow: 0 2px 12px rgba(0,0,0,.18); opacity: 0; pointer-events: none; }
+  #hpull svg { width: 20px; height: 20px; }
+  #hpull.ready, #hpull.spin { color: var(--accent); }
+  #hpull.spin svg { animation: hspin .8s linear infinite; }
+  @keyframes hspin { to { transform: rotate(360deg); } }
+  body.in-app #hpull { display: none; }
+  #home.pullback, #hpull.pullback { transition: transform .32s cubic-bezier(.2,.8,.2,1), opacity .32s; }
+  @media (prefers-reduced-motion: reduce) { #hpull.spin svg { animation: none; } #home.pullback, #hpull.pullback { transition: none; } }
   @media (prefers-reduced-motion: reduce) { .hall.arranging .happ .ic { animation: none; } .hall .happ.settle, .hall .happ.lift .ic { transition: none; } }
   .hg { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 14px 2px; }
   /* Thumb arc (aOS/home-tab.js, html[data-home="arc"]): the fixed four on an inner ring and four favorites on an outer one,

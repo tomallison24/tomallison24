@@ -92,6 +92,13 @@ test('the brief: the day\'s events, deliveries due, pickups, tonight\'s dinner, 
   assert.ok(say.includes('weather: Rain likely today (70%)'));
   assert.deepEqual(b.lines.map(l => l.app), ['calendar', 'weather', 'orders', 'orders', 'meals', 'notes'], 'in that order, six at most');
 });
+test('the counts on Home\'s icons: deliveries due today and pickups waiting, reminders due or late; the weather\'s kind', () => {
+  seedDay();
+  assert.deepEqual(aosFind.badges(), { orders: 2, notes: 2 }, 'Target and Costco, not the gift or the delivered one; the late and today\'s reminders, not done or tomorrow\'s');
+  assert.equal(aosFind.weather().kind, 'rainy');
+  store.clear();
+  assert.deepEqual(aosFind.badges(), { orders: 0, notes: 0 }, 'an empty phone: none');
+});
 test('the trip card: the next trip within a week, with what happens while away, and the words for Ipsy', () => {
   seedDay();
   const t = aosFind.brief().trip;
