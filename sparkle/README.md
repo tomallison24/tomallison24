@@ -105,7 +105,11 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 - **Coins and the castle**: 1 coin a right answer (first or second try), 3 for finishing a round,
   never taken away. In her castle she tries on what she has, and in the Royal Boutique the first
   tap shows the price and a second buys. Surprise presents (about one round in four, and the quest),
-  and the unicorn grows with her stickers (one each time she moves up a level).
+  and the unicorn grows with her stickers (one each time she moves up a level): a little bigger with each
+  one (on the map and in the stables, up to 1.3 times its first size at 12), and in stages (a foal, young,
+  a unicorn, wings, rainbow). A level up is a moment at the end of the round: a **Level up!** banner,
+  her unicorn growing from its old size to its new one with sparkles, and its level (Level 1 at the
+  start, one more for each sticker).
 - **Settings** (for grown-ups; the shared rows of `../home/settings.js`): press and hold Grown-ups, then Face ID (the family account), or, where
   there's none, a grown-up's times-table question. Each child's levels and how they moved this
   week, accuracy, words known and learning, words to **practice together** (missed on 2 or more

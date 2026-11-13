@@ -97,7 +97,10 @@
   // ---- players ----
   const players = () => Object.values(save.players).sort((a, b) => a.created - b.created);
   const uidOf = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const stageOf = p => { const n = (p.stickers || []).length; return n >= 25 ? 4 : n >= 15 ? 3 : n >= 8 ? 2 : n >= 3 ? 1 : 0; };
+  // her unicorn grows a little with every level up (each sticker): a bit bigger each time, up to 1.3 times
+  // its first size at 12 stickers, so the map, the stables and the end of a round show how far she's come
+  const GROW_MAX = 12, growAt = n => 1 + Math.min(GROW_MAX, n) * 0.025, growOf = p => growAt((p.stickers || []).length), uniLevel = p => 1 + (p.stickers || []).length;
+  const stageAt = n => n >= 25 ? 4 : n >= 15 ? 3 : n >= 8 ? 2 : n >= 3 ? 1 : 0, stageOf = p => stageAt((p.stickers || []).length);
   const owns = (p, id) => (p.owned || []).includes(id) || Object.values(A.STARTER).includes(id) || (RM.ITEMS[id] && RM.STARTER[RM.ITEMS[id].room][RM.ITEMS[id].slot] === id);
   const wearing = p => Object.assign({}, A.STARTER, p.wearing || {});
   // her rank: every skill's highest level added up (7 to 55), and never lower than she's been
@@ -173,7 +176,7 @@
     const nx = nextStop();
     $('mapIn').innerHTML = W.kingdom({ at: me.world.at, stars: me.world.stars, critters: me.world.critters, open: session.open, quest: nx, unfog: me.world.open || {},
         colour: Object.fromEntries(Ch.LANDS.map(l => [l, Ch.colour((me.chapters || {})[l])])) })
-      + `<div id="rider" aria-hidden="true"><div class="wrap"><span class="un">${A.unicorn(stageOf(me), wearing(me), { mood: Care.mood(petNow()) === 'sad' ? 'sad' : 'happy', dirt: Care.dirt(me.pet) })}</span><span class="pr">${A.princess(me.look, wearing(me), { head: true })}</span></div></div>`;
+      + `<div id="rider" aria-hidden="true" style="--g:${growOf(me)}"><div class="wrap"><span class="un">${A.unicorn(stageOf(me), wearing(me), { mood: Care.mood(petNow()) === 'sad' ? 'sad' : 'happy', dirt: Care.dirt(me.pet) })}</span><span class="pr">${A.princess(me.look, wearing(me), { head: true })}</span></div></div>`;
     place(W.NODES[me.world.at] || W.NODES.castle);
   }
   function place(n) {
@@ -800,7 +803,8 @@
   async function endRound() {
     const R = round; if (!R) return;
     round = null;
-    const stageBefore = stageOf(me);
+    // as she was when the round began (a level up adds its sticker as it happens)
+    const had = (me.stickers || []).length - R.moved.length, stageBefore = stageAt(had), growBefore = growAt(had);
     E.earn(me, device, E.TUNE.coinRound); R.coins += E.TUNE.coinRound;
     me.rounds = (me.rounds || 0) + 1; session.recent.push(R.skill);
     const land = landKey(R.skill); E.finished(me, device, land);
@@ -825,19 +829,23 @@
     show('reward');
     $('rewardBd').innerHTML = R.skill === 'bake' && K ? K.scene() : W.backdrop(landKey(R.skill));
     const msg = praise(R);
-    $('rewardIn').innerHTML = `<div class="cheer dash"><div class="dance">${A.unicorn(stageOf(me), wearing(me), { mood: 'happy' })}</div></div>
+    // a level up: a banner, and her unicorn grows before her eyes (from its old size to its new one), with sparkles
+    const up = R.moved.length > 0, bigger = growOf(me) > growBefore;
+    $('rewardIn').innerHTML = `${up ? `<div class="lvup" role="status">${A.icon('star', 34)}<span>Level up!</span>${A.icon('star', 34)}</div>` : ''}
+      <div class="cheer ${up ? 'up' : 'dash'}"><div class="${up && bigger ? 'growup' : ''}" style="--from:${(growBefore / growOf(me)).toFixed(3)}"><div class="dance">${A.unicorn(stageOf(me), wearing(me), { mood: 'happy' })}</div></div>
+        ${up ? `<span class="unilv" aria-label="Unicorn level ${uniLevel(me)}">${A.icon('unicorn', 28)}<span>Level ${uniLevel(me)}</span></span>` : ''}</div>
       <div class="praise">${esc(msg)}</div>
       <div class="earn">${A.coin(46)}<span>+${R.coins}</span></div>
       ${R.skill === 'bake' && R.baked ? `<div class="praise note"><span class="treatpic">${K.treat(R.treat)}</span><span>${R.baked} ${R.baked === 1 ? 'treat' : 'treats'} for your unicorn! Find ${R.baked === 1 ? 'it' : 'them'} in the stables.</span></div>` : ''}
-      ${R.moved.length ? `<div class="praise note">${A.icon('star', 26)}<span>New sticker! You're ready for harder ones.</span></div>` : ''}
-      ${grew ? `<div class="praise note">${A.icon('unicorn', 26)}<span>Your unicorn grew!</span></div>` : ''}
+      ${up ? `<div class="praise note">${A.icon('star', 26)}<span>${grew ? 'New sticker! Your unicorn grew up a stage!' : bigger ? 'New sticker! Your unicorn grew bigger!' : 'New sticker! Your unicorn is big and strong!'}</span></div>` : grew ? `<div class="praise note">${A.icon('unicorn', 26)}<span>Your unicorn grew!</span></div>` : ''}
       ${lifted.map(l => `<div class="praise note">${A.icon(l === 'garden' ? 'flower' : 'tiara', 26)}<span>The fog lifted! ${esc(LAND_NAME[l][0].toUpperCase() + LAND_NAME[l].slice(1))} is open.</span></div>`).join('')}
       ${promoted ? `<div class="praise note">${A.icon('tiara', 26)}<span>You are a ${esc(RANKS[me.rank])} now!</span></div>` : ''}
       ${gifts ? `<button type="button" class="giftbox" id="giftBtn" aria-label="Open your surprise">${A.gift()}</button>` : ''}
       ${chapter ? `<button type="button" class="chbook" id="chapterBtn">${A.icon('book', 44)}<span>New chapter!</span></button>` : ''}
       <div style="display:flex;gap:12px"><button type="button" class="big mint" id="againBtn" aria-label="Play again">${ICON.again}</button><button type="button" class="big pink" id="mapBtn">${ICON.go}<span>Kingdom</span></button></div>`;
     V.sfx('fanfare');
-    V.say([msg], { who: 'narrator' });
+    V.say(up ? [msg, bigger ? 'Level up! Your unicorn grew bigger!' : 'Level up!'] : [msg], { who: 'narrator' });
+    if (up) setTimeout(() => { const c = document.querySelector('#rewardIn .cheer'); if (!c || !c.isConnected) return; const b = c.getBoundingClientRect(); V.sfx('sparkle'); if (!reduce()) burst(b.left + b.width / 2, b.top + b.height / 2, 18); }, reduce() ? 0 : 900);
     $('againBtn').onclick = () => startRound(R.skill);
     $('mapBtn').onclick = () => enterWorld();
     if (R.skill === 'bake') { $('mapBtn').innerHTML = `${ICON.home}<span>Castle</span>`; $('mapBtn').onclick = () => openCastle(); }
@@ -1027,7 +1035,7 @@
     $('stableCoins').innerHTML = A.coin(34) + `<span>${E.coins(me)}</span>`;
     $('stall').classList.toggle('night', !!pet.asleep);
     $('stall').innerHTML = (ST ? ST.scene({ night: pet.asleep, lantern: pet.asleep }) : '')
-      + `<div class="uni ${uniLeft ? 'left' : ''} ${pet.asleep && !reduce() ? 'breathe' : ''}" id="uni" role="button" aria-label="Your unicorn" style="--x:${uniPx()}px">${uniSvg(pet)}</div><div class="fx" id="stallFx">${pet.asleep ? '<span class="zz" style="left:60%;top:30%">z</span><span class="zz" style="left:66%;top:22%;animation-delay:.8s">z</span>' : ''}</div>`
+      + `<div class="uni ${uniLeft ? 'left' : ''} ${pet.asleep && !reduce() ? 'breathe' : ''}" id="uni" role="button" aria-label="Your unicorn" style="--x:${uniPx()}px;--g:${growOf(me)}">${uniSvg(pet)}</div><div class="fx" id="stallFx">${pet.asleep ? '<span class="zz" style="left:60%;top:30%">z</span><span class="zz" style="left:66%;top:22%;animation-delay:.8s">z</span>' : ''}</div>`
       + (w && !pet.asleep && ST ? `<span class="want" aria-hidden="true">${ST.need(w, 42)}</span>` : '');
     paintNeeds();
     $('careTabs').innerHTML = CARE_TABS.map(([id, name, need]) => `<button type="button" data-ct="${id}" aria-pressed="${id === careTab}">${need && ST ? ST.need(need, 22) : A.coin(22)} ${name}</button>`).join('');
