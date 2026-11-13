@@ -370,7 +370,7 @@ for (const scheme of ['light', 'dark']) {
 {
   const pr = [];
   const shoot = p => p.evaluate(async () => {
-    aosTabs.show('home'); await new Promise(r => setTimeout(r, 1300));   // Home ripples in first (aOS/home-tab.js), and no shot goes while it does
+    aosTabs.show('home'); await new Promise(r => setTimeout(r, 300));
     const fired = aosTronShots.fire(), again = aosTronShots.fire();
     await new Promise(r => setTimeout(r, 120));
     const cv = document.getElementById('tronshots'); let lit = 0;
