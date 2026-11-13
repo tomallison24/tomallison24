@@ -9,7 +9,9 @@
 // (and swapping one), then reading short-vowel words, sight words (only once she can sound out
 // 3-letter words), sentences, little stories, and last digraphs and blends.
 // The math ladder follows the kindergarten standards (count, compare, add and take away within 5,
-// make 10, within 10) and goes on past them (tens, within 20, missing numbers), since she's strong.
+// make 10, within 10) and goes on a little past them (tens, teens, missing numbers). It's kept gentle
+// for a 5-year-old: there's always a picture to count, and past 10 the gems come as blocks of ten
+// (a full ten frame) and ones, so she counts on from ten instead of counting to 20 one by one.
 // Pictures are the phone's emoji: clear and familiar for a 5-year-old, so a picture never stands
 // between her and the word. Words are only ones with a picture nobody would name differently.
 //
@@ -181,16 +183,19 @@
     while (set.size < n && guard++ < 50) { const d = r.int(1, 3) * (r() < 0.5 ? -1 : 1), v = ans + d; if (v >= lo && v <= hi) set.add(v); }
     while (set.size < n) set.add(Math.max(...set) + 1);
     return r.shuffle([...set]).map(x => num(x)); };
+  const countOn = (from, k) => Array.from({ length: k }, (_, i) => from + i + 1).join('... ');
+  // A teen as a block of ten and ones, with b more ones (add) or b of its ones rolled away (take away)
+  const teen = (a, b, add) => ({ type: 'block', t: 1, a: a - 10, b: add ? b : 0, gone: add ? 0 : b });
   const MATH = [
     // 1 count to 10
     r => { const n = r.int(3, 10); return { key: 'c:' + n, kind: 'pick', say: ['How many gems?'], show: { type: 'gems', n }, choices: nums(r, n, 1, 12), answer: String(n),
       hint: ['Touch each gem as you count.'], hintShow: 'count', tell: [`There are ${n} gems.`] }; },
     // 2 count to 20, or count on
-    r => { if (r() < 0.5) { const n = r.int(11, 20); return { key: 'c:' + n, kind: 'pick', say: ['How many gems? Count the rows of five.'], show: { type: 'gems', n, rows: 5 }, choices: nums(r, n, 8, 22), answer: String(n), hint: ['Each row has five.'], hintShow: 'count', tell: [`There are ${n} gems.`] }; }
-      const a = r.int(5, 12), b = r.int(1, 4); return { key: 'o:' + a + '+' + b, kind: 'pick', say: [`Start at ${a}. Count on ${b} more.`], show: { type: 'on', a, b }, choices: nums(r, a + b, 1, 20), answer: String(a + b),
+    r => { if (r() < 0.5) { const n = r.int(11, 19); return { key: 'c:' + n, kind: 'pick', say: ['How many gems? The block has ten.'], show: { type: 'block', t: 1, a: n - 10 }, choices: nums(r, n, 10, 20), answer: String(n), hint: [`The block is ten. Count on: ${countOn(10, n - 10)}`], hintShow: 'block', tell: [`Ten and ${n - 10} more is ${n}.`] }; }
+      const a = r.int(3, 9), b = r.int(1, 3); return { key: 'o:' + a + '+' + b, kind: 'pick', say: [`Start at ${a}. Count on ${b} more.`], show: { type: 'on', a, b }, choices: nums(r, a + b, 1, 20), answer: String(a + b),
         hint: [`${a}... then count: ${Array.from({ length: b }, (_, i) => a + i + 1).join('... ')}`], tell: [`${a} and ${b} more is ${a + b}.`] }; },
     // 3 more or fewer
-    r => { let a = r.int(1, 10), b = r.int(1, 10); while (a === b) b = r.int(1, 10); const more = r() < 0.6;
+    r => { let a = r.int(1, 10), b = r.int(1, 10); while (Math.abs(a - b) < 2) b = r.int(1, 10); const more = r() < 0.6;
       const ans = (more ? a > b : a < b) ? 'L' : 'R';
       return { key: null, kind: 'pick', say: [`Which cart has ${more ? 'more' : 'fewer'} gems?`], show: { type: 'carts', a, b },
         choices: [{ id: 'L', kind: 'cart', v: a, label: 'this cart' }, { id: 'R', kind: 'cart', v: b, label: 'that cart' }], answer: ans,
@@ -207,22 +212,22 @@
     // 7 within 10, a story
     r => { const add = r() < 0.55; const a = add ? r.int(2, 7) : r.int(5, 10), b = add ? r.int(1, 10 - a) : r.int(1, a - 1), ans = add ? a + b : a - b;
       const say = add ? `Pebble had ${a} gems and found ${b} more. How many now?` : `Pebble had ${a} gems and gave ${b} away. How many are left?`;
-      return { key: 'f:' + a + (add ? '+' : '-') + b, kind: 'pick', say: [say], text: `${a} ${add ? '+' : '-'} ${b} = ?`, show: { type: add ? 'add' : 'take', a, b, hidden: true },
-        choices: nums(r, ans, 0, 10), answer: String(ans), hint: ['Here are the gems. Count them.'], hintShow: 'reveal', tell: [`${a} ${add ? 'plus' : 'take away'} ${b} is ${ans}.`] }; },
+      return { key: 'f:' + a + (add ? '+' : '-') + b, kind: 'pick', say: [say], text: `${a} ${add ? '+' : '-'} ${b} = ?`, show: { type: add ? 'add' : 'take', a, b },
+        choices: nums(r, ans, 0, 10), answer: String(ans), hint: [add ? 'Count them all.' : 'Count the ones that stayed.'], hintShow: 'count', tell: [`${a} ${add ? 'plus' : 'take away'} ${b} is ${ans}.`] }; },
     // 8 count by tens
-    r => { if (r() < 0.6) { const s = r.int(1, 6) * 10; const seq = [s, s + 10, s + 20]; const ans = s + 30;
-        return { key: 'c:' + ans + 't', kind: 'pick', say: [`Count by tens: ${seq.join(', ')}, what comes next?`], text: `${seq.join(', ')}, ?`, choices: nums(r, ans, 10, 100).map(c => c),
-          answer: String(ans), hint: ['Add one more ten.'], tell: [`${seq.join(', ')}, ${ans}!`] }; }
-      const t = r.int(2, 9); return { key: 'c:' + t * 10 + 'r', kind: 'pick', say: ['Each bag holds ten gems. How many gems?'], show: { type: 'tens', t },
-        choices: [t - 1, t, t + 1].filter(x => x > 0).map(x => num(x * 10)), answer: String(t * 10), hint: ['Count the bags by tens: 10, 20, 30...'], tell: [`${t} tens is ${t * 10}.`] }; },
-    // 9 within 20
-    r => { const add = r() < 0.5; const a = add ? r.int(6, 15) : r.int(11, 20), b = add ? r.int(2, 20 - a) : r.int(2, 9), ans = add ? a + b : a - b;
-      return { key: 'f:' + a + (add ? '+' : '-') + b, kind: 'pick', say: [`What is ${a} ${add ? 'plus' : 'take away'} ${b}?`], text: `${a} ${add ? '+' : '-'} ${b} = ?`,
-        choices: nums(r, ans, 0, 20), answer: String(ans), hint: [add ? `Start at ${a} and count on ${b}.` : `Start at ${a} and count back ${b}.`], tell: [`${a} ${add ? 'plus' : 'take away'} ${b} is ${ans}.`] }; },
+    r => { if (r() < 0.5) { const t = r.int(1, 3), seq = Array.from({ length: t }, (_, i) => (i + 1) * 10), ans = (t + 1) * 10;
+        return { key: 'c:' + ans + 't', kind: 'pick', say: [`Count the blocks by tens: ${seq.join(', ')}, what comes next?`], text: `${seq.join(', ')}, ?`, show: { type: 'tens', t: t + 1 },
+          choices: [ans - 10, ans, ans + 10].map(x => num(x)), answer: String(ans), hint: ['One more block is ten more.'], tell: [`${seq.join(', ')}, ${ans}!`] }; }
+      const t = r.int(2, 5); return { key: 'c:' + t * 10 + 'r', kind: 'pick', say: ['Each block has ten gems. How many gems?'], show: { type: 'tens', t },
+        choices: [t - 1, t, t + 1].map(x => num(x * 10)), answer: String(t * 10), hint: [`Count the blocks by tens: ${Array.from({ length: t }, (_, i) => (i + 1) * 10).join(', ')}.`], tell: [`${t} tens is ${t * 10}.`] }; },
+    // 9 teens: a block of ten and some ones, add or take away ones (never past 19 or below 10)
+    r => { const add = r() < 0.6, o = add ? r.int(0, 5) : r.int(2, 8), b = add ? r.int(1, Math.min(4, 9 - o)) : r.int(1, Math.min(4, o)), a = 10 + o, ans = add ? a + b : a - b;
+      return { key: 'f:' + a + (add ? '+' : '-') + b, kind: 'pick', say: [add ? `Pebble has ${a} gems and finds ${b} more. How many now?` : `Pebble has ${a} gems and ${b} roll away. How many are left?`], text: `${a} ${add ? '+' : '-'} ${b} = ?`,
+        show: teen(a, b, add), choices: nums(r, ans, 10, 20), answer: String(ans), hint: ['The block is ten. Count on from ten.'], hintShow: 'block', tell: [`${a} ${add ? 'plus' : 'take away'} ${b} is ${ans}.`] }; },
     // 10 missing numbers
-    r => { const sum = r.int(4, 12), a = r.int(1, sum - 1), b = sum - a;
-      return { key: 'f:' + a + '+?=' + sum, kind: 'pick', say: [`${a} plus what makes ${sum}?`], text: `${a} + ? = ${sum}`, choices: nums(r, b, 0, 12), answer: String(b),
-        hint: [`Start at ${a} and count up to ${sum}.`], tell: [`${a} plus ${b} makes ${sum}.`] }; },
+    r => { const sum = r.int(4, 10), a = r.int(1, sum - 1), b = sum - a;
+      return { key: 'f:' + a + '+?=' + sum, kind: 'pick', say: [`${a} plus what makes ${sum}?`], text: `${a} + ? = ${sum}`, show: { type: 'add', a, b, hidden: true }, choices: nums(r, b, 0, 10), answer: String(b),
+        hint: [`Here are ${sum} gems. ${a} are pink. Count the blue ones.`], hintShow: 'reveal', tell: [`${a} plus ${b} makes ${sum}.`] }; },
   ];
 
   // ---- memory: the wand's sparkle sequence ----
@@ -416,8 +421,8 @@
     if (skill === 'spell' && k === 'p' && /^[a-z]{2,5}$/.test(v)) return build(r, v, CVC.includes(v) ? 2 : 1, [`Spell ${word(v)}.`], !!PIC[v]);
     if (skill === 'spell' && k === 's' && LETTERS.includes(v)) return Object.assign(SPELL[0](r, {}), { key }, { say: ['Which gem says', snd(v), '?'], choices: r.shuffle([v, ...others(r, LETTERS, 2, [v])]).map(letterChoice), answer: v, hint: [snd(v), ', as in', word(EXAMPLE[v]), '.'], tell: [`This gem, ${v}, says`, snd(v), '.'] });
     if (skill === 'math' && k === 'f') { const m = /^(\d+)([+-])(\d+)$/.exec(v); if (!m) return null; const a = +m[1], b = +m[3], add = m[2] === '+', ans = add ? a + b : a - b;
-      return { key, kind: 'pick', say: [`What is ${a} ${add ? 'plus' : 'take away'} ${b}?`], text: `${a} ${m[2]} ${b} = ?`, show: a + b <= 10 ? { type: add ? 'add' : 'take', a, b, hidden: true } : null,
-        choices: nums(r, ans, 0, 20), answer: String(ans), hint: [add ? `Start at ${a} and count on ${b}.` : `Start at ${a} and count back ${b}.`], hintShow: a + b <= 10 ? 'reveal' : null, tell: [`${a} ${add ? 'plus' : 'take away'} ${b} is ${ans}.`] }; }
+      return { key, kind: 'pick', say: [`What is ${a} ${add ? 'plus' : 'take away'} ${b}?`], text: `${a} ${m[2]} ${b} = ?`, show: a + b <= 10 ? { type: add ? 'add' : 'take', a, b, hidden: true } : a >= 10 && a < 20 && (add ? a + b < 20 : a - b >= 10) ? teen(a, b, add) : null,
+        choices: nums(r, ans, 0, 20), answer: String(ans), hint: [add ? `Start at ${a} and count on ${b}.` : `Start at ${a} and count back ${b}.`], hintShow: a + b <= 10 ? 'reveal' : a >= 10 && a < 20 && (add ? a + b < 20 : a - b >= 10) ? 'block' : null, tell: [`${a} ${add ? 'plus' : 'take away'} ${b} is ${ans}.`] }; }
     return null;
   }
 

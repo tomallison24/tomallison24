@@ -44,8 +44,11 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 - **The questions** (`content.js`): reading follows IXL's kindergarten Learn to Read plan, which
   her school uses (syllables, rhymes, first sounds, onset and rime, letter sounds, blending, middle
   and last sounds, short words, sight words once she can sound words out, sentences, little
-  stories, digraphs and blends); math follows the kindergarten standards and goes past them
-  (tens, within 20, missing numbers); memory is the wand's sparkle sequence, 3 up to 9, backwards
+  stories, digraphs and blends); math follows the kindergarten standards and goes a little past them
+  (tens, teens, missing numbers within 10), kept gentle for a 5-year-old: there is always a picture to
+  count, and past 10 the gems come as a **block of ten** (a full ten frame marked 10) and loose ones,
+  so she counts on from ten (the hint lights the block, then each one); counting by tens is blocks to
+  50, and the teens add or take away a few ones without crossing ten; memory is the wand's sparkle sequence, 3 up to 9, backwards
   on one level. Spelling (Tiara Workshop) taps letter gems in order, so no handwriting: a sound to its
   gem, a word's first letter, building words (then with extra gems), changing one letter to make a new
   word, sight words, and blends; it practises the words she has met in Story Tower. Flower Match goes
@@ -102,7 +105,11 @@ comes first. The design is in the spec, "Sparkle Kingdom: Game Spec" (a Claude d
 - **Coins and the castle**: 1 coin a right answer (first or second try), 3 for finishing a round,
   never taken away. In her castle she tries on what she has, and in the Royal Boutique the first
   tap shows the price and a second buys. Surprise presents (about one round in four, and the quest),
-  and the unicorn grows with her stickers (one each time she moves up a level).
+  and the unicorn grows with her stickers (one each time she moves up a level): a little bigger with each
+  one (on the map and in the stables, up to 1.3 times its first size at 12), and in stages (a foal, young,
+  a unicorn, wings, rainbow). A level up is a moment at the end of the round: a **Level up!** banner,
+  her unicorn growing from its old size to its new one with sparkles, and its level (Level 1 at the
+  start, one more for each sticker).
 - **Settings** (for grown-ups; the shared rows of `../home/settings.js`): press and hold Grown-ups, then Face ID (the family account), or, where
   there's none, a grown-up's times-table question. Each child's levels and how they moved this
   week, accuracy, words known and learning, words to **practice together** (missed on 2 or more

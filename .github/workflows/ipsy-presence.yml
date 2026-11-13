@@ -8,7 +8,7 @@ permissions:
 jobs:
   check:
     name: ipsy-presence
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # Playwright 1.56.1 has no Chromium for ubuntu-latest (26.04)
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
