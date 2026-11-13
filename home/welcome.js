@@ -88,7 +88,8 @@
   const RELEASES = [
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school', 'improve'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'No-school days show in Calendar'],
-      notes: ['aOS Home: back from an app, Home ripples in, out from the app you opened',
+      notes: ['Sparkle Kingdom: the Gem Mine\'s math is gentler for a 5-year-old. Past 10 the gems come as a block of ten and some ones, so she counts on from ten; counting by tens is blocks of ten up to 50; the teens add or take away a few ones without crossing ten; and every question has gems to count (the stories and missing numbers too, within 10)',
+        'aOS Home: back from an app, Home ripples in, out from the app you opened',
         'aOS Home: pull down at the top to refresh it; Notes and Orders show a count on their icons (reminders due, deliveries due today and pickups waiting), as Mail shows its unread; and the Weather widget shows the sky as it is outside: the sun glowing, stars at night, clouds drifting, rain or snow falling, a flash of lightning',
         'aOS Home: every app in one card, four across, A to Z (no more groups); hold an app and drag it to move it (it\'s kept, and follows you to your other devices), and A to Z puts them back. The trip card is gone from Home, and the brief at the top opens and folds smoothly, folded again each time you come back to Home',
         'Calendar: a Calendars button beside Search picks which calendars to show on this phone (the Family calendar, School, Travel, Notes and the rest), with Show only one and Show all; the Family calendar can be hidden too (Ipsy still sees it), and saving an event shows it again. Settings > Calendars has the same switches',

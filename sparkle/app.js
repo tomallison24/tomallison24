@@ -421,6 +421,8 @@
     return V.say(q.say, { who, onPart: k => lit(k), onWord: (k, c) => lit(k, c) }).then(() => { if (b) b.classList.remove('talk'); for (const w of document.querySelectorAll('#bubble .w')) w.classList.remove('lit'); });
   }
   function gemRow(n, color, cls = '') { return Array.from({ length: n }, () => `<span class="${cls}">${A.gem(color, 44)}</span>`).join(''); }
+  // a block of ten: a full ten frame of little gems, so she sees ten at a glance and counts on from it
+  function tenBlock(small) { return `<span class="ten ${small ? 'sm' : ''}" aria-label="a block of ten">${Array.from({ length: 10 }, () => `<i>${A.gem('#FFC94D', 24)}</i>`).join('')}<b>10</b></span>`; }
   function showHtml(q) {
     const s = q.show, parts = [];
     if (q.text) { const long = q.text.length > 9; parts.push(`<div class="read ${long ? 'long' : ''}" aria-label="${esc(q.text)}">${long ? q.text.split(' ').map(w => ltr(w, 52)).join('') : ltr(q.text, 84)}</div>`); }
@@ -432,7 +434,9 @@
     if (s.type === 'add') parts.push(`<div class="gems" id="gems" ${s.hidden ? 'hidden' : ''}>${gemRow(s.a, '#FF8FC7')}${gemRow(s.b, '#8FD3FF')}</div>`);
     if (s.type === 'take') parts.push(`<div class="gems" id="gems" ${s.hidden ? 'hidden' : ''}>${gemRow(s.a - s.b, '#B79BFF')}${gemRow(s.b, '#B79BFF', 'gone')}</div>`);
     if (s.type === 'frame') parts.push(`<div class="frame10" id="frame">${Array.from({ length: 10 }, (_, k) => `<i>${k < s.n ? A.gem('#7FE0C7', 42) : ''}</i>`).join('')}</div>`);
-    if (s.type === 'tens') parts.push(`<div class="tens">${Array.from({ length: s.t }, () => '<span class="bag">10</span>').join('')}</div>`);
+    if (s.type === 'tens') parts.push(`<div class="tens" id="blocks">${Array.from({ length: s.t }, () => tenBlock(true)).join('')}</div>`);
+    // tens and ones: the block(s) of ten, then her loose gems (pink), the ones found (blue) or rolled away (grey)
+    if (s.type === 'block') parts.push(`<div class="blocks"><div class="tens" id="blocks">${Array.from({ length: s.t }, () => tenBlock()).join('')}</div>${s.a + (s.b || 0) ? `<div class="gems" id="gems">${gemRow(s.a - (s.gone || 0), '#FF8FC7')}${gemRow(s.b || 0, '#8FD3FF')}${gemRow(s.gone || 0, '#FF8FC7', 'gone')}</div>` : ''}</div>`);
     if (s.type === 'carts') parts.push('');
     // Pattern Parade: the floats in a row, an empty sparkly one where the answer goes
     if (s.type === 'parade') parts.push(`<div class="parade" aria-label="${esc(s.seq.map(x => x ? C.pieceName(x) : 'an empty float').join(', '))}">${s.seq.map(x => `<span class="fl ${x ? '' : 'gap'}">${floatSvg(x)}</span>`).join('')}</div>`);
@@ -468,6 +472,8 @@
   async function hintShow(q) {
     if (q.hintShow === 'reveal') { const g = $('gems'); if (g) g.hidden = false; }
     if (q.hintShow === 'count' || q.hintShow === 'reveal') { const gs = [...document.querySelectorAll('#gems > span:not(.gone)')]; for (let k = 0; k < gs.length; k++) { gs[k].classList.add('lit'); V.sfx('note', k); await wait(380); } }
+    if (q.hintShow === 'block') { for (const t of document.querySelectorAll('#blocks .ten')) { t.classList.add('lit'); V.sfx('note', 0); await wait(600); }
+      const gs = [...document.querySelectorAll('#gems > span:not(.gone)')]; for (let k = 0; k < gs.length; k++) { gs[k].classList.add('lit'); V.sfx('note', k + 1); await wait(380); } }
     if (q.hintShow === 'empty') for (const i of document.querySelectorAll('#frame i')) if (!i.innerHTML) i.classList.add('lit');
     if (typeof q.hintShow === 'string' && q.choices.some(c => c.id === q.hintShow) && q.hintShow !== q.answer) {}
   }

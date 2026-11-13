@@ -241,6 +241,15 @@ svg{display:block}
 .cart svg{width:30px;height:30px}
 .tens{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .tens .bag{width:56px;height:70px;border-radius:14px 14px 22px 22px;background:var(--k-lilac);box-shadow:inset 0 0 0 3px var(--k-ink);display:grid;place-items:center;font-weight:800;color:#fff;font-size:20px}
+.blocks{display:flex;flex-direction:column;align-items:center;gap:10px}
+.ten{position:relative;display:grid;grid-template-columns:repeat(5,30px);gap:3px;padding:6px;border-radius:14px;background:var(--k-lav);box-shadow:inset 0 0 0 3px var(--k-ink)}
+.ten i{width:30px;height:30px;display:grid;place-items:center}
+.ten i svg{width:26px;height:26px}
+.ten b{position:absolute;top:-10px;right:-10px;min-width:30px;height:30px;padding:0 4px;border-radius:15px;background:var(--k-pink);color:#fff;font-size:17px;font-weight:800;display:grid;place-items:center;box-shadow:inset 0 0 0 2px var(--k-ink)}
+.ten.sm{grid-template-columns:repeat(5,18px);gap:2px;padding:5px}
+.ten.sm i{width:18px;height:18px}
+.ten.sm i svg{width:16px;height:16px}
+.ten.lit{animation:hop .6s ease-in-out;box-shadow:inset 0 0 0 3px var(--k-ink),0 0 0 5px var(--k-gold)}
 .drum{position:absolute;right:10px;bottom:10px;width:70px;height:70px;border-radius:50%;background:var(--k-pink);box-shadow:inset 0 0 0 3px var(--k-ink),0 3px 0 #D9579A;display:grid;place-items:center}
 .drum svg{width:44px;height:44px}
 .drum.hit{animation:drumhit .18s ease-out}
@@ -435,6 +444,9 @@ svg{display:block}
   .show .gems svg,.frame10 i{width:68px;height:68px}
   .frame10 i svg{width:54px;height:54px}
   .tens .bag{width:72px;height:90px;font-size:24px}
+  .ten{grid-template-columns:repeat(5,40px)}
+  .ten i{width:40px;height:40px}
+  .ten i svg{width:34px;height:34px}
   .cart svg{width:40px;height:40px}
   .choice{min-height:130px}
   .choice svg{height:96px}
