@@ -182,9 +182,6 @@ else" follows the same order.
   the sun glowing, stars twinkling at night (in Vintage the sun turns into a pale moon, and dims behind clouds,
   rain, snow or fog), clouds drifting, rain or snow falling, a flash of lightning, the wind. Drawn in the widget's
   own ink, behind what it says; still, with Reduce Motion.
-- **The ripple**: back on Home from an app, its icons and widgets come in as a ripple out from the icon you opened
-  the app with (each fades up, grows a little past its size and settles, the further away the later); back from
-  Today, a wave down from the top. Only what's on screen; none with Reduce Motion.
 - **Pull to refresh**: at the top of Home, pull down and let go. The refresh sign comes down, turns and spins while
   the forecast is fetched again (when over a minute old), Mail's count read again and your settings from your
   other devices brought in; then Home is drawn again. Pulled too little, it springs back.
