@@ -10,7 +10,7 @@
   // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-layers-512.png, icon-grid-512.png. aOS shows
   // the one for its own look. The app's own icon (what a Home Screen shows) follows the design picked in the app.
   const lookNow = () => (window.aosLook ? aosLook.get() : 'vintage');
-  const icon = id => lookNow() === 'layers' && window.aosGlyphs && aosGlyphs[id] ? `../${id}/icon-pebble.svg`   // in Layers, its pebble (make-looks.mjs)
+  const icon = id => lookNow() === 'layers' && window.aosGlyphs && aosGlyphs[id] ? `../${id}/icon-pebble.svg`   // in Pearl, its pebble (make-looks.mjs)
     : `../${id}/icon-${lookNow() === 'vintage' ? '' : lookNow() + '-'}512.png`;
   const appUrl = id => new URL(`../${id}/`, location.href).href + '?via=aos';
   const T = id => D.TOURS[id] || { tag: '', cards: [] };
@@ -307,10 +307,10 @@
     if ((b = ev.target.closest('[data-plan-stop]'))) return setPlan(b, { cancel: true });
     if ((b = ev.target.closest('[data-plan-resume]'))) return setPlan(b, { resume: true });
   }
-  // Look: Vintage (mid-century, the default), Standard (Sea glass), Layers or Tron, kept on this phone (look.js); every app takes it
+  // Look: Vintage (mid-century, the default), Standard (Sea glass), Pearl (id 'layers', the look it replaced) or Tron, kept on this phone (look.js); every app takes it
   // too. Named and described word for word as in every app's Settings > Design (home/design.js, aosDesign.picker())
   const LOOKS = [['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'], ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
-    ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];
+    ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];
   const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${id === 'grid' ? 'Tron <span class="se">Special Edition</span>' : esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
   // a link to Updates or Subscription (a notification, the plan card) opens that one
@@ -319,7 +319,7 @@
     <div class="fbody" id="${id}" hidden>${body}</div>`;
   const unfold = (b, on) => { if (!b) return; on = on == null ? b.getAttribute('aria-expanded') !== 'true' : on; b.setAttribute('aria-expanded', String(on)); const x = $(b.getAttribute('aria-controls')); if (x) x.hidden = !on; };
   const THEME_NAME = t => (W.theme.list.find(([v]) => v === t) || [, 'Automatic'])[1];
-  // Tron's intro as aOS opens (tron-intro.js), Vintage's, Sunrise (vintage-intro.js), Sea glass's, Tide (glass-intro.js), and Layers', Skylight (layers-intro.js):
+  // Tron's intro as aOS opens (tron-intro.js), Vintage's, Sunrise (vintage-intro.js), Sea glass's, Tide (glass-intro.js), and Pearl's, Ignition (layers-intro.js; Pearl keeps Layers' id):
   // with its sound, silent, or off
   // Home's layout (aOS/home-tab.js): Classic, or Thumb arc for the right hand or the left
   const HOME_LAYOUTS = [['classic', 'Classic'], ['arc', 'Thumb arc'], ['arc-left', 'Left-handed arc']];
@@ -352,7 +352,7 @@
         S.choice({ id: 'homeLayout', title: 'Home layout', sub: 'Thumb arc puts Home, Mail, Weather, Calendar and your four favorites where your thumb rests, and every app on one screen.', options: HOME_LAYOUTS, value: homeLayout() }),
       ])
       + intro('tronIntroSec', 'tronIntroPick', 'Tron', tronIntro(), 'tiplay') + intro('vintageIntroSec', 'vintageIntroPick', 'Sunrise', vintageIntro(), 'viplay')
-      + intro('glassIntroSec', 'glassIntroPick', 'Tide', glassIntro(), 'giplay') + intro('layersIntroSec', 'layersIntroPick', 'Skylight', layersIntro(), 'liplay');
+      + intro('glassIntroSec', 'glassIntroPick', 'Tide', glassIntro(), 'giplay') + intro('layersIntroSec', 'layersIntroPick', 'Ignition', layersIntro(), 'liplay');
   }
   function acctPage(at) {
     const S = AllisonOS.settings;

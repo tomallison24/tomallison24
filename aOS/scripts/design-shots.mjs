@@ -1,6 +1,6 @@
 // The pictures in the aOS design charter (DESIGN.md), drawn from the apps themselves into docs/design/.
 // Each is cropped to the part that shows its rule, at iPhone size (390 points wide); a rule about the
-// looks shows Vintage, Standard, Layers and Tron side by side. A "Don't" is drawn from a small snippet
+// looks shows Vintage, Standard, Pearl and Tron side by side. A "Don't" is drawn from a small snippet
 // of the old pattern here, never from an app, so it stays the same after every app is fixed.
 //
 // Run it again whenever an app or a shared part (home/settings.js, home/design.js, home/welcome.js)
@@ -44,7 +44,7 @@ const browser = await chromium.launch();
 
 const NOW = new Date('2026-10-14T14:00:00-06:00');   // a Wednesday afternoon in Denver
 const TZ = 'America/Denver';
-const LOOKS = [['vintage', 'Vintage'], ['glass', 'Standard'], ['layers', 'Layers'], ['grid', 'Tron']];
+const LOOKS = [['vintage', 'Vintage'], ['glass', 'Standard'], ['layers', 'Pearl'], ['grid', 'Tron']];   // Pearl keeps Layers' id
 const MAGICK = (() => { try { execFileSync('convert', ['-version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
 const made = [];
 
@@ -240,7 +240,7 @@ if (want('anatomy')) {
     + S.section('Trips', [S.toggle({ title: 'Family calendar', sub: 'Shares bookings with the Family calendar, both ways.', on: true }), S.info({ title: 'Live flight status', sub: 'Working: 3 lookups this month, of 50.' })], { hint: 'One line under a section, at most.', value: '3 trips', open: true }));
   const lines = await annotate(p, [
     { sel: '#stLbl', text: 'Sheet title: 17, semibold' },
-    { sel: '#setSheet .okbtn', text: 'The way out: the ✓, 44 × 44, in the accent (Vintage, Layers, Tron) or the pastel (Standard)', at: 'right', radius: 22 },
+    { sel: '#setSheet .okbtn', text: 'The way out: the ✓, 44 × 44, in the accent (Vintage, Pearl, Tron) or the pastel (Standard)', at: 'right', radius: 22 },
     { sel: '#stBody .st-lbl', i: 1, text: 'Section: a dropdown row, its name 16 semibold, how it stands on the right, a chevron; closed until tapped' },
     { sel: '#stBody .st-group', i: 1, text: 'Open: its group under it, corners 20, a hairline edge, no shadow', at: 'right', radius: 20 },
     { sel: '#stBody .st-title', i: 1, text: 'Row name: 16, semibold' },

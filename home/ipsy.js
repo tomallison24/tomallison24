@@ -1038,7 +1038,7 @@
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Layers or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, {
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Pearl (its id is layers) or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, {
       get: () => { const l = ls.get('aos.look', 'vintage'); return l === 'neon' ? 'layers' : l; },
       put: v => {   // every app, as aOS's own Look picker writes it (AllisonOS.welcome.data.APPS): Money and Sparkle too, not only the apps with settings here
         const all = (AOS.welcome && AOS.welcome.data && AOS.welcome.data.APPS) || SET_APPS;

@@ -48,9 +48,9 @@
   const GROUND = { vintage: ['#F4ECDD', '#241E1A'], grid: ['#050608', '#050608'] };
   const LOOKS = ['vintage', 'glass', 'layers', 'grid'];
   const ok = v => v === 'neon' ? 'layers' : LOOKS.includes(v) ? v : 'vintage';
-  // Layers' sky: the time of day, and the colour at the top of each sky (aOS/scripts/looks.mjs, SKIES), for the bars
+  // Pearl's bar colours (aOS/scripts/looks.mjs, SKIES): one ground all day; still keyed by the time of day, as Layers' skies were
   const tod = (h = new Date().getHours()) => h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night';
-  const SKY_TOP = { morning: ['#F4DCCB', '#42302A'], afternoon: ['#B9DCD2', '#1F3B35'], evening: ['#EDCDC9', '#3F2B2E'], night: ['#D2D7EE', '#0F1426'] };
+  const SKY_TOP = { morning: ['#F7F3EC', '#02050C'], afternoon: ['#F7F3EC', '#02050C'], evening: ['#F7F3EC', '#02050C'], night: ['#F7F3EC', '#02050C'] };
   const pairs = s => String(s || '').split(',').map(p => p.split('=').map(x => x.trim())).filter(p => p.length === 2 && p[0] && p[1]);
 
   // ---- The old Vintage app's data, moved once ----
@@ -114,6 +114,9 @@
   }
 
   // ---- The design ----
+  const PEARL_JS = (me && me.src || '../home/design.js').replace(/design\.js(\?.*)?$/, 'pearl.js');
+  // Pearl's light and dust (../home/pearl.js): loaded once Pearl is the look, and it draws only while it is
+  const pearl = () => { if (window.aosPearl || document.querySelector('script[data-pearl-js]')) return; const s = document.createElement('script'); s.src = PEARL_JS; s.dataset.pearlJs = ''; (document.head || root).append(s); };
   let stored = null; try { stored = localStorage.getItem(KEY); if (stored === 'neon') localStorage.setItem(KEY, 'layers'); } catch {}
   function apply(look) {
     look = ok(look);
@@ -134,6 +137,7 @@
       const h = l.getAttribute('href') || '';
       l.setAttribute('href', h.replace(/icon(?:-(?:glass|neon|layers|grid))?-(\d+)\.png/, look === 'vintage' ? 'icon-$1.png' : `icon-${look}-$1.png`));
     }
+    if (look === 'layers') pearl();
     return look;
   }
   let look = apply(stored);
@@ -152,7 +156,7 @@
 .aos-design .sw{flex:none;width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--hair,rgba(128,128,128,.25))}
 .aos-design .sw.vintage{background:conic-gradient(#E3A72F 0 25%,#1F6F6B 0 50%,#D8572A 0 75%,#4A3426 0)}
 .aos-design .sw.glass{background:linear-gradient(135deg,#6FA597,#8193BC 40%,#BE918F 70%,#BC9C68)}
-.aos-design .sw.layers{background:radial-gradient(circle at 50% 78%,#F6F7F9 0 30%,transparent 31%),linear-gradient(160deg,#B9DCD2,#C6D1E7 45%,#EAD0CE 75%,#EEDFC4)}
+.aos-design .sw.layers{background:radial-gradient(circle at 50% 50%,transparent 0 9px,#F2FAFF 10px 11px,rgba(150,205,255,.5) 12px,transparent 15px),radial-gradient(80% 70% at 50% 45%,#0B1A37,#02050C 80%)}
 .aos-design .sw.grid{background:radial-gradient(circle,#FF2A2A 0 12%,#08090B 13% 38%,#FF2A2A 39% 49%,#08090B 50% 70%,#E9EDF1 71% 76%,#08090B 77%)}
 .aos-design .sw.grid{position:relative}
 .aos-design .sw.grid::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;background:conic-gradient(transparent 0 70%,rgba(255,42,42,.25) 80%,#FF2A2A 92%,#fff 95%,transparent 96%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));filter:drop-shadow(0 0 3px #FF2A2A);animation:aosSeSpin 1.8s linear infinite}
@@ -172,7 +176,7 @@
   const ROWS = [
     ['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'],
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
-    ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'],
+    ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'],
     ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares'],
   ];
   const picker = () => '<div class="aos-design" role="radiogroup" aria-label="Design">' + ROWS.map(([id, name, note]) =>

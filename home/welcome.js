@@ -86,6 +86,40 @@
   //                  log in aOS. An app it doesn't mention: nothing.
   // ===========================================================================
   const RELEASES = [
+    { v: '2.4', date: '2026-11-14', title: 'Light in the dust', look: 'vintage',
+      highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'Pearl takes the place of Layers'],
+      notes: ['Pearl, in aOS and every app: at night, lines of cool white light on near-black blue; by day, carbon hairlines on cream. It follows the phone\'s light or dark setting',
+        'Pearl takes the place of Layers: a phone that had Layers opens in Pearl, in aOS and every app, with nothing to set',
+        'Dust drifts slowly behind every screen in Pearl, at many depths. Dust that strays near the light is drawn into it and vanishes with the faintest glint, and new dust quietly appears elsewhere. When Weather says rain or snow where you are, the dust falls as rain or drifts down as snow',
+        'Under each title, a strip of light with a beam gliding slowly back and forth along it',
+        'The top edge of each card lights up where your eyes rest on the screen, a little above the middle, and fades above and below it, so the card you scroll to brightens',
+        'New app icons in Pearl: each app is one simple line drawing with a dot in its own colour, on aOS Home, in search, in the app store and on your Home Screen',
+        'aOS Home in Pearl: the weather and what\'s next as two panes of glass, the weather drawn in light',
+        'Ignition, Pearl\'s intro: dust gathers into a rounded square of light, it flares, and aOS appears, in under four seconds. Account > Appearance > Ignition intro: Sound, Silent or Off',
+        'Titles in Pearl are in Unbounded Light, kept on the phone so they work offline',
+        'Everything in Pearl moves slowly, and with Reduce Motion it holds still. The light and dust pause whenever a screen isn\'t showing'],
+      apps: {
+        aos: { highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'Pearl takes the place of Layers'],
+          tour: [{ sel: '[data-acct]', t: 'Pearl', d: 'Your name, then Appearance: Look. Pearl is new, in place of Layers, for aOS and every app.', g: 'tap' }] },
+        mail: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        calendar: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        clock: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        news: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        weather: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        notes: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        podcasts: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        travel: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        places: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        fitness: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        drinks: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        meals: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        orders: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        school: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        money: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        improve: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        house: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+        sparkle: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
+      } },
     { v: '2.3', date: '2026-10-31', title: 'Back to school', look: 'vintage', added: ['school', 'improve'],
       highlights: ['New app: School, your child\'s school in one place', 'What\'s on tomorrow, what needs you and what\'s coming up', 'No-school days show in Calendar'],
       notes: ['Sparkle Kingdom: the Gem Mine\'s math is gentler for a 5-year-old. Past 10 the gems come as a block of ten and some ones, so she counts on from ten; counting by tens is blocks of ten up to 50; the teens add or take away a few ones without crossing ten; and every question has gems to count (the stories and missing numbers too, within 10)',
@@ -1655,7 +1689,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
   // an app's icon in its design here (design.<id>, Clock's set.design; aOS: aos.look): icon-512.png is Vintage
   const lookOf = id => { try { return id === 'aos' ? localStorage.getItem('aos.look') : id === 'clock' ? ((JSON.parse(localStorage.getItem('allison-clock-v1')) || {}).set || {}).design : localStorage.getItem('design.' + id); } catch { return null; } };
   const homeIcon = id => { let l = lookOf(id); if (l === 'neon') l = 'layers'; return url(`../${DIR(id)}/icon-${/^(glass|layers|grid)$/.test(l || '') ? l + '-' : ''}512.png`); };   // neon: Night Drive's, which Layers replaced
-  // what the app shows of itself: in Layers, its pebble (icon-pebble.svg, made by aOS/scripts/make-looks.mjs); the Home
+  // what the app shows of itself: in Pearl (id 'layers'), its pebble (icon-pebble.svg, made by aOS/scripts/make-looks.mjs); the Home
   // Screen icon (homeIcon) is only for adding it to the Home Screen, which shows that one
   const icon = id => { let l = lookOf(id); return (l === 'layers' || l === 'neon') && APPS.includes(id) ? url(`../${DIR(id)}/icon-pebble.svg`) : homeIcon(id); };
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="currentColor"/></svg>';
@@ -1842,7 +1876,7 @@ html[data-theme="dark"] #aos-welcome { --w-bg: #0D1213; --w-text: #fff; --w-mute
 #aos-welcome .c-sw { position: relative; flex: 0 0 44px; height: 56px; border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--w-edge); }
 #aos-welcome .c-sw.vintage { background: #F4ECDD; } #aos-welcome .c-sw.vintage::after { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
 #aos-welcome .c-sw.glass { background: radial-gradient(60% 40% at 20% 10%, rgba(169,211,199,.95), transparent 70%), radial-gradient(60% 40% at 90% 60%, rgba(185,198,224,.95), transparent 70%), #EEF2F0; }
-#aos-welcome .c-sw.layers { background: linear-gradient(to bottom, transparent 0 22px, rgba(246,247,249,.85) 34px), linear-gradient(150deg, #B9DCD2, #C6D1E7 40%, #EAD0CE 75%, #EEDFC4); }
+#aos-welcome .c-sw.layers { background: radial-gradient(circle at 50% 50%, transparent 0 9px, #F2FAFF 10px 11px, rgba(150,205,255,.5) 12px, transparent 15px), radial-gradient(80% 70% at 50% 45%, #0B1A37, #02050C 80%); }
 #aos-welcome .c-sw.grid { background: #08090B; } #aos-welcome .c-sw.grid::after { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #FF2A2A 0 12%, transparent 13% 38%, #FF2A2A 39% 50%, transparent 51% 70%, #E9EDF1 71%); filter: drop-shadow(0 0 4px #FF2A2A); }
 #aos-welcome .c-sw.grid::after { animation: aosSePulse 1.1s ease-in-out infinite alternate; } #aos-welcome .c-sw.grid::before {content:'';position:absolute;left:-60%;bottom:9px;width:60%;height:2px;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent,#FF2A2A 80%,#fff);box-shadow:0 0 6px #FF2A2A;animation:aosSeRide 2.2s cubic-bezier(.5,0,.5,1) infinite}
 #aos-welcome .c-look .se {display:inline-block;margin-left:7px;padding:2px 7px 1px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.5;vertical-align:2px;white-space:nowrap;color:#fff;background:linear-gradient(100deg,#9E0A14 0%,#FF2A2A 38%,#FF8F8F 50%,#FF2A2A 62%,#9E0A14 100%) 0 0/260% 100%;box-shadow:0 0 8px rgba(255,42,42,.6);text-shadow:0 1px 2px rgba(90,0,0,.55);animation:aosSeShine 2.6s linear infinite}
@@ -1920,18 +1954,19 @@ html[data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #241E1A; --w-text: #F4ECDD;
 #aos-welcome.mc::after { left: -30px; bottom: 90px; width: 130px; height: 36px; border-radius: 18px; background: #D8572A; transform: rotate(-18deg); opacity: .85; }
 #aos-welcome.mc .c-panel { box-shadow: inset 0 0 0 1.5px var(--w-edge); -webkit-backdrop-filter: none; backdrop-filter: none; }
 #aos-welcome.mc .w-btn { background: #D8572A !important; color: #FFF8EC !important; box-shadow: none; }
-/* Layers and Tron (data-look on <html>, home/design.js): the same screens in their colours. Layers: the sky as the disc, no pill */
-html[data-look="layers"] #aos-welcome.mc.mc { --w-bg: #F4F6F9; --w-text: #12161C; --w-muted: #4C525B; --w-glass: #FFFFFF; --w-edge: rgba(18,22,28,.12); --w-dot: rgba(18,22,28,.16);
-  --w-pastel: linear-gradient(100deg, #306E61, #306E61); --w-glow: rgba(150,200,186,.5); --w-hot: linear-gradient(120deg, #306E61 0%, #306E61 45%, #CF5C59 100%); --w-hot-glow: rgba(150,200,186,.6); --w-hot-glow2: rgba(226,182,178,.5);
-  --w-btn: #306E61; --w-on-btn: #FFFFFF; --w-sky: linear-gradient(150deg, #B9DCD2, #C6D1E7 40%, #EAD0CE 75%, #EEDFC4); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
-@media (prefers-color-scheme: dark) { html[data-look="layers"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #10141A; --w-text: #E8ECF2; --w-muted: #A9B0BC; --w-glass: #1B2029; --w-edge: rgba(255,255,255,.12); --w-dot: rgba(232,236,242,.2);
-  --w-pastel: linear-gradient(100deg, #7FC6B4, #7FC6B4); --w-hot: linear-gradient(120deg, #7FC6B4 0%, #7FC6B4 45%, #E3A79F 100%); --w-btn: #7FC6B4; --w-on-btn: #10141A; --w-sky: linear-gradient(150deg, #1F3B35, #252F48 40%, #3F2D2C 75%, #3C3424); } }
-html[data-look="layers"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #10141A; --w-text: #E8ECF2; --w-muted: #A9B0BC; --w-glass: #1B2029; --w-edge: rgba(255,255,255,.12); --w-dot: rgba(232,236,242,.2);
-  --w-pastel: linear-gradient(100deg, #7FC6B4, #7FC6B4); --w-hot: linear-gradient(120deg, #7FC6B4 0%, #7FC6B4 45%, #E3A79F 100%); --w-btn: #7FC6B4; --w-on-btn: #10141A; --w-sky: linear-gradient(150deg, #1F3B35, #252F48 40%, #3F2D2C 75%, #3C3424); }
+/* Pearl (id 'layers', the look it replaced) and Tron (data-look on <html>, home/design.js): the same screens in their colours.
+   Pearl: cream and carbon by day, near-black and light at night; titles in Unbounded Light; no disc, no pill */
+html[data-look="layers"] #aos-welcome.mc.mc { --w-bg: #F3EEE4; --w-text: #1E2126; --w-muted: #6E6960; --w-glass: #FBF8F2; --w-edge: rgba(30,33,38,.12); --w-dot: rgba(30,33,38,.16);
+  --w-pastel: linear-gradient(100deg, #1E2126, #1E2126); --w-glow: rgba(255,255,255,.8); --w-hot: linear-gradient(120deg, #1E2126 0%, #1E2126 55%, #56877B 100%); --w-hot-glow: rgba(255,255,255,.7); --w-hot-glow2: rgba(86,135,123,.35);
+  --w-btn: #1E2126; --w-on-btn: #FBF8F2; --w-sky: radial-gradient(110% 60% at 50% 0%, #FFFDF9 0%, #F4EEE3 55%, #E9E1D3 100%); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { html[data-look="layers"]:not([data-theme="light"]) #aos-welcome.mc.mc { --w-bg: #02050C; --w-text: #E8F0F6; --w-muted: #8C98A8; --w-glass: #0E1520; --w-edge: rgba(220,240,255,.14); --w-dot: rgba(220,240,255,.2);
+  --w-pastel: linear-gradient(100deg, #F2FAFF, #B9D4F0); --w-glow: rgba(150,205,255,.45); --w-hot: linear-gradient(120deg, #F2FAFF 0%, #CFE3F7 50%, #A9D3C7 100%); --w-hot-glow: rgba(150,205,255,.6); --w-hot-glow2: rgba(169,211,199,.5); --w-btn: #F2FAFF; --w-on-btn: #02050C; --w-sky: radial-gradient(110% 50% at 50% 100%, #081631 0%, #040A1A 45%, #000206 100%); } }
+html[data-look="layers"][data-theme="dark"] #aos-welcome.mc.mc { --w-bg: #02050C; --w-text: #E8F0F6; --w-muted: #8C98A8; --w-glass: #0E1520; --w-edge: rgba(220,240,255,.14); --w-dot: rgba(220,240,255,.2);
+  --w-pastel: linear-gradient(100deg, #F2FAFF, #B9D4F0); --w-glow: rgba(150,205,255,.45); --w-hot: linear-gradient(120deg, #F2FAFF 0%, #CFE3F7 50%, #A9D3C7 100%); --w-hot-glow: rgba(150,205,255,.6); --w-hot-glow2: rgba(169,211,199,.5); --w-btn: #F2FAFF; --w-on-btn: #02050C; --w-sky: radial-gradient(110% 50% at 50% 100%, #081631 0%, #040A1A 45%, #000206 100%); }
 html[data-look="layers"] #aos-welcome.mc::before { opacity: 1; background: var(--w-sky); }
 html[data-look="layers"] #aos-welcome.mc::after { display: none; }
 html[data-look="layers"] #aos-welcome.mc .w-btn { background: var(--w-btn) !important; color: var(--w-on-btn) !important; box-shadow: 0 10px 22px -12px rgba(16,24,40,.45); }
-html[data-look="layers"] #aos-welcome.mc :is(h1, h2) { font-weight: 700; letter-spacing: -.02em; }
+html[data-look="layers"] #aos-welcome.mc :is(h1, h2) { font-family: "Unbounded", "Avenir Next", system-ui, sans-serif; font-weight: 200; letter-spacing: -.025em; font-size-adjust: .43; }
 html[data-look="grid"] #aos-welcome.mc.mc { --w-bg: #F3F5F7; --w-text: #15171B; --w-muted: #50555D; --w-glass: #FFFFFF; --w-edge: rgba(208,16,30,.28); --w-dot: rgba(21,23,27,.18);
   --w-pastel: linear-gradient(100deg, #D0101E, #D0101E); --w-glow: rgba(208,16,30,.3); --w-hot: linear-gradient(120deg, #D0101E 0%, #D0101E 45%, #2A2E35 100%); --w-hot-glow: rgba(208,16,30,.5); --w-hot-glow2: rgba(42,46,53,.4);
   --w-line: #D0101E; --w-heat: #D0101E; --w-shine: 0px; font-family: "Exo 2", "Avenir Next", system-ui, sans-serif; }
@@ -1969,7 +2004,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     el.querySelector('.w-skip').onclick = close;
     return { el, q: s => el.querySelector(s), close, closers };
   }
-  // In Tron, Vintage, Sea glass and Layers, aOS opens with its intro (aOS/tron-intro.js, vintage-intro.js, glass-intro.js, layers-intro.js) over everything: a welcome waits for it to end, so none of its
+  // In Tron, Vintage, Sea glass and Pearl, aOS opens with its intro (aOS/tron-intro.js, vintage-intro.js, glass-intro.js, layers-intro.js) over everything: a welcome waits for it to end, so none of its
   // opening plays unseen underneath (at most a few seconds, whatever happens to the intro).
   const introDone = () => new Promise(r => { const t0 = Date.now(), look = () => (document.querySelector('#tronIntro, #vintageIntro, #glassIntro, #layersIntro') && Date.now() - t0 < 8000 ? setTimeout(look, 100) : r()); look(); });
   const run = (label, inner, onClose, body) => {
@@ -2275,7 +2310,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: ['#addApp', '#addKind'], t: 'Which app', d: 'Pick its kind and the app it’s about, or General. Improve keeps them for the next one.', g: 'tap' },
     { sel: '#showChips', t: 'Open and done', d: 'Everything still to do is in Open, newest first. Tap one to change it, mark it done or delete it.', g: 'tap' },
     { sel: '#moreBtn', t: 'Shared with the family', d: 'Signed in, the list is kept in the family\'s Google Sheet: everyone can add to it, and it can all be worked through in one go. Sign in here.', g: 'tap' },
-    { sel: '#moreBtn', t: 'Your look', d: 'Vintage, mid-century modern, Standard in Sea glass, Layers or Tron. Pick one in Settings, and change it any time.', g: 'tap' },
+    { sel: '#moreBtn', t: 'Your look', d: 'Vintage, mid-century modern, Standard in Sea glass, Pearl or Tron. Pick one in Settings, and change it any time.', g: 'tap' },
   ] };
   SPOTS.money = { stops: [
     { sel: ['#main [data-act="connect"]', '#main .empty'], t: 'This month at a glance', d: 'Connect Gmail and Money reads Monarch’s alert emails: what you’ve spent, the pace for the month, and each category against your usual.', g: 'tap' },
@@ -2314,7 +2349,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: ['#players .pcard', '#players'], t: 'Just hard enough', d: 'Every skill moves up or down by itself to keep her mostly right and a little stretched. Words she misses come back on later days.' },
     { sel: ['#players .pcard', '#players'], t: 'Earned by learning', d: 'Coins buy gowns, tiaras and things for her unicorn, and her unicorn grows as she learns.' },
     { sel: '#grownBtn', t: 'For grown-ups', d: 'Press and hold Grown-ups for Settings: each child\'s progress, words to practice together, play time and the letter sounds you record.', g: 'hold' },
-    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Layers or Tron, for the player picker and Settings. Pick one in Settings > Design.', g: 'hold' },
+    { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Pearl or Tron, for the player picker and Settings. Pick one in Settings > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
   const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', school: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
@@ -2523,7 +2558,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   // never shows the app itself, and coming back to aOS later lands on aOS.
   // aOS has a choice to make first, since iOS takes its icon, status bar and address when it is
   // added: Vintage or Sea glass (aOS/look.js), and the Home Screen icon shown follows it.
-  const LOOKS = [['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'], ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'], ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];   // word for word home/design.js's picker
+  const LOOKS = [['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'], ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'], ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];   // word for word home/design.js's picker
   const lookIcon = look => url(`../aOS/icon-${look === 'vintage' ? '' : look + '-'}512.png`);
   function playInstall(id = APP) {
     const k = 'aos.later.' + id, stay = ios && viaAOS() && id !== 'aos';   // Chrome has no in-app view to close: Not now

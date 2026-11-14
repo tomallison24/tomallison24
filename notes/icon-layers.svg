@@ -1,16 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Layers: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F8F5E9"/><stop offset="1" stop-color="#EDE7C9"/></linearGradient><mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
-      <rect x="86" y="118" width="58" height="58" rx="18" fill="#fff"/>
-      <path d="M101 148l12 12 17-25" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-    </mask></defs>
-  <rect width="512" height="512" fill="url(#lyg)"/>
-  <g>
-    <rect width="512" height="512" fill="#726F34" mask="url(#cut)"/>
-    <rect x="166" y="118" width="260" height="58" rx="29" fill="#726F34"/>
-    <g fill="#726F34" fill-opacity="0.78">
-      <rect x="86" y="214" width="340" height="32" rx="16"/><rect x="86" y="270" width="260" height="32" rx="16"/>
-      <rect x="86" y="326" width="340" height="32" rx="16"/><rect x="86" y="382" width="170" height="32" rx="16"/>
-    </g>
-  </g>
+  <!-- Pearl: generated from aOS/scripts/pearl-icons.mjs by aOS/scripts/make-looks.mjs - don't edit by hand. The app's line of light on the night ground, with its coloured dot. -->
+  <defs><radialGradient id="pg" cx=".5" cy=".95" r=".95"><stop offset="0" stop-color="#0B1A37"/><stop offset=".5" stop-color="#050C1D"/><stop offset="1" stop-color="#01030A"/></radialGradient><filter id="gl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="512" height="512" fill="url(#pg)"/>
+  <g fill="#DCEBFF"><circle cx="501" cy="508" r="2.0" fill-opacity="0.41"/><circle cx="351" cy="97" r="2.8" fill-opacity="0.51"/><circle cx="94" cy="102" r="1.9" fill-opacity="0.17"/><circle cx="408" cy="19" r="2.1" fill-opacity="0.38"/><circle cx="84" cy="154" r="2.8" fill-opacity="0.35"/><circle cx="169" cy="63" r="2.0" fill-opacity="0.24"/><circle cx="360" cy="240" r="3.1" fill-opacity="0.27"/><circle cx="140" cy="142" r="1.4" fill-opacity="0.13"/><circle cx="194" cy="202" r="2.3" fill-opacity="0.18"/><circle cx="180" cy="460" r="2.2" fill-opacity="0.29"/><circle cx="18" cy="379" r="1.8" fill-opacity="0.44"/><circle cx="153" cy="7" r="2.6" fill-opacity="0.14"/><circle cx="383" cy="73" r="3.0" fill-opacity="0.51"/><circle cx="162" cy="406" r="1.2" fill-opacity="0.52"/><circle cx="478" cy="275" r="1.2" fill-opacity="0.21"/><circle cx="112" cy="182" r="2.4" fill-opacity="0.29"/></g>
+  <g fill="none" stroke="#F2FAFF" stroke-linecap="round" stroke-linejoin="round" filter="url(#gl)"><g transform="translate(104 104) scale(12.667)" stroke-width="1.15"><path d="M6 7.5h12M6 12h12M6 16.5h7"/></g></g>
+  <circle cx="414" cy="98" r="19" fill="#FFF2AE" filter="url(#gl)"/>
 </svg>

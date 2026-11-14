@@ -66,13 +66,13 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
   const names = await p.locator('#looks .dopt b').allTextContents();
-  if (names.join() !== 'Vintage,Standard,Layers,Tron Special Edition') pr.push('the picker offers ' + names.join());
+  if (names.join() !== 'Vintage,Standard,Pearl,Tron Special Edition') pr.push('the picker offers ' + names.join());
   // the same names and words as every app's Settings > Design (home/design.js)
   const notes = await p.locator('#looks .dopt small').allTextContents();
-  if (notes.join('|') !== 'Mid-century: cream and walnut, mustard, teal and orange|Sea glass: frosted glass in the AllisonOS colors|A still sky by the time of day, frosted glass over it|Light cycles: red light on a black grid, as in Tron: Ares') pr.push('the picker describes them as ' + notes.join('|'));
+  if (notes.join('|') !== 'Mid-century: cream and walnut, mustard, teal and orange|Sea glass: frosted glass in the AllisonOS colors|Light in the dust: lines of light on near-black, carbon on cream by day|Light cycles: red light on a black grid, as in Tron: Ares') pr.push('the picker describes them as ' + notes.join('|'));
   if (await selected(p) !== 'vintage') pr.push('Vintage is not the one picked: ' + await selected(p));
   if (await p.locator('#looks [data-look="grid"] .se').evaluate(e => getComputedStyle(e).animationName) !== 'aosSeShine') pr.push('Tron\'s Special Edition badge does not animate');
-  report('aOS opens in Vintage; Appearance > Look offers Vintage, Standard, Layers and Tron Special Edition, in every app\'s words (its badge animated), Vintage picked', pr); await ctx.close();
+  report('aOS opens in Vintage; Appearance > Look offers Vintage, Standard, Pearl and Tron Special Edition, in every app\'s words (its badge animated), Vintage picked', pr); await ctx.close();
 }
 
 // 2. Sea glass at once, kept over a reload, with no flash of Vintage; Vintage again
@@ -118,7 +118,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
   const names = await p.locator('#aos-welcome .c-look b').allTextContents();
-  if (names.join() !== 'Vintage,Standard,Layers,Tron Special Edition') pr.push('the install step offers ' + names.join());
+  if (names.join() !== 'Vintage,Standard,Pearl,Tron Special Edition') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());
@@ -167,7 +167,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/icon-layers-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Layers\': ' + st.icon);
   if (!st.tint.split(',').every(c => SKY_TOP[st.tod] && SKY_TOP[st.tod].includes(c.toUpperCase()))) pr.push(`the status bar tint ${st.tint} is not the top of Layers' ${st.tod} sky`);
   if (await selected(p) !== 'layers') pr.push('the picker does not show Layers picked');
-  if (!/Layers/.test(await p.locator('#lookSub').innerText())) pr.push('the Appearance line does not say Layers');
+  if (!/Pearl/.test(await p.locator('#lookSub').innerText())) pr.push('the Appearance line does not say Pearl');
   if (await p.evaluate(() => document.documentElement.hasAttribute('data-sky'))) pr.push('the Vintage sky is still drawn in Layers');
   if (await p.evaluate(() => !/gradient/.test(getComputedStyle(document.documentElement).backgroundImage))) pr.push('Layers\' sky is not behind the page');
   if (await p.locator('#stories .story img').first().getAttribute('src').then(s => !/icon-pebble\.svg$/.test(s || ''))) pr.push('the apps\' icons are not Layers\' pebbles');
@@ -554,8 +554,8 @@ for (const scheme of ['light', 'dark']) {
   report('Sea glass\'s Tide intro: the waves, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
 }
 
-// 13. Layers' intro, Skylight (aOS/layers-intro.js): aOS opens with the time of day's sky, a swarm of dots building a
-// house and "aOS" with a greeting by the clock, then "aOS" glides up onto the small "aOS" at the top of the page; once a launch;
+// 13. Pearl's intro, Ignition (aOS/layers-intro.js; Pearl keeps Layers' id): aOS opens with dust gathering into a rounded
+// square of light and "aOS" with a greeting by the clock, then "aOS" glides up onto the small "aOS" at the top of the page; once a launch;
 // Sound, Silent or Off and Play in Account (in Layers only); and none for a browser test that didn't ask for it, or in another look
 {
   const pr = [];
@@ -579,7 +579,7 @@ for (const scheme of ['light', 'dark']) {
   const { c, p } = await launch({ 'aos.look': 'layers', 'aos.layers.intro': 'sound' });
   await p.waitForTimeout(200);
   let v = await p.evaluate(() => ({ ...window.__li, want: aosLayersIntro.greeting() }));
-  if (!v.shown || v.name !== 'aOS' || v.hi !== v.want) pr.push('aOS did not open with the Skylight intro: ' + JSON.stringify(v));
+  if (!v.shown || v.name !== 'aOS' || v.hi !== v.want) pr.push('aOS did not open with the Ignition intro: ' + JSON.stringify(v));
   await p.waitForFunction(() => !document.getElementById('layersIntro'), null, { timeout: 6000 }).catch(() => pr.push('the intro did not end by itself'));
   v = await p.evaluate(() => window.__li);
   if (!v.home || v.lost || Math.abs(v.home.dx) > 2 || Math.abs(v.home.dy) > 2 || Math.abs(v.home.w) > 2) pr.push('"aOS" did not land on the page\'s own: ' + JSON.stringify(v));
@@ -591,7 +591,7 @@ for (const scheme of ['light', 'dark']) {
   // Account, in Layers: Sound picked, Play plays it (with its sound), Skip ends it, Off stops it on the next launch
   await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   await openLook(p);
-  if (!(await p.isVisible('#layersIntroPick [data-value="sound"][aria-checked="true"]'))) pr.push('Account has no Skylight intro setting, Sound picked');
+  if (!(await p.isVisible('#layersIntroPick [data-value="sound"][aria-checked="true"]'))) pr.push('Account has no Ignition intro setting, Sound picked');
   if (await p.isVisible('#vintageIntroPick') || await p.isVisible('#tronIntroPick') || await p.isVisible('#glassIntroPick')) pr.push('Account shows another look\'s intro setting in Layers');
   await p.click('[data-liplay]');
   await p.waitForSelector('#layersIntro[data-sound="playing"]', { timeout: 3000 }).catch(() => pr.push('played from Account, the intro\'s sound did not play'));
@@ -602,9 +602,9 @@ for (const scheme of ['light', 'dark']) {
   const p2 = await c.newPage(); await p2.goto(BASE + '/aOS/'); await p2.waitForTimeout(400);
   if (await p2.evaluate(() => !!document.getElementById('layersIntro'))) pr.push('the intro played with Off picked');
   await c.close();
-  // the swarm: hundreds of dots in the apps' colours, which by 2.8 seconds have built the house (its ground across the
-  // lower part of the screen, the roof's peak above the walls) with the family inside; in Dark, light dots and people
-  // on the dark sky; Silent, no sound
+  // the gathering: by 2.8 seconds the dust has become the mark, a rounded square of light across the middle of the upper
+  // half of the screen (its top edge to its bottom one, as parts of the screen); in Dark, light on the dark; by day, carbon;
+  // Silent, no sound
   const swarm = p => p.evaluate(() => {
     const e = document.getElementById('layersIntro'), cv = e && e.querySelector('.li-swarm'); if (!cv) return null;
     const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let n = 0, light = 0, top = cv.height, bottom = 0;
@@ -614,23 +614,23 @@ for (const scheme of ['light', 'dark']) {
   for (const scheme of ['light', 'dark']) {
     const { c, p } = await launch({ 'aos.look': 'layers', 'aos.layers.intro': 'silent' }, { scheme }); await p.waitForTimeout(2800);
     const n = await swarm(p);
-    if (!n || n.n < 2000) pr.push(`${scheme}: the house of dots is not drawn: ` + JSON.stringify(n));
+    if (!n || n.n < 150) pr.push(`${scheme}: the mark of light is not drawn: ` + JSON.stringify(n));
     else {
-      if (n.top < 0.3 || n.top > 0.5 || n.bottom < 0.7 || n.bottom > 0.85) pr.push(`${scheme}: the house is not where it should be (its peak to its ground, as parts of the screen): ` + JSON.stringify(n));
-      if (scheme === 'dark' ? n.light < 0.6 : n.light > 0.4) pr.push(`${scheme}: the dots and the family are not in the ${scheme} colours: ` + JSON.stringify(n));
+      if (n.top < 0.22 || n.top > 0.38 || n.bottom < 0.42 || n.bottom > 0.62) pr.push(`${scheme}: the mark is not where it should be (its top edge to its bottom one, as parts of the screen): ` + JSON.stringify(n));
+      if (scheme === 'dark' ? n.light < 0.6 : n.light > 0.4) pr.push(`${scheme}: the light is not in the ${scheme} colours: ` + JSON.stringify(n));
       if (n.sound) pr.push('Silent played its sound');
     }
     await c.close();
   }
   // Sea glass: not this intro
   { const { c, p } = await launch({ 'aos.look': 'glass', 'aos.layers.intro': 'sound' }); await p.waitForTimeout(400);
-    if ((await p.evaluate(() => window.__li)).shown) pr.push('the Skylight intro played in Sea glass'); await c.close(); }
+    if ((await p.evaluate(() => window.__li)).shown) pr.push('the Ignition intro played in Sea glass'); await c.close(); }
   // Reduce Motion: a short fade, and still gone in time
   { const { c, p } = await launch({ 'aos.look': 'layers', 'aos.layers.intro': 'silent' }, { still: true }); await p.waitForTimeout(200);
     if (!(await p.evaluate(() => window.__li)).shown) pr.push('no intro with Reduce Motion');
     await p.waitForFunction(() => !document.getElementById('layersIntro'), null, { timeout: 4000 }).catch(() => pr.push('with Reduce Motion, the intro did not end within 4 seconds'));
     await c.close(); }
-  report('Layers\' Skylight intro: the sky, the house of dots, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
+  report('Pearl\'s Ignition intro: dust gathering into a mark of light, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
 }
 
 

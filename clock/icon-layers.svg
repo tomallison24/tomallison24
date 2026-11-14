@@ -1,18 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Layers: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2F5FF"/><stop offset="1" stop-color="#DFE5FE"/></linearGradient>
-    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
-      <circle cx="256" cy="268" r="104" fill="#fff"/>
-      <g stroke="#fff" stroke-width="14" stroke-linecap="round">
-        <path d="M256 152V70M256 384v82M140 268H58M372 268h82"/>
-        <path d="M314 167.5l25-43.3M198 368.5l-25 43.3M156.5 210l-43.3-25M355.5 326l43.3 25M198 167.5l-25-43.3M314 368.5l25 43.3M156.5 326l-43.3 25M355.5 210l43.3-25"/>
-      </g>
-      <g fill="#fff"><circle cx="256" cy="66" r="18"/><circle cx="256" cy="470" r="18"/><circle cx="54" cy="268" r="18"/><circle cx="458" cy="268" r="18"/>
-        <circle cx="341" cy="121" r="12"/><circle cx="171" cy="415" r="12"/><circle cx="110" cy="183" r="12"/><circle cx="402" cy="353" r="12"/><circle cx="171" cy="121" r="12"/><circle cx="341" cy="415" r="12"/><circle cx="110" cy="353" r="12"/><circle cx="402" cy="183" r="12"/></g>
-      <g stroke="#000" stroke-linecap="round" fill="none"><path d="M256 268v-70" stroke-width="20"/><path d="M256 268l52 30" stroke-width="20"/></g>
-      <circle cx="256" cy="268" r="15" fill="#000"/>
-    </mask>
-  </defs>
-  <rect width="512" height="512" fill="url(#lyg)"/>
-  <rect width="512" height="512" fill="#4A498C" mask="url(#cut)"/>
+  <!-- Pearl: generated from aOS/scripts/pearl-icons.mjs by aOS/scripts/make-looks.mjs - don't edit by hand. The app's line of light on the night ground, with its coloured dot. -->
+  <defs><radialGradient id="pg" cx=".5" cy=".95" r=".95"><stop offset="0" stop-color="#0B1A37"/><stop offset=".5" stop-color="#050C1D"/><stop offset="1" stop-color="#01030A"/></radialGradient><filter id="gl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="512" height="512" fill="url(#pg)"/>
+  <g fill="#DCEBFF"><circle cx="455" cy="43" r="0.9" fill-opacity="0.19"/><circle cx="223" cy="180" r="2.2" fill-opacity="0.50"/><circle cx="157" cy="420" r="3.0" fill-opacity="0.35"/><circle cx="456" cy="457" r="3.0" fill-opacity="0.47"/><circle cx="344" cy="293" r="2.3" fill-opacity="0.28"/><circle cx="302" cy="141" r="1.0" fill-opacity="0.16"/><circle cx="500" cy="286" r="1.9" fill-opacity="0.13"/><circle cx="60" cy="289" r="1.3" fill-opacity="0.33"/><circle cx="16" cy="198" r="1.7" fill-opacity="0.36"/><circle cx="86" cy="2" r="1.1" fill-opacity="0.46"/><circle cx="449" cy="2" r="2.2" fill-opacity="0.16"/><circle cx="175" cy="246" r="2.4" fill-opacity="0.16"/><circle cx="511" cy="105" r="1.1" fill-opacity="0.44"/><circle cx="408" cy="427" r="1.0" fill-opacity="0.50"/><circle cx="9" cy="259" r="1.1" fill-opacity="0.26"/><circle cx="319" cy="218" r="2.8" fill-opacity="0.21"/></g>
+  <g fill="none" stroke="#F2FAFF" stroke-linecap="round" stroke-linejoin="round" filter="url(#gl)"><g transform="translate(104 104) scale(12.667)" stroke-width="1.15"><circle cx="12" cy="12" r="7.5"/><path d="M12 8v4l2.8 1.8"/></g></g>
+  <circle cx="414" cy="98" r="19" fill="#8597FF" filter="url(#gl)"/>
 </svg>

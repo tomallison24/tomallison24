@@ -326,13 +326,26 @@
     sparkle: '<path d="M12 3c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7z"/>',
   };
   const glyph = id => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[id] || GLYPH.sparkle}</svg>`;
-  // Each app as a pebble: its own colour, lighter at the top left, with its drawing in white at 60% of it (aOS/glyphs.js,
-  // made by make-looks.mjs from the app's icon.svg); an app without one keeps its line drawing on the round button.
+  // Each app as Pearl's pebble (Pearl replaced Layers and keeps its id): a hairline pebble with the app's line drawing at 60% of
+  // it and its coloured dot (aOS/glyphs.js, made by make-looks.mjs from aOS/scripts/pearl-icons.mjs), drawn in the page's own
+  // light: carbon on pearl by day, light on graphite at night (aOS/index.html, .orb.pebble); an app without one keeps its
+  // line drawing on the round button.
   const pebble = id => { const g = (window.aosGlyphs || {})[id], P = window.aosPebble; if (!g || !P) return glyph(id);
-    return `<svg class="peb" viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="pg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.top}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`
-      + `<radialGradient id="pw-${id}" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
-      + `<path d="${P}" fill="url(#pg-${id})"/><path d="${P}" fill="url(#pw-${id})"/><path class="edge" d="${P}"/></svg>`
-      + `<svg class="gl" viewBox="${g.vb}" aria-hidden="true">${g.defs ? `<defs>${g.defs}</defs>` : ''}${g.body}</svg>`; };
+    return `<svg class="peb" viewBox="0 0 512 512" aria-hidden="true"><path class="edge" d="${P}"/></svg>`
+      + `<svg class="gl" viewBox="0 0 24 24" aria-hidden="true">${g.line}</svg><i class="pdot" style="--dot:${g.dot}" aria-hidden="true"></i>`; };
+  // the weather drawn in light, for the Weather widget (Weather's own kinds of weather, aOS/home-find.js weather().kind)
+  const CLOUD = 'M19 47h27a9 9 0 0 0 1-17.9A13 13 0 0 0 22.5 26 10.5 10.5 0 0 0 19 47z';
+  const rays = (x, y, r1, r2) => Array.from({ length: 8 }, (_, i) => { const a = i / 8 * Math.PI * 2; return `<path d="M${(x + Math.cos(a) * r1).toFixed(1)} ${(y + Math.sin(a) * r1).toFixed(1)}L${(x + Math.cos(a) * r2).toFixed(1)} ${(y + Math.sin(a) * r2).toFixed(1)}"/>`; }).join('');
+  const WXG = {
+    sun: () => `<g class="rays">${rays(32, 32, 17, 23)}</g><circle cx="32" cy="32" r="11"/>`,
+    moon: () => '<path d="M40 16a17 17 0 1 0 9 30A15 15 0 0 1 40 16z"/>',
+    partly: () => `<g class="rays">${rays(40, 22, 11, 15)}</g><circle cx="40" cy="22" r="7"/><path class="mask" d="${CLOUD}"/><path d="${CLOUD}"/>`,
+    cloud: () => `<path d="${CLOUD}"/>`,
+    rain: () => `<path d="${CLOUD}" transform="translate(0,-7)"/><path class="drop" d="M24 46l-2 7"/><path class="drop" style="animation-delay:.9s" d="M32 46l-2 7"/><path class="drop" style="animation-delay:1.8s" d="M40 46l-2 7"/>`,
+    snow: () => `<path d="${CLOUD}" transform="translate(0,-7)"/><circle class="drop" cx="24" cy="49" r="1.3"/><circle class="drop" style="animation-delay:1.6s" cx="32" cy="49" r="1.3"/><circle class="drop" style="animation-delay:3.2s" cx="40" cy="49" r="1.3"/>`,
+  };
+  const wxKind = k => /snow/.test(k) ? 'snow' : /rain|pour|lightning|hail/.test(k) ? 'rain' : k === 'clear-night' ? 'moon' : k === 'sunny' ? 'sun' : k === 'partlycloudy' ? 'partly' : 'cloud';
+  const wxGlyph = k => `<svg class="wxg" viewBox="0 0 64 64" aria-hidden="true">${WXG[wxKind(k || '')]()}</svg>`;
   const gridPins = () => pins.filter(known).slice(0, 4);
   function usedMost() {   // as mostUsed, but any app: the grid has room for Weather and Calendar too
     const u = get(USED, {}), d = dayNo();
@@ -348,9 +361,10 @@
     const order = gridOrder(), ed = editing();
     $('gridEdit').textContent = ed ? 'Done' : 'Edit'; $('gridHint').hidden = !ed;
     $('gridHead').textContent = ed ? 'Tap to keep on top' : 'Your apps';
-    setHTML($('hgsky'), (known('weather') ? `<button type="button" data-open="weather" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}"><b>${wx ? esc(wx.temp) : '–'}</b><span>${wx ? esc(wx.text) : 'Weather'}</span></button>` : '')
-      + (known('calendar') ? `<button type="button" data-open="calendar" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}">${next
-        ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Today</b><span>Nothing else on</span>'}</button>` : ''));
+    // Pearl's two widgets, as glass: the weather (where, how warm, the sky drawn in light) and what's next
+    setHTML($('hgsky'), (known('weather') ? `<button type="button" data-open="weather" aria-label="Weather${wx ? `: ${esc(wx.temp)}, ${esc(wx.text)}` : ''}"><i class="wk">${wx && wx.place ? esc(wx.place) : 'Weather'}</i>${wxGlyph(wx && wx.kind)}<b>${wx ? esc(wx.temp) : '–'}</b><span>${wx ? esc(wx.text) + (wx.hilo ? ` · ${esc(wx.hilo)}` : '') : 'Open for the forecast'}</span></button>` : '')
+      + (known('calendar') ? `<button type="button" data-open="calendar" aria-label="Calendar${next ? `: next, ${esc(next.title)}, ${esc(next.when)}` : ''}"><i class="wk">${next ? 'Next' : 'Today'}</i>${next
+        ? `<b>${esc(next.when)}</b><span translate="no">${esc(next.title)}</span>` : '<b>Free</b><span>Nothing else on</span>'}</button>` : ''));
     setHTML($('hgrid'), order.map((id, i) => (i === 4 ? '<i class="grule" aria-hidden="true"></i>' : '')
       + `<button type="button" class="gapp${ed && gridPins().includes(id) ? ' sel' : ''}" data-open="${id}" data-gapp="${id}" style="--tint:var(--ink-${id}, var(--sp-every));--pale:var(--pale-${id}, var(--orb-on))" aria-label="${label(id)}${ed ? ': keep on the top row' : ''}"${ed ? ` aria-pressed="${gridPins().includes(id)}"` : ''}>`
       + `<span class="orb${window.aosGlyphs && aosGlyphs[id] ? ' pebble' : ''}">${pebble(id)}</span>${count(id) && !ed ? `<em aria-hidden="true">${count(id) > 99 ? '99+' : count(id)}</em>` : ''}<b>${esc(name(id))}</b></button>`).join(''));

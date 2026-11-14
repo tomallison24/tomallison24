@@ -823,7 +823,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const DESIGNS = [
     ['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'],
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
-    ['layers', 'Layers', 'A still sky by the time of day, frosted glass over it'],
+    ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'],
     ['grid', 'Tron <span class="se">Special Edition</span>', 'Light cycles: red light on a black grid, as in Tron: Ares'],
   ];
   const designPicker = () => '<div role="radiogroup" aria-label="Design">' + DESIGNS.map(([id, name, note]) => `<button class="snd" type="button" role="radio" data-design="${id}" aria-checked="${S.set.design === id}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${name}</b><small>${note}</small></span><span class="tick">${ICON.tick}</span></button>`).join('') + '</div>';
@@ -843,7 +843,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   addEventListener('clock:design', () => { if (window.clockDesign && clockDesign.get() !== S.set.design) { S.set.design = clockDesign.get(); paintSettings(); } });
   // one listener for the sheet
   $('setBody').addEventListener('click', e => {
-    // Design: Vintage, Standard, Layers or Tron, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
+    // Design: Vintage, Standard, Pearl or Tron, at once (design.js swaps the style sheet, the sky, the icon iOS would take)
     const d = e.target.closest('[data-design]');
     if (d) {
       if (d.dataset.design === S.set.design) return;

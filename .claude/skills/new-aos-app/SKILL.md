@@ -77,13 +77,16 @@ The id is short, lowercase, one word (`drinks`); its display name goes in
 | `.github/workflows/news.yml` | `'<id>/**'` in the push paths, and the folder in the `cp -r … _site/` line (else it is never published) |
 
 **Every app has four designs**, as one app: **Vintage** (mid-century modern in the Retro
-colours, the default), **Standard** (Sea glass), **Layers** and **Tron**, picked in aOS for
+colours, the default), **Standard** (Sea glass), **Pearl** (its id is `layers`, the look it
+replaced) and **Tron**, picked in aOS for
 every app at once or in the app's own **Settings → Design** (Meals, `meals/`, is the pattern; Clock
-started it with its own `clock/design.js`). You write two of them: Layers and Tron are
+started it with its own `clock/design.js`). You write two of them: Pearl and Tron are
 generated from Vintage by `node aOS/scripts/make-looks.mjs` (their `<style id="layers">`,
-and `<style id="grid">` blocks after the Vintage one, and `icon-layers*` / `icon-grid*` from
-`icon.svg`; Layers paints a still sky, by the time of day, behind the page and frosts it below the
-title, so the page's `body` or `#app.app` should be its ground, not a full-screen wrapper of its own):
+and `<style id="grid">` blocks after the Vintage one, and `icon-grid*` from `icon.svg`; Pearl's
+icons, `icon-layers*` and `icon-pebble.svg`, come from the app's one-line drawing in
+`aOS/scripts/pearl-icons.mjs`, so a new app adds one there. Pearl paints its ground on `<html>`
+and draws its dust behind the page (`home/pearl.js`), so the page's `body` or `#app.app` should be
+its ground, not a full-screen wrapper of its own):
 - The Sea glass styles are the page's main `<style>`; the Vintage look is a second
   `<style id="vintage">` right after it (cream and walnut, mustard, teal, burnt orange, flat
   cards, atomic shapes in `.ambient`, Futura).
