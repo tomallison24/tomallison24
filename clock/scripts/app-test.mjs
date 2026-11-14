@@ -13,7 +13,8 @@
 //   - Nightstand opens and closes; Settings' 24-hour time changes the digits
 //   - the main clock shows a city picked in Settings, and goes back to this phone's time
 //   - each design looks like itself (Vintage: Futura, starburst faces, a mustard tab thumb, the
-//     sky; Standard: Sea glass, no starburst, no sky), and Settings > Design switches between
+//     sky; Standard: Sea glass, no starburst, no sky; Pearl: faces in hairlines of light, thin numbers, rings of
+//     light for buttons), and Settings > Design switches between
 //     them at once, keeps the choice, and gives iOS the right icon and status bar
 //   - no script errors and nothing the page's Content Security Policy blocks
 // Screenshots go to the folder given as the second argument.
@@ -365,6 +366,28 @@ await step('the main clock shows another city, and goes back to this phone\'s ti
   assert.match(await text(page, '#heroT'), /^8:00\s*AM$/);
   assert.equal(await text(page, '#heroD'), 'Wednesday, March 11');
   assert.equal((await stored(page)).set.home, null);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+// Pearl (id 'layers'): every face a hairline ring of light, no starburst; thin numbers; the main button a ring of
+// light, not coral; the tab bar's thumb a ring, not mustard; in light and in dark
+for (const scheme of ['light', 'dark']) await step(scheme + ' Pearl: the faces drawn in light, no starburst or mustard; Start and the tab thumb rings of light', async () => {
+  const { ctx, page, errors } = await open(scheme, { v: 1, set: { design: 'layers' } });
+  const st = await page.evaluate(() => {
+    const cs = (sel, ps) => { const e = document.querySelector(sel); return e ? getComputedStyle(e, ps || null) : null; };
+    return { look: document.documentElement.dataset.look, rays: cs('#hero .face .rays').display, dial: cs('#hero .face .dial').fill, ring: cs('#hero .face .dial').stroke,
+      time: cs('#heroT').fontWeight, thumb: cs('.slthumb') && cs('.slthumb').backgroundColor };
+  });
+  assert.equal(st.look, 'layers');
+  assert.equal(st.rays, 'none', 'no starburst');
+  assert.match(st.dial, /transparent|rgba\(0, 0, 0, 0\)/, 'the dial is a ring, not a cream disc: ' + st.dial);
+  assert.ok(+st.time <= 300, 'thin numbers: ' + st.time);
+  if (st.thumb) assert.match(st.thumb, /transparent|rgba\(0, 0, 0, 0\)/, 'the tab thumb is a ring, not mustard: ' + st.thumb);
+  await page.click('[data-tab="stopwatch"]');
+  const go = await page.evaluate(() => { const e = document.querySelector('.round.go'); const c = getComputedStyle(e); return { bg: c.backgroundColor, sh: c.boxShadow }; });
+  assert.ok(!/rgb\(2\d\d, 1\d\d, \d+\)/.test(go.bg) && /px/.test(go.sh), 'Start is a ring of light, not coral: ' + JSON.stringify(go));
+  await shot(page, 'pearl-' + scheme);
   assert.deepEqual(errors, []);
   await ctx.close();
 });
