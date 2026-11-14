@@ -67,7 +67,7 @@
   }
 
   // ---- the dust ----
-  let motes = [], pulses = [], target = 60, falling = 0, taken = 0;
+  let motes = [], pulses = [], target = 60, falling = 0, taken = 0, lastFall = 0;
   const mote = (initial) => {
     let x, y, n = 0;
     do { x = Math.random() * W; y = Math.random() * H; n++; } while (!initial && n < 6 && lights.some(a => near(a, x, y)[2] < 70));
@@ -110,9 +110,9 @@
         for (const a of lights) { const n = near(a, m.x, m.y); if (!best || n[2] < best[2]) { best = n; ba = a; } }
         const [px, py, d] = best;
         // close in, in open space (not under a card, where it couldn't be seen): it falls the rest of the way, over the page
-        if (d < (ba.icon ? 58 : 46) && pull > 0.3 && falling < 3 && T - (m.chk || 0) > 0.6) {
+        if (d < (ba.icon ? 58 : 46) && pull > 0.3 && falling < 1 && T - (m.chk || 0) > 2 && T - lastFall > 1.6) {
           m.chk = T;
-          if (open(m.x, m.y)) { m.fall = { key: ba.key, t: 0, dur: 1.5 + Math.random() * 1.1, x0: m.x, y0: m.y, bend: (Math.random() - 0.5) * 2 }; falling++; continue; }
+          if (Math.random() < 0.4 && open(m.x, m.y)) { lastFall = T; m.fall = { key: ba.key, t: 0, dur: 1.5 + Math.random() * 1.1, x0: m.x, y0: m.y, bend: (Math.random() - 0.5) * 2 }; falling++; continue; }
         }
         // gravity: gentle far off, stronger near the light, nothing beyond about 240px
         const g = (0.002 + 0.22 / (d + 16)) * pull * Math.max(0, Math.min(1, (240 - d) / 140)) * (ba.w || 1);
@@ -157,11 +157,11 @@
       // a faint tail behind it, longer as it speeds up
       if (f.lx != null && u > 0.15) {
         const tx = m.x + (f.lx - m.x) * 5, ty = m.y + (f.ly - m.y) * 5, g = lx.createLinearGradient(tx, ty, m.x, m.y), c = day ? '30,33,38' : '220,238,255';
-        g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(1, `rgba(${c},${(day ? 0.35 : 0.5) * u})`);
+        g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(1, `rgba(${c},${(day ? 0.2 : 0.28) * u})`);
         lx.strokeStyle = g; lx.lineWidth = day ? 0.8 : 1; lx.lineCap = 'round'; lx.beginPath(); lx.moveTo(tx, ty); lx.lineTo(m.x, m.y); lx.stroke();
       }
       f.lx = m.x; f.ly = m.y;
-      lx.globalAlpha = Math.min(1, (0.5 + 0.5 * u) * (day ? 0.75 : 1));
+      lx.globalAlpha = Math.min(1, (0.4 + 0.4 * u) * (day ? 0.7 : 0.9));
       lx.drawImage(spr[0], m.x - size, m.y - size, size * 2, size * 2);
     }
     lx.globalAlpha = 1;
@@ -171,15 +171,15 @@
       if (k <= 0.002) continue;
       if (p.icon) {   // the icon glows a moment
         const r = p.r * (0.7 + 0.5 * u), g = lx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-        g.addColorStop(0, day ? `rgba(255,255,255,${0.8 * k})` : `rgba(210,235,255,${0.42 * k})`); g.addColorStop(1, 'rgba(210,235,255,0)');
+        g.addColorStop(0, day ? `rgba(255,255,255,${0.5 * k})` : `rgba(210,235,255,${0.22 * k})`); g.addColorStop(1, 'rgba(210,235,255,0)');
         lx.fillStyle = g; lx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
-        if (day) { lx.beginPath(); lx.arc(p.x, p.y, p.r * (0.45 + 0.25 * u), 0, TAU); lx.strokeStyle = `rgba(30,33,38,${0.22 * k})`; lx.lineWidth = 0.8; lx.stroke(); }
+        if (day) { lx.beginPath(); lx.arc(p.x, p.y, p.r * (0.45 + 0.25 * u), 0, TAU); lx.strokeStyle = `rgba(30,33,38,${0.12 * k})`; lx.lineWidth = 0.8; lx.stroke(); }
       } else {   // the line brightens where it landed, spreading a little along it
         const w = 18 + 60 * u, c = day ? '30,33,38' : '255,255,255', g = lx.createLinearGradient(p.x - w, 0, p.x + w, 0);
-        g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(0.5, `rgba(${c},${(day ? 0.75 : 0.9) * k})`); g.addColorStop(1, `rgba(${c},0)`);
+        g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(0.5, `rgba(${c},${(day ? 0.45 : 0.55) * k})`); g.addColorStop(1, `rgba(${c},0)`);
         lx.fillStyle = g; lx.fillRect(p.x - w, p.y - 0.8, w * 2, 1.6);
         const r = 7 + 6 * u, h = lx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-        h.addColorStop(0, day ? `rgba(255,255,255,${0.7 * k})` : `rgba(190,225,255,${0.35 * k})`); h.addColorStop(1, 'rgba(190,225,255,0)');
+        h.addColorStop(0, day ? `rgba(255,255,255,${0.45 * k})` : `rgba(190,225,255,${0.2 * k})`); h.addColorStop(1, 'rgba(190,225,255,0)');
         lx.fillStyle = h; lx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
       }
     }
