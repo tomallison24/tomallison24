@@ -453,6 +453,60 @@ html.locked .tabs{opacity:0;pointer-events:none}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
+/* ======================================================================
+   Pearl (its id is 'layers', the look it replaced): Clock in light.
+   ----------------------------------------------------------------------
+   Pearl's own block (<style id="layers">, generated from the Vintage one)
+   repaints Vintage's colours; these are Clock's own Pearl rules, written by
+   hand (the generator doesn't touch this block). Vintage's atomic starburst,
+   cream dial, walnut hands and mustard go: every face is a hairline ring of
+   light with hairline ticks and hands, the second hand in Clock's own colour
+   (the dot on its icon), glowing a little at night; the numbers are thin; the
+   main buttons, the tab bar's thumb and the timers' rings are rings of light, the
+   tab bar glass; ringing is Pearl's ground, not a mustard sun. html:root
+   outranks the Vintage block's dark rules.
+   ====================================================================== */
+html:root[data-look="layers"]{--pl-clock:#4F63E0;--hand-s:var(--pl-clock);--hand-lap:var(--pl-line);--seg-thumb:transparent}
+html:root[data-look="layers"][data-theme="dark"]{--pl-clock:#8597FF}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]){--pl-clock:#8597FF}}
+html:root[data-look="layers"] .face .rays,html:root[data-look="layers"] .night .nface .face .rays{display:none}
+html:root[data-look="layers"] .face :is(.dial,.sub,.tk,.hh,.mh,.sh,.lh){vector-effect:non-scaling-stroke;stroke-linecap:round}
+html:root[data-look="layers"] .face .dial,html:root[data-look="layers"] .face.dark .dial,html:root[data-look="layers"] .night .nface .face .dial{fill:transparent;stroke:var(--pl-line);stroke-width:1.2px}
+html:root[data-look="layers"] .face.sw .dial{stroke-width:1px}
+html:root[data-look="layers"] .face .sub{fill:transparent;stroke:var(--pl-line);stroke-width:.8px;opacity:.6}
+html:root[data-look="layers"] .face .tk{stroke:var(--pl-line);stroke-width:1px;opacity:.45}
+html:root[data-look="layers"] .face .tk.big{stroke-width:1.4px;opacity:.95}
+html:root[data-look="layers"] .face :is(.hh,.mh){stroke:var(--pl-line)}
+html:root[data-look="layers"] .face .hh{stroke-width:2.6px} html:root[data-look="layers"] .face .mh{stroke-width:1.8px}
+html:root[data-look="layers"] .face.mini .hh{stroke-width:2px} html:root[data-look="layers"] .face.mini .mh{stroke-width:1.4px} html:root[data-look="layers"] .face.mini .dial{stroke-width:1px}
+html:root[data-look="layers"] .face .sh,html:root[data-look="layers"] .night .nface .face .sh{stroke:var(--pl-clock);stroke-width:1.2px}
+html:root[data-look="layers"] .face .lh{stroke:var(--pl-line);stroke-width:1px}
+html:root[data-look="layers"] .face .hub,html:root[data-look="layers"] .face.dark .hub,html:root[data-look="layers"] .night .nface .face .hub{fill:var(--pl-line)}
+html:root[data-look="layers"] .face .hub2{fill:var(--pl-clock)}
+html:root[data-look="layers"] .face :is(.nm,.dg){fill:var(--pl-line);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;font-weight:300}
+html:root[data-look="layers"][data-theme="dark"] .face{filter:drop-shadow(0 0 1.5px rgba(210,240,255,.8)) drop-shadow(0 0 10px rgba(150,205,255,.3))}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]) .face{filter:drop-shadow(0 0 1.5px rgba(210,240,255,.8)) drop-shadow(0 0 10px rgba(150,205,255,.3))}}
+/* the numbers: thin, as if drawn in light */
+html:root[data-look="layers"] :is(.swface .dig,#heroT,.ring .rtime,.num){font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;font-weight:200;letter-spacing:-.01em}
+html:root[data-look="layers"][data-theme="dark"] :is(.swface .dig,#heroT,.ring .rtime){text-shadow:0 0 18px rgba(160,205,255,.35)}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]) :is(.swface .dig,#heroT,.ring .rtime){text-shadow:0 0 18px rgba(160,205,255,.35)}}
+/* the buttons: rings of light, not coral and teal */
+html:root[data-look="layers"] :is(.round.go,.btn.main,.mini.go){background:var(--pl-fab);color:var(--pl-line);box-shadow:var(--pl-ring)}
+html:root[data-look="layers"] :is(.round:not(.go),.btn:not(.main):not(.danger)){background:transparent;color:var(--pl-line);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pl-line) 55%,transparent)}
+html:root[data-look="layers"] .btn.danger{box-shadow:inset 0 0 0 1px var(--danger)}
+html:root[data-look="layers"] .dots button[aria-pressed="true"]::before{background:var(--pl-line)}
+html:root[data-look="layers"] .trow .tring .fgc{stroke:var(--pl-clock)}
+html:root[data-look="layers"] .trow.paused .tring .fgc{stroke:var(--pl-line);opacity:.5}
+html:root[data-look="layers"] .wheels::before{background:color-mix(in srgb,var(--pl-line) 5%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--pl-line) 35%,transparent),inset 0 -1px 0 color-mix(in srgb,var(--pl-line) 35%,transparent)}
+/* the tab bar: glass with a hairline, its thumb a ring of light */
+html:root[data-look="layers"] .tabs{background:var(--pl-fab);-webkit-backdrop-filter:blur(18px) saturate(1.2);backdrop-filter:blur(18px) saturate(1.2);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pl-line) 22%,transparent),0 12px 28px -14px rgba(0,0,0,.5)}
+html:root[data-look="layers"] .tabs button{color:var(--muted)}
+html:root[data-look="layers"] .tabs button[aria-selected="true"]{color:var(--pl-line)}
+html:root[data-look="layers"] .slthumb{background:transparent;box-shadow:var(--pl-ring)}
+/* ringing: Pearl's ground and the time in light, not a mustard sun and an orange pill */
+html:root[data-look="layers"] .ring{background:var(--pl-ground);background-color:var(--pl-top)}
+html:root[data-look="layers"] .ring::before,html:root[data-look="layers"] .ring::after{display:none}
+html:root[data-look="layers"] .ring :is(.rk,.rbell,.rtime){color:var(--pl-line)}
 </style>
 <style id="vintage">
 /* ======================================================================
