@@ -14,6 +14,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
 // (aos:design, at the bottom). vintage(): a flat design - Vintage, or Layers and Tron, which repaint it.
 const look = () => (window.aosDesign ? aosDesign.get() : 'vintage');
 const vintage = () => look() !== 'glass';
+const pearl = () => look() === 'layers';   // Pearl (its id is Layers'): the weather drawn in lines of light (PEARL, below)
 // The data (NWS, Open-Meteo) is in data.js, shared with Home's weather pill.
 const { SEV, getJSON, ymd, inUS, fetchBase, store } = WXD;   // store: wx.* in localStorage (data.js has the same one); the rest of WXD is data.js's own
 
@@ -30,7 +31,37 @@ const STORM_PARTS = {
 const GEAR = '<svg class="gear" viewBox="0 0 24 24" stroke-width="1.7" width="14" height="14" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="3"/><path d="M12 3.5l1.3 2.3 2.6-.7.6 2.6 2.6.6-.7 2.6 2.3 1.3-2.3 1.3.7 2.6-2.6.6-.6 2.6-2.6-.7L12 20.5l-1.3-2.3-2.6.7-.6-2.6-2.6-.6.7-2.6L3.5 12l2.3-1.3-.7-2.6 2.6-.6.6-2.6 2.6.7z"/></svg>';   // the gear every aOS app's Settings button has (Orders' line drawing)
 // Refresh is the one line drawing every aOS app uses (DESIGN.md rule 13), not Material's filled arrow
 const REFRESH = '<path d="M20 11.2a8 8 0 0 0-14.6-4.4L4 8.4"/><path d="M4 3.8v4.6h4.6"/><path d="M4 12.8a8 8 0 0 0 14.6 4.4l1.4-1.6"/><path d="M20 20.2v-4.6h-4.6"/>';
+// Pearl: each kind of weather as a line of light on a 64 x 64 grid, in place of Material's filled shapes (stroke in
+// screen pixels, so it is a hairline at every size). The hero's sun turns slowly, its clouds drift and its rain falls
+// (#vintage block's Pearl rules; still with Reduce Motion). A cloud in front of the sun or the moon hides what's behind it.
+const PL_CLOUD = 'M19 47h27a9 9 0 0 0 1-17.9A13 13 0 0 0 22.5 26 10.5 10.5 0 0 0 19 47z';
+const plRays = (cx, cy, r1, r2, n = 8) => '<g class="pl-rays">' + Array.from({ length: n }, (_, i) => { const a = i / n * Math.PI * 2;
+  return `<path d="M${(cx + Math.cos(a) * r1).toFixed(1)} ${(cy + Math.sin(a) * r1).toFixed(1)}L${(cx + Math.cos(a) * r2).toFixed(1)} ${(cy + Math.sin(a) * r2).toFixed(1)}"/>`; }).join('') + '</g>';
+const plCloud = (dy = 0) => `<g class="pl-drift"><path d="${PL_CLOUD}"${dy ? ` transform="translate(0,${dy})"` : ''}/></g>`;
+const plDrops = (xs, len = 7) => xs.map((x, i) => `<path class="pl-drop" style="animation-delay:${(i * 0.9).toFixed(1)}s" d="M${x} 46l-2 ${len}"/>`).join('');
+const plFlakes = xs => xs.map((x, i) => `<circle class="pl-flake" style="animation-delay:${(i * 1.6).toFixed(1)}s" cx="${x}" cy="49" r="1.3"/>`).join('');
+const PL_MOON = (cx, cy, r) => `<path d="M${cx + r * 0.35} ${cy - r}A${r} ${r} 0 1 0 ${cx + r} ${cy + r * 0.5}A${r * 0.82} ${r * 0.82} 0 0 1 ${cx + r * 0.35} ${cy - r}z"/>`;
+let plN = 0;
+const plBehind = inner => { const id = 'plc' + (++plN); return `<clipPath id="${id}"><path clip-rule="evenodd" d="M0 0H64V64H0z${PL_CLOUD}"/></clipPath><g clip-path="url(#${id})">${inner}</g>`; };
+const PEARL = {
+  'weather-sunny': () => `${plRays(32, 32, 17, 23)}<circle cx="32" cy="32" r="11"/>`,
+  'weather-night': () => PL_MOON(30, 32, 15),
+  'weather-partly-cloudy': () => plBehind(`${plRays(40, 22, 11, 15)}<circle cx="40" cy="22" r="7"/>`) + plCloud(),
+  'weather-night-partly-cloudy': () => plBehind(PL_MOON(39, 22, 9)) + plCloud(),
+  'weather-cloudy': () => plCloud(),
+  'weather-rainy': () => plCloud(-7) + plDrops([24, 32, 40]),
+  'weather-pouring': () => plCloud(-7) + plDrops([20, 27, 34, 41], 10),
+  'weather-snowy': () => plCloud(-7) + plFlakes([24, 32, 40]),
+  'weather-snowy-rainy': () => plCloud(-7) + plDrops([24, 40]) + plFlakes([32]),
+  'weather-hail': () => plCloud(-7) + [24, 32, 40].map((x, i) => `<circle class="pl-flake" style="animation-delay:${i * 0.7}s" cx="${x}" cy="49" r="2"/>`).join(''),
+  'weather-lightning': () => plCloud(-7) + '<path class="pl-bolt" d="M34 40l-5 9h7l-4 9"/>',
+  'weather-lightning-rainy': () => plCloud(-7) + '<path class="pl-bolt" d="M33 40l-5 9h7l-4 9"/>' + plDrops([22, 43]),
+  'weather-fog': () => '<g class="pl-drift"><path d="M14 26h36M18 34h32M14 42h30"/></g>',
+  'weather-windy': () => '<g class="pl-drift"><path d="M10 26h28a6 6 0 1 0-6-6M10 34h38a6 6 0 1 1-6 6M10 42h20"/></g>',
+  'weather-windy-variant': () => '<g class="pl-drift"><path d="M10 26h28a6 6 0 1 0-6-6M10 34h38a6 6 0 1 1-6 6M10 42h20"/></g>',
+};
 const svg = (name, size, style) => {
+  if (pearl() && PEARL[name]) return `<svg class="i pl" viewBox="0 0 64 64" width="${size}" height="${size}" style="${style || ''}" fill="none" stroke="currentColor" aria-hidden="true">${PEARL[name]()}</svg>`;
   if (name === 'refresh') return `<svg class="i" viewBox="0 0 24 24" width="${size}" height="${size}" style="${style || ''}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${REFRESH}</svg>`;
   const d = MDI[name] || MDI['weather-cloudy'];
   let paths = `<path fill="currentColor" d="${d}"/>`;
@@ -928,11 +959,14 @@ function radarSync() {
 // A temperature's colour on the five-stop Celsius ramp: cold blue through green to hot orange
 // (in Vintage, cold teal through olive and mustard to hot burnt orange, the Retro colours).
 // Absolute, so 30° looks the same in any week.
+const pearlDark = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); };
 function rampOf(m) {
   const f = (m.entity.attributes.temperature_unit || '').indexOf('F') >= 0;
   const stops = {
     vintage: [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]],
-    layers: [[0, [96, 141, 224]], [10, [64, 129, 115]], [18, [74, 150, 134]], [25, [216, 171, 99]], [32, [207, 92, 89]]],   // Vintage's, repainted (aOS/scripts/looks.mjs), cold as mist blue
+    layers: pearlDark()   // Pearl: quiet - ice blue, through white (carbon by day), to a soft amber
+      ? [[0, [126, 168, 255]], [10, [150, 200, 238]], [18, [214, 226, 240]], [25, [240, 210, 162]], [32, [240, 164, 132]]]
+      : [[0, [62, 104, 186]], [10, [72, 124, 156]], [18, [92, 98, 110]], [25, [166, 124, 64]], [32, [176, 88, 64]]],
     grid: [[0, [96, 125, 160]], [10, [140, 160, 185]], [18, [168, 174, 184]], [25, [251, 96, 73]], [32, [228, 31, 36]]],   // cold steel to hot red
     glass: [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]],
   }[look()] || [];
