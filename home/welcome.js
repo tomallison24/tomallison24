@@ -1193,7 +1193,7 @@
         {
           "i": "star",
           "t": "Your look",
-          "d": "Vintage, mid-century modern, Standard in Sea glass, Layers or Tron. Pick one in Settings, and change it any time."
+          "d": "Vintage, mid-century modern, Standard in Sea glass, Pearl or Tron. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -1298,7 +1298,7 @@
         {
           "i": "sliders",
           "t": "Four designs",
-          "d": "Vintage, Standard in Sea glass, Layers or Tron, for the player picker and Settings. Pick one in Settings > Design."
+          "d": "Vintage, Standard in Sea glass, Pearl or Tron, for the player picker and Settings. Pick one in Settings > Design."
         }
       ]
     }
