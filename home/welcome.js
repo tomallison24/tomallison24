@@ -90,7 +90,7 @@
       highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'In Pearl your helper is Lumen, a beam of light that takes the shapes of the cosmos', 'Pearl takes the place of Layers'],
       notes: ['Pearl, in aOS and every app: at night, lines of cool white light on near-black blue; by day, carbon hairlines on cream. It follows the phone\'s light or dark setting',
         'Pearl takes the place of Layers: a phone that had Layers opens in Pearl, in aOS and every app, with nothing to set',
-        'Dust drifts slowly behind every screen in Pearl, at many depths. Dust that strays near the light is drawn into it and vanishes with the faintest glint, and new dust quietly appears elsewhere. When Weather says rain or snow where you are, the dust falls as rain or drifts down as snow',
+        'Dust drifts slowly behind every screen in Pearl, at many depths. Dust near the light is drawn in, slowly at first, then falls the last of the way into a line or an app\'s icon, where the line brightens a moment or the icon glows. New dust quietly appears elsewhere. When Weather says rain or snow where you are, the dust falls as rain or drifts down as snow',
         'Under each title, a strip of light with a beam gliding slowly back and forth along it',
         'The top edge of each card lights up where your eyes rest on the screen, a little above the middle, and fades above and below it, so the card you scroll to brightens',
         'New app icons in Pearl: each app is one simple line drawing with a dot in its own colour, on aOS Home, in search, in the app store and on your Home Screen',

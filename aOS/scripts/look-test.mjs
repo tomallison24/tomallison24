@@ -181,6 +181,9 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!lit) pr.push('Lumen\'s light is not drawn');
   const lph = await p.evaluate(() => document.getElementById('hq').placeholder);
   if (!/ask Lumen$/.test(lph)) pr.push('in Pearl the helper is not called Lumen: ' + lph);
+  // Pearl's dust: pulled into the light and taken in, where you can see it, by the icons as well as the lines
+  const took = await p.waitForFunction(() => { const s = window.aosPearl && aosPearl.stats(); return s && s.icons > 0 && s.taken >= 2 && s; }, null, { timeout: 12000 }).then(h => h.jsonValue(), () => null);
+  if (!took) pr.push('in Pearl, no dust was taken into the light or icons on Home: ' + JSON.stringify(await p.evaluate(() => window.aosPearl && aosPearl.stats())));
   await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   // a phone that had Night Drive (gone): aOS opens in Layers, and every app's choice is moved over
   await p.evaluate(() => { localStorage.setItem('aos.look', 'neon'); localStorage.setItem('design.mail', 'neon'); localStorage.setItem('allison-clock-v1', JSON.stringify({ set: { design: 'neon' } })); });

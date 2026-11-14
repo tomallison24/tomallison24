@@ -4,7 +4,9 @@
 //
 //   - Dust, behind everything (a canvas fixed under the page; the page's ground is <html>'s, so it shows through):
 //     motes at many depths, sharp in the middle and soft near and far, drifting slowly. The ones in focus are pulled into
-//     the nearest light (the strip under the title, the lit edges of boxes) and vanish there with the faintest glint;
+//     the nearest light (the strip under the title, the lit edges of boxes, the apps' icons). Close in, a mote in open
+//     space is handed to the light's canvas, over the page, so you see it fall the last of the way, faster as it goes,
+//     and be taken in: the line brightens a moment where it lands, or the icon glows;
 //     new ones fade in, slowly, far from the light. When Weather's last forecast here (wx.cache) is rain or snow, the
 //     dust falls as rain or drifts down as snow.
 //   - Light, over the page (a second canvas, never in the way of a tap): a strip under the title with a beam gliding
@@ -65,7 +67,7 @@
   }
 
   // ---- the dust ----
-  let motes = [], sparks = [], target = 60;
+  let motes = [], pulses = [], target = 60, falling = 0, taken = 0;
   const mote = (initial) => {
     let x, y, n = 0;
     do { x = Math.random() * W; y = Math.random() * H; n++; } while (!initial && n < 6 && lights.some(a => near(a, x, y)[2] < 70));
@@ -79,9 +81,20 @@
 
   function stepDust(T, dt) {
     const step = dt * 60;
+    falling = 0; for (const m of motes) if (m.fall) falling++;
     for (let i = motes.length - 1; i >= 0; i--) {
       const m = motes[i];
-      if (m.die > 0) { m.die += dt / 0.5; m.x += (m.tx - m.x) * 0.25; m.y += (m.ty - m.y) * 0.25; if (m.die >= 1) motes.splice(i, 1); continue; }
+      if (m.die > 0) { m.die += dt / 0.5; if (m.die >= 1) motes.splice(i, 1); continue; }
+      if (m.fall) {   // the last of the way into its light, faster as it goes, then taken in
+        const f = m.fall, a = lights.find(l => l.key === f.key);
+        if (!a) { m.fall = null; falling--; m.die = 0.001; continue; }   // its light scrolled away or went: it fades where it is
+        f.t += dt;
+        const u = Math.min(1, f.t / f.dur), e = u * u * (2.2 - 1.2 * u), [px, py] = a.icon ? [a.x0, a.y] : near(a, f.x0, f.y0);
+        const nx = -(py - f.y0), ny = px - f.x0, nl = Math.hypot(nx, ny) || 1, arc = Math.sin(Math.PI * e) * 10 * f.bend;
+        m.x = f.x0 + (px - f.x0) * e + nx / nl * arc; m.y = f.y0 + (py - f.y0) * e + ny / nl * arc;
+        if (u >= 1) { pulses.push({ key: f.key, x: px, y: py, t: 0, icon: !!a.icon, r: a.r || 0 }); taken++; falling--; motes.splice(i, 1); }
+        continue;
+      }
       if (m.life < 1) m.life = Math.min(1, m.life + dt * m.grow);
       if (wx) {   // rain falls, snow drifts down; neither is drawn into the light
         const fall = wx === 'rain' ? 1.5 + m.z * 2.4 : 0.22 + m.z * 0.42, sway = wx === 'snow' ? Math.sin(T * 0.55 + m.ph) * 0.28 : -0.14;
@@ -96,8 +109,13 @@
         let best = null, ba = null;
         for (const a of lights) { const n = near(a, m.x, m.y); if (!best || n[2] < best[2]) { best = n; ba = a; } }
         const [px, py, d] = best;
-        if (d < 2.4) { m.die = 0.001; m.tx = px; m.ty = py; sparks.push({ x: px, y: py, t: 0 }); continue; }
-        const g = (0.0007 + 0.1 / (d + 12)) * pull * Math.max(0, Math.min(1, (280 - d) / 160)) * (ba.w || 1);
+        // close in, in open space (not under a card, where it couldn't be seen): it falls the rest of the way, over the page
+        if (d < (ba.icon ? 58 : 46) && pull > 0.3 && falling < 3 && T - (m.chk || 0) > 0.6) {
+          m.chk = T;
+          if (open(m.x, m.y)) { m.fall = { key: ba.key, t: 0, dur: 1.5 + Math.random() * 1.1, x0: m.x, y0: m.y, bend: (Math.random() - 0.5) * 2 }; falling++; continue; }
+        }
+        // gravity: gentle far off, stronger near the light, nothing beyond about 240px
+        const g = (0.002 + 0.22 / (d + 16)) * pull * Math.max(0, Math.min(1, (240 - d) / 140)) * (ba.w || 1);
         ax = (px - m.x) / d * g; ay = (py - m.y) / d * g;
       }
       m.vx += (fx * (0.4 + m.z) - m.vx) * 0.02 + ax; m.vy += (fy * (0.4 + m.z) - m.vy) * 0.02 + ay;
@@ -105,10 +123,10 @@
       m.x += m.vx * step; m.y += m.vy * step;
       if (m.x < -30) m.x = W + 30; if (m.x > W + 30) m.x = -30; if (m.y < -30) m.y = H + 30; if (m.y > H + 30) m.y = -30;
     }
-    const alive = motes.reduce((n, m) => n + (m.die ? 0 : 1), 0);
+    const alive = motes.reduce((n, m) => n + (m.die || m.fall ? 0 : 1), 0);
     if (alive < target && Math.random() < Math.min(0.5, (target - alive) * 0.02) * step) motes.push(mote(false));
     if (alive > target + 10) motes.length = target;
-    for (let i = sparks.length - 1; i >= 0; i--) { sparks[i].t += dt; if (sparks[i].t > 0.8) sparks.splice(i, 1); }
+    for (let i = pulses.length - 1; i >= 0; i--) { pulses[i].t += dt; if (pulses[i].t > 1.4) pulses.splice(i, 1); }
     if (ptr.on) { ptr.vx *= 0.9; ptr.vy *= 0.9; }
   }
   function drawDust(T) {
@@ -116,6 +134,7 @@
     dx.setTransform(D, 0, 0, D, 0, 0); dx.clearRect(0, 0, W, H);
     dx.globalCompositeOperation = day ? 'source-over' : 'lighter';
     for (const m of motes) {
+      if (m.fall) continue;   // drawn over the page, on the light's canvas (drawFalls)
       const focus = Math.abs(m.z - 0.45), level = Math.min(4, Math.floor(focus * 9));
       const size = (1.4 + m.z * m.z * 9) * (1 + level * 0.5) * (m.die ? 1 - m.die * 0.75 : 0.4 + 0.6 * m.life);
       let a = (0.1 + 0.3 * (1 - focus)) * (0.65 + 0.35 * Math.sin(T * m.tw * 0.45 + m.ph));
@@ -126,17 +145,54 @@
       dx.globalAlpha = Math.min(1, a * (day ? 0.62 : 1)); dx.drawImage(spr[m.die ? 0 : level], m.x - size, m.y - size, size * 2, size * 2);
     }
     dx.globalAlpha = 1;
-    for (const s of sparks) {   // the faintest glint where a mote is taken in
-      const u = s.t / 0.8, r = 2 + u * 5, al = (1 - u) * 0.38;
-      if (day) { dx.beginPath(); dx.arc(s.x, s.y, 1 + u * 5, 0, TAU); dx.strokeStyle = `rgba(30,33,38,${al * 0.45})`; dx.lineWidth = 0.6; dx.stroke(); }
-      else { const g = dx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r); g.addColorStop(0, `rgba(255,255,255,${al})`); g.addColorStop(1, 'rgba(150,200,255,0)'); dx.fillStyle = g; dx.fillRect(s.x - r, s.y - r, r * 2, r * 2); }
-    }
     dx.globalCompositeOperation = 'source-over';
+  }
+  // the motes falling into their light, and where each was taken in: over the page, on the light's canvas
+  function drawFalls(T) {
+    const day = !night(), spr = SPR[day ? 'day' : 'night'];
+    lx.globalCompositeOperation = day ? 'source-over' : 'lighter';
+    for (const m of motes) {
+      if (!m.fall) continue;
+      const f = m.fall, u = Math.min(1, f.t / f.dur), size = (2.6 + m.z * 4) * (1 - u * 0.5);
+      // a faint tail behind it, longer as it speeds up
+      if (f.lx != null && u > 0.15) {
+        const tx = m.x + (f.lx - m.x) * 5, ty = m.y + (f.ly - m.y) * 5, g = lx.createLinearGradient(tx, ty, m.x, m.y), c = day ? '30,33,38' : '220,238,255';
+        g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(1, `rgba(${c},${(day ? 0.35 : 0.5) * u})`);
+        lx.strokeStyle = g; lx.lineWidth = day ? 0.8 : 1; lx.lineCap = 'round'; lx.beginPath(); lx.moveTo(tx, ty); lx.lineTo(m.x, m.y); lx.stroke();
+      }
+      f.lx = m.x; f.ly = m.y;
+      lx.globalAlpha = Math.min(1, (0.5 + 0.5 * u) * (day ? 0.75 : 1));
+      lx.drawImage(spr[0], m.x - size, m.y - size, size * 2, size * 2);
+    }
+    lx.globalAlpha = 1;
+    for (const p of pulses) {
+      const a = lights.find(l => l.key === p.key); if (a) { p.y = a.y; if (a.icon) p.x = a.x0; }   // stays with its light as you scroll
+      const u = p.t / 1.4, k = Math.sin(Math.PI * Math.min(1, u * 2.5)) * (1 - u) ** 1.5;   // up quickly, then slowly away
+      if (k <= 0.002) continue;
+      if (p.icon) {   // the icon glows a moment
+        const r = p.r * (0.7 + 0.5 * u), g = lx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        g.addColorStop(0, day ? `rgba(255,255,255,${0.8 * k})` : `rgba(210,235,255,${0.42 * k})`); g.addColorStop(1, 'rgba(210,235,255,0)');
+        lx.fillStyle = g; lx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+        if (day) { lx.beginPath(); lx.arc(p.x, p.y, p.r * (0.45 + 0.25 * u), 0, TAU); lx.strokeStyle = `rgba(30,33,38,${0.22 * k})`; lx.lineWidth = 0.8; lx.stroke(); }
+      } else {   // the line brightens where it landed, spreading a little along it
+        const w = 18 + 60 * u, c = day ? '30,33,38' : '255,255,255', g = lx.createLinearGradient(p.x - w, 0, p.x + w, 0);
+        g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(0.5, `rgba(${c},${(day ? 0.75 : 0.9) * k})`); g.addColorStop(1, `rgba(${c},0)`);
+        lx.fillStyle = g; lx.fillRect(p.x - w, p.y - 0.8, w * 2, 1.6);
+        const r = 7 + 6 * u, h = lx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        h.addColorStop(0, day ? `rgba(255,255,255,${0.7 * k})` : `rgba(190,225,255,${0.35 * k})`); h.addColorStop(1, 'rgba(190,225,255,0)');
+        lx.fillStyle = h; lx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      }
+    }
+    lx.globalCompositeOperation = 'source-over';
   }
 
   // ---- what's lit: the strip under the title, and the top edges of boxes ----
   const HEADS = '.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.ptitle';
-  let boxes = [], strip = null, lights = [], scanAt = 0;
+  const ICONS = '.orb.pebble,img[src*="icon-pebble"],img[src*="icon-layers"]';
+  let boxes = [], icons = [], strip = null, lights = [], scanAt = 0;
+  // open space: what's at the point is the page itself, not a box or an icon (a mote under a card can't be seen)
+  const open = (x, y) => { if (x < 0 || y < 0 || x > W || y > H) return false; const e = document.elementFromPoint(x, y);
+    return !e || !(boxes.some(b => b.el.contains(e)) || icons.some(i => i.el.contains(e)) || e.closest('[role="dialog"],[aria-modal="true"],.sheet,.scrim,.ipsy-wrap')); };
   // a box: a ground of its own and rounded corners, most of the screen's width, not fixed (bars, sheets, toasts are)
   function scan() {
     scanAt = performance.now();
@@ -154,6 +210,14 @@
       if (out.length >= 48) break;
     }
     boxes = out;
+    // the apps' icons: aOS Home's pebbles, and every Pearl icon on the page (search, the store, an app's own screens)
+    icons = [];
+    for (const el of document.body.querySelectorAll(ICONS)) {
+      const r = el.getBoundingClientRect();
+      if (r.width < 22 || r.width > 140 || r.bottom < -240 || r.top > H + 480 || el.closest('[data-pearl-skip]')) continue;
+      icons.push(icons.find(i => i.el === el) || { el });
+      if (icons.length >= 40) break;
+    }
     // the title's strip: under the title's own header, if it sits near the top
     strip = null;
     const t = [...document.querySelectorAll(HEADS)].find(e => { const r = e.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < H * 0.4 && getComputedStyle(e).visibility !== 'hidden'; });
@@ -190,7 +254,7 @@
       g = lx.createRadialGradient(0, 0, 0, 0, 0, hw);
       g.addColorStop(0, day ? `rgba(255,255,255,${0.75 * b.lb})` : `rgba(150,205,255,${0.26 * b.lb})`); g.addColorStop(0.45, day ? `rgba(255,255,255,${0.25 * b.lb})` : `rgba(150,205,255,${0.07 * b.lb})`); g.addColorStop(1, 'rgba(150,205,255,0)');
       lx.fillStyle = g; lx.fillRect(-hw, 0, hw * 2, hw); lx.restore();
-      lights.push({ x0: cx - hw * 0.6, x1: cx + hw * 0.6, y, w: 0.25 + b.lb * 1.1 });
+      lights.push({ key: b.el, x0: cx - hw * 0.6, x1: cx + hw * 0.6, y, w: 0.25 + b.lb * 1.1 });
     }
     // the strip: a quiet line, and a beam that glides slowly back and forth along it
     if (strip && strip.el.isConnected) {
@@ -206,9 +270,18 @@
         g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, day ? 'rgba(255,255,255,.95)' : 'rgba(250,253,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
         lx.save(); lx.shadowColor = day ? 'rgba(255,255,255,.9)' : 'rgba(170,215,255,.95)'; lx.shadowBlur = day ? 6 : 12;
         lx.fillStyle = g; lx.fillRect(Math.max(x0, bx - bw), y - 0.9, Math.min(x1, bx + bw) - Math.max(x0, bx - bw), 1.8); lx.restore();
-        lights.push({ x0: x0 + len * 0.12, x1: x1 - len * 0.12, y, w: 1.3 });
+        lights.push({ key: strip.el, x0: x0 + len * 0.12, x1: x1 - len * 0.12, y, w: 1.3 });
       }
     }
+    // each icon: a point of light at its middle, pulling a little less than the lines
+    for (const i of icons) {
+      if (!i.el.isConnected) continue;
+      const r = i.el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (r.bottom < 0 || r.top > H || !r.width) { i.vis = false; continue; }
+      if (frame % 4 === 0 || i.vis == null) i.vis = shows(i.el, cx, cy);
+      if (i.vis) lights.push({ key: i.el, icon: true, x0: cx, x1: cx, y: cy, r: r.width * 0.62, w: 0.8 });
+    }
+    drawFalls(T);
     lx.globalCompositeOperation = 'source-over';
   }
   // the strip sits on the page itself: hidden while a sheet or a dialog is over it
@@ -253,6 +326,7 @@
   addEventListener('pageshow', check); addEventListener('focus', check);
   addEventListener('scroll', () => { scanAt = 0; }, { passive: true, capture: true });
   setInterval(check, 1500);   // an app's frame shown or put away, aOS Home covered or uncovered
-  window.aosPearl = { pause: () => { held = true; stop(); }, resume: () => { held = false; check(); }, running: () => running };
+  window.aosPearl = { pause: () => { held = true; stop(); }, resume: () => { held = false; check(); }, running: () => running,
+    stats: () => ({ motes: motes.length, lights: lights.length, icons: lights.filter(l => l.icon).length, falling, taken, falls: motes.filter(m => m.fall).map(m => [Math.round(m.x), Math.round(m.y), +(m.fall.t / m.fall.dur).toFixed(2), m.fall.key && m.fall.key.className && String(m.fall.key.className.baseVal ?? m.fall.key.className)]) }) };   // for the tests
   if (document.body) check(); else addEventListener('DOMContentLoaded', check);
 })();
