@@ -4,6 +4,7 @@
 // views, the hour and day sheets, Settings (Design, then the search, add a city, units, page dots, and the Trip place from your Travel layer, signed in), the alerts, the
 // radar's forecast frames through Weather's own helper (../weather/api/hrrr), and that nothing trips the
 // page's Content Security Policy; that its storage is wx.*.
+// Pearl is checked too: the weather in lines of light, none of Vintage's shapes (its own rules in index.html).
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look: Futura, flat cream
 // (walnut) cards, a mustard thumb, an orange main button, a flat disc and atomic shapes for the sky instead
 // of a gradient, with text that reads on every colour it lands on; and Standard (Sea glass): the gradient
@@ -421,6 +422,30 @@ for (const scheme of ['light', 'dark']) {
     await page.keyboard.press('Escape');
   });
   await step(scheme + ' Standard: no script errors', async () => assert.deepEqual(problems, []));
+  await ctx.close();
+}
+
+for (const scheme of ['light', 'dark']) {
+  // Pearl (id 'layers'): the weather in lines of light - none of Vintage's disc, pill, dot or flat shapes, Pearl's ground
+  // whatever the weather, line icons in the hero, the hours and the days, and the thumb a ring of light, not mustard
+  const { ctx, page, problems } = await newPage(scheme, { design: 'layers' });
+  await page.goto(BASE + '/weather/');
+  await ready(page);
+  await step(scheme + ' Pearl: the weather drawn in lines of light, none of Vintage\'s shapes or colours', async () => {
+    const st = await page.evaluate(() => {
+      const cs = (sel, ps) => { const e = document.querySelector(sel); return e ? getComputedStyle(e, ps || null) : null; };
+      return { look: document.documentElement.dataset.look, disc: cs('.w3-sky') && cs('.w3-sky').display, pill: cs('#sky', '::before').display, dot: cs('#sky', '::after').display,
+        ground: getComputedStyle(document.documentElement).backgroundImage, hero: !!document.querySelector('.w3-ico svg.i.pl'), plain: document.querySelectorAll('#hxTray svg.i.pl').length,
+        days: document.querySelectorAll('.dcols svg.i.pl').length, thumb: cs('.vsw .slthumb').backgroundColor };
+    });
+    assert.equal(st.look, 'layers');
+    assert.equal(st.disc, 'none', 'no Vintage disc'); assert.equal(st.pill, 'none', 'no pill'); assert.equal(st.dot, 'none', 'no dot');
+    assert.match(st.ground, /radial-gradient/, 'Pearl\'s ground, not the weather\'s tint');
+    assert.ok(st.hero && st.plain > 3 && st.days >= 5, 'line icons in the hero, the hours and the days: ' + JSON.stringify(st));
+    assert.match(st.thumb, /rgba\(0, 0, 0, 0\)|transparent/, 'the thumb is a ring of light, not a fill');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'pearl-' + scheme + '.png') });
+  });
+  await step(scheme + ' Pearl: no script errors', async () => assert.deepEqual(problems, []));
   await ctx.close();
 }
 

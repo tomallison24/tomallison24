@@ -95,6 +95,7 @@
         'The top edge of each card lights up where your eyes rest on the screen, a little above the middle, and fades above and below it, so the card you scroll to brightens',
         'New app icons in Pearl: each app is one simple line drawing with a dot in its own colour, on aOS Home, in search, in the app store and on your Home Screen',
         'aOS Home in Pearl: the weather and what\'s next as two panes of glass, the weather drawn in light',
+        'Weather in Pearl: the weather drawn in lines of light, glowing a little at night, in place of Vintage\'s disc and shapes; the temperatures from ice blue through white to a soft amber, and rain in Weather\'s own blue',
         'Ignition, Pearl\'s intro: dust gathers into a rounded square of light, it flares, and aOS appears, in under four seconds. Account > Appearance > Ignition intro: Sound, Silent or Off',
         'Titles in Pearl are in Unbounded Light, kept on the phone so they work offline',
         'In Pearl, your helper is Lumen, a mysterious beam of light that keeps changing shape, after things astrophysicists study: a pulsar\'s sweeping beams, a black hole with light bent over its top, a spiral galaxy, a nebula\'s shells and a quasar\'s jets. It listens in gravitational waves, searches as a pulsar, writes as a comet and finishes in a supernova\'s flash, while dust drifts in and is taken into its core. Your own helper and its name come back in the other looks',
