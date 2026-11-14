@@ -1,4 +1,4 @@
-// Writes the Layers and Tron looks of every page and icon from its Vintage one (aOS/scripts/looks.mjs
+// Writes the Pearl (id 'layers') and Tron looks of every page from its Vintage one, and their icons (aOS/scripts/looks.mjs
 // says how a colour moves). Run it after changing a page's <style id="vintage"> block or an icon.svg:
 //
 //   node aOS/scripts/make-looks.mjs            the <style id="layers"> and <style id="grid">
@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { lookBlock, signature, mapColor, LOOKS } from './looks.mjs';
+import { LINES, GROUND } from './pearl-icons.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const NEW = ['layers', 'grid'];
@@ -20,6 +21,13 @@ const check = process.argv.includes('--check');
 const pages = readdirSync(ROOT, { withFileTypes: true }).filter(d => d.isDirectory() && existsSync(path.join(ROOT, d.name, 'index.html')))
   .map(d => d.name).filter(d => /^<style id="vintage">/m.test(readFileSync(path.join(ROOT, d, 'index.html'), 'utf8')));
 const stale = [];
+// every app's own colour (aOS/app.js, ROOM_HUE): Pearl's coloured dot on each icon
+const HUE = Function('return ' + /const ROOM_HUE = (\{[^}]*\})/.exec(readFileSync(path.join(ROOT, 'aOS/app.js'), 'utf8'))[1])();
+const dotOf = app => { const c = HUE[app].split(',').map(Number), k = 255 / Math.max(...c);   // as bright as the hue goes, a little toward white
+  return '#' + c.map(v => Math.round(Math.min(255, v * k * 0.88 + 255 * 0.12)).toString(16).padStart(2, '0')).join('').toUpperCase(); };
+// Pearl's mark (aOS's own icon): the pebble as a line of light, a rounded square of degree 4, in a 512 box
+const MARK = r => 'M' + Array.from({ length: 160 }, (_, i) => { const t = i / 160 * Math.PI * 2, c = Math.cos(t), s = Math.sin(t), k = 1 / Math.sqrt(Math.sqrt(c ** 4 + s ** 4));
+  return [256 + r * c * k, 256 + r * s * k].map(v => +v.toFixed(1)).join(' '); }).join('L') + 'Z';
 
 // ---- the page blocks ----
 const VSTART = /^<style id="vintage">\n/m;
@@ -60,6 +68,27 @@ for (const app of pages) {
 const SIZE = /viewBox="0 0 (\d+) (\d+)"/;
 // Tron's trail on a 512 icon: 26 in from each edge, its corners rounded at 94
 const TRAIL = 'M120 26H392A94 94 0 0 1 486 120V392A94 94 0 0 1 392 486H120A94 94 0 0 1 26 392V120A94 94 0 0 1 120 26Z';
+// Pearl's Home Screen icon: the night ground, a few motes of dust, the app's drawing as a line of light with its glow, and the
+// app's coloured dot top right; aOS's own: its mark, the pebble, as a line of light. The same in light and dark, as the
+// Home Screen shows one icon.
+function pearlIcon(app) {
+  let seed = [...app].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const r = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
+  const motes = Array.from({ length: 16 }, () => `<circle cx="${(r() * 512).toFixed(0)}" cy="${(r() * 512).toFixed(0)}" r="${(0.8 + r() * 2.4).toFixed(1)}" fill-opacity="${(0.12 + r() * 0.4).toFixed(2)}"/>`).join('');
+  const glow = '<filter id="gl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  const drawing = app === 'aOS'
+    ? `<path d="${MARK(150)}" stroke-width="13"/>`
+    : `<g transform="translate(104 104) scale(12.667)" stroke-width="1.15">${LINES[app]}</g>`;
+  const dot = app === 'aOS' || !HUE[app] ? '' : `\n  <circle cx="414" cy="98" r="19" fill="${dotOf(app)}" filter="url(#gl)"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Pearl: generated from aOS/scripts/pearl-icons.mjs by aOS/scripts/make-looks.mjs - don't edit by hand. The app's line of light on the night ground, with its coloured dot. -->
+  <defs><radialGradient id="pg" cx=".5" cy=".95" r=".95">${GROUND.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</radialGradient>${glow}</defs>
+  <rect width="512" height="512" fill="url(#pg)"/>
+  <g fill="#DCEBFF">${motes}</g>
+  <g fill="none" stroke="#F2FAFF" stroke-linecap="round" stroke-linejoin="round" filter="url(#gl)">${drawing}</g>${dot}
+</svg>
+`;
+}
 function iconFor(look, svg) {
   const masks = [];
   svg = svg.replace(/<mask[\s\S]*?<\/mask>/g, m => { masks.push(m); return `\u0000${masks.length - 1}\u0000`; });
@@ -129,7 +158,8 @@ const pngs = [];
 for (const app of icons) {
   const src = readFileSync(path.join(ROOT, app, 'icon.svg'), 'utf8');
   for (const look of NEW) {
-    const f = path.join(ROOT, app, `icon-${look}.svg`), out = iconFor(look, src);
+    const f = path.join(ROOT, app, `icon-${look}.svg`), out = look === 'layers' ? pearlIcon(app) : iconFor(look, src);
+    if (look === 'layers' && app !== 'aOS' && !LINES[app]) { stale.push(`${app}: no Pearl drawing in aOS/scripts/pearl-icons.mjs`); continue; }
     const was = existsSync(f) ? readFileSync(f, 'utf8') : null;
     const noPng = !existsSync(path.join(ROOT, app, `icon-${look}-512.png`)) || !existsSync(path.join(ROOT, app, `icon-${look}-180.png`));
     if (was !== out || noPng) { stale.push(`${app}/icon-${look}.svg`); if (!check) { writeFileSync(f, out); pngs.push([app, look, out]); } }
@@ -154,90 +184,41 @@ if (!check && pngs.length) {
   await browser.close();
 }
 
-// ---- Layers' pebbles: every app's icon inside aOS and its own screens, in Layers ----
-// The drawing from the app's icon.svg (its own colour, named in the icon's note: "own colour (#…) on a pale tint of it
-// (#…)"), in white, without the tile and the Vintage marks, cropped to a square round it so every app's is the same size;
-// and the pebble's gradient: the app's colour (aOS/app.js, ROOM_HUE) lighter at the top left, down to its own, dark
-// enough for the white drawing. Written twice: aOS/glyphs.js (Layers' grid on aOS Home, aOS/home-tab.js) and
-// <app>/icon-pebble.svg (every other place an app's icon shows in Layers: aOS/app.js, home-tab.js, home/welcome.js).
-// The drawing is 60% of the pebble (40% until 2026-11-02, when the pebble became a rounded square). Each keeps a hash of what it was made from, so --check needs no browser.
+// ---- Pearl's pebbles: every app's icon inside aOS and its own screens, in Pearl ----
+// The app's line drawing (aOS/scripts/pearl-icons.mjs) and its coloured dot, written twice: aOS/glyphs.js (aOS Home's grid,
+// aOS/home-tab.js, which draws them in the page's own light) and <app>/icon-pebble.svg (every other place an app's icon shows
+// in Pearl: aOS/app.js, home-tab.js, home/welcome.js): carbon on a pearl pebble by day, light on graphite at night (the
+// phone's light or dark setting). Pearl's id is 'layers', the look it replaced.
 {
-  const { createHash } = await import('crypto');
   const file = path.join(ROOT, 'aOS/glyphs.js');
-  // the pebble's outline: an iOS app icon's rounded square (2026-11-02, was a soft wobbly superellipse like sea glass), a
-  // superellipse of degree 5, the continuous corner iOS draws, in a 512 box (240 from the middle, room for the shadow)
+  // the pebble's outline: an iOS app icon's rounded square, a superellipse of degree 5, in a 512 box (240 from the middle)
   const PEBBLE = 'M' + Array.from({ length: 180 }, (_, i) => { const t = i / 180 * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
     return [256 + 240 * Math.sign(c) * Math.abs(c) ** (2 / 5), 256 + 240 * Math.sign(s) * Math.abs(s) ** (2 / 5)].map(v => +v.toFixed(1)).join(' '); }).join('L') + 'Z';
-  const HUE = Function('return ' + /const ROOM_HUE = (\{[^}]*\})/.exec(readFileSync(path.join(ROOT, 'aOS/app.js'), 'utf8'))[1])();
-  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-  const mixc = (a, b, k) => '#' + rgb(a).map((v, i) => Math.round(v + (rgb(b)[i] - v) * k).toString(16).padStart(2, '0')).join('').toUpperCase();
-  const lum = h => { const [r, g, b] = rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
-  let was = {};
-  try { was = JSON.parse(/window\.aosGlyphs = (\{[\s\S]*?\});\n/.exec(readFileSync(file, 'utf8'))[1]); } catch {}
-  const out = {}, todo = [];
+  const ordered = {};
   for (const app of icons.filter(a => HUE[a])) {
-    const raw = readFileSync(path.join(ROOT, app, 'icon.svg'), 'utf8'), m = /own colour \((#[0-9A-F]{6})\)[^#]*\((#[0-9A-F]{6})\)/i.exec(raw);
-    if (!m) { stale.push(`${app}/icon.svg (its note doesn't name its own colour and tint)`); continue; }
-    const [, deep, pale] = m, s = raw.replace(/<!--[\s\S]*?-->/g, '');
-    const defs = (/<defs>([\s\S]*?)<\/defs>/.exec(s) || ['', ''])[1].trim();
-    const body = s.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/<defs>[\s\S]*?<\/defs>/, '')
-      .replace(`<rect width="512" height="512" fill="${pale}"/>`, '').replace(/<circle cx="424" cy="88" r="44"[^>]*\/>/, '')
-      .replace(/<rect[^>]*rotate\(-18 90 444\)"\/>/, '').replace(/\s+/g, ' ').trim();
-    const white = t => t.split(deep).join('#FFFFFF').split(deep.toLowerCase()).join('#FFFFFF')
-      .replace(/id="([^"]+)"/g, `id="g-${app}-$1"`).replace(/url\(#([^)]+)\)/g, `url(#g-${app}-$1)`);
-    const mid = '#' + HUE[app].split(',').map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
-    let top = mixc(mid, '#FFFFFF', .12);
-    while ((1.05) / (lum(mixc(top, deep, .5)) + .05) < 3) top = mixc(top, deep, .2);   // the white drawing reads on the middle of it
-    const h = createHash('sha1').update([defs, body, deep, top].join('|')).digest('hex').slice(0, 12);
-    out[app] = { h, top, end: deep, defs: white(defs), body: white(body) };
-    if (!was[app] || was[app].h !== h) todo.push(app);
+    if (!LINES[app]) { stale.push(`${app}: no Pearl drawing in aOS/scripts/pearl-icons.mjs`); continue; }
+    ordered[app] = { dot: dotOf(app), line: LINES[app] };
   }
-  const final = {};
-  for (const app of Object.keys(out)) if (!todo.includes(app)) final[app] = was[app];
-  if (todo.length && !check) {
-    const { createRequire } = await import('module');
-    const { execSync } = await import('child_process');
-    const require = createRequire(execSync('npm root -g').toString().trim() + '/');
-    const { chromium } = require('playwright');
-    const browser = await chromium.launch(), page = await browser.newPage({ viewport: { width: 512, height: 512 } });
-    for (const app of todo) {
-      const o = out[app];
-      // the drawing's own box: drawn alone, and its pixels scanned
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs>${o.defs}</defs>${o.body}</svg>`;
-      const [x0, y0, x1, y1] = await page.evaluate(async svg => {
-        const img = new Image(); img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))); await img.decode();
-        const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
-        const d = x.getImageData(0, 0, 512, 512).data; let a = 512, b = 512, e = 0, f = 0;
-        for (let y = 0; y < 512; y++) for (let i = 0; i < 512; i++) if (d[(y * 512 + i) * 4 + 3] > 40) { if (i < a) a = i; if (i > e) e = i; if (y < b) b = y; if (y > f) f = y; }
-        return [a, b, e + 1, f + 1];
-      }, svg);
-      const size = Math.max(x1 - x0, y1 - y0);
-      final[app] = { h: o.h, top: o.top, end: o.end, vb: `${Math.round((x0 + x1 - size) / 2)} ${Math.round((y0 + y1 - size) / 2)} ${size} ${size}`, defs: o.defs, body: o.body };
-    }
-    await browser.close();
-  }
-  if (todo.length) stale.push('aOS/glyphs.js' + ` (${todo.join(', ')})`);
-  if (!todo.length || !check) {
-    const ordered = Object.fromEntries(Object.keys(out).map(a => [a, final[a]]));
-    const text = `// Made by aOS/scripts/make-looks.mjs from each app's icon.svg - don't edit by hand.\n`
-      + `// Layers' pebbles (aOS/home-tab.js, pebble): each app's drawing in white, cropped to a square round it (vb), and its\n`
-      + `// pebble's gradient, top left to bottom right; aosPebble is the pebble's outline in a 512 box. h: a hash of what it was made from.\n`
-      + `window.aosPebble = '${PEBBLE}';\n`
-      + `window.aosGlyphs = ${JSON.stringify(ordered, null, 1)};\n`;
-    if (!existsSync(file) || readFileSync(file, 'utf8') !== text) { if (!todo.length) stale.push('aOS/glyphs.js'); if (!check) writeFileSync(file, text); }
-    // each app's pebble as an icon of its own: the pebble a little inside the box, with a soft shadow under it
-    for (const [app, g] of Object.entries(ordered)) {
-      const [vx, vy, vs] = g.vb.split(' ').map(Number), w = 512 * .92 * .6, at = 256 - w / 2;
-      const peb = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">\n`
-        + `  <!-- Made by aOS/scripts/make-looks.mjs from icon.svg - don't edit by hand. Layers' pebble: the app's colour, lighter at the top left, its drawing in white at 60% of it. ${g.h} -->\n`
-        + `  <defs><linearGradient id="p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g.top}"/><stop offset="1" stop-color="${g.end}"/></linearGradient>`
-        + `<radialGradient id="w" cx=".2" cy=".12" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
-        + `<filter id="s" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#101828" flood-opacity=".22"/></filter></defs>\n`
-        + `  <g transform="translate(256 256) scale(.92) translate(-256 -256)"><path d="${PEBBLE}" fill="url(#p)" filter="url(#s)"/><path d="${PEBBLE}" fill="url(#w)"/></g>\n`
-        + `  <svg x="${at.toFixed(2)}" y="${at.toFixed(2)}" width="${w.toFixed(2)}" height="${w.toFixed(2)}" viewBox="${vx} ${vy} ${vs} ${vs}">${g.defs ? `<defs>${g.defs}</defs>` : ''}${g.body}</svg>\n</svg>\n`;
-      const f = path.join(ROOT, app, 'icon-pebble.svg');
-      if (!existsSync(f) || readFileSync(f, 'utf8') !== peb) { stale.push(`${app}/icon-pebble.svg`); if (!check) writeFileSync(f, peb); }
-    }
+  const text = `// Made by aOS/scripts/make-looks.mjs from aOS/scripts/pearl-icons.mjs - don't edit by hand.\n`
+    + `// Pearl's pebbles (aOS/home-tab.js, pebble): each app's line drawing on a 24 grid and its coloured dot; aosPebble is the\n`
+    + `// pebble's outline in a 512 box.\n`
+    + `window.aosPebble = '${PEBBLE}';\n`
+    + `window.aosGlyphs = ${JSON.stringify(ordered, null, 1)};\n`;
+  if (!existsSync(file) || readFileSync(file, 'utf8') !== text) { stale.push('aOS/glyphs.js'); if (!check) writeFileSync(file, text); }
+  for (const [app, g] of Object.entries(ordered)) {
+    const peb = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Made by aOS/scripts/make-looks.mjs from aOS/scripts/pearl-icons.mjs - don't edit by hand. Pearl's pebble: the app's line drawing and its coloured dot, carbon on pearl by day, light on graphite at night. -->
+  <defs><linearGradient id="d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6E1D8"/></linearGradient>`
+      + `<filter id="s" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#3C2E14" flood-opacity=".18"/></filter>`
+      + `<filter id="g" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+      + `<style>.t{fill:url(#d);stroke:rgba(30,33,38,.4)}.l{stroke:#1E2126}@media (prefers-color-scheme:dark){.t{fill:#0B1222;stroke:rgba(214,236,255,.45)}.l{stroke:#F2FAFF;filter:url(#g)}}</style></defs>
+  <g transform="translate(256 256) scale(.92) translate(-256 -256)"><path class="t" stroke-width="5" filter="url(#s)" d="${PEBBLE}"/></g>
+  <g class="l" fill="none" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(115 115) scale(11.75)" stroke-width="1.25">${g.line}</g></g>
+  <circle cx="396" cy="116" r="16" fill="${g.dot}"/>
+</svg>
+`;
+    const f = path.join(ROOT, app, 'icon-pebble.svg');
+    if (!existsSync(f) || readFileSync(f, 'utf8') !== peb) { stale.push(`${app}/icon-pebble.svg`); if (!check) writeFileSync(f, peb); }
   }
 }
 

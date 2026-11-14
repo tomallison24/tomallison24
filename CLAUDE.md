@@ -36,7 +36,7 @@ requests skips its steps rather than itself.
 for everything (aOS1, aOS1.1, aOS2). When you ship something a user would
 notice, add a line for it:
 
-- By default, add to the top entry (aOS2.3 now): each merge releases it again,
+- By default, add to the top entry (aOS2.4 now): each merge releases it again,
   moving its tag; phones get the change with no update screen. A change worth
   announcing with update screens gets a new entry above it, when the owner
   wants one; the merge that adds it releases it:
@@ -105,9 +105,10 @@ from.
 ## Layout
 
 - `aOS/` (capital O and S, `/aOS/`) is the home of every app (aOS2): its Home tab
-  (`aOS/home-tab.js`) has Ipsy across the apps, Favorites and every app (in Layers, its own grid: every app as
-  a pebble, an iOS-style rounded square, in its own colour with its drawing in white, `aOS/glyphs.js` made by make-looks, the order yours alone, `aos.home.grid`;
-  every other app icon shown in Layers, in aOS and the apps' own screens, is its `icon-pebble.svg`, made by make-looks too; the Home Screen icon stays `icon-layers-*.png`), and each app opens
+  (`aOS/home-tab.js`) has Ipsy across the apps, Favorites and every app (in Pearl, its own grid: the weather and what's next as
+  glass, then every app as a pebble, an iOS-style rounded square, with its one-line drawing and a dot in its own colour, `aOS/glyphs.js` made by make-looks
+  from `aOS/scripts/pearl-icons.mjs`; every other app icon shown in Pearl, in aOS and the apps' own screens, is its `icon-pebble.svg`, made by make-looks too;
+  the Home Screen icon is `icon-layers-*.png`), and each app opens
   inside aOS, in a frame on this site, sharing aOS's storage (`window.aosHome`: `welcome.js` in
   the app takes aOS's insets and skips the install steps; data an app kept only on its own
   Home Screen copy moves in through the family account, `handoff`). It is also the app store;
@@ -115,8 +116,8 @@ from.
   opened from there, the app hands its data to aOS and says it lives in aOS now.
 - `home/` was the launcher; it is **retired**. It now holds the scripts every
   app shares - `welcome.js` (welcome, walkthroughs, update screens, install
-  steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Layers
-  or Tron), `names.js` (your helper's name where the words say Ipsy), `sky.js` (the Vintage designs' day and night sky),
+  steps, release log, theme), `slide.js`, `design.js` (Vintage, Sea glass, Pearl
+  or Tron), `pearl.js` (Pearl's light and dust), `names.js` (your helper's name where the words say Ipsy), `sky.js` (the Vintage designs' day and night sky),
   `aisles.js` (grocery sections, for Notes and Meals) and `ipsy.js` (Ipsy, the AI helper you
   chat with: Orders, Travel, Meals, Calendar, Notes, News, Fitness; its server side is
   `server/ipsy.js`; the helper dresses for the weather from Weather's `wx.cache`, `outfit()`; in every app it can log a bug or an idea in Improve, `IMPROVE_TOOLS` through `home/sheet.js` `AllisonOS.sheet.improve`) with `redact.js` before it (personal details stay on the phone: what goes to
@@ -144,20 +145,24 @@ from.
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
 - **Four designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
-  glass), Layers (a still sky by the time of day, `data-tod` on `<html>`, light or dark with the phone,
-  frosted glass over it from the title down; it replaced Night Drive, and a phone that had Night Drive, `neon`,
-  opens in Layers) and Tron (light cycles, after the
+  glass), Pearl (aOS 2.4: light in the dust; lines of cool white light on near-black at night, carbon hairlines on cream by day,
+  with the phone; titles in Unbounded Light from `home/fonts`; dust drifting behind every screen, falling as rain or snow with Weather's
+  `wx.cache`, drawn into the strip of light under each title and the lit top edges of cards, brightest 38% down the screen where the eyes
+  rest: `home/pearl.js`, loaded by `design.js`/`look.js` in Pearl only; the helper becomes Lumen, a beam of light that changes
+  shape after astrophysics, pulsar, black hole, galaxy, nebula, quasar, `lumSvg` in `home/ipsy.js`, named so in every app. **Pearl's id is `layers`**, the look it replaced, so every
+  `data-look`, `design.<app>`, block, file and test that says `layers` means Pearl; Layers had replaced Night Drive, and a phone that had
+  Night Drive, `neon`, opens in Pearl) and Tron (light cycles, after the
   Tron: Ares mode in Tesla's cars: red light on black, dark only; its light trail runs around each screen behind
   everything and round each app's icon, and on aOS Home it now and then sends a shot round a section or widget, `aOS/tron-shots.js`, the helper becomes Ares, the Tron: Ares rider (named so in every app), and aOS alone opens with its intro and sound, `aOS/tron-intro.js`; in Vintage aOS opens with Sunrise, `aOS/vintage-intro.js`,
-  its sun going up into the disc at the top of aOS; in Sea glass with Tide, `aOS/glass-intro.js`, its "aOS" gliding into the page's; in Layers with Skylight,
-  `aOS/layers-intro.js`, the sun or moon rising into the top right as hundreds of dots flock in and build the apps'
-  drawings into a house with a family in the light inside, "aOS" gliding into the page's), picked for every
+  its sun going up into the disc at the top of aOS; in Sea glass with Tide, `aOS/glass-intro.js`, its "aOS" gliding into the page's; in Pearl with Ignition,
+  `aOS/layers-intro.js`, dust gathering into a rounded square of light that flares, in under four seconds, "aOS" gliding into the
+  page's), picked for every
   app at once in aOS (Account > Appearance > Look: `aOS/look.js` writes each app's design) or in
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
   id="vintage">` block on or off, `data-look` on `<html>`, the icon (`icon-*.png` Vintage,
   `icon-glass-*.png` Sea glass, `icon-layers-*.png`, `icon-grid-*.png`), status bar and bar colours.
-  A change to how an app looks is made in Vintage and Sea glass; **Layers and Tron are
+  A change to how an app looks is made in Vintage and Sea glass; **Pearl and Tron are
   generated from Vintage** (`<style id="layers">`, `<style id="grid">` and the icons, by
   `node aOS/scripts/make-looks.mjs`, palettes in `aOS/scripts/looks.mjs`): run it after changing a
   Vintage block or an `icon.svg` (check-apps fails until you do), never edit those blocks by hand.

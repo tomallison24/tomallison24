@@ -27,16 +27,24 @@ must say the same thing.
 ## 1. Four looks, one app
 
 **Every app has the four looks: Vintage (the default), Standard (Sea glass),
-Layers and Tron; you write Vintage and Sea glass, and Layers and Tron are
-generated from Vintage.**
+Pearl and Tron; you write Vintage and Sea glass, and Pearl and Tron are
+generated from Vintage.** Pearl (aOS 2.4) replaced Layers and keeps its id,
+`layers`: every `data-look="layers"`, `<style id="layers">` and `icon-layers-*`
+is Pearl's.
 
 - **Why:** a person picks a look once, in aOS (Account > Appearance), and every
   app wears it. One app that can't breaks the suite.
 - **Done:** `home/design.js` loaded in `<head>` with the app's `data-app`; the
   page's main `<style>` is Sea glass, `<style id="vintage">` follows it, and
-  `<style id="layers">` and `<style id="grid">` (Tron) are written by
+  `<style id="layers">` (Pearl) and `<style id="grid">` (Tron) are written by
   `node aOS/scripts/make-looks.mjs` from the Vintage block (palettes in
-  `aOS/scripts/looks.mjs`), never by hand. Colours come from tokens (`--bg`,
+  `aOS/scripts/looks.mjs`), never by hand. Pearl's light and dust (the strip
+  under the title, the lit top edges of cards at the eye line, 38% down the
+  screen, the dust behind the page) are `home/pearl.js`, which finds the title
+  and the cards itself: an app needs nothing for it but a title in one of the
+  shared heading classes and cards with a ground and rounded corners. Pearl's
+  icons are one-line drawings in `aOS/scripts/pearl-icons.mjs`: a new app adds
+  its drawing there. Colours come from tokens (`--bg`,
   `--text`, `--muted`, `--accent`, `--cta`, and the shared `--st-*`), never
   from colours typed into a rule. No new colours or gradients: Sea glass is the
   four AllisonOS hues (sea glass `#6FA597`, mist `#8193BC`, shell `#BE918F`,
@@ -46,7 +54,7 @@ generated from Vintage.**
   and `aOS/scripts/design-test.mjs` (every app opens in all four). The tokens:
   Review.
 
-![Fitness in Vintage, Standard, Layers and Tron](docs/design/looks.png)
+![Fitness in Vintage, Standard, Pearl and Tron](docs/design/looks.png)
 
 The tokens the shared parts take in each look, read from a real page:
 
@@ -260,7 +268,7 @@ Settings > AI helper, and anything marked Private stays out of what it reads.**
   Account > AI helper), then the app's own (Ipsy fills in what's missing, Ipsy
   can search Gmail), with the models it uses in the line under the section. A note, order, booking or event can be marked
   Private (a switch in its editor): the app's tools leave it out of everything
-  they read (`AllisonOS.ipsy.privacy`). In Tron the helper is Ares.
+  they read (`AllisonOS.ipsy.privacy`). In Tron the helper is Ares; in Pearl it is Lumen, a beam of light that changes shape (pulsar, black hole, galaxy, nebula, quasar).
 - **Enforced:** Review (Undo and the chat's asking are `home/ipsy.js`'s own;
   CI: `order` checks where the AI helper section sits).
 - **Known gaps:** none.

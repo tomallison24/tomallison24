@@ -50,22 +50,23 @@ const interp = (pts, x) => {   // piecewise linear through [[x, y]...]
 // Vintage's own anchors (OKLCH lightness): walnut ground .245, walnut card .29, ink .27, cream ground .94, card .97
 export const LOOKS = {
   layers: {
-    name: 'Layers',
-    // the AllisonOS colours under a still sky: cool mist neutrals, the four families moved to sea glass, mist
-    // blue, shell and sand at Vintage's own lightness (so contrast stays as Vintage had it)
+    // Pearl (its id stays 'layers', the look it replaced, so phones that had Layers open in Pearl): light in the dust.
+    // By day, cream with carbon ink; at night, near-black blue with cool white light. The accents keep Vintage's roles in
+    // the AllisonOS colours (sea glass, mist, shell, sand) at Vintage's lightness, quieter by day, glowing at night.
+    name: 'Pearl',
     light: {
-      neutral: { L: [[0.2, 0.17], [0.27, 0.215], [0.55, 0.5], [0.94, 0.958], [0.97, 0.988], [1, 1]], h: 255, C: L => 0.004 + 0.022 * (1 - L) },
-      orange: { h: 24, C: 0.85, dL: 0 }, mustard: { h: 78, C: 0.72, dL: 0 }, olive: { h: 262, C: 1.05, dL: 0 },
-      teal: { h: 178, C: 0.9, dL: 0 }, blue: { h: 262, C: 0.9, dL: 0 }, pink: { h: 352, C: 0.8, dL: 0 },
+      neutral: { L: [[0.2, 0.17], [0.27, 0.235], [0.55, 0.5], [0.94, 0.948], [0.97, 0.982], [1, 0.995]], h: L => (L > 0.6 ? 82 : 255), C: L => (L > 0.6 ? 0.012 : 0.008) },
+      orange: { h: 24, C: 0.7, dL: 0 }, mustard: { h: 78, C: 0.6, dL: 0 }, olive: { h: 262, C: 0.9, dL: 0 },
+      teal: { h: 178, C: 0.75, dL: 0 }, blue: { h: 262, C: 0.8, dL: 0 }, pink: { h: 352, C: 0.7, dL: 0 },
     },
     dark: {
-      neutral: { L: [[0.2, 0.15], [0.245, 0.185], [0.29, 0.235], [0.36, 0.29], [0.6, 0.62], [0.94, 0.945], [1, 1]], h: 255, C: L => (L < 0.5 ? 0.016 : 0.006 + 0.02 * (1 - L)) },
-      orange: { h: 24, C: 0.85, dL: 0.03 }, mustard: { h: 80, C: 0.75, dL: 0.02 }, olive: { h: 262, C: 1.1, dL: 0.06 },
-      teal: { h: 178, C: 0.9, dL: 0.03 }, blue: { h: 262, C: 0.9, dL: 0.04 }, pink: { h: 352, C: 0.8, dL: 0.03 },
+      neutral: { L: [[0.2, 0.1], [0.245, 0.13], [0.29, 0.185], [0.36, 0.245], [0.6, 0.62], [0.94, 0.935], [1, 1]], h: 258, C: L => (L < 0.5 ? 0.028 : 0.006 + 0.012 * (1 - L)) },
+      orange: { h: 24, C: 0.75, dL: 0.07 }, mustard: { h: 80, C: 0.7, dL: 0.05 }, olive: { h: 262, C: 1.0, dL: 0.12 },
+      teal: { h: 178, C: 0.75, dL: 0.09 }, blue: { h: 262, C: 0.85, dL: 0.1 }, pink: { h: 352, C: 0.7, dL: 0.06 },
     },
     font: '-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif',
-    display: '-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif',
-    ground: ['#EEF1F5', '#10141A'],
+    display: '"Unbounded","Avenir Next","Helvetica Neue",system-ui,sans-serif',
+    ground: ['#F7F3EC', '#02050C'],
   },
   // Night Drive's palette: not a look any more (Layers replaced it), but Tron's icon grounds take their hue from its dark one
   neon: {
@@ -107,7 +108,7 @@ export function mapRgb(look, rgb, dark) {
   const [L, C, h] = toLch(rgb);
   if (C < 0.045) {   // a neutral (tinted a little toward the family when it carries some colour)
     const n = P.neutral, L2 = interp(n.L, L);
-    return fromLch(L2, n.C(L2), n.h);
+    return fromLch(L2, n.C(L2), typeof n.h === 'function' ? n.h(L2) : n.h);
   }
   const f = P[FAMILY(h)];
   return fromLch(L + f.dL, C * f.C, f.h);
@@ -182,7 +183,7 @@ export function lookBlock(look, css) {
     const prop = decl.slice(0, k).trim(), val = decl.slice(k + 1).trim();
     if (/^font-family$/i.test(prop) || /^--[\w-]*font[\w-]*$/i.test(prop)) return VFONT.test(val) ? `${prop}:${L.font}${/!important/.test(val) ? ' !important' : ''}` : null;
     if (/^font$/i.test(prop) && VFONT.test(val)) return `${prop}:${val.replace(/(["']?Futura[\s\S]*)$/, L.font)}`;
-    if (look === 'layers' && BARS.test(val)) return `${prop}:none`;   // Vintage's three little bars under a title: Layers has the sky instead
+    if (look === 'layers' && BARS.test(val)) return `${prop}:none`;   // Vintage's three little bars under a title: Pearl has its light strip instead
     return hasColor(val) ? `${prop}:${mapColor(look, val, dark)}` : null;
   };
   // Light or Dark: a rule in a prefers-color-scheme block, or for [data-theme], is that mode's; any other follows
@@ -222,38 +223,31 @@ const BAND = ':is(.ambient,.aurora,.atoms)';
 const darkBoth = body => `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${body}}}\n:root[data-theme="dark"]{${body}}\n`;
 const svgUrl = svg => `url("data:image/svg+xml,${encodeURIComponent(svg).replace(/%20/g, ' ').replace(/%3D/g, '=').replace(/%3A/g, ':').replace(/%2F/g, '/')}")`;
 
-// Layers' skies, by the time of day (data-tod on <html>, home/design.js), in each mode: the plate's gradient and two
-// still glows low down. Light skies stay light at night so the page's dark ink still reads on them; Dark's are deep.
+// The bar colours by the time of day (data-tod on <html>, home/design.js). Layers had a sky for each; Pearl, which replaced it,
+// has one ground all day, so every time of day is the same: the top of the page by day and at night.
+const PEARL_DAY = ['radial-gradient(110% 60% at 50% 0%,#FFFDF9 0%,#F4EEE3 55%,#E9E1D3 100%)', 'rgba(255,253,246,0)', 'rgba(255,253,246,0)', '#F7F3EC'];
+const PEARL_NIGHT = ['radial-gradient(110% 50% at 50% 100%,#081631 0%,#040A1A 45%,#000206 100%)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0)', '#02050C'];
 export const SKIES = {
-  light: {
-    morning:   ['linear-gradient(160deg,#F4DCCB 0%,#F0E0C4 45%,#CFD8EC 100%)', 'rgba(236,196,160,.55)', 'rgba(170,188,226,.5)', '#F4DCCB'],
-    afternoon: ['linear-gradient(150deg,#B9DCD2 0%,#C6D1E7 40%,#EAD0CE 75%,#EEDFC4 100%)', 'rgba(150,200,186,.6)', 'rgba(226,182,178,.5)', '#B9DCD2'],
-    evening:   ['linear-gradient(160deg,#EDCDC9 0%,#DCCCE5 50%,#CFD5EE 100%)', 'rgba(222,176,172,.55)', 'rgba(184,170,220,.5)', '#EDCDC9'],
-    night:     ['linear-gradient(160deg,#D2D7EE 0%,#CFCFEC 55%,#DCD0E3 100%)', 'rgba(150,160,210,.5)', 'rgba(190,160,200,.42)', '#D2D7EE'],
-  },
-  dark: {
-    morning:   ['linear-gradient(160deg,#42302A 0%,#3B3424 45%,#263049 100%)', 'rgba(90,74,48,.8)', 'rgba(42,58,102,.7)', '#42302A'],
-    afternoon: ['linear-gradient(150deg,#1F3B35 0%,#252F48 40%,#3F2D2C 75%,#3C3424 100%)', 'rgba(46,90,80,.8)', 'rgba(90,60,58,.7)', '#1F3B35'],
-    evening:   ['linear-gradient(160deg,#3F2B2E 0%,#33294A 50%,#222C4A 100%)', 'rgba(74,48,96,.8)', 'rgba(42,58,102,.7)', '#3F2B2E'],
-    night:     ['linear-gradient(160deg,#0F1426 0%,#191A33 55%,#241A2C 100%)', 'rgba(42,58,102,.6)', 'rgba(74,48,96,.5)', '#0F1426'],
-  },
+  light: { morning: PEARL_DAY, afternoon: PEARL_DAY, evening: PEARL_DAY, night: PEARL_DAY },
+  dark: { morning: PEARL_NIGHT, afternoon: PEARL_NIGHT, evening: PEARL_NIGHT, night: PEARL_NIGHT },
 };
 const skyVars = ([plate, g1, g2, top]) => `--ly-plate:${plate};--ly-g1:${g1};--ly-g2:${g2};--ly-top:${top}`;
 
 export function signature(look) {
   if (look === 'layers') {
-    const L = SKIES.light, D = SKIES.dark, TODS = Object.keys(L);
-    const darkTod = t => `@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-tod="${t}"]{${skyVars(D[t])}}}\n:root[data-theme="dark"][data-tod="${t}"]{${skyVars(D[t])}}\n`;
-    return `/* Layers: a still sky behind the page, its colours by the time of day (data-tod, set by home/design.js when the
-   page opens and when you come back; it never animates), clear behind the title and frosted from there down, as a
-   dock of glass over it. Vintage's disc, dot and pill go: the sky is the one shape. System type, bold headings. */
-${HEADS}{font-family:${LOOKS.layers.display};font-style:normal;font-weight:700;letter-spacing:-.02em}
-:root{--ly-band:calc(env(safe-area-inset-top) + 150px);--ly-veil:rgba(244,246,249,.82);--ly-lift:0 1px 2px rgba(16,24,40,.08),0 10px 22px -12px rgba(16,24,40,.4);${skyVars(L.afternoon)}}
-${TODS.filter(t => t !== 'afternoon').map(t => `:root[data-tod="${t}"]{${skyVars(L[t])}}`).join('\n')}
-${darkBoth(`--ly-veil:rgba(16,20,26,.78);--ly-lift:0 1px 2px rgba(0,0,0,.3),0 10px 22px -12px rgba(0,0,0,.7);${skyVars(D.afternoon)}`)}${TODS.filter(t => t !== 'afternoon').map(darkTod).join('')}:root{background:linear-gradient(to bottom,transparent 0,transparent var(--ly-band),var(--ly-veil) calc(var(--ly-band) + 110px)),radial-gradient(75% 45% at 8% 94%,var(--ly-g1),transparent 72%),radial-gradient(65% 40% at 96% 70%,var(--ly-g2),transparent 72%),var(--ly-plate);background-color:var(--ly-top);min-height:100%}   /* the colour: the sky's top, as the bars take it */
+    const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+    return `/* Pearl (id 'layers'): light in the dust. By day a cream ground and carbon hairlines; at night near-black blue and
+   cool white light. Titles in Unbounded Light (SIL Open Font License, ../home/fonts), glowing a little at night. Vintage's
+   disc, dot and pill go: the light and the dust (../home/pearl.js, drawn behind everything) are the only shapes. */
+@font-face{font-family:"Unbounded";font-style:normal;font-weight:200;font-display:swap;src:url("../home/fonts/unbounded-200-latin.woff2") format("woff2");unicode-range:${LAT}}
+${HEADS}{font-family:${LOOKS.layers.display};font-style:normal;font-weight:200;letter-spacing:-.025em;font-size-adjust:.43}   /* Unbounded is wide: a little smaller, so titles fit as they did */
+:root{--pl-ground:${PEARL_DAY[0]};--pl-top:${PEARL_DAY[3]};--pl-line:#1E2126;--pl-glow:rgba(255,255,255,.9);--pl-ring:0 0 0 1.2px #1E2126,0 10px 22px -14px rgba(70,56,32,.55);--pl-fab:rgba(255,253,248,.85)}
+${darkBoth(`--pl-ground:${PEARL_NIGHT[0]};--pl-top:${PEARL_NIGHT[3]};--pl-line:#F2FAFF;--pl-glow:rgba(150,205,255,.55);--pl-ring:inset 0 0 0 1.2px rgba(242,250,255,.85),0 0 18px -2px rgba(150,200,255,.55);--pl-fab:rgba(10,18,32,.72)`)}:root{background:var(--pl-ground);background-color:var(--pl-top);min-height:100%}
 :root :is(body,#app.app){background:transparent}
-${SHAPE(1)},${SHAPE(2)},${SHAPE(3)},:root .aos-sky-cap{display:none}   /* and no fade under a solid status bar: the sky runs on up into it */
-:is(.fab,.okbtn){box-shadow:var(--ly-lift)}
+${SHAPE(1)},${SHAPE(2)},${SHAPE(3)},:root .aos-sky-cap{display:none}
+${darkBoth('--pl-title-glow:0 0 22px rgba(160,205,255,.32)')}${HEADS}{text-shadow:var(--pl-title-glow,none)}
+:is(.fab,.okbtn){box-shadow:var(--pl-ring);background:var(--pl-fab) !important;color:var(--pl-line) !important}   /* the main button: a ring of light on glass, not a fill */
+:is(.fab,.okbtn) svg{stroke:currentColor}
 `;
   }
   if (look === 'grid') {

@@ -1,13 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Layers: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
-  <defs><linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F1F5FF"/><stop offset="1" stop-color="#DDE6FE"/></linearGradient></defs>
-  <rect width="512" height="512" fill="url(#lyg)"/>
-  <g>
-    <g transform="scale(.5)"><g fill="none" stroke="#5C76AD" stroke-linecap="round" stroke-width="56">
-      <path d="M358 648a220 220 0 1 1 308 0"/>
-      <path d="M256 752a364 364 0 1 1 512 0" stroke-opacity="0.55"/>
-    </g>
-    <circle cx="512" cy="492" r="86" fill="#5C76AD"/>
-    <rect x="478" y="600" width="68" height="236" rx="34" fill="#5C76AD"/></g>
-  </g>
+  <!-- Pearl: generated from aOS/scripts/pearl-icons.mjs by aOS/scripts/make-looks.mjs - don't edit by hand. The app's line of light on the night ground, with its coloured dot. -->
+  <defs><radialGradient id="pg" cx=".5" cy=".95" r=".95"><stop offset="0" stop-color="#0B1A37"/><stop offset=".5" stop-color="#050C1D"/><stop offset="1" stop-color="#01030A"/></radialGradient><filter id="gl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="512" height="512" fill="url(#pg)"/>
+  <g fill="#DCEBFF"><circle cx="347" cy="352" r="1.7" fill-opacity="0.34"/><circle cx="119" cy="291" r="1.9" fill-opacity="0.49"/><circle cx="278" cy="259" r="1.0" fill-opacity="0.29"/><circle cx="398" cy="463" r="1.7" fill-opacity="0.18"/><circle cx="131" cy="317" r="1.7" fill-opacity="0.44"/><circle cx="28" cy="53" r="2.0" fill-opacity="0.50"/><circle cx="439" cy="323" r="1.3" fill-opacity="0.52"/><circle cx="234" cy="216" r="2.3" fill-opacity="0.13"/><circle cx="268" cy="326" r="2.8" fill-opacity="0.13"/><circle cx="145" cy="54" r="2.1" fill-opacity="0.21"/><circle cx="443" cy="145" r="0.9" fill-opacity="0.26"/><circle cx="211" cy="240" r="2.3" fill-opacity="0.26"/><circle cx="403" cy="473" r="1.3" fill-opacity="0.42"/><circle cx="176" cy="37" r="2.0" fill-opacity="0.42"/><circle cx="161" cy="410" r="3.2" fill-opacity="0.14"/><circle cx="215" cy="396" r="1.9" fill-opacity="0.25"/></g>
+  <g fill="none" stroke="#F2FAFF" stroke-linecap="round" stroke-linejoin="round" filter="url(#gl)"><g transform="translate(104 104) scale(12.667)" stroke-width="1.15"><circle cx="12" cy="11" r="1.6"/><path d="M8.6 14.6a4.8 4.8 0 1 1 6.8 0M6.2 17a8.2 8.2 0 1 1 11.6 0M12 14.5V20"/></g></g>
+  <circle cx="414" cy="98" r="19" fill="#A5BBFF" filter="url(#gl)"/>
 </svg>

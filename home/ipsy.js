@@ -145,6 +145,9 @@
       + '<path d="M70 122Q100 138 130 122"/><path d="M100 132V166"/><path d="M62 160Q64 134 76 116"/><path d="M138 160Q136 134 124 116"/><circle cx="100" cy="150" r="6"/></g>',
     front: '<g class="h-rvis"><path class="h-rvisor" d="M71 70Q100 58 129 70V90Q100 98 71 90Z"/><rect class="h-rsweep" x="93" y="64" width="14" height="30" rx="7"/>'
       + '<path d="M80 73Q90 68 102 67" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/><path class="h-rline" d="M80 84Q100 90 120 84"/></g>' };
+  // Pearl's helper (Lumen): in Pearl, everyone's helper is a beam of light that takes the shapes of the sky's strangest
+  // things (lumSvg, below), whichever helper they picked. Not in the picker; no clothes, whatever the weather.
+  HELPERS.beam = { label: 'Lumen', kind: 'Lumen, a mysterious beam of light that changes shape like the things astrophysicists study: a pulsar, a black hole, a galaxy, a nebula, a quasar' };
   // Dressed for the weather where you are (Weather's forecast, kept on the phone: wx.cache, as aOS Home reads it in
   // aOS/home-find.js): an umbrella in rain, a scarf when it's chilly, a coat when it's cold, a woolly hat in snow or
   // a freeze, a sun hat and sunglasses on a warm sunny day. By the feels-like temperature, now: wearing() gives the
@@ -459,8 +462,181 @@
     return !calm;
   }
 
+  // ---------------------------------------------------------------------------
+  // Pearl's helper, Lumen: in Pearl, everyone's helper is a beam of light that takes the shapes of the sky's
+  // strangest things, one after another, slowly (Pearl's tempo): a pulsar's sweeping beams round its spinning star
+  // and field lines, a black hole's disk with the light bent over its top (the photon ring), a galaxy's arms, a
+  // planetary nebula's shells, a quasar's jets, a binary's gravitational waves, a comet, a supernova. Its jobs are
+  // shapes too: it listens in waves, thinks as a black hole, reads as a galaxy, searches as a pulsar's beam, writes
+  // as a comet, shows as a jet, talks as a breathing nebula, and is done in a supernova's flash. Not in the picker.
+  // Three strands of light (and a core), each a line of points; between shapes every point flows to its new place,
+  // a little behind the one before it, so the beam pours itself into each shape. Dust drifts in and is taken in at
+  // the core, as Pearl's dust is by its lines of light. On a canvas over the SVG that follows .h-lum (its bob, and
+  // across aOS Home's bar), as Nova's dots do. Cool white at night; carbon on cream by day.
+  const LUM_P = 64, LUM_S = 3, LUM_CX = 100, LUM_CY = 110, TAU = Math.PI * 2;
+  const LUM_IDLE = ['beam', 'pulsar', 'blackhole', 'galaxy', 'nebula', 'jet'];
+  const LUM_JOB = { listen: 'waves', think: 'blackhole', read: 'galaxy', scan: 'pulsar', write: 'comet', show: 'jet', talk: 'nebula', done: 'supernova', cross: 'comet' };
+  // each shape: (strand, u along it 0..1, t seconds) -> [x, y] in the SVG's 200 x 200; core: where the light gathers
+  const lumRot = (x, y, a) => [LUM_CX + x * Math.cos(a) - y * Math.sin(a), LUM_CY + x * Math.sin(a) + y * Math.cos(a)];
+  const LUM_FORMS = {
+    // the beam itself: a shaft of light, a slow ripple running up it, two faint halos beside it
+    beam: { core: [100, 110, 1], open: [0, 1, 2], at: (s, u, t) => s === 0 ? [LUM_CX + 1.4 * Math.sin(u * 9 - t * 1.1), 26 + 168 * u] : [LUM_CX + (s === 1 ? -4 : 4) * Math.sin(Math.PI * u), 50 + 120 * u] },
+    // a pulsar: its two beams sweeping round, the star, and its dipole field lines (r = k sin²θ) turning with it
+    pulsar: { core: [100, 110, 1.3], open: [0], at: (s, u, t, k) => {
+      const a = t * (k.mood === 'scan' ? 2.6 : 0.9);
+      if (s === 0) return lumRot(0, (u - 0.5) * 168, a);
+      if (s === 1) return lumRot(7 * Math.cos(u * TAU), 7 * Math.sin(u * TAU), 0);
+      const th = u * TAU, r = 40 * Math.sin(th) ** 2; return lumRot(r * Math.cos(th), r * Math.sin(th), a + Math.PI / 2); } },
+    // a black hole: the disk edge-on, the photon ring, and the far side of the disk bent up over the top
+    blackhole: { core: [100, 110, 0.25], at: (s, u, t) => {
+      if (s === 0) { const th = u * TAU + t * 0.6; return lumRot(76 * Math.cos(th), 13 * Math.sin(th), -0.12); }
+      if (s === 1) return lumRot(25 * Math.cos(u * TAU - t * 0.6), 25 * Math.sin(u * TAU - t * 0.6), 0);
+      return lumRot(-50 * Math.cos(Math.PI * u), -36 * Math.sin(Math.PI * u) - 4, -0.12); } },
+    // a spiral galaxy, tilted: two arms (r = a·e^(bθ)) round a bright core, turning slowly
+    galaxy: { core: [100, 110, 1.5], at: (s, u, t) => {
+      if (s === 2) return lumRot(5 * Math.cos(u * TAU), 3 * Math.sin(u * TAU), 0);
+      const th = u * 3.3 * Math.PI, r = 6.5 * Math.exp(0.235 * th), a = th + (s ? Math.PI : 0) + t * 0.25;
+      return lumRot(r * Math.cos(a), 0.6 * r * Math.sin(a), -0.35); } },
+    // a planetary nebula: two shells, gently uneven, breathing (with its words, when it talks), the white dwarf inside
+    nebula: { core: [100, 110, 0.7], at: (s, u, t, k) => {
+      const th = u * TAU, br = k.mood === 'talk' ? 3 * Math.sin(t * 9) : 1.5 * Math.sin(t * 0.8);
+      if (s === 2) return lumRot(3 * Math.cos(th), 3 * Math.sin(th), 0);
+      const R = s ? 30 : 52, r = R + br * (s ? 0.6 : 1) + (s ? 3 : 5) * Math.sin(5 * th + t * 0.4 + s);
+      return lumRot(r * Math.cos(th), 0.8 * r * Math.sin(th), 0.3); } },
+    // a quasar: its jets straight out of the core, a slow twist running along them, the small disk across
+    jet: { core: [100, 110, 1.6], open: [0], at: (s, u, t) => {
+      if (s === 0) { const d = (u - 0.5) * 2; return lumRot(3.5 * Math.abs(d) * Math.sin(u * 22 - t * 3), d * 86, 0.18); }
+      if (s === 1) return lumRot(30 * Math.cos(u * TAU + t), 6 * Math.sin(u * TAU + t), 0.18);
+      return lumRot(4 * Math.cos(u * TAU), 4 * Math.sin(u * TAU), 0); } },
+    // a binary's gravitational waves: three rings going out, stretched and squeezed (the wave's two ways) as they go
+    waves: { core: [100, 110, 1.1], at: (s, u, t) => {
+      const th = u * TAU, r = 20 + s * 22 + 3 * Math.sin(t * 2.4 - s * 1.1), q = 1 + 0.09 * Math.cos(t * 4.8 - s);
+      return lumRot(r * q * Math.cos(th), (r / q) * Math.sin(th), 0); } },
+    // a comet: its curved dust tail, its straight ion tail, and its head
+    comet: { core: [128, 92, 1.4], open: [0, 1], at: (s, u, t) => {
+      if (s === 2) return [128 + 6 * Math.cos(u * TAU), 92 + 6 * Math.sin(u * TAU)];
+      if (s === 1) return [128 - 104 * u, 92 + 46 * u + 1.2 * Math.sin(u * 14 - t * 3)];
+      return [128 - 92 * u - 8 * u * u, 92 + 30 * u + 44 * u * u]; } },
+    // a supernova: the shock going out in a ragged ring, a second inside it, the core left behind
+    supernova: { core: [100, 110, 2], at: (s, u, t) => {
+      const th = u * TAU;
+      if (s === 2) return lumRot(4 * Math.cos(th), 4 * Math.sin(th), 0);
+      const r = (s ? 30 : 56) + (s ? 3 : 6) * Math.sin(th * 7 + t * 0.7) + 2.5 * Math.sin(th * 13 - t * 1.3 + s);
+      return lumRot(r * Math.cos(th), r * Math.sin(th), t * 0.2); } },
+  };
+  // the dust: motes drifting in to the core, slowly, taken in, and new ones far out
+  const LUM_DUST = 16;
+  function lumSvg() {
+    queueMicrotask(lumWake);
+    return '<svg class="ipsy-char" viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-who="beam"><g class="h-pose"><g class="h-hop"><g class="h-bob"><g class="h-lean"><g class="h-lum">'
+      + '<rect width="200" height="200" fill="none" stroke="none"/></g></g></g></g></g></svg><canvas class="h-beam" aria-hidden="true"></canvas>';
+  }
+  const lumHosts = document.getElementsByClassName('h-lum'), lumLive = new Set();
+  let lumRaf = 0, lumLast = 0;
+  const lumSeen = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { const st = e.target._lum; if (st) { st.vis = e.isIntersecting; if (st.vis) lumKick(); } })) : null;
+  function lumSweep() { for (const st of lumLive) if (!st.g.isConnected) { lumLive.delete(st); if (lumSeen) lumSeen.unobserve(st.cv); } }
+  function lumWake() {
+    lumSweep();
+    for (const g of lumHosts) {
+      if (g.dataset.on) continue;
+      const svg = g.ownerSVGElement, cv = svg && svg.nextElementSibling;
+      if (!cv || !cv.classList.contains('h-beam')) continue;
+      const host = g.closest('[data-mood]') || g.closest('.ipsy-host') || svg.parentNode;
+      const st = { g, svg, cv, host, p: new Float32Array(LUM_S * LUM_P * 2), core: [LUM_CX, LUM_CY, 1], mood: '', form: '', t0: 0, plan: [], flash: 0, vis: !lumSeen, peek: !!svg.closest('.h-peek'), first: true,
+        dust: Array.from({ length: LUM_DUST }, () => lumMote({}, true)) };
+      g.dataset.on = '1'; cv._lum = st; lumLive.add(st); if (lumSeen) lumSeen.observe(cv);
+      if (!host._lumMo) { host._lumMo = new MutationObserver(lumKick); host._lumMo.observe(host, { attributes: true, attributeFilter: ['data-mood'] }); }
+    }
+    lumKick();
+  }
+  function lumMote(m, any) { m.a = Math.random() * TAU; m.r = any ? 20 + Math.random() * 70 : 78 + Math.random() * 18; m.k = 0.5 + Math.random(); m.o = 0; return m; }
+  function lumKick() { if (!lumRaf && lumLive.size) { lumLast = 0; lumRaf = requestAnimationFrame(lumFrame); } }
+  function lumFrame(now) {
+    lumRaf = 0; lumSweep();
+    const dt = lumLast ? Math.min(0.05, (now - lumLast) / 1000) : 0.016; lumLast = now;
+    let more = false;
+    for (const st of lumLive) if (st.vis || st.first) { if (lumStep(st, now / 1000, dt)) more = true; }
+    if (more) lumRaf = requestAnimationFrame(lumFrame);
+  }
+  function lumAim(st, t) {   // the shape for now: a job's, or idle's slow round of the sky (7 s each)
+    const mood = st.host.dataset.mood || 'idle';
+    if (mood !== st.mood) {
+      if (mood === 'done') st.flash = 1;   // a supernova's flash
+      st.mood = mood; st.t0 = t; st.plan = ['beam', ...LUM_IDLE.slice(1).sort(() => Math.random() - 0.5)];
+    }
+    if (st.peek || still()) return LUM_JOB[mood] && !st.peek ? LUM_JOB[mood] : 'beam';
+    return LUM_JOB[mood] || st.plan[Math.floor((t - st.t0) / 7) % st.plan.length];
+  }
+  function lumStep(st, now, dt) {
+    const calm = still() || st.peek, t = calm ? 0 : now, form = lumAim(st, now), F = LUM_FORMS[form], k = { mood: st.mood };
+    if (form !== st.form) { st.form = form; st.since = now; }
+    const sr = st.svg.getBoundingClientRect(), hr = st.host.getBoundingClientRect();
+    if (!sr.width) { st.first = false; return false; }
+    // the canvas: over the SVG with a margin round it (the light goes a little outside), at the screen's pixels
+    const M = 0.3, dpr = Math.min(3, devicePixelRatio || 1), W = Math.round(sr.width * (1 + 2 * M) * dpr), H = Math.round(sr.height * (1 + 2 * M) * dpr);
+    if (st.cv.width !== W || st.cv.height !== H) { st.cv.width = W; st.cv.height = H; }
+    const cs = st.cv.style, L = (sr.left - hr.left - M * sr.width).toFixed(1) + 'px', T = (sr.top - hr.top - M * sr.height).toFixed(1) + 'px';
+    if (cs.left !== L || cs.top !== T) { cs.left = L; cs.top = T; cs.width = sr.width * (1 + 2 * M) + 'px'; cs.height = sr.height * (1 + 2 * M) + 'px'; }
+    let m = null; try { m = st.svg.getScreenCTM().inverse().multiply(st.g.getScreenCTM()); } catch {}
+    // every point flows towards its place in the shape, each a little behind the one before (the beam pours in)
+    const p = st.p, jump = calm || st.first, into = now - (st.since || now);
+    let moving = false;
+    for (let s = 0; s < LUM_S; s++) for (let i = 0; i < LUM_P; i++) {
+      const u = i / (LUM_P - 1), [x, y] = F.at(s, u, t, k), j = (s * LUM_P + i) * 2;
+      const lag = Math.max(0, Math.min(1, (into * 1.4 - u * 0.5 - s * 0.12)));   // how far this point is into its flow
+      const f = jump ? 1 : 1 - Math.exp(-dt * (1.2 + 5 * lag));
+      const dx = x - p[j], dy = y - p[j + 1];
+      if (dx * dx + dy * dy > 0.02) moving = true;
+      p[j] += dx * f; p[j + 1] += dy * f;
+    }
+    const c = st.core, fc = jump ? 1 : 1 - Math.exp(-dt * 2.5);
+    for (let n = 0; n < 3; n++) c[n] += (F.core[n] - c[n]) * fc;
+    st.flash = calm ? 0 : Math.max(0, st.flash - dt * 0.9);
+    // draw
+    const x2 = st.cv.getContext('2d'), s = sr.width / 200 * dpr, ox = M * sr.width * dpr, oy = M * sr.height * dpr, dark = darkNow();
+    x2.setTransform(1, 0, 0, 1, 0, 0); x2.clearRect(0, 0, W, H);
+    x2.setTransform(s * (m ? m.a : 1), s * (m ? m.b : 0), s * (m ? m.c : 0), s * (m ? m.d : 1), s * (m ? m.e : 0) + ox, s * (m ? m.f : 0) + oy);
+    const rgb = dark ? '228,238,255' : '30,34,42', glow = dark ? 1 : 0.55, lift = 1 + st.flash * 1.5;
+    const bw = Math.pow(Math.max(1, (1.2 * dpr) / (1.3 * s)), 0.85);   // small (aOS Home's bar): lines no thinner than about a point
+    x2.globalCompositeOperation = dark ? 'lighter' : 'source-over'; x2.lineCap = 'round'; x2.lineJoin = 'round';
+    const path = (s0, from, to) => { x2.beginPath(); for (let i = from; i <= to; i++) { const j = (s0 * LUM_P + i) * 2; i === from ? x2.moveTo(p[j], p[j + 1]) : x2.lineTo(p[j], p[j + 1]); } x2.stroke(); };
+    // a closed shape is drawn whole; an open one (a beam, a jet, a tail) in pieces, fading out at its ends, as light does
+    const line = (s0, from, to, a) => {
+      if (!(F.open || []).includes(s0)) { x2.strokeStyle = 'rgba(' + rgb + ',' + Math.min(1, a).toFixed(3) + ')'; return path(s0, from, to); }
+      const j0 = s0 * LUM_P * 2, j1 = j0 + (LUM_P - 1) * 2, g = x2.createLinearGradient(p[j0], p[j0 + 1], p[j1], p[j1 + 1]), c0 = 'rgba(' + rgb + ',';
+      g.addColorStop(0, c0 + '0)'); g.addColorStop(0.3, c0 + Math.min(1, a * 0.85).toFixed(3) + ')'); g.addColorStop(0.5, c0 + Math.min(1, a).toFixed(3) + ')'); g.addColorStop(0.7, c0 + Math.min(1, a * 0.85).toFixed(3) + ')'); g.addColorStop(1, c0 + '0)');
+      x2.strokeStyle = g; path(s0, from, to);
+    };
+    for (let s0 = 0; s0 < LUM_S; s0++) {
+      const faint = form === 'beam' && s0 ? 0.35 : 1;
+      // the glow, then the line itself
+      for (const [w, a] of [[7, 0.06], [3.2, 0.16], [1.3, 0.85]]) { x2.lineWidth = w * bw; line(s0, 0, LUM_P - 1, a * faint * glow * lift); }
+      // a brighter run of light gliding along the strand, slowly, as along Pearl's lines
+      if (!calm) {
+        const n = 12, at = Math.floor(((t * 0.22 + s0 / 3) % 1) * (LUM_P + n)) - n;
+        const a0 = Math.max(0, at), a1 = Math.min(LUM_P - 1, at + n);
+        if (a1 > a0) { x2.lineWidth = 2.2 * bw; line(s0, a0, a1, 0.5 * faint * glow); }
+      }
+    }
+    // the core: where the light gathers
+    const R = 9 * c[2] * (1 + st.flash * 2.5) * Math.sqrt(bw);
+    if (R > 0.3) { const gr = x2.createRadialGradient(c[0], c[1], 0, c[0], c[1], R); gr.addColorStop(0, 'rgba(' + (dark ? '255,255,255' : rgb) + ',' + Math.min(1, 0.9 * glow * lift).toFixed(3) + ')'); gr.addColorStop(0.35, 'rgba(' + rgb + ',' + (0.35 * glow).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(' + rgb + ',0)');
+      x2.fillStyle = gr; x2.beginPath(); x2.arc(c[0], c[1], R, 0, TAU); x2.fill(); }
+    // the dust, drifting in round the core and taken in (a faint glint as it goes)
+    if (!calm) for (const d of st.dust) {
+      d.r -= dt * d.k * (2.5 + 60 / (d.r + 6)); d.a += dt * d.k * (12 / (d.r + 10)); d.o = Math.min(1, d.o + dt * 0.4);
+      if (d.r < 4) { lumMote(d); continue; }
+      const x = c[0] + d.r * Math.cos(d.a), y = c[1] + 0.7 * d.r * Math.sin(d.a), a = d.o * (d.r < 12 ? 0.5 + (12 - d.r) / 12 : 0.4) * glow;
+      x2.fillStyle = 'rgba(' + rgb + ',' + a.toFixed(3) + ')'; x2.beginPath(); x2.arc(x, y, (d.r < 12 ? 1.1 : 0.8) * bw, 0, TAU); x2.fill();
+    }
+    x2.globalCompositeOperation = 'source-over';
+    st.first = false;
+    return !calm || moving;
+  }
+
   function charSvg(who, wear) {
     if (who === 'nova') return novaSvg();
+    if (who === 'beam') return lumSvg();
     const c = HELPERS[who] || HELPERS.mia, o = outfit(who, wear), lx = c.sh, sy = 120, rx = 200 - lx, hb = lx + 17.5;
     // where the hands end up for each job (the arm's rest, turned: see the CSS)
     const mg = [f1(rx + 24.4), f1(sy + 13.5)], pn = [f1(rx - 22.5), f1(sy + 16.4)], pt = [f1(rx + 21), f1(sy - 18.3)];
@@ -506,13 +682,16 @@
   const helper = () => {
     try {
       const h = JSON.parse(ls.get(HELPER_KEY, 'null')), who = h && (own(RETIRED, h.who) ? RETIRED[h.who] : h.who);
-      return own(HELPERS, who) && who !== 'rider' ? { who, name: String(h.name || '').slice(0, 16) } : null;
+      return own(HELPERS, who) && who !== 'rider' && who !== 'beam' ? { who, name: String(h.name || '').slice(0, 16) } : null;
     } catch { return null; }
   };
-  // in Tron your helper is Ares (Tron: Ares's rider, as in Tesla's Tron mode), whatever its name in the other looks
-  const helperName = () => { if (LOOK() === 'grid') return 'Ares'; const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
+  // in Tron your helper is Ares (Tron: Ares's rider, as in Tesla's Tron mode), in Pearl Lumen (a beam of light),
+  // whatever its name in the other looks
+  const LOOK_HELPER = { grid: 'rider', layers: 'beam' };
+  const lookHelper = () => LOOK_HELPER[LOOK()] || '';
+  const helperName = () => { if (lookHelper()) return HELPERS[lookHelper()].label; const h = helper(); return (h && h.name.trim()) || 'Ipsy'; };
   // the chat's title: its name, or with none, what it is (Mia is Mia, Nova is Nova)
-  const title = () => { const h = helper(); return LOOK() === 'grid' || !h || h.name.trim() ? helperName() : (HELPERS[h.who].named || HELPERS[h.who].label); };
+  const title = () => { const h = helper(); return lookHelper() || !h || h.name.trim() ? helperName() : (HELPERS[h.who].named || HELPERS[h.who].label); };
   function setHelper(who, name) {
     if (!own(HELPERS, who)) return;
     ls.set(HELPER_KEY, JSON.stringify({ who, name: String(name || '').replace(/\s+/g, ' ').trim().slice(0, 16) }));
@@ -531,12 +710,12 @@
   // takes turns with the others (peek), one every few seconds.
   const cells = new Set();
   let peekAt = Math.floor(Math.random() * WHO.length), peekT = 0;
-  const looksAs = who => (LOOK() === 'grid' ? 'rider' : who);
+  const looksAs = who => lookHelper() || who;
   let WEAR = wearing();   // what the helpers have on (wearing()), looked at again with the weather (refit)
   function drawChar(c, who) {
     if (!c.fixed) who = looksAs(who);
     if (c.who === who && c.wear === WEAR) return;
-    c.who = who; c.wear = WEAR; c.host.innerHTML = charSvg(who, WEAR); c.svg = c.host.firstChild; novaSweep();
+    c.who = who; c.wear = WEAR; c.host.innerHTML = charSvg(who, WEAR); c.svg = c.host.firstChild; novaSweep(); lumSweep();
     if (c.peeking) c.svg.classList.add('h-peek');
   }
   function refit() {   // a new forecast, back on the page, or the hour turned: dressed again if the weather changed
@@ -559,7 +738,7 @@
     if (peekT || helper()) return;
     peekT = setInterval(() => {
       if (helper()) { clearInterval(peekT); peekT = 0; return; }
-      if (document.visibilityState !== 'visible' || still() || LOOK() === 'grid') return;
+      if (document.visibilityState !== 'visible' || still() || lookHelper()) return;
       peekAt++;
       cells.forEach(c => { if (!c.host.isConnected) { cells.delete(c); return; } if (c.fixed || c.mood !== 'idle' || c.host.closest('.ipsy-wrap:not([hidden])')) return; c.peek = WHO[peekIndex()]; c.peeking = true; drawChar(c, c.peek); });
     }, 4200);
@@ -612,6 +791,9 @@
   // the rider: mounts, rides its Light Cycle out (leaning in), turns at the end, rides back
   MOVES.rider = { speed: 0.9, frames: [[0, 0, 'none'], [0.06, 0, 'translateY(-6px)'], [0.44, 1, 'rotate(-5deg)', 'cubic-bezier(.55,0,.25,1)'], [0.5, 1, 'scaleX(-1) rotate(-5deg)'],
     [0.94, 0, 'scaleX(-1) rotate(-5deg)', 'cubic-bezier(.55,0,.25,1)'], [1, 0, 'none']] };
+  // Lumen: pulls itself out into a comet and streaks across, turns in a burst at the far end, and streaks back
+  MOVES.beam = { speed: 0.95, frames: [[0, 0, 'none'], [0.08, 0, 'scale(.8,1.15)'], [0.42, 1, 'skewX(-14deg) scale(1.15,.9)', 'cubic-bezier(.6,0,.2,1)'], [0.5, 1, 'scale(1.25)'],
+    [0.56, 1, 'scaleX(-1)'], [0.92, 0, 'scaleX(-1) skewX(-14deg) scale(1.15,.9)', 'cubic-bezier(.6,0,.2,1)'], [1, 0, 'none']] };
   function cross(slot, d) {
     const host = slot.querySelector('.ipsy-host'), svg = slot.querySelector('.ipsy-char'), pose = svg && svg.querySelector('.h-pose');
     if (!host || !pose || still()) return null;
@@ -750,7 +932,7 @@
 [data-mood="cross"] [data-who="rider"] .h-armL{transform:rotate(-75deg)}
 [data-mood="cross"] [data-who="rider"] .h-armR{transform:rotate(-40deg)}
 /* Nova: its dots, on a canvas over the SVG that follows .h-code (novaStep places and draws it); here, the whole of it sweeps, scribbles, points or pops */
-.h-dots{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
+.h-dots,.h-beam{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .h-code{transform-origin:100px 112px}
 [data-mood="scan"] .h-code{animation:ipsyNScan 1.4s ease-in-out infinite alternate}
 [data-mood="write"] .h-code{animation:ipsyScribble .5s linear infinite}
@@ -1038,7 +1220,7 @@
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Layers or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, {
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Pearl (its id is layers) or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, {
       get: () => { const l = ls.get('aos.look', 'vintage'); return l === 'neon' ? 'layers' : l; },
       put: v => {   // every app, as aOS's own Look picker writes it (AllisonOS.welcome.data.APPS): Money and Sparkle too, not only the apps with settings here
         const all = (AOS.welcome && AOS.welcome.data && AOS.welcome.data.APPS) || SET_APPS;
@@ -1485,7 +1667,7 @@
       busy = true; sendBtn.disabled = true;
       const mark = messages.length;          // where this question starts, to go back to if it fails
       let ctx = ''; try { ctx = M.hide(o.context ? o.context() : ''); } catch {}
-      const me = helper(), tron = LOOK() === 'grid', who = tron ? ' You are this person’s helper, named Ares, drawn as ' + HELPERS.rider.kind + '.' : me ? ' You are this person’s helper, ' + (me.name.trim() ? 'named ' + me.name.trim() + ', ' : '') + 'drawn as ' + HELPERS[me.who].kind + '.' : '';
+      const me = helper(), as = lookHelper(), who = as ? ' You are this person’s helper, named ' + HELPERS[as].label + ', drawn as ' + HELPERS[as].kind + '.' : me ? ' You are this person’s helper, ' + (me.name.trim() ? 'named ' + me.name.trim() + ', ' : '') + 'drawn as ' + HELPERS[me.who].kind + '.' : '';
       messages.push({ role: 'user', content: [{ type: 'text', text: '[From the app: today is ' + today() + '.' + (ctx ? ' ' + ctx : '') + who + PLACEHOLDERS + ']' }, { type: 'text', text }] });
       add({ t: 'me', text });
       let failed = null;

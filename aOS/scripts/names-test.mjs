@@ -2,7 +2,7 @@
 //   - English: no Language in Appearance, no Russian left anywhere; a phone that had Russian picked
 //     (aos.lang = 'ru', from before) opens in English;
 //   - your helper's name where the words say Ipsy ("Or just tell Mia…"), a new name at once, with none what
-//     it is ("the fox"; Mia is Mia), in Tron Ares; the release log and translate="no" as they were.
+//     it is ("the fox"; Mia is Mia), in Tron Ares, in Pearl Lumen; the release log and translate="no" as they were.
 //
 //   node aOS/scripts/names-test.mjs [repo root]
 import { createRequire } from 'module'; import { execSync } from 'child_process'; import http from 'http'; import fs from 'fs'; import path from 'path';
@@ -48,7 +48,7 @@ const CYR = /[Ѐ-ӿ]/;
   report('English only: a phone that had Russian picked opens aOS and its apps in English, with no Language to pick', pr); await ctx.close();
 }
 
-// 2. your helper's name where the words say Ipsy; a new name at once; the release log and translate="no" as they were; Ares in Tron
+// 2. your helper's name where the words say Ipsy; a new name at once; the release log and translate="no" as they were; Ares in Tron, Lumen in Pearl
 {
   const { ctx, p, errs } = await phone({ 'aos.helper': '{"who":"fox","name":"Mia"}' }); const pr = [...errs];
   await p.goto(BASE + '/meals/'); await p.waitForSelector('#askIn'); await p.waitForTimeout(300);
@@ -82,7 +82,10 @@ const CYR = /[Ѐ-ӿ]/;
   await p.evaluate(() => document.documentElement.setAttribute('data-look', 'grid')); await p.waitForTimeout(100);
   r = await look();
   if (!r.text.includes('Or just tell Ares…')) pr.push('in Tron, the helper is not Ares');
-  report('your helper\'s name where the words say Ipsy, a new name at once, Ares in Tron, the release log and translate="no" as they were', pr); await ctx.close();
+  await p.evaluate(() => document.documentElement.setAttribute('data-look', 'layers')); await p.waitForTimeout(100);
+  r = await look();
+  if (!r.text.includes('Or just tell Lumen…')) pr.push('in Pearl, the helper is not Lumen');
+  report('your helper\'s name where the words say Ipsy, a new name at once, Ares in Tron, Lumen in Pearl, the release log and translate="no" as they were', pr); await ctx.close();
 }
 
 await b.close(); server.close();

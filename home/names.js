@@ -1,6 +1,6 @@
 // Your helper's name on the page. Once you've picked your helper (home/ipsy.js, aos.helper {who, name}), the
 // words say its name where they said Ipsy: "Or just tell Biscuit…", or with no name, what it is ("Ask the
-// fox"; Mia is Mia); in Tron, Ares (Tron: Ares's rider). Not inside translate="no" (what the family wrote,
+// fox"; Mia is Mia); in Tron, Ares (Tron: Ares's rider); in Pearl, Lumen (a beam of light). Not inside translate="no" (what the family wrote,
 // the chat itself) or data-ipsy="as-is" (the release log: what each version said then). Every page loads it
 // in <head>, before its words:
 //   <script src="../home/names.js"></script>
@@ -15,7 +15,9 @@
   // (the robot, the octopus and the otter are retired: whoever picked one has Nova now, as in home/ipsy.js)
   const KINDS = { fox: 'the fox', owl: 'the owl', hedgehog: 'the hedgehog', nova: 'Nova', robot: 'Nova', octopus: 'Nova', otter: 'Nova' };
   const nameNow = () => {   // '' while it's Ipsy (not picked, or a name that is Ipsy)
-    if (root.getAttribute('data-look') === 'grid') return 'Ares';
+    const look = root.getAttribute('data-look');
+    if (look === 'grid') return 'Ares';
+    if (look === 'layers' || look === 'neon') return 'Lumen';   // Pearl's helper, a beam of light (Pearl's id is 'layers')
     try {
       const h = JSON.parse(localStorage.getItem(HELPER)) || {}, n = String(h.name || '').replace(/\s+/g, ' ').trim().slice(0, 16);
       if (n) return /\bipsy\b/i.test(n) ? '' : n;
@@ -42,7 +44,7 @@
     },
   };
   addEventListener('storage', e => { if (e.key === HELPER) window.aosNames.helper(); });   // named in another app or frame
-  new MutationObserver(() => window.aosNames.helper()).observe(root, { attributes: true, attributeFilter: ['data-look'] });   // Tron's Ares, or back
+  new MutationObserver(() => window.aosNames.helper()).observe(root, { attributes: true, attributeFilter: ['data-look'] });   // Tron's Ares, Pearl's Lumen, or back
 
   // ---- the words on the page ----
   const SKIP = /^(SCRIPT|STYLE|TEXTAREA|NOSCRIPT|CODE|PRE)$/i;
