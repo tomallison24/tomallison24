@@ -153,7 +153,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   report('the installed app takes the look from the address or the cookie on its first launch; a look already chosen wins', pr);
 }
 
-// 6. Layers and Tron: aOS's look and every app's, at once; their own block, ground, icons and fonts
+// 6. Layers and Tron: aOS's look and every app's, at once; their own block, ground, icons and fonts; Pearl's helper, Lumen
 {
   const { ctx, p, errs } = await open(); const pr = [...errs];
   const state = () => p.evaluate(() => ({ look: document.documentElement.dataset.look, tod: document.documentElement.dataset.tod, media: ['vintage', 'layers', 'grid'].map(id => document.getElementById(id).media).join(),
@@ -173,6 +173,15 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (await p.locator('#stories .story img').first().getAttribute('src').then(s => !/icon-pebble\.svg$/.test(s || ''))) pr.push('the apps\' icons are not Layers\' pebbles');
   await p.reload(); await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   if (await p.evaluate(() => document.documentElement.dataset.look) !== 'layers') pr.push('Layers is not kept over a reload');
+  // Pearl's helper: Lumen, a beam of light drawn on its canvas, called Lumen where the words say Ipsy
+  await p.evaluate(() => aosTabs.show('home'));
+  await p.waitForSelector('#ipsySlot .ipsy-char[data-who="beam"]', { state: 'attached', timeout: 3000 }).catch(() => pr.push('the helper is not Lumen, the beam of light, in Pearl'));
+  const lit = await p.waitForFunction(() => { const c = document.querySelector('#ipsySlot canvas.h-beam'); if (!c || !c.width) return false;
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 60) n++; return n > 40; }, null, { timeout: 3000 }).then(() => true, () => false);
+  if (!lit) pr.push('Lumen\'s light is not drawn');
+  const lph = await p.evaluate(() => document.getElementById('hq').placeholder);
+  if (!/ask Lumen$/.test(lph)) pr.push('in Pearl the helper is not called Lumen: ' + lph);
+  await p.evaluate(() => aosTabs.show('today')); await p.waitForSelector('#stories .story');
   // a phone that had Night Drive (gone): aOS opens in Layers, and every app's choice is moved over
   await p.evaluate(() => { localStorage.setItem('aos.look', 'neon'); localStorage.setItem('design.mail', 'neon'); localStorage.setItem('allison-clock-v1', JSON.stringify({ set: { design: 'neon' } })); });
   await p.reload(); await p.waitForTimeout(300);
@@ -186,7 +195,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/icon-grid-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Tron\'s: ' + st.icon);
   const gfont = await p.evaluate(async () => { await Promise.all(['700 16px "Orbitron"', '16px "Exo 2"'].map(f => document.fonts.load(f, 'Home'))); return document.fonts.check('700 16px "Orbitron"', 'Home') && document.fonts.check('16px "Exo 2"', 'Home'); });
   if (!gfont) pr.push('Tron\'s fonts (Orbitron, Exo 2) did not load from ../home/fonts');
-  report('Layers and Tron: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts; Night Drive moves to Layers', pr); await ctx.close();
+  report('Layers and Tron: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts, and Pearl\'s helper Lumen; Night Drive moves to Layers', pr); await ctx.close();
 }
 
 // 7. under an iPhone's solid status bar, an app's shapes fade in from its ground in every flat look (../home/sky.js),

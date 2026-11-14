@@ -87,7 +87,7 @@
   // ===========================================================================
   const RELEASES = [
     { v: '2.4', date: '2026-11-14', title: 'Light in the dust', look: 'vintage',
-      highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'Pearl takes the place of Layers'],
+      highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'In Pearl your helper is Lumen, a beam of light that takes the shapes of the cosmos', 'Pearl takes the place of Layers'],
       notes: ['Pearl, in aOS and every app: at night, lines of cool white light on near-black blue; by day, carbon hairlines on cream. It follows the phone\'s light or dark setting',
         'Pearl takes the place of Layers: a phone that had Layers opens in Pearl, in aOS and every app, with nothing to set',
         'Dust drifts slowly behind every screen in Pearl, at many depths. Dust that strays near the light is drawn into it and vanishes with the faintest glint, and new dust quietly appears elsewhere. When Weather says rain or snow where you are, the dust falls as rain or drifts down as snow',
@@ -97,9 +97,10 @@
         'aOS Home in Pearl: the weather and what\'s next as two panes of glass, the weather drawn in light',
         'Ignition, Pearl\'s intro: dust gathers into a rounded square of light, it flares, and aOS appears, in under four seconds. Account > Appearance > Ignition intro: Sound, Silent or Off',
         'Titles in Pearl are in Unbounded Light, kept on the phone so they work offline',
+        'In Pearl, your helper is Lumen, a mysterious beam of light that keeps changing shape, after things astrophysicists study: a pulsar\'s sweeping beams, a black hole with light bent over its top, a spiral galaxy, a nebula\'s shells and a quasar\'s jets. It listens in gravitational waves, searches as a pulsar, writes as a comet and finishes in a supernova\'s flash, while dust drifts in and is taken into its core. Your own helper and its name come back in the other looks',
         'Everything in Pearl moves slowly, and with Reduce Motion it holds still. The light and dust pause whenever a screen isn\'t showing'],
       apps: {
-        aos: { highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'Pearl takes the place of Layers'],
+        aos: { highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'In Pearl your helper is Lumen, a beam of light that takes the shapes of the cosmos', 'Pearl takes the place of Layers'],
           tour: [{ sel: '[data-acct]', t: 'Pearl', d: 'Your name, then Appearance: Look. Pearl is new, in place of Layers, for aOS and every app.', g: 'tap' }] },
         mail: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
         calendar: { highlights: ['New look: Pearl, lines of light in the dust', 'Light on near-black at night, carbon on cream by day', 'Pick it in Settings > Design, or for every app in aOS'] },
