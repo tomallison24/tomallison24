@@ -837,6 +837,12 @@
   addEventListener('aos:theme', retint); addEventListener('aos:sky', retint);
   { const dk = matchMedia('(prefers-color-scheme: dark)'); dk.addEventListener ? dk.addEventListener('change', retint) : dk.addListener(retint); }
   retint(); addEventListener('load', retint);   // and as aOS opens
+  // An intro (Ignition, Sunrise, Tide, Tron's) covers aOS as it opens, on <html>, and iOS takes the bar's colour from it.
+  // Once it has gone, #barcap is taken off and put back so iOS reads the bar again from the page as it is now (its own
+  // colour may not have changed, so tint() alone wouldn't); the same when aOS comes back on screen.
+  const recap = () => { tint(); const cap = $('barcap'); if (cap) { cap.style.display = 'none'; void cap.offsetHeight; cap.style.display = ''; } };
+  new MutationObserver(ms => { if (ms.some(m => m.removedNodes.length)) requestAnimationFrame(recap); }).observe(document.documentElement, { childList: true });
+  addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') requestAnimationFrame(recap); });
 
   // ---- "‹ aOS": tap to go back, hold for the other open apps; or swipe in from the left edge ----
   let holdT = null, held = false;

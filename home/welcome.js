@@ -116,6 +116,7 @@
         'In Pearl, a very thin hairline of light now parts things that sit one under another, fading at its ends: between emails in Mail, trips in Travel, orders, notes in a column and groups of rows in every app, and above each section\'s title (Arriving today, Coming up, each day of a trip), and in Home between its sections, devices and rooms',
         'Junction: a car going ahead no longer stops at a green light while the line in front of it moves off; it only waits when the road beyond is really backing up',
         'Junction: the control panel is half the height, so it covers far less of the south road: one row for the junction, Auto and Upgrades, one row of phases, and no words under them',
+        'Pearl: with Appearance set to Dark on a phone in light mode (or the other way round, or Pearl following the sun), the strip at the top of the screen now matches the page, not the cream or dark of the phone\'s own mode; the Ignition intro is day or night as the page will be',
         'Travel: once Ipsy has read a booking against its email and put right what it says, the booking leaves To check by itself; it stays there only if Ipsy couldn\'t settle it (something still missing, or a detail from your calendar or the flight board that the email doesn\'t state)',
         'Travel in Pearl: the Next card is a faint ring of light, not the booking\'s colour, so it no longer looks like a problem',
         'Calendar: your own Google calendar alongside the Family calendar. Connect it in Settings > Connected accounts, read-only; only you see it, unless you turn on Share with the family, and then the family sees its times, titles and places in Shared with you, and an event that\'s private in Google only as Busy'],
@@ -1397,7 +1398,7 @@
     const now = effective('auto'); if (sunWas === null) { sunWas = now; return; }
     if (now === sunWas) return;
     sunWas = now;
-    const turn = () => applyTheme('auto');
+    const turn = () => { applyTheme('auto'); dispatchEvent(new CustomEvent('aos:theme', { detail: 'auto' })); };   // aOS's bar follows (home-tab.js)
     if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return turn();
     if (!document.getElementById('aos-dusk')) document.head.insertAdjacentHTML('beforeend', '<style id="aos-dusk">::view-transition-old(root),::view-transition-new(root){animation-duration:3.2s;animation-timing-function:ease-in-out}</style>');
     document.startViewTransition(turn);

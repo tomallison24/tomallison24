@@ -23,7 +23,27 @@
   const stored = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
   const mode = () => { const m = stored(); return m === 'silent' || m === 'off' ? m : 'sound'; };
   const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const night = () => root.dataset.theme === 'dark' || (root.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  // Day or night, as the page will be: welcome.js sets data-theme only after this runs (it's loaded later), so it's
+  // worked out here the way welcome.js's effective() does it. Light or Dark as picked in Appearance; System in Pearl
+  // follows the sun where you are (Weather's place); else the phone. Going by the phone alone drew the cream day intro
+  // over a page about to turn dark (Appearance Dark on a phone in light mode), and iOS kept that cream in the status bar.
+  const sunNight = () => {   // as welcome.js's sunNight (NOAA's low-precision formulas): below -0.83 degrees the sun has set
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem('wx.here')); if (!p || !Number.isFinite(p.lat)) p = (JSON.parse(localStorage.getItem('wx.places')) || [])[0]; } catch {}
+    if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return null;
+    const rad = Math.PI / 180, d = (Date.now() / 86400000) - 10957.5, g = (357.529 + 0.98560028 * d) * rad, q = 280.459 + 0.98564736 * d;
+    const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * rad, e = (23.439 - 0.00000036 * d) * rad;
+    const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L)), dec = Math.asin(Math.sin(e) * Math.sin(L));
+    const gmst = (18.697374558 + 24.06570982441908 * d) % 24, ha = ((gmst * 15 + p.lon) * rad) - ra;
+    return Math.asin(Math.sin(p.lat * rad) * Math.sin(dec) + Math.cos(p.lat * rad) * Math.cos(dec) * Math.cos(ha)) / rad < -0.83;
+  };
+  const night = () => {
+    if (root.dataset.theme) return root.dataset.theme === 'dark';
+    let t = 'auto'; try { t = (JSON.parse(localStorage.getItem('home.settings')) || {}).theme || 'auto'; } catch {}
+    if (t === 'dark' || t === 'light') return t === 'dark';
+    const n = sunNight(); if (n != null) return n;
+    return matchMedia('(prefers-color-scheme: dark)').matches;
+  };
   const greeting = (d = new Date()) => d.getHours() < 12 ? 'Good morning' : d.getHours() < 18 ? 'Good afternoon' : 'Good evening';
 
   // ---- the sound: a low swell, then rising notes with an echo, as the line flares ----
