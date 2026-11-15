@@ -27,6 +27,10 @@ window.aosGlyphs = {
   "dot": "#FFA2F0",
   "line": "<path d=\"M8 16.5h8a4 4 0 0 0 4-4v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2a4 4 0 0 0 4 4zM8 16.5 6.5 19.5M12 14V9.2M9.8 11.2 12 9l2.2 2.2\"/>"
  },
+ "junction": {
+  "dot": "#947EFF",
+  "line": "<rect x=\"8.5\" y=\"3.5\" width=\"7\" height=\"14.5\" rx=\"3\"/><circle cx=\"12\" cy=\"7.4\" r=\"1.2\"/><circle cx=\"12\" cy=\"10.8\" r=\"1.2\"/><circle cx=\"12\" cy=\"14.2\" r=\"1.2\"/><path d=\"M12 18v2.5\"/>"
+ },
  "mail": {
   "dot": "#70A0FF",
   "line": "<rect x=\"4\" y=\"6.5\" width=\"16\" height=\"11\" rx=\"3\"/><path d=\"M5.5 8.5 12 13l6.5-4.5\"/>"

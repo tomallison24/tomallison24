@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Mid-century modern, as a tinted tile: a traffic light in Junction's own colour (#4B3A9F) on a pale tint of it (#E4DFFF); every app has its own, a shade of its room's (Kids, for the games: aOS/app.js, ROOM_HUE). The three lamps are cut out of it. A small mustard sun and burnt-orange pill in the corners are the Vintage mark. Flat shapes, full-bleed; the phone rounds the corners. -->
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect x="186" y="96" width="140" height="300" rx="46" fill="#fff"/>
+      <path d="M186 150h-38M186 246h-38M186 342h-38M326 150h38M326 246h38M326 342h38" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
+      <rect x="240" y="396" width="32" height="60" fill="#fff"/>
+      <circle cx="256" cy="158" r="34" fill="#000"/>
+      <circle cx="256" cy="246" r="34" fill="#000"/>
+      <circle cx="256" cy="334" r="34" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#E4DFFF"/>
+  <circle cx="424" cy="88" r="44" fill="#E3A72F"/>
+  <rect x="46" y="432" width="88" height="24" rx="12" fill="#D8572A" transform="rotate(-18 90 444)"/>
+  <rect width="512" height="512" fill="#4B3A9F" mask="url(#cut)"/>
+</svg>

@@ -118,8 +118,8 @@
     if (run && run.win) run.win.style.clipPath = '';
     run = null; if (cv) { cx.clearRect(0, 0, cv.width, cv.height); cv.remove(); }
   }
-  // the canvas goes up at once, not on the first frame, so it's there from the tap (a busy phone can take a while to draw)
-  function start(r) { if (raf) cancelAnimationFrame(raf); if (run && run.win) run.win.style.clipPath = ''; run = r; canvas().clearRect(0, 0, innerWidth, innerHeight); raf = requestAnimationFrame(frame); }
+  // the canvas goes up at once, with the window's clip: waiting for the first frame left a frame with the window shut and nothing drawn
+  function start(r) { if (raf) cancelAnimationFrame(raf); if (run && run.win) run.win.style.clipPath = ''; run = r; canvas(); raf = requestAnimationFrame(frame); }
   window.aosPearlOpen = (from, win) => {
     if (!pearl() || still()) return false;
     let r = from && from.isConnected ? from.getBoundingClientRect() : null;

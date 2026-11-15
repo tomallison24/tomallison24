@@ -233,6 +233,8 @@ export const SKIES = {
 };
 const skyVars = ([plate, g1, g2, top]) => `--ly-plate:${plate};--ly-g1:${g1};--ly-g2:${g2};--ly-top:${top}`;
 
+// the games keep their own look in Pearl (the owner's call): the rulebook below leaves them out
+const GAMES = ['sparkle', 'junction'];
 export function signature(look, app) {
   if (look === 'layers') {
     const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
@@ -254,7 +256,7 @@ ${darkBoth('--pl-title-glow:0 0 22px rgba(160,205,255,.32)')}${HEADS}{text-shado
 :is(.skel,.skeleton)::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:conic-gradient(from var(--pl-a),transparent 0 70%,color-mix(in srgb,var(--pl-line) 60%,transparent) 90%,var(--pl-line) 96%,transparent 97%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:var(--pl-trace-glow,none);animation:pl-trace 2.8s linear infinite;animation-delay:calc(var(--i,0) * -.35s)}
 ${darkBoth('--pl-trace-glow:drop-shadow(0 0 3px rgba(150,205,255,.8))')}@keyframes pl-trace{to{--pl-a:360deg}}
 @media (prefers-reduced-motion:reduce){:is(.skel,.skeleton)::after{animation:none;opacity:.4}}
-` + (app === 'sparkle' ? '' : `/* ---- the rulebook, for every app but Sparkle (a game, kept game style): light, not surfaces (decided with the owner) ----
+` + (GAMES.includes(app) ? '' : `/* ---- the rulebook, for every app but the games (GAMES, kept game style): light, not surfaces (decided with the owner) ----
    No cards, boxes, pills or bars: their grounds and edges go, and things sit on Pearl's ground, parted by hairlines.
    Picked means brighter: a ring, a little thicker, never a fill. The main button is a ring of light, the others a
    hairline, a destructive one a red hairline. Fields and chips are faint rings, brighter while in use. No shadows.

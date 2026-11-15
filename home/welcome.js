@@ -87,8 +87,10 @@
   // ===========================================================================
   const RELEASES = [
     { v: '2.4', date: '2026-11-14', title: 'Light in the dust', look: 'vintage',
+      added: ['junction'],
       highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'In Pearl your helper is Lumen, a beam of light that takes the shapes of the cosmos', 'Pearl takes the place of Layers'],
-      notes: ['Pearl, in aOS and every app: at night, lines of cool white light on near-black blue; by day, carbon hairlines on cream. It follows the phone\'s light or dark setting',
+      notes: ['New app: Junction, a traffic game. Run the lights at a crossroads through rush hours and quiet nights, earn coins for every car that gets through, and spend them on turn lanes, smart lights, new junctions down the road and upgrades for the whole city',
+        'Pearl, in aOS and every app: at night, lines of cool white light on near-black blue; by day, carbon hairlines on cream. It follows the phone\'s light or dark setting',
         'Pearl takes the place of Layers: a phone that had Layers opens in Pearl, in aOS and every app, with nothing to set',
         'Dust drifts slowly behind every screen in Pearl, at many depths. Dust near the light is drawn in, slowly at first, then falls the last of the way into a line or an app\'s icon, where the line brightens a moment or the icon glows. New dust quietly appears elsewhere. When Weather says rain or snow where you are, the dust falls as rain or drifts down as snow',
         'Under each title, a strip of light with a beam gliding slowly back and forth along it',
@@ -108,7 +110,7 @@
         'In Pearl, your helper is Lumen, a mysterious beam of light that keeps changing shape, after things astrophysicists study: a pulsar\'s sweeping beams, a black hole with light bent over its top, a spiral galaxy, a nebula\'s shells and a quasar\'s jets. It listens in gravitational waves, searches as a pulsar, writes as a comet and finishes in a supernova\'s flash, while dust drifts in and is taken into its core. Your own helper and its name come back in the other looks',
         'Everything in Pearl moves slowly, and with Reduce Motion it holds still. The light and dust pause whenever a screen isn\'t showing',
         'On aOS Home, your helper stays beside the search bar now, rather than now and then running across it',
-        'Every app in Pearl is drawn in light now, as Weather is: no cards, boxes or filled pills, things sit on the ground parted by hairlines. What you\'ve picked is a brighter, slightly thicker ring of light; the main button is a ring of light and the others a hairline; fields and chips are faint rings that brighten while you use them; Settings is rows parted by hairlines. Sheets keep their own ground, and Sparkle stays a game'],
+        'Every app in Pearl is drawn in light now, as Weather is: no cards, boxes or filled pills, things sit on the ground parted by hairlines. What you\'ve picked is a brighter, slightly thicker ring of light; the main button is a ring of light and the others a hairline; fields and chips are faint rings that brighten while you use them; Settings is rows parted by hairlines. Sheets keep their own ground, and the games, Sparkle and Junction, keep their own look'],
       apps: {
         aos: { highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'In Pearl your helper is Lumen, a beam of light that takes the shapes of the cosmos', 'Pearl takes the place of Layers'],
           tour: [{ sel: '[data-acct]', t: 'Pearl', d: 'Your name, then Appearance: Look. Pearl is new, in place of Layers, for aOS and every app.', g: 'tap' }] },
@@ -695,7 +697,7 @@
   // What an update screen shows: the highlights, or else the first few notes.
   const top = (list, n = 3) => { const h = list.flatMap(x => entry(x).highlights); return (h.length ? h : list.flatMap(x => entry(x).notes)).slice(0, n); };
   // The apps, in aOS's order; house is shown as Home.
-  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'school', 'money', 'improve', 'house', 'sparkle'];
+  const APPS = ['mail', 'calendar', 'clock', 'news', 'weather', 'notes', 'podcasts', 'travel', 'places', 'fitness', 'drinks', 'meals', 'orders', 'school', 'money', 'improve', 'house', 'sparkle', 'junction'];
   // Two collections: the core apps everyone gets, and the Allison family's own. aOS shows them
   // apart, core first, in this order (APPS keeps its order: the accounts server lists the same).
   const CORE = ['weather', 'notes', 'news', 'mail', 'calendar', 'clock'];
@@ -704,7 +706,7 @@
   // (mealsvintage/ and the rest) open the same app (news.yml copies it there).
   const FAMILY_APPS = APPS.filter(id => !CORE.includes(id));
   const BY_GROUP = [...CORE, ...FAMILY_APPS];
-  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', school: 'School', money: 'Money', improve: 'Improve', house: 'Home', sparkle: 'Sparkle Kingdom' };
+  const NAMES = { aos: 'aOS', home: 'AllisonOS', mail: 'Mail', clock: 'Clock', calendar: 'Calendar', news: 'News', weather: 'Weather', notes: 'Notes', podcasts: 'Podcasts', travel: 'Travel', places: 'Places', fitness: 'Fitness', drinks: 'Drinks', meals: 'Meals', orders: 'Orders', school: 'School', money: 'Money', improve: 'Improve', house: 'Home', sparkle: 'Sparkle Kingdom', junction: 'Junction' };
   // Each app's walkthrough (written from its README): a tagline and its cards.
   const TOURS = {
     "clock": {
@@ -1174,6 +1176,36 @@
           "i": "star",
           "t": "Two designs",
           "d": "Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time."
+        }
+      ]
+    },
+    "junction": {
+      "tag": "A traffic game: keep the crossroads moving",
+      "cards": [
+        {
+          "i": "car",
+          "t": "Keep it moving",
+          "d": "Cars come from every road. Every one that gets through earns coins, and more the longer traffic keeps flowing. Jams cost coins."
+        },
+        {
+          "i": "clock",
+          "t": "Rush hours",
+          "d": "A day runs through quiet nights and two rush hours, morning and evening, that build up, peak for a few hours, then ease off."
+        },
+        {
+          "i": "sliders",
+          "t": "Take over the lights",
+          "d": "Every junction has lights that run on their own. In a surge, tap a phase to take over, and turn Auto back on when it passes."
+        },
+        {
+          "i": "chart",
+          "t": "Build your roads",
+          "d": "Spend coins on turn arrows, turn lanes and smart sensors, then new junctions down the road and upgrades for the whole city."
+        },
+        {
+          "i": "star",
+          "t": "Your look",
+          "d": "Vintage, mid-century modern, Standard in Sea glass, Pearl or Tron. Pick one in Settings, and change it any time."
         }
       ]
     },
@@ -1667,7 +1699,7 @@ html[data-theme="dark"] .aos-sd { --s-bg: #000; --s-group: #1C1C1E; --s-text: #f
 
   // ---- the AllisonOS tour ----
   const OS_TOUR = () => [
-    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, School, Money, Home and Improve, and Sparkle Kingdom for the children, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
+    { noart: true, t: 'Everything in one place', d: 'The core apps, Weather, Notes, News, Mail, Calendar and Clock, and the Allison family\'s own, Podcasts, Travel, Places, Fitness, Drinks, Meals, Orders, School, Money, Home and Improve, Sparkle Kingdom for the children, and Junction, a traffic game, all in aOS. And they work together for continuity: your trips, reminders and notes show up in Calendar, a booking opens its email, and Home knows the weather.' },
     { i: 'refresh', t: 'Always up to date', d: 'Updates are pushed automatically, so you always have the latest of everything at your fingertips.' },
     { i: 'sliders', t: 'Made to work for you', d: 'Absolute personalization: add just the apps you want, choose light or dark in each, and set every app up your way, from your places to your favorites.' },
     ...(tron() ? [] : [{ x: 'theme', noart: true, t: 'Light or dark', d: 'Follow your iPhone, or keep aOS always light or always dark. Each app asks too, the first time it opens.' }]),   // Tron is dark only
@@ -2383,6 +2415,13 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '#bannerBtn', t: 'Connect your house', d: 'This is a preview on sample readings. Tap Connect to link your Home Assistant: Home shows you how, next.', g: 'tap' },
   ] };
   // Sparkle Kingdom opens on who's playing: its tour says what the game is there, and where the grown-ups go
+  SPOTS.junction = { stops: [
+    { sel: ['#coinsBox', '#cv'], t: 'Keep it moving', d: 'Cars come from every road. Every one that gets through earns coins, and more the longer traffic keeps flowing. Jams cost coins.' },
+    { sel: ['#daybar', '#sClock'], t: 'Rush hours', d: 'A day runs through quiet nights and two rush hours, morning and evening, that build up, peak for a few hours, then ease off. The bar shows the day\'s traffic.' },
+    { sel: ['#jPhases:not([hidden])', '#jpanel'], t: 'Take over the lights', d: 'Every junction has lights that run on their own. In a surge, tap a phase to take over, and turn Auto back on when it passes.', g: 'tap' },
+    { sel: '#jShop', t: 'Build your roads', d: 'Spend coins on turn arrows, turn lanes and smart sensors, then new junctions down the road and upgrades for the whole city.', g: 'tap' },
+    { sel: '#moreBtn', t: 'Your look', d: 'Vintage, mid-century modern, Standard in Sea glass, Pearl or Tron. Pick one in Settings, and change it any time.', g: 'tap' },
+  ] };
   SPOTS.sparkle = { stops: [
     { sel: ['#players .pcard', '#players'], t: 'A kingdom to explore', d: 'She rides her unicorn across floating islands. Reading a signpost, mending a bridge and opening a crystal door is how she gets around.' },
     { sel: ['#players .pcard', '#players'], t: 'Reading first', d: 'Story Tower follows her school\'s reading plan, from syllables to little stories, with the Gem Mine for math and Star Meadow for memory.' },
@@ -2392,7 +2431,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     { sel: '#grownBtn', t: 'Four designs', d: 'Vintage, Standard in Sea glass, Pearl or Tron, for the player picker and Settings. Pick one in Settings > Design.', g: 'hold' },
   ] };
   // Every app carries both designs (../home/design.js): its tour ends at the button for its Settings.
-  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', school: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
+  const DESIGN_AT = { mail: ['#gear', '#screen .signin [data-act="signin"]'], house: '#gear', calendar: '#setBtn', orders: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', meals: '#setBtn', drinks: '#moreBtn', school: '#moreBtn', junction: '#moreBtn', money: '#setBtn', fitness: '#setBtn', news: '#setBtn', weather: '#foot [data-action="location"]', notes: ['#setBtn', '#remSetBtn'], places: '#setBtn' };
   for (const [id, sel] of Object.entries(DESIGN_AT)) if (SPOTS[id]) SPOTS[id].stops.push({ sel, t: 'Two designs', d: 'Vintage, mid-century modern, or Standard, in Sea glass. Pick one in Settings, and change it any time.', g: 'tap' });
   let spotEnd = null;
   const onScreen = e => {
@@ -2678,6 +2717,7 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
     orders: [['allison-orders-v1', 'design.orders'], []],
     house: [['house.', 'design.house'], []],
     sparkle: [['sparkle.', 'design.sparkle'], []],
+    junction: [['junction.', 'design.junction'], []],
   };
   const CARRY_MAX = 230 * 1024;          // what the account takes for one app (HANDOFF_MAX), with room to spare
   const CARRIED = 'aos.carry2.';         // + app: 'done' (aOS has it), else the day it was last sent

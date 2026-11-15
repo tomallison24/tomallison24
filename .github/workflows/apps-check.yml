@@ -189,13 +189,14 @@ jobs:
               fitness/scripts/meds-steps-test.mjs
               aOS/scripts/design-test.mjs
               aOS/scripts/updating-test.mjs
-          # Meals, Podcasts; aOS's look; Android
+          # Meals, Podcasts; aOS's look; Android; Junction, the traffic game
           - group: meals-podcasts
             tests: |
               meals/scripts/app-test.mjs
               podcasts/scripts/app-test.mjs
               aOS/scripts/look-test.mjs
               aOS/scripts/android-installed-test.mjs
+              junction/scripts/app-test.mjs
           # Places; aOS 2's Home (every app inside aOS, Ipsy across them); News' table and match pages
           - group: places-home
             tests: |

@@ -49,7 +49,7 @@ is Pearl's.
   page's own indicator (`#hpull`, `.ptr`: keep its opacity as the pull and
   `.spin` while loading); in aOS an app powers on as it opens (`aOS/pearl-open.js`); a loading placeholder (`.skel`,
   `.skeleton`) is traced in light by Pearl's block. Pearl draws in light, not surfaces, in every app but
-  Sparkle (a game): its block clears the shared surface tokens (`--tile`, `--glass`, `--fill`, `--mc-card`, `--seg-thumb`,
+  the games (Sparkle and Junction, `GAMES` in `aOS/scripts/looks.mjs`): its block clears the shared surface tokens (`--tile`, `--glass`, `--fill`, `--mc-card`, `--seg-thumb`,
   ...), so cards, boxes and filled pills go and things sit on the ground parted by hairlines; picked is a brighter,
   thicker ring (`--pl-pick`), never a fill; the main button a ring of light, the others a hairline; fields and chips
   faint rings that brighten in use; sheets and menus keep one solid ground (`--pl-surface`). So an app gets it by using
