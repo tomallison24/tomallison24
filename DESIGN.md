@@ -48,7 +48,13 @@ is Pearl's.
   hairlines marked `data-pl-line`, and draws pull to refresh in light from the
   page's own indicator (`#hpull`, `.ptr`: keep its opacity as the pull and
   `.spin` while loading); in aOS an app powers on as it opens (`aOS/pearl-open.js`); a loading placeholder (`.skel`,
-  `.skeleton`) is traced in light by Pearl's block. With Appearance on System,
+  `.skeleton`) is traced in light by Pearl's block. Pearl draws in light, not surfaces, in every app but
+  the games (Sparkle and Junction, `GAMES` in `aOS/scripts/looks.mjs`): its block clears the shared surface tokens (`--tile`, `--glass`, `--fill`, `--mc-card`, `--seg-thumb`,
+  ...), so cards, boxes and filled pills go and things sit on the ground parted by hairlines; picked is a brighter,
+  thicker ring (`--pl-pick`), never a fill; the main button a ring of light, the others a hairline; fields and chips
+  faint rings that brighten in use; sheets and menus keep one solid ground (`--pl-surface`). So an app gets it by using
+  the shared tokens and classes; what an app draws its own way (a coloured disc, a filled badge) needs its own Pearl
+  rule, made in the Vintage block's terms or in the app's own `html:root[data-look="layers"]` rules. With Appearance on System,
   Pearl follows the sun where you are, not the phone (`welcome.js`). Pearl's
   icons are one-line drawings in `aOS/scripts/pearl-icons.mjs`: a new app adds
   its drawing there. Colours come from tokens (`--bg`,

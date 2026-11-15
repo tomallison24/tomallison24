@@ -1720,8 +1720,18 @@
     // once Settings' sections are dropdowns (home/settings.js folds them as they arrive): its own open, scrolled to
     requestAnimationFrame(() => {
       AllisonOS.settings.reveal('stNotify', { scroll: false });
-      const sec = $('stNotify'), body = sec && sec.closest('.sheetbody');
-      if (body) body.scrollTop += sec.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+      // reveal opens the dropdown in a microtask: scroll after it, so the sheet is measured with the section open
+      queueMicrotask(() => {
+        const sec = $('stNotify'), body = sec && sec.closest('.sheetbody'); if (!body) return;
+        const go = () => { body.scrollTop += sec.getBoundingClientRect().top - body.getBoundingClientRect().top - 8; };
+        go();
+        // the floating Done button (home/welcome.js, makeRoom) then adds room at the sheet's foot, so it can scroll further
+        // than when this ran (on a slow phone, after it): follow the section when it does, for a moment, until you touch it
+        const mo = new MutationObserver(go), stop = () => { mo.disconnect(); body.removeEventListener('pointerdown', stop); body.removeEventListener('wheel', stop); };
+        mo.observe(body, { attributes: true, attributeFilter: ['style'] });
+        body.addEventListener('pointerdown', stop); body.addEventListener('wheel', stop, { passive: true });
+        setTimeout(stop, 2000);
+      });
     });
   };
 

@@ -39,7 +39,7 @@ for (const app of pages) {
   let rest = html.slice(e);
   const OLD = new RegExp(`^\\n?<style id="(?:${[...NEW, ...GONE].join('|')})"[^>]*>[\\s\\S]*?</style>`);
   while (OLD.test(rest)) rest = rest.replace(OLD, '');   // the old ones, every copy, regenerated
-  const blocks = NEW.map(look => `\n<style id="${look}" media="not all">\n/* ${LOOKS[look].name}: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */\n${lookBlock(look, vintage)}${signature(look)}</style>`).join('');
+  const blocks = NEW.map(look => `\n<style id="${look}" media="not all">\n/* ${LOOKS[look].name}: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */\n${lookBlock(look, vintage)}${signature(look, app)}</style>`).join('');
   const out = html.slice(0, e) + blocks + rest;
   if (out !== html) { stale.push(`${app}/index.html`); if (!check) writeFileSync(file, out); }
 }
