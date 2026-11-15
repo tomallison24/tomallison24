@@ -239,21 +239,10 @@ for (const [look, scheme] of [['vintage', 'light'], ['glass', 'dark']]) {
   check(await pg.locator('#hfound .htop').count() === 0 && /Nothing on this phone/.test(await pg.textContent('#hfound')), `nothing found says so, and offers Ipsy ${tag}`);
   await pg.locator('#hq').press('Escape'); await pg.waitForTimeout(100);
   check(await pg.inputValue('#hq') === '' && await pg.isVisible('#hmain'), `Escape clears it ${tag}`);
-  // now and then your helper crosses the bar and back, in its own way; a tap sends it home at once; never with Reduce Motion
-  check(await pg.evaluate(() => aosHomeTab.roll()) === true, `Ipsy crosses the bar ${tag}`);
-  await pg.waitForTimeout(1000);
-  const rollMid = () => pg.evaluate(() => ({ x: Math.round(new DOMMatrix(getComputedStyle(document.getElementById('ipsySlot')).transform).m41), turn: getComputedStyle(document.querySelector('#ipsySlot .h-pose')).transform !== 'none' || document.querySelector('#ipsySlot .ipsy-host').dataset.mood === 'cross', rolling: document.getElementById('askIpsy').classList.contains('rolling'), words: getComputedStyle(document.getElementById('hq')).opacity }));
-  const mid = await rollMid();
-  check(mid.x > 80 && mid.turn && mid.rolling && mid.words === '0', `it's out along the bar, in its move, the words out of its way (${JSON.stringify(mid)}) ${tag}`);
-  await pg.evaluate(() => document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))); await pg.waitForTimeout(50);
-  const home = await rollMid();
-  check(home.x === 0 && !home.rolling, `a tap sends it home (${JSON.stringify(home)}) ${tag}`);
-  await pg.emulateMedia({ reducedMotion: 'reduce' });
-  check(await pg.evaluate(() => aosHomeTab.roll()) === false, `never with Reduce Motion ${tag}`);
-  await pg.emulateMedia({ reducedMotion: 'no-preference' });
-  await pg.locator('#hq').fill('w');
-  check(await pg.evaluate(() => aosHomeTab.roll()) === false, `nor while you type ${tag}`);
-  await pg.locator('#hq').press('Escape'); await pg.waitForTimeout(100);
+  // your helper stays beside the bar: it no longer crosses it (no roll, no cross, never out along the bar)
+  const stays = await pg.evaluate(() => ({ roll: typeof aosHomeTab.roll, cross: window.AllisonOS && AllisonOS.ipsy ? typeof AllisonOS.ipsy.cross : 'no ipsy', x: Math.round(new DOMMatrix(getComputedStyle(document.getElementById('ipsySlot')).transform).m41),
+    mood: (document.querySelector('#ipsySlot .ipsy-host') || {}).dataset?.mood, rolling: document.getElementById('askIpsy').classList.contains('rolling') }));
+  check(stays.roll === 'undefined' && stays.cross === 'undefined' && stays.x === 0 && stays.mood !== 'cross' && !stays.rolling, `Ipsy stays put beside the bar (${JSON.stringify(stays)}) ${tag}`);
   await pg.locator('#ipsySlot .ipsy-btn').click(); await pg.waitForTimeout(700);
   const bub = await pg.locator('.ipsy-bubble').boundingBox(), ask = await pg.locator('#askIpsy').boundingBox();
   check(bub && bub.y >= ask.y + ask.height && bub.y + bub.height <= 844 && !/helper/.test(await pg.textContent('.ipsy-head')), `Ipsy's chat opens below the Ipsy bar, on screen, without the extra words ${tag}`);

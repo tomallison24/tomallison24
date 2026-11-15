@@ -109,7 +109,7 @@
     ['scan', 'I search Gmail and the web for you.'], ['write', 'I plan dinners and tidy your lists.'],
     ['done', 'Every change I make has an Undo.'], ['show', 'Find me on aOS Home, and in six apps!'],
   ];
-  // the helpers to pick from (home/ipsy.js), each with how it crosses the Ipsy bar on Home
+  // the helpers to pick from (home/ipsy.js), each with a word on its character
   const IPSY_WHO = [['mia', 'Mia', 'The family’s own. Zoomies!'], ['fox', 'Fox', 'Creeps, then pounces'], ['owl', 'Owl', 'Loops the loop'],
     ['hedgehog', 'Hedgehog', 'Rolls up in a ball'], ['nova', 'Nova', 'Dots that turn into shapes']];
   const IPSY = { id: 'orders', ipsy: true, k: 'Meet Ipsy', h: 'Say hi to Ipsy, your new helper', body: () => `
