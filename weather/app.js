@@ -618,6 +618,87 @@ function w3Hero(m) {
     </div>`;
 }
 
+
+// ---- Pearl: Horizon. No cards: the weather drawn in light on Pearl's ground. ----
+// The condition in light over the temperature, centred; a line that says what the rain will do; the next 24 hours
+// as one line of light, like a horizon, its temperatures over it, the rain hanging under it with its chance under
+// each hour; the week as lines of light alone. Short hairlines part them (data-pl-line: ../home/pearl.js lights them
+// where your eyes rest and draws the dust into them). Feels like, humidity, wind and radar keep their own views.
+const plSmooth = pts => pts.map((p, i) => { if (!i) return `M${p[0].toFixed(1)} ${p[1].toFixed(1)}`; const q = pts[i - 1], k = (p[0] - q[0]) / 2;
+  return `C${(q[0] + k).toFixed(1)} ${q[1].toFixed(1)} ${(p[0] - k).toFixed(1)} ${p[1].toFixed(1)} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`; }).join('');
+const plIcon = (c, dark) => (dark && V.icons[c + '-night']) || V.icons[c] || 'weather-cloudy';
+// what the rain will do in the next 12 hours, in a line
+function plRain(m) {
+  const hrs = (m.fc.hourly || []).slice(0, 12), at = t => hrFmt(t, m.tz), pop = m.rKind === 'pop';
+  const i = hrs.findIndex(h => wet(m, h.r));
+  if (i < 0) return 'Dry for the next 12 hours.';
+  const top = Math.max(...hrs.slice(i).map(h => h.r)), word = pop && top < 50 ? 'A chance of rain' : 'Rain likely';
+  const j = hrs.findIndex((h, k) => k > i && !wet(m, h.r));
+  if (i === 0) return j < 0 ? 'Rain now, on through the next 12 hours.' : `Rain now, easing by ${at(hrs[j].t)}.`;
+  return j < 0 ? `${word} from ${at(hrs[i].t)}, on into the night.` : `${word} from ${at(hrs[i].t)}, easing by ${at(hrs[j].t)}.`;
+}
+function plHero(m) {
+  const { entity, fc, sun } = m, a = entity.attributes, c = entity.state, today = (fc.daily || [])[0] || {};
+  const temp = a.temperature == null ? '--' : Math.round(a.temperature), gps = S.loc && S.loc.mode === 'gps';
+  const more = [a.wind_speed != null ? `Wind ${Math.round(a.wind_speed)} ${a.wind_speed_unit || ''}${a.wind_bearing != null ? ' from the ' + compassLong(a.wind_bearing) : ''}` : '',
+    a.humidity != null ? `humidity ${Math.round(a.humidity)}%` : ''].filter(Boolean).join(', ');
+  heroSky = '';
+  return `<div class="w3-in pl-hero${S.heroRise ? ' rise' : ''}">
+      <div class="w3-ico pl-gl">${svg(plIcon(c, sun.night), 76)}</div>
+      <button class="w3-place pl-place" data-action="location" aria-label="Places">${gps ? svg('navigation-variant', 12) : ''}<span${S.loc.name && S.loc.name !== 'My Location' ? ' translate="no"' : ''}>${esc(S.loc.name || 'My Location')}</span>${svg('chevron-down', 16)}</button>
+      <div class="w3-temp pl-t">${temp}°</div>
+      <div class="pl-cond">${V.words[c] || c}${today.h != null ? ` <em>· H ${today.h}° L ${today.l}°</em>` : ''}</div>
+    </div>
+    <div class="pl-short" data-pl-line></div>
+    <p class="pl-say">${plRain(m)}${more ? ` <span>${more[0].toUpperCase() + more.slice(1)}.</span>` : ''}</p>`;
+}
+function plHours(m) {
+  const { entity, tz } = m, head = viewHead(m), seq = hourSeq(m), hrs = seq.filter(x => x.kind === 'hour');
+  if (!hrs.length) return head + '<div style="font-size:16px;opacity:0.75;padding:10px 0;">Forecast unavailable</div>';
+  const a = entity.attributes, unit = a.precipitation_unit || '', metric = (a.temperature_unit || '').indexOf('C') >= 0, pop = m.rKind === 'pop';
+  const W = 58, PAD = 22, BASE = 112, H = 160, w = PAD * 2 + W * hrs.length;
+  const vs = hrs.map(x => x.v), lo = Math.min(...vs), span = Math.max(metric ? 5 : 9, Math.max(...vs) - lo);
+  const X = i => PAD + W * i + W / 2, Y = v => 40 + (1 - (v - lo) / span) * 44, xAt = t => X(0) + (t - hrs[0].t) / 3600 * W;
+  const pts = hrs.map((x, i) => [X(i), Y(x.v)]);
+  let out = `<line x1="0" y1="${BASE}" x2="${w}" y2="${BASE}" class="pl-base"/><line x1="${X(0)}" y1="14" x2="${X(0)}" y2="${BASE}" class="pl-nowl"/>`
+    + `<path class="pl-hline" d="${plSmooth(pts)}"/>`;
+  let was = '';
+  hrs.forEach((x, i) => {
+    const [px, py] = pts[i], ic = plIcon(x.c, x.dark);
+    out += `<circle cx="${px}" cy="${py}" r="${i ? 1.8 : 3}" class="pl-pt"/><text x="${px}" y="${(py - 10).toFixed(1)}">${x.v}°</text>`
+      + `<text class="pl-h" x="${px}" y="${BASE - 9}">${x.now ? 'Now' : hrOf(x.t, tz) === 0 ? dayFmt(x.t, tz) : hrFmt(x.t, tz)}</text>`;
+    if (ic !== was) out += `<g transform="translate(${px - 9} 0)">${svg(ic, 18)}</g>`;   // the weather, where it changes
+    was = ic;
+    const f = Math.min(1, Math.max(0, pop ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25)));
+    if (pop ? x.r >= 5 : x.r > 0) {   // the rain under the line, and its chance under each hour
+      const n = Math.max(1, Math.min(5, Math.ceil(f * 5))), len = 5 + f * 16, dry = wet(m, x.r) ? '' : ' dry';
+      for (let k = 0; k < n; k++) out += `<line class="pl-drop${dry}" x1="${(px - (n - 1) * 3 + k * 6).toFixed(1)}" y1="${BASE + 5}" x2="${(px - (n - 1) * 3 + k * 6 - 1.5).toFixed(1)}" y2="${(BASE + 5 + len * (0.75 + 0.25 * ((k * 7) % 3) / 2)).toFixed(1)}"/>`;
+      out += `<text class="pl-r${dry}" x="${px}" y="${BASE + 36}">${x.r}${unit}</text>`;
+    }
+  });
+  seq.filter(x => x.kind === 'rise' || x.kind === 'set').forEach(x => {
+    const px = xAt(x.t);
+    out += `<line class="pl-mkl" x1="${px}" y1="${BASE - 3}" x2="${px}" y2="${BASE + 3}"/><text class="pl-mk" x="${px}" y="${H - 6}">${x.kind === 'rise' ? 'Sunrise' : 'Sunset'} ${minFmt(x.t, tz)}</text>`;
+  });
+  const hits = hrs.map((x, i) => `<div class="pl-hc" data-hour="${x.t}" role="button" tabindex="0" aria-label="Details for ${x.now ? 'now' : hrFmt(x.t, tz)}" style="left:${X(i) - W / 2}px;width:${W}px"></div>`).join('');
+  return head + `<div class="hx pl-hz"><div class="hx-tray" id="hxTray"><div class="pl-hzin" style="width:${w}px;height:${H}px"><svg class="pl-hzsvg" width="${w}" height="${H}" aria-hidden="true">${out}</svg>${hits}</div></div></div>`;
+}
+function plDays(m) {
+  const { entity, fc, tz } = m, days = (fc.daily || []).slice(0, 7);
+  if (!days.length) return '';
+  const unit = entity.attributes.precipitation_unit || '', cur = entity.attributes.temperature;
+  const min = Math.min(...days.map(d => d.l)), max = Math.max(...days.map(d => d.h)), pos = t => ((t - min) / Math.max(1, max - min) * 100).toFixed(1);
+  const rows = days.map((d, i) => {
+    const name = i === 0 ? 'Today' : dayFmt(d.t, tz), a = pos(d.l), b = pos(d.h);
+    const now = i === 0 && cur != null && d.h > d.l ? `<u style="left:${((Math.min(Math.max(cur, d.l), d.h) - d.l) / (d.h - d.l) * 100).toFixed(1)}%"></u>` : '';
+    return `<div class="pl-w" data-day="${i}" role="button" tabindex="0" aria-label="Details for ${i === 0 ? 'today' : dayLong(d.t, tz)}">
+      <span class="pl-wn">${name}</span>${svg(V.icons[d.c] || 'weather-cloudy', 20)}
+      <span class="pl-wr"><s style="left:calc(${a}% - 6px)">${d.l}°</s><i style="left:${a}%;width:${(b - a).toFixed(1)}%">${now}</i><b style="left:calc(${b}% + 6px)">${d.h}°</b></span>
+      <span class="pl-wp">${wet(m, d.r) ? d.r + unit : ''}</span></div>`;
+  });
+  return `<div class="pl-short" data-pl-line></div><div class="w3-dhead">7-day forecast</div><div class="pl-week">${rows.join('')}</div>`;
+}
+
 // Which way an hour's icon moves, by its weather.
 function hourMotion(c, dark) {
   if (c === 'sunny') return 'spin';
@@ -1108,7 +1189,7 @@ function render() {
   if (!app.contains(card) || app.firstElementChild !== alerts) { app.replaceChildren(alerts, card, dots, foot); }
   put(dots, dotsBar());
 
-  put(hero, w3Hero(m));
+  put(hero, pearl() ? plHero(m) : w3Hero(m));
   skyEl.hidden = false;
   put(skyEl, heroSky);
   if (vintage()) { document.documentElement.dataset.c = sky; document.body.style.background = ''; }   // the colour group: the ground, and the disc behind the top of the page (#vintage)
@@ -1122,7 +1203,7 @@ function render() {
     const edge = tray.getBoundingClientRect().left, c = [...tray.querySelectorAll('[data-hour]')].find(c => c.getBoundingClientRect().right > edge + 6);
     if (c) anchor = { t: c.dataset.hour, d: c.getBoundingClientRect().left - edge };
   }
-  put(hours, w3Hours(m));
+  put(hours, pearl() && S.view === 'now' ? plHours(m) : w3Hours(m));
   const tray2 = document.getElementById('hxTray');
   if (tray2 && anchor) {
     const c = tray2.querySelector(`[data-hour="${anchor.t}"]`);
@@ -1142,7 +1223,7 @@ function render() {
         { duration: swiped ? 360 : 420, easing: 'cubic-bezier(.22,1,.36,1)' });
     }
   }
-  put(days, wDays(m));
+  put(days, pearl() ? plDays(m) : wDays(m));
 
   const at = new Date(S.data.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const status = S.loading ? `${svg('refresh', 14, '').replace('class="i"', 'class="i spin"')} Updating…`

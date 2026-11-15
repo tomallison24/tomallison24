@@ -476,6 +476,55 @@ html:root[data-look="layers"] .w3-chip svg{color:var(--pl-line)}
 html:root[data-look="layers"] .vsw button[aria-pressed="true"]{color:var(--pl-line)}
 html:root[data-look="layers"] .dot.on i{background:var(--pl-line)}
 html:root[data-look="layers"] .hx-now{background:color-mix(in srgb,var(--pl-line) 3%,transparent)}
+/* Horizon (app.js plHero, plHours, plDays): no cards. The temperature centred under the weather in light; a line on
+   the rain; the next 24 hours one line of light with the rain hanging under it; the week as lines of light. Short
+   hairlines part them (pearl.js brightens the one where your eyes rest). */
+html:root[data-look="layers"] :is(.w3-hours,.w3-days){background:none;box-shadow:none;border:0;-webkit-backdrop-filter:none;backdrop-filter:none}
+html:root[data-look="layers"] .w3-dhead{border:0;text-align:center;color:var(--muted);font-size:11px;letter-spacing:.18em;padding:0 0 10px}
+html:root[data-look="layers"] .hx-head{justify-content:center;flex-direction:column;gap:10px}
+html:root[data-look="layers"] .hx-title{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+html:root[data-look="layers"] .pl-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:6px}
+html:root[data-look="layers"] .pl-gl svg.i.pl{width:76px;height:76px}
+html:root[data-look="layers"] .pl-place{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:500;color:var(--muted);margin-top:8px;max-width:100%}
+html:root[data-look="layers"] .pl-place span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:root[data-look="layers"] .pl-t{font-family:"Unbounded","Avenir Next","Helvetica Neue",system-ui,sans-serif;font-weight:200;font-size:108px;line-height:.92;letter-spacing:-.04em;margin:8px 0 6px;padding-left:.12em;font-variant-numeric:tabular-nums;text-shadow:var(--pl-title-glow,none)}
+html:root[data-look="layers"] .pl-cond{font-size:16px} html:root[data-look="layers"] .pl-cond em{font-style:normal;color:var(--muted)}
+html:root[data-look="layers"] .pl-short{height:1px;width:44%;margin:24px auto;background:linear-gradient(90deg,transparent,var(--pl-line),transparent);opacity:.28}
+html:root[data-look="layers"] .w3-days .pl-short{margin-top:6px}
+html:root[data-look="layers"] .pl-say{text-align:center;font-size:15.5px;line-height:1.55;max-width:32ch;margin:0 auto 14px;text-wrap:balance}
+html:root[data-look="layers"] .pl-say span{color:var(--muted)}
+html:root[data-look="layers"] .pl-hz{border-radius:0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
+html:root[data-look="layers"] .pl-hz .hx-tray{padding:0;scroll-snap-type:none}
+html:root[data-look="layers"] .pl-hzin{position:relative;flex:none}
+html:root[data-look="layers"] .pl-hzsvg{display:block;overflow:visible}
+html:root[data-look="layers"] .pl-hzsvg text{fill:var(--text);font-size:13px;font-weight:500;text-anchor:middle;font-variant-numeric:tabular-nums}
+html:root[data-look="layers"] .pl-hzsvg .pl-h{fill:var(--muted);font-size:12px;font-weight:400}
+html:root[data-look="layers"] .pl-hzsvg .pl-r{fill:var(--mc-teal);font-size:11.5px}
+html:root[data-look="layers"] .pl-hzsvg .pl-mk{fill:var(--muted);font-size:10.5px;font-weight:400}
+html:root[data-look="layers"] .pl-hzsvg :is(.pl-r,.pl-drop).dry{opacity:.5}
+html:root[data-look="layers"] .pl-hline{fill:none;stroke:var(--pl-line);stroke-width:1.5;stroke-linecap:round}
+html:root[data-look="layers"] .pl-pt{fill:var(--pl-line)}
+html:root[data-look="layers"] .pl-base{stroke:var(--pl-line);stroke-width:1;opacity:.16}
+html:root[data-look="layers"] .pl-nowl{stroke:var(--pl-line);stroke-width:1;opacity:.3}
+html:root[data-look="layers"] .pl-mkl{stroke:var(--pl-line);stroke-width:1;opacity:.5}
+html:root[data-look="layers"] .pl-drop{stroke:var(--mc-teal);stroke-width:1.1;stroke-linecap:round;opacity:.8}
+html:root[data-look="layers"] .pl-hzsvg svg.i.pl{overflow:visible}
+html:root[data-look="layers"] .pl-hc{position:absolute;top:0;bottom:0;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+html:root[data-look="layers"] .pl-hc:active{background:color-mix(in srgb,var(--pl-line) 6%,transparent)}
+html:root[data-look="layers"] :is(.pl-hc,.pl-w):focus-visible{outline:1px solid var(--pl-line);outline-offset:-1px}
+html:root[data-look="layers"] .pl-week{display:grid;gap:2px}
+html:root[data-look="layers"] .pl-w{display:grid;grid-template-columns:50px 22px 1fr 40px;align-items:center;gap:10px;height:42px;font-size:15px;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+html:root[data-look="layers"] .pl-w:active{background:color-mix(in srgb,var(--pl-line) 5%,transparent)}
+html:root[data-look="layers"] .pl-wn{color:var(--muted)}
+html:root[data-look="layers"] .pl-w svg.i.pl{width:20px;height:20px}
+html:root[data-look="layers"] .pl-wr{position:relative;align-self:stretch;margin:0 34px 0 36px}
+html:root[data-look="layers"] .pl-wr i{position:absolute;top:50%;height:1.5px;margin-top:-.75px;border-radius:1px;background:var(--pl-line)}
+html:root[data-look="layers"] .pl-wr u{position:absolute;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--pl-line);box-shadow:0 0 0 2px var(--pl-top)}
+html:root[data-look="layers"] .pl-wr :is(s,b){position:absolute;top:50%;font-size:13.5px;text-decoration:none;font-variant-numeric:tabular-nums;white-space:nowrap}
+html:root[data-look="layers"] .pl-wr s{color:var(--muted);transform:translate(-100%,-50%)} html:root[data-look="layers"] .pl-wr b{font-weight:500;transform:translateY(-50%)}
+html:root[data-look="layers"] .pl-wp{color:var(--mc-teal);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+html:root[data-look="layers"][data-theme="dark"] :is(.pl-hline,.pl-wr i){filter:drop-shadow(0 0 2px rgba(210,240,255,.85)) drop-shadow(0 0 8px rgba(150,205,255,.35))}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]) :is(.pl-hline,.pl-wr i){filter:drop-shadow(0 0 2px rgba(210,240,255,.85)) drop-shadow(0 0 8px rgba(150,205,255,.35))}}
 /* rain, and Weather's accent: Weather's own colour in Pearl (the dot on its icon), not Vintage's teal */
 html:root[data-look="layers"]{--mc-teal:#2D7FA6;--accent:#2D7FA6;--accent-text:#2D7FA6}
 html:root[data-look="layers"][data-theme="dark"]{--mc-teal:#82E0FF;--accent:#82E0FF;--accent-text:#82E0FF}
