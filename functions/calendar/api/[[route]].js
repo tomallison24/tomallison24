@@ -14,6 +14,12 @@
 //   GET    /calendar/api/diagnose                   the three lookups, step by step, with numbers and
 //                                                   long ids masked, for when the calendar isn't found.
 //   POST   /calendar/api/ipsy   { messages }        one step of Ipsy's chat (below): Anthropic's answer, as it comes.
+//   GET    /calendar/api/google                     your own Google calendar (server/gcal.js): { on, mine, shared }
+//   GET    /calendar/api/google/events?start&end    yours in full, and the family's that are shared with you
+//   POST   /calendar/api/google/share { share }     show yours to the family, or stop
+//   POST   /calendar/api/google/disconnect          revoked at Google and forgotten here
+//                                                   (connecting goes through aOS's sign-in: /aOS/api/gmail/start,
+//                                                   kind 'calendar')
 //
 // A browser can't talk to iCloud's CalDAV server itself (it refuses pages
 // from other sites, and the password would have to live on the phone), so
@@ -46,6 +52,7 @@
 // at most IPSY_DAILY questions a person a day (calendar:ipsy:<user id>:<day> in the accounts' KV).
 
 import { reply, kv, sessionUser } from '../../../server/auth.js';
+import * as gcal from '../../../server/gcal.js';
 import { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES, T, DAY, persona, modelOf, requestHead, ipsyStep, today } from '../../../server/ipsy.js';
 
 const ROOT = 'https://caldav.icloud.com/';
@@ -72,6 +79,7 @@ export async function onRequest(ctx, f = fetch) {
   // Who is asking (the lock in front, _middleware.js, has already let only family through): the
   // owner's tools, and the count of each person's writes. Without storage (a test) there is no one.
   const db = kv(env), me = db ? await sessionUser(db, request) : null, owner = !db || (!!me && me.role === 'owner');
+  if (route === 'google' || route.startsWith('google/')) return google(route, method, request, q, db, env, me, f);
   if (route === 'ping' && method === 'GET') {
     if (!configured) return reply({ ok: true, configured: false });
     try { const cal = await discover(acct); return reply({ ok: true, configured: true, calendar: { name: cal.name, color: cal.color } }); }
@@ -301,6 +309,29 @@ async function importEvents(cal, acct, ics, count) {
 }
 
 // ---- Ipsy ----
+// Your own Google calendar (server/gcal.js): only ever your own sign-in, and the family's only when they share it.
+async function google(route, method, request, q, db, env, me, f) {
+  if (!db) return reply({ error: 'accounts-off' }, 503);
+  if (!me) return reply({ error: 'signin' }, 401);
+  if (route === 'google' && method === 'GET') return reply(await gcal.view(db, env, me));
+  if (!gcal.on(env)) return reply({ error: 'off' }, 404);
+  if (route === 'google/events' && method === 'GET') {
+    const s = q.get('start') || '', e = q.get('end') || '';
+    if (!TIME_OK.test(s) || !TIME_OK.test(e)) return reply({ error: 'bad-request' }, 400);
+    const iso = t => t.slice(0, 4) + '-' + t.slice(4, 6) + '-' + t.slice(6, 8) + 'T' + t.slice(9, 11) + ':' + t.slice(11, 13) + ':' + t.slice(13, 15) + 'Z';
+    const from = Date.parse(iso(s)), to = Date.parse(iso(e));
+    if (!(to > from) || to - from > RANGE_MAX_DAYS * 864e5) return reply({ error: 'bad-request' }, 400);
+    return reply(await gcal.events(db, env, me, iso(s), iso(e), Date.now(), f));
+  }
+  if (route === 'google/share' && method === 'POST') {
+    let b = {}; try { b = JSON.parse(await readBody(request)); } catch {}
+    const r = await gcal.share(db, me, b && b.share === true);
+    return reply(r, r.error ? 409 : 200);
+  }
+  if (route === 'google/disconnect' && method === 'POST') return reply(await gcal.disconnect(db, env, me, f));
+  return reply({ error: 'not-found' }, 404);
+}
+
 export { IPSY_MODEL, IPSY_DAILY, IPSY_MAX_BODY, IPSY_MAX_MESSAGES };
 export const ipsyModelOf = env => modelOf(env, 'CALENDAR_IPSY_MODEL');
 const S = { type: 'string' };

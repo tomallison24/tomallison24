@@ -90,9 +90,9 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // ---------------------------------------------------------------------
   const settings = Object.assign({
     weekStart: 0, clock: 'auto', units: 'auto', dayStart: 7, duration: 60, alertTimed: '-PT15M', alertAllDay: '-PT15H',
-    layers: { family: true, holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false },
+    layers: { family: true, holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false, google: true, gshared: true },
   }, ls.json(K.settings, {}));
-  settings.layers = Object.assign({ family: true, holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false }, settings.layers || {});
+  settings.layers = Object.assign({ family: true, holidays: true, notes: true, travel: true, mail: true, fitness: true, meals: true, orders: true, school: true, news: true, weather: true, drinks: false, google: true, gshared: true }, settings.layers || {});
   // Weeks start on Sunday, the US way. Settings saved before that kept Monday only as the
   // old default; unless the week start was picked here (weekStartPicked), it moves to Sunday.
   if (!settings.weekStartPicked && settings.weekStart !== 0) { settings.weekStart = 0; try { if (ls.json(K.settings, null)) ls.set(K.settings, JSON.stringify(settings)); } catch {} }
@@ -132,7 +132,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const dayLetter = s => { const d = shortDay(s); return /^[A-Za-z]/.test(d) ? d.slice(0, 1) : d.slice(0, 1).toUpperCase() + d.slice(1, 2); };
   // What the family wrote (titles, places, notes, names) and what came from elsewhere (bookings) stays as it is
   // (translate="no"), but not the words the app writes itself.
-  const KEEP_KINDS = { family: 1, note: 1, travel: 1, meals: 1, orders: 1, school: 1, news: 1 }, APP_WORDS = new Set(['Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking', 'Meals', 'Orders', 'News']);
+  const KEEP_KINDS = { family: 1, note: 1, travel: 1, meals: 1, orders: 1, school: 1, news: 1, google: 1, gshared: 1 }, APP_WORDS = new Set(['Busy', 'Reminder', 'Note', 'Nudge', 'Reminder · done', 'Flight', 'Hotel', 'Booking', 'Meals', 'Orders', 'News']);
   // a title the app starts ("Pick up · Hertz", "Dinner: Lasagna", "Arrives: Target") is translated up to the colon; the rest stays
   const APP_START = { travel: /^(Pick up|Return) · /, meals: /^(Breakfast|Lunch|Dinner): /, orders: /^(Arrives|Delivery window ends|Pick up by|Return by): / };
   const keep = (x, s) => KEEP_KINDS[x.kind] && !APP_WORDS.has(s) && !(APP_START[x.kind] && APP_START[x.kind].test(s)) ? ' translate="no"' : '';
@@ -149,7 +149,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     win: null,                    // {from, to} ms loaded from iCloud
     occ: [],                      // occurrences in the window (Family + layers)
     lastRefresh: 0, refreshing: false, offline: false,
-    wx: ls.json(K.wx, null), mail: ls.json(K.mail, null), mailState: 'idle', drinks: null, drinksState: 'idle', layers: null, layersState: 'idle',
+    wx: ls.json(K.wx, null), mail: ls.json(K.mail, null), mailState: 'idle', drinks: null, drinksState: 'idle', google: null, googleState: 'idle', layers: null, layersState: 'idle',
   };
   if (!['day', 'week', 'month', 'year', 'list'].includes(st.view)) st.view = 'month';
   const q = new URLSearchParams(location.search);
@@ -166,6 +166,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     school: { name: 'School', color: 'var(--sch)', sub: 'No-school days, from School' },
     news: { name: 'News', color: 'var(--nws)', sub: 'Fixtures of the teams you follow in News' },
     drinks: { name: 'Drinks', color: 'var(--drk)', sub: 'Your drinks and alcohol-free days, seen only by you' },
+    google: { name: 'Personal', color: 'var(--gc)', sub: 'Your own Google calendar, seen only by you' },
+    gshared: { name: 'Shared with you', color: 'var(--gs)', sub: 'Personal calendars the family shares with you' },
     weather: { name: 'Weather', color: 'var(--accent)', sub: 'A forecast on each day' },
   };
   // Vintage draws the Family calendar in Retro mustard (--cal) and every Notes item in Retro plum, so
@@ -264,6 +266,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         if (d.calendar) st.calendar = d.calendar;
         st.api = 'ok';
         saveCache(); rebuild(); render();
+        loadGoogle(false);   // the window may have moved
         if (loud) pillDone('Up to date');
         return true;
       } catch (e) {
@@ -304,6 +307,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (settings.layers.school) out.push(...schoolItems(w));
     if (settings.layers.news) out.push(...newsItems(w));
     if (settings.layers.drinks) out.push(...drinksItems(w));
+    if (settings.layers.google) out.push(...googleItems('google'));
+    if (settings.layers.gshared) out.push(...googleItems('gshared'));
     if (settings.layers.mail && st.mail && Array.isArray(st.mail.items)) out.push(...st.mail.items.filter(x => x.start >= w.from - 31 * D && x.start < w.to).map(x => Object.assign({}, x, { color: LAYER.mail.color })));
     out.sort((a, b) => (b.allDay - a.allDay) || a.start - b.start || (b.end - b.start) - (a.end - a.start));
     st.all = out;   // what Ipsy reads: the Family calendar even while it's hidden here (Calendars), and the layers that are on
@@ -483,6 +488,101 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       out.push(allDayItem('fitness', 'fit|' + date, 'Workout · ' + groups.join(', '), date, null, { sub, link: '../fitness/?date=' + date, notes, icon: 'dumbbell' }));
     }
     return out;
+  }
+
+  // ---- Personal: your own Google calendar, and the family's that are shared with you ----
+  // Read through Calendar's server (functions/calendar/api google/*, server/gcal.js), which keeps each person's
+  // read-only Google sign-in (aOS's, kind 'calendar') and never sends it to a phone. Yours comes in full and only
+  // you see it, unless you turn on Share with the family (Settings > Connected accounts); then the family sees its
+  // titles, places and times, and an event you marked Private in Google only as Busy. Kept in memory only, never in
+  // this app's storage, and not read by Ipsy (ipsy-tools.js knows nothing of these two layers).
+  const GOOGLE_ERR = {
+    expired: 'Your sign-in ran out after 30 days: connect again.',
+    revoked: 'Google ended the sign-in: connect again.',
+    'api-off': 'Google Calendar isn’t turned on for aOS’s Google project yet.',
+    google: 'Couldn’t read Google Calendar just now.',
+  };
+  async function loadGoogle(force) {
+    if (!settings.layers.google && !settings.layers.gshared && !force) return;
+    const acct = window.AllisonOS && AllisonOS.account, tok = acct && acct.token();
+    if (!tok) { st.googleState = 'signin'; return; }
+    const w = st.win || wantedWindow(), g = st.google;
+    if (!force && g && g.win.from <= w.from && g.win.to >= w.to && Date.now() - g.at < 5 * MIN) return;
+    st.googleState = 'loading';
+    try {
+      const r = await fetch(API + 'google/events?start=' + stampZ(w.from) + '&end=' + stampZ(w.to), { headers: { 'X-Calendar': '1', Authorization: 'Bearer ' + tok }, cache: 'no-store' });
+      if (r.status === 401) { st.googleState = 'signin'; return; }
+      if (r.status === 404 || r.status === 503) { st.google = null; st.googleState = 'off'; rebuild(); render(); return; }
+      if (!r.ok) throw new Error('google-' + r.status);
+      const j = await r.json();
+      st.google = { at: Date.now(), win: w, on: !!j.on, mine: j.mine || null, shared: Array.isArray(j.shared) ? j.shared : [] };
+      st.googleState = j.on ? 'ok' : 'off';
+      rebuild(); render();
+    } catch { st.googleState = 'error'; }
+  }
+  // Google's times: a day (all day, the end the day after) or a moment with its offset
+  function googleItem(kind, id, e, extra) {
+    if (!e || typeof e.start !== 'string') return null;
+    const title = String(e.title || 'Busy');
+    if (e.allDay) {
+      if (!isDay(e.start)) return null;
+      return allDayItem(kind, id, title, e.start, isDay(e.end) && e.end > e.start ? e.end : null, extra);
+    }
+    const s = Date.parse(e.start), en = Date.parse(e.end);
+    if (!isFinite(s)) return null;
+    return timedItem(kind, id, title, s, isFinite(en) && en >= s ? en : s, extra);
+  }
+  function googleItems(kind) {
+    const g = st.google; if (!g) return [];
+    const out = [];
+    if (kind === 'google' && g.mine && Array.isArray(g.mine.events)) {
+      for (const e of g.mine.events) {
+        const x = googleItem('google', 'gc|' + e.id + '|' + e.start, e, { sub: String(e.location || ''), notes: String(e.notes || ''), private: !!e.private, gbusy: e.busy !== false, ...(e.link ? { glink: e.link } : {}) });
+        if (x) out.push(x);
+      }
+    }
+    if (kind === 'gshared') for (const p of g.shared) {
+      if (!p || !Array.isArray(p.events)) continue;
+      for (const e of p.events) {
+        const x = googleItem('gshared', 'gs|' + p.who + '|' + e.id + '|' + e.start, e, { sub: String(e.location || ''), who: String(p.who || ''), gbusy: e.busy !== false });
+        if (x) out.push(x);
+      }
+    }
+    return out;
+  }
+  // POST google/share and google/disconnect, signed in
+  async function googlePost(path, body) {
+    const r = await AllisonOS.account.fetch(API + path, { method: 'POST', headers: { 'X-Calendar': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' });
+    if (!r.ok) throw new Error('google-' + r.status);
+    return r.json();
+  }
+  // Connect: Google's sign-in through aOS's server (home/account.js AllisonOS.gmail.start, kind 'calendar'). Google's
+  // page can't open in aOS's frame: the whole aOS window goes, and ../home/welcome.js brings it back (aos.away).
+  async function connectGoogle() {
+    const G = window.AllisonOS && AllisonOS.gmail;
+    const u = G ? await G.start({ kind: 'calendar', back: location.pathname + location.search }).catch(() => null) : null;
+    if (!u) { toast('Couldn’t open Google’s sign-in just now.', null, 5000); return; }
+    let top = null; try { top = window.top !== window && window.top.aosHome ? window.top : null; } catch {}
+    if (!top) return location.replace(u);
+    try { localStorage.setItem('aos.away', 'calendar|' + Date.now()); } catch {}
+    top.location.replace(u);
+  }
+  // back from Google's sign-in: #gcal=kept (or error); the server has it by now
+  { const m = /^#gcal=(kept|error)/.exec(location.hash); if (m) { history.replaceState(null, '', location.pathname + location.search); if (m[1] === 'error') setTimeout(() => toast('Google Calendar wasn’t connected. Allow it to see your calendar, then try again.', null, 6000), 800); } }
+  function googleRows(S) {
+    const g = st.google, mine = g && g.mine;
+    if (st.googleState === 'signin') return [S.info({ id: 'stGcal', title: 'Google Calendar', sub: 'Sign in to your family account first: open aOS.' })];
+    if (st.googleState === 'off' || (g && !g.on)) return [S.info({ id: 'stGcal', title: 'Google Calendar', sub: 'Not set up on aOS’s server yet: the owner turns on Gmail stays signed in.' })];
+    if (!g) return [S.info({ id: 'stGcal', title: 'Google Calendar', sub: st.googleState === 'error' ? 'Couldn’t reach Calendar’s server just now.' : 'Checking now.' })];
+    if (!mine) return [S.action({ id: 'stGcalIn', icon: 'link', title: 'Connect Google Calendar', sub: 'Shows your own calendar here, read-only, seen only by you.' })];
+    if (mine.error && !mine.email) return [S.info({ id: 'stGcal', title: 'Google Calendar', sub: GOOGLE_ERR[mine.error] || GOOGLE_ERR.google }), S.action({ id: 'stGcalIn', icon: 'link', title: 'Connect Google Calendar', sub: 'Shows your own calendar here, read-only, seen only by you.' })];
+    const til = mine.until ? new Date(mine.until).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    return [
+      S.info({ id: 'stGcal', title: 'Google Calendar', sub: mine.error ? (GOOGLE_ERR[mine.error] || GOOGLE_ERR.google) : mine.email + ', read-only' + (til ? ', signed in until ' + til : '') + '.' }),
+      S.toggle({ id: 'stGcalShare', title: 'Share with the family', sub: 'Family members see your events, and only Busy for ones private in Google.', on: !!mine.share }),
+      S.action({ id: 'stGcalIn', icon: 'refresh', title: 'Reconnect or switch Google account' }),
+      S.danger({ id: 'stGcalOut', icon: 'out', title: 'Disconnect Google Calendar', sub: 'Removes it from Calendar here and for the family.' }),
+    ];
   }
 
   // ---- Drinks: each day's standard drinks, or alcohol-free ----
@@ -716,7 +816,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const now = Date.now();
     const tm = x.allDay ? 'all-day' + (x.endDate > addDays(x.startDate, 1) ? '<small>' + esc(fmt(noon(x.startDate), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(addDays(x.endDate, -1)), { day: 'numeric', month: 'short' })) + '</small>' : '')
       : esc(fmtTime(x.start)) + '<small>' + esc(x.end > x.start ? fmtTime(x.end) : '') + '</small>';
-    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : x.kind === 'drinks' ? ICON.glass : x.icon && ICON[x.icon] ? ICON[x.icon] : ICON.flag) + subSpan(x) + '</span>' : '';
+    const sub = x.sub ? '<span class="s">' + (x.kind === 'family' || x.kind === 'google' || x.kind === 'gshared' ? ICON.map : x.kind === 'note' ? ICON.notes : x.kind === 'travel' ? ICON[x.icon || 'plane'] : x.kind === 'mail' ? ICON.mail : x.kind === 'fitness' ? ICON.dumbbell : x.kind === 'drinks' ? ICON.glass : x.icon && ICON[x.icon] ? ICON[x.icon] : ICON.flag) + subSpan(x) + '</span>' : '';
     return '<button class="evrow' + (x.end < now && !opts.noPast ? ' past' : '') + (x.done ? ' done' : '') + '" type="button" data-ev="' + esc(x.id) + '" ' + kindColor(x) + '><span class="tm">' + tm + '</span><span class="bd"><span class="t"' + keep(x, x.title) + '>' + esc(x.title) + '</span>' + sub + '</span></button>';
   }
 
@@ -1117,17 +1217,23 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       if (o.url) rows.push('<a class="kvrow" href="' + esc(/^https?:/i.test(o.url) ? o.url : '#') + '" target="_blank" rel="noopener"><span class="ic">' + ICON.link + '</span><span class="v" translate="no">' + esc(o.url) + '</span><span class="go">' + ICON.ext + '</span></a>');
       if (o.attendees.length || o.organizer) rows.push(kv('people', (o.organizer ? '<span class="att"><i></i><span translate="no">' + esc(o.organizer.name || o.organizer.email) + '</span> <small>organizer</small></span>' : '') + o.attendees.map(a => '<span class="att ' + (a.status === 'ACCEPTED' ? 'yes' : a.status === 'DECLINED' ? 'no' : '') + '"><i></i><span translate="no">' + esc(a.name || a.email) + '</span>' + (a.status && a.status !== 'NEEDS-ACTION' ? ' <small>' + esc(a.status.toLowerCase()) + '</small>' : '') + '</span>').join('')));
       if (o.description) rows.push(kv('notes', '<span translate="no">' + esc(o.description) + '</span>'));
+    } else if (x.kind === 'google' || x.kind === 'gshared') {
+      if (x.kind === 'gshared') rows.push(kv('people', '<span translate="no">' + esc(x.who) + '</span><small>Shared from their own Google calendar</small>'));
+      if (x.sub) rows.push('<a class="kvrow" href="https://maps.apple.com/?q=' + encodeURIComponent(x.sub) + '" target="_blank" rel="noopener"><span class="ic">' + ICON.map + '</span><span class="v"><span translate="no">' + esc(x.sub) + '</span><small>Open in Maps</small></span><span class="go">' + ICON.ext + '</span></a>');
+      if (!x.gbusy) rows.push(kv('busy', 'Shown as free'));
+      if (x.kind === 'google' && x.private) rows.push(kv('lock', 'Private in Google<small>' + (st.google && st.google.mine && st.google.mine.share ? 'The family sees only Busy' : 'Only you see it') + '</small>'));
+      if (x.notes) rows.push(kv('notes', '<span translate="no">' + esc(x.notes) + '</span>'));
     } else {
       if (x.sub) rows.push(kv(x.kind === 'note' ? 'notes' : x.kind === 'travel' ? (x.icon || 'plane') : x.kind === 'mail' ? 'mail' : x.kind === 'fitness' ? 'dumbbell' : x.kind === 'drinks' ? 'glass' : x.icon && ICON[x.icon] ? x.icon : 'flag', subSpan(x)));
       if (x.notes) rows.push(kv('notes', '<span translate="no">' + esc(x.notes) + '</span>'));
     }
-    const cn = fam ? (st.calendar && st.calendar.name || 'Family') : LAYER[x.kind].name;
+    const cn = fam ? (st.calendar && st.calendar.name || 'Family') : x.kind === 'gshared' ? x.who + '’s calendar' : LAYER[x.kind].name;
     $('evBody').innerHTML = '<div class="evhead" style="--c:' + esc(x.color) + '"><span class="cn"' + (fam ? ' translate="no"' : '') + '><i></i>' + esc(cn) + '</span><h3' + (x.done ? ' class="done"' : '') + keep(x, x.title) + '>' + esc(x.title) + '</h3><p class="when">' + whenWords(x) + '</p></div>'
       + (rows.length ? '<div class="rgroup glass">' + rows.join('') + '</div>' : '')
       + (fam ? '<div class="actrow"><button class="btn quiet danger" type="button" id="evDelete">Delete Event</button></div>'
-        : '<div class="rgroup glass">' + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '</span></a>' : '')
+        : '<div class="rgroup glass">' + (x.glink ? '<a class="rowbtn" href="' + esc(x.glink) + '" target="_blank" rel="noopener"><span class="ic">' + ICON.ext + '</span><span>Open in Google Calendar</span></a>' : '') + (x.link ? '<a class="rowbtn" href="' + esc(x.link) + '"><span class="ic">' + ICON.ext + '</span><span>Open in ' + esc(LAYER[x.kind].name) + '</span></a>' : '')
           + (x.kind === 'note' && /^todo\|/.test(x.id) ? '<button class="rowbtn" type="button" id="evDone"><span class="ic">' + ICON.tick + '</span><span>' + (x.done ? 'Mark as not done' : 'Mark as done') + '</span></button>' : '')
-          + (x.kind !== 'family' && x.kind !== 'drinks' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar</span></button>' : '') + '</div>');
+          + (x.kind !== 'family' && x.kind !== 'drinks' && x.kind !== 'gshared' && st.api === 'ok' ? '<button class="rowbtn" type="button" id="evCopy"><span class="ic">' + ICON.cal + '</span><span>Add to the Family calendar</span></button>' : '') + '</div>');
     $('evActs').innerHTML = (fam && st.api === 'ok' ? '<button class="textbtn" type="button" id="evEdit">Edit</button>' : '') + '<button class="iconbtn" type="button" data-close aria-label="Done">' + ICON.close + '</button>';
     openSheet('evSheet');
     const del = $('evDelete'); if (del) del.onclick = () => deleteEvent(x);
@@ -1176,7 +1282,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       let rule = x.kind === 'family' ? rruleOf(x) : '';
       // A rule with COUNT or UNTIL gets its end from the form's own end fields.
       const r = rule ? I.parseRRule(rule) : null;
-      return { title: x.title === 'New Event' ? '' : x.title, location: x.kind === 'family' ? o.location : (x.kind === 'travel' ? x.sub : ''), allDay: !!x.allDay,
+      return { title: x.title === 'New Event' ? '' : x.title, location: x.kind === 'family' ? o.location : (x.kind === 'travel' || x.kind === 'google' || x.kind === 'gshared' ? x.sub : ''), allDay: !!x.allDay,
         start: x.start, end: x.allDay ? Math.max(x.start + D, x.end) : Math.max(x.start + 15 * MIN, x.end), tz: (x.kind === 'family' && o.tzid && o.tzid !== 'UTC' && I.validTz(o.tzid)) ? o.tzid : TZ,
         rule: r ? I.fmtRRule(Object.assign({}, r, { COUNT: undefined, UNTIL: undefined })) : '', ruleEnd: r && r.COUNT ? { type: 'count', count: r.COUNT } : r && r.UNTIL ? { type: 'date', date: ymdOf(r.UNTIL) } : { type: 'never' },
         alarms, travel: o.travel || 0, transp: o.transp === 'TRANSPARENT' ? 'TRANSPARENT' : 'OPAQUE', url: o.url || '', notes: x.kind === 'family' ? (o.description || '') : (x.notes || ''), private: isPrivate(x) };
@@ -1494,14 +1600,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   }
   // Every calendar's switch, the Family calendar first: Settings > Calendars and the Calendars sheet (the button
   // beside Search) draw the same rows, and a tap in either does the same (toggleLayer). Kept on this phone.
-  const LAYER_ORDER = ['holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'school', 'news', 'drinks', 'weather'];
+  const LAYER_ORDER = ['google', 'gshared', 'holiday', 'note', 'travel', 'mail', 'fitness', 'meals', 'orders', 'school', 'news', 'drinks', 'weather'];
   const layerKey = k => ({ holiday: 'holidays', note: 'notes' }[k] || k);
   // each calendar's name with its colour beside it, as on the page
   const named = (name, color, id) => '<i class="st-dot"' + (id ? ' id="' + id + '"' : '') + ' style="--c:' + esc(color) + '" aria-hidden="true"></i><span translate="no">' + esc(name) + '</span>';
   function calendarRows(S, notes = {}) {
     const fam = S.toggle({ html: true, title: named(st.calendar && st.calendar.name || 'Family', calColor(), 'stFamily'), sub: 'iCloud, shared with the family.', on: settings.layers.family !== false, data: { layer: 'family' } });
     return [fam, ...LAYER_ORDER.map(k => {
-      const note = k === 'mail' && notes.mailNote ? notes.mailNote : k === 'weather' && notes.wxNote ? notes.wxNote : k === 'drinks' && notes.drinksNote ? notes.drinksNote : k === 'holiday' || !notes.mailNote ? LAYER[k].sub : layerNote(k);
+      const note = k === 'mail' && notes.mailNote ? notes.mailNote : k === 'weather' && notes.wxNote ? notes.wxNote : k === 'drinks' && notes.drinksNote ? notes.drinksNote : k === 'google' && notes.googleNote ? notes.googleNote : k === 'gshared' && notes.gsharedNote ? notes.gsharedNote : k === 'holiday' || !notes.mailNote ? LAYER[k].sub : layerNote(k);
       return S.toggle({ html: true, title: named(LAYER[k].name, LAYER[k].color), sub: esc(sentence(note)), on: !!settings.layers[layerKey(k)], data: { layer: layerKey(k) } });
     })];
   }
@@ -1516,6 +1622,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function toggleLayer(k, on = k === 'family' ? settings.layers.family === false : !settings.layers[k]) {
     settings.layers[k] = on; saveSettings();
     if (LAYER_APPS.includes(k) && on) loadLayers(true).then(() => { if (k === 'mail') return loadMail(true); }).then(() => { renderSettings(); renderCalendars(); });
+    if ((k === 'google' || k === 'gshared') && on) loadGoogle(true).then(() => { renderSettings(); renderCalendars(); });
     if (k === 'drinks') { if (on) loadDrinks(true).then(() => { renderSettings(); renderCalendars(); }); else st.drinks = null; }
     if (k === 'weather' && on) loadWeather(true);
   }
@@ -1539,9 +1646,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function renderSettings() {
     const S = AllisonOS.settings, G = window.AllisonOS.calendarGmail;
     const mailNote = !settings.layers.mail ? LAYER.mail.sub : st.mailState === 'signin' ? 'Sign in to your family account first: open aOS.' : st.mailState === 'no-copy' || st.mailState === 'no-token' ? 'Open Mail once, signed in, to show it here' : st.mailState === 'error' ? 'Couldn’t read Gmail just now.' : st.mailState === 'loading' ? 'Reading…' : (st.mail ? plural(st.mail.items.length, 'reminder') : LAYER.mail.sub);
+    const gmine = st.google && st.google.mine, gshared = st.google ? st.google.shared.filter(p => p && p.who) : [];
+    const googleNote = !settings.layers.google ? LAYER.google.sub : gmine && gmine.email && !gmine.error ? (gmine.share ? 'Your Google calendar, shared with the family' : LAYER.google.sub) : 'Connect it in Connected accounts, below';
+    const gsharedNote = !settings.layers.gshared ? LAYER.gshared.sub : gshared.length ? 'From ' + gshared.map(p => p.who).join(', ') + (gshared.some(p => p.error) ? ' (some couldn’t be read just now)' : '') : 'Nobody shares one with you yet';
     const drinksNote = !settings.layers.drinks ? LAYER.drinks.sub : st.drinksState === 'signin' ? 'Sign in to your family account first: open Drinks or aOS.' : st.drinksState === 'off' ? 'Family accounts aren’t switched on yet.' : st.drinksState === 'error' ? 'Couldn’t read your log just now.' : st.drinksState === 'loading' ? 'Reading…' : LAYER.drinks.sub;
     const wxNote = !settings.layers.weather ? LAYER.weather.sub : st.wx && st.wx.denied ? 'Location was refused; allow it for this site to see the forecast.' : st.wx && st.wx.days ? 'Forecast for the next 16 days' : 'Fetching…';
-    const layers = calendarRows(S, { mailNote, drinksNote, wxNote });
+    const layers = calendarRows(S, { mailNote, drinksNote, wxNote, googleNote, gsharedNote });
     const last = st.lastRefresh;
     $('stBody').innerHTML = (window.aosDesign ? S.section('Design', S.raw(aosDesign.picker(), { id: 'stDesign' })) : '')
       + S.section('Calendars', layers)
@@ -1560,6 +1670,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.info({ id: 'stICloud', title: 'iCloud', sub: icloudLine() }),
         S.action({ id: 'stRefresh', icon: 'refresh', title: 'Check now', sub: last ? 'Last checked ' + ago(last) + '.' : 'Not checked yet.' }),
         st.api === 'error' || st.api === 'ok' ? S.action({ id: 'stForget', icon: 'link', title: 'Look up the calendar again', sub: 'If the Family calendar was renamed or moved.' }) : '',
+        ...googleRows(S),   // your own Google calendar (loadGoogle)
         ...(G ? G.accounts(S) : []),   // Gmail for Ipsy (ipsy-gmail.js)
       ])
       + S.section('AI helper', [S.claude('calendar'), ...(G ? G.ipsy(S) : [])]);
@@ -1578,7 +1689,20 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const G = window.AllisonOS.calendarGmail, g = G && b.dataset.gmail && G.click(b, S);
     if (g) { if (g !== 'armed') renderSettings(); return; }
     if (b.dataset.layer) { toggleLayer(b.dataset.layer); rebuild(); render(); renderSettings(); calBadge(); return; }
-    if (b.id === 'stRefresh') { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadWeather(true); }); }
+    if (b.id === 'stGcalIn') { connectGoogle(); return; }
+    if (b.id === 'stGcalShare') {
+      const on = S.flip(b);
+      googlePost('google/share', { share: on }).then(j => { if (st.google && st.google.mine) st.google.mine.share = !!j.share; toast(j.share ? 'Your Google calendar is shared with the family.' : 'Your Google calendar is yours alone again.'); })
+        .catch(() => { toast('Couldn’t change that just now.', null, 5000); }).then(renderSettings);
+      return;
+    }
+    if (b.id === 'stGcalOut') {
+      if (!S.armed(b, 'Tap again to disconnect')) return;
+      googlePost('google/disconnect').then(() => { st.google = null; rebuild(); render(); toast('Google Calendar disconnected.'); return loadGoogle(true); })
+        .catch(() => toast('Couldn’t disconnect just now.', null, 5000)).then(renderSettings);
+      return;
+    }
+    if (b.id === 'stRefresh') { closeSheet('setSheet'); st.api = st.api === 'ok' ? 'ok' : 'checking'; ping().then(() => { render(); refresh({ loud: true, force: true }); loadLayers(true).then(() => loadMail(true)); loadDrinks(true); loadGoogle(true).then(renderSettings); loadWeather(true); }); }
     else if (b.id === 'stForget') (async () => { try { await api('forget', { method: 'POST' }); } catch {} closeSheet('setSheet'); st.api = 'checking'; render(); await ping(); render(); refresh({ loud: true, force: true }); })();
   });
   $('stBody').addEventListener('change', e => {
@@ -1590,7 +1714,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else return;
     saveSettings();
   });
-  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); };
+  $('setBtn').onclick = () => { renderSettings(); openSheet('setSheet'); if (!st.google && st.googleState !== 'loading') loadGoogle(true).then(renderSettings); };
   // Calendars: which to show on this phone, a tap away (the same switches as Settings > Calendars)
   $('calBtn').onclick = () => { renderCalendars(true); openSheet('calSheet'); };
   $('calBody').addEventListener('click', e => {
@@ -1627,8 +1751,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   rebuild();
   render();
   ping().then(() => { render(); refresh({ loud: st.items.size === 0, force: true }); });
-  loadLayers(false).then(() => loadMail(false)); loadDrinks(false); loadWeather(false);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); loadLayers(false).then(() => loadMail(false)); loadDrinks(false); loadWeather(false); if (st.view === 'day' || st.view === 'week') placeNow(); } });
+  loadLayers(false).then(() => loadMail(false)); loadDrinks(false); loadGoogle(false); loadWeather(false);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); loadLayers(false).then(() => loadMail(false)); loadDrinks(false); loadGoogle(false); loadWeather(false); if (st.view === 'day' || st.view === 'week') placeNow(); } });
   setInterval(() => { if (document.visibilityState !== 'visible') return; if (Date.now() - st.lastRefresh > REFRESH_MS) refresh(); if (st.view === 'day' || st.view === 'week') placeNow(); }, MIN);
   window.addEventListener('resize', () => { const tv = $('timeview'); if (tv) afterRender(); });
   // "Updated" pill, once, when a new version arrives (as in Notes and Travel).
@@ -1657,7 +1781,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         I, TZ, st, settings, LAYER, eventsOn, matches, isPrivate, layerData, refresh, rebuild, render, goTo, writeEvent, writeItem, deleteFile, written, formFrom,
         ymd, dayMs, addDays, today, fmtTime, longDate, medDate, wxFor, busyPill, toast, errText,
         calendarName: () => st.calendar && st.calendar.name || 'Family',
-        screen: () => (!$('evSheet').hidden && shown && isPrivate(shown) ? 'a private event, over ' : !$('evSheet').hidden && shown ? 'the event “' + shown.title + '” (' + (shown.kind === 'family' ? 'id ' + shown.name : LAYER[shown.kind].name) + '), over ' : '')
+        screen: () => (!$('evSheet').hidden && shown && (isPrivate(shown) || shown.kind === 'google' || shown.kind === 'gshared') ? 'a private event, over ' : !$('evSheet').hidden && shown ? 'the event “' + shown.title + '” (' + (shown.kind === 'family' ? 'id ' + shown.name : LAYER[shown.kind].name) + '), over ' : '')
           + (st.searching ? 'search results for “' + st.search + '”' : 'the ' + VIEW_NAMES[st.view] + ' view, ' + (st.view === 'day' ? longDate(st.sel) : st.view === 'year' ? st.sel.slice(0, 4) : st.view === 'week' ? 'the week of ' + medDate(weekStartOf(st.sel)) : MONTHS[+st.sel.slice(5, 7) - 1] + ' ' + st.sel.slice(0, 4))),
       }),
     });

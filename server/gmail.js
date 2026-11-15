@@ -12,6 +12,9 @@
 //   - Disconnect (POST gmail/disconnect) revokes it at Google and deletes it; so does leaving the family (forget);
 //   - off until GOOGLE_CLIENT_SECRET is set (and the consent screen is In production, or Google ends the refresh
 //     token after 7 days): until then the apps sign in on the phone, as before.
+//   - Google Calendar too (kind 'calendar', calendar.readonly): Calendar's personal calendar (server/gcal.js). Its
+//     sign-in comes back here the same way but is kept on its own (gc:<user>, one account), never in the Gmail list,
+//     and goes back with #gcal= rather than #gmail=, so the apps' Gmail sign-ins never take it for theirs.
 //
 // Kept in the accounts' KV:
 //   gm:<user>            [{ email, kind, at, sealed }]  one entry an account and kind ('read' or 'modify'), at most 4
@@ -23,7 +26,8 @@ import { getJSON, putJSON, rand, b64u, unb64u } from './auth.js';
 
 export const DAYS = 30;
 export const CLIENT_ID = '804406956056-e91hbdndc4cqgerh9sffl9fmt76nfpua.apps.googleusercontent.com';   // Mail's (mail/app.js)
-export const SCOPES = { read: 'https://www.googleapis.com/auth/gmail.readonly', modify: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.settings.basic' };
+export const SCOPES = { read: 'https://www.googleapis.com/auth/gmail.readonly', modify: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.settings.basic', calendar: 'https://www.googleapis.com/auth/calendar.readonly' };
+export const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth', TOKEN = 'https://oauth2.googleapis.com/token', REVOKE = 'https://oauth2.googleapis.com/revoke';
 const PROFILE = 'https://gmail.googleapis.com/gmail/v1/users/me/profile';
 const MAX = 4, STATE_SECS = 600;
@@ -74,12 +78,14 @@ export const clearCookie = COOKIE + '=; Path=/aOS/api/gmail; HttpOnly; Secure; S
 export async function finish(db, env, site, params, nonce = '', f = fetch) {
   const state = params.get('state') || '', st = state && await getJSON(db, 'gmst:' + state);
   if (st) await db.delete('gmst:' + state);
-  const go = (ok, extra = '') => ({ to: site + (st ? st.back : '/aOS/') + '#gmail=' + (ok ? 'kept' : 'error') + extra });
+  const cal = !!st && st.kind === 'calendar';
+  const go = (ok, extra = '') => ({ to: site + (st ? st.back : '/aOS/') + (cal ? '#gcal=' : '#gmail=') + (ok ? 'kept' : 'error') + extra });
   if (!st || params.get('error') || !params.get('code')) return go(false);
   if (!nonce || nonce !== st.nonce) return go(false);   // not the phone that started this sign-in
   const r = await post(f, TOKEN, { code: params.get('code'), client_id: clientId(env), client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: back(site), grant_type: 'authorization_code' });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.refresh_token || !j.access_token) return go(false);
+  if (cal) return go(await keepCalendar(db, env, st.uid, j, f));
   const p = await f(PROFILE, { headers: { Authorization: 'Bearer ' + j.access_token } });
   const email = p.ok ? ((await p.json().catch(() => ({}))).emailAddress || '') : '';
   if (!email) { await post(f, REVOKE, { token: j.refresh_token }).catch(() => {}); return go(false); }
@@ -89,6 +95,30 @@ export async function finish(db, env, site, params, nonce = '', f = fetch) {
   await putJSON(db, 'gm:' + st.uid, list.slice(0, MAX));
   return go(true, '&acct=' + encodeURIComponent(email));
 }
+
+// Google Calendar's sign-in (kind 'calendar'): the address is the primary calendar's id. Only a key that can read
+// the calendar is kept (Google lets a person untick it on the consent page); one account a person, so another
+// replaces it (revoked). Sharing with the family stays as it was for the same account, and starts off for a new one.
+async function keepCalendar(db, env, uid, j, f) {
+  const granted = String(j.scope || '').split(/\s+/);
+  const p = granted.includes(SCOPES.calendar) ? await f(CALENDAR_API + '/calendars/primary', { headers: { Authorization: 'Bearer ' + j.access_token } }) : null;
+  const email = p && p.ok ? String((await p.json().catch(() => ({}))).id || '') : '';
+  if (!email) { await post(f, REVOKE, { token: j.refresh_token }).catch(() => {}); return false; }
+  const was = await getJSON(db, 'gc:' + uid), same = !!was && sameEmail(was.email, email);
+  if (was && !same) await revoke(env, was, f);
+  await putJSON(db, 'gc:' + uid, { email, at: Date.now(), sealed: await seal(env, j.refresh_token), share: same && !!was.share });
+  await db.delete('gct:' + uid);   // the hour-long key of the account before (server/gcal.js)
+  return true;
+}
+// An hour-long key from a kept refresh token: { token, exp, scope } or { error: 'revoked' | 'google' }
+export async function renew(env, sealedToken, now = Date.now(), f = fetch) {
+  let rt; try { rt = await unseal(env, sealedToken); } catch { return { error: 'revoked' }; }
+  const r = await post(f, TOKEN, { refresh_token: rt, client_id: clientId(env), client_secret: env.GOOGLE_CLIENT_SECRET, grant_type: 'refresh_token' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) return { error: j.error === 'invalid_grant' ? 'revoked' : 'google' };
+  return { token: j.access_token, exp: now + Math.max(60, (+j.expires_in || 3600) - 60) * 1000, scope: j.scope || '' };
+}
+export { revoke };
 
 async function revoke(env, x, f = fetch) { try { await post(f, REVOKE, { token: await unseal(env, x.sealed) }); } catch {} }
 

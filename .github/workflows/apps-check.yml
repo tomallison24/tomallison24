@@ -40,7 +40,7 @@ jobs:
       # Meals: the server (the allergy check above all) and its sums
       - run: node meals/scripts/api-test.mjs && node notes/scripts/ipsy-api-test.mjs && node meals/scripts/logic-test.mjs && node notes/scripts/aisles-test.mjs && node news/scripts/ai-test.mjs
       # each app's own server and logic tests: plain Node, no network
-      - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/ical-test.mjs
+      - run: node calendar/scripts/access-test.mjs && node calendar/scripts/api-test.mjs && node calendar/scripts/google-test.mjs && node calendar/scripts/ical-test.mjs
       - run: node drinks/scripts/calc-test.mjs && node drinks/scripts/sheet-test.mjs && node notes/scripts/sheet-test.mjs && node fitness/scripts/analysis-test.mjs && node fitness/scripts/sheet-test.mjs && node fitness/scripts/meds-test.mjs && node fitness/scripts/steps-api-test.mjs && node fitness/scripts/ipsy-api-test.mjs && node fitness/scripts/health-api-test.mjs && node fitness/scripts/health-status-test.mjs && node fitness/scripts/vitals-alert-test.mjs && node travel/scripts/sheet-test.mjs
       - run: node mail/scripts/push-test.mjs && node places/scripts/parse-test.mjs && node travel/scripts/api-test.mjs && node travel/scripts/parse-test.mjs && node travel/scripts/reader-version-test.mjs && node orders/scripts/parse-test.mjs && node orders/scripts/api-test.mjs && node orders/scripts/sheet-test.mjs && node meals/scripts/sheet-test.mjs && node podcasts/scripts/sheet-test.mjs && node podcasts/scripts/api-test.mjs && node improve/scripts/sheet-test.mjs
       # Clock: when alarms ring, the sleep schedule, zones, laps, the sounds
@@ -174,10 +174,11 @@ jobs:
               orders/scripts/ipsy-test.mjs
               news/scripts/ipsy-test.mjs
               aOS/scripts/ipsy-settings-test.mjs
-          # Ipsy in Calendar and Notes; Mail's two designs; Money
+          # Ipsy in Calendar and Notes; your own Google calendar in Calendar; Mail's two designs; Money
           - group: calendar-ipsy
             tests: |
               calendar/scripts/ipsy-test.mjs
+              calendar/scripts/google-app-test.mjs
               notes/scripts/ipsy-test.mjs
               mail/scripts/design-test.mjs
               money/scripts/app-test.mjs
