@@ -14,7 +14,7 @@
 // - Spend them (the Upgrades sheet): lights, turn arrows, smart sensors, right turn on red, turn lanes, new
 //   junctions, and city-wide upgrades. Lights run on their own; tapping a phase takes over for a while.
 // - Saved on this phone only: junction.save.v4 (coins, the clock, the junctions and upgrades), and
-//   junction.view, junction.daylen and junction.hold (Settings).
+//   junction.view and junction.daylen (Settings).
 
 // Refuse to run inside another site's frame; this same site may (aOS opens it in one).
 if (window.top !== window.self && (() => { try { return window.top.location.origin !== location.origin; } catch { return true; } })()) {
@@ -115,13 +115,12 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   ];
 
   // ---------- game state ----------
-  let G = null, view = 'normal', speed = 1, hold = 20, dayMin = 16, paused = false, MAIN = 'EW', EXT = { hx: 800, hy: 400 };
+  let G = null, view = 'normal', speed = 1, dayMin = 16, paused = false, MAIN = 'EW', EXT = { hx: 800, hy: 400 };
   try { const d = +localStorage.getItem('junction.daylen'); if ([10, 16, 24].includes(d)) dayMin = d; } catch (e) {}
   try { const v = localStorage.getItem('junction.view'); if (VIEWS[v]) view = v; } catch (e) {}
-  try { const h = localStorage.getItem('junction.hold'); if (h != null && [0, 10, 20, 40].includes(+h)) hold = +h; } catch (e) {}
 
   function newSite(id, off) {
-    return { id, off, cx: 0, cy: 0, active: id === 'A', up: {}, ctrl: { phase: 0, target: null, stage: 'G', t: 0 }, manualUntil: -1,
+    return { id, off, cx: 0, cy: 0, active: id === 'A', up: { lights: true }, auto: true, ctrl: { phase: 0, target: null, stage: 'G', t: 0 },
       lanes: {}, res: {}, mv: {}, sides: [] };
   }
   function newGame(save) {
@@ -133,7 +132,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       G.city = save.city || {};
       Object.assign(G, { T: save.T || 0, progress: save.progress ?? save.T ?? 0, coins: save.coins || 0, cleared: save.cleared || 0, lost: save.lost || 0, clock: save.clock ?? 10, day: save.day || 1 });
       G.nextSurge = G.T + 40;
-      for (const s of G.sites) { const ss = save.sites && save.sites[s.id]; if (ss) { s.active = !!ss.active; s.up = ss.up || {}; } }
+      for (const s of G.sites) { const ss = save.sites && save.sites[s.id]; if (ss) { s.active = !!ss.active; s.up = { ...(ss.up || {}), lights: true }; s.auto = ss.auto !== false; } }
       G.level = levelAt(G.progress);
     }
     syncSites();
@@ -396,7 +395,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!hasLights(s)) return;
     const c = s.ctrl;
     c.t += dt;
-    const manual = s.manualUntil === Infinity || G.T < s.manualUntil;
+    const manual = !s.auto;   // Auto off: the lights hold what you last picked
     if (!manual && c.stage === 'G') {
       const ph = phasesOf(s);
       if (!ph.includes(c.phase)) request(s, 0);
@@ -627,7 +626,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function save() {
     if (G.demo) return;
     const sites = {};
-    for (const s of G.sites) sites[s.id] = { active: s.active, up: s.up };
+    for (const s of G.sites) sites[s.id] = { active: s.active, up: s.up, auto: s.auto };
     try { localStorage.setItem('junction.save.v4', JSON.stringify({ T: G.T, progress: G.progress, city: G.city, clock: G.clock, day: G.day, coins: G.coins, cleared: G.cleared, lost: G.lost, sites })); } catch (e) {}
   }
   function loadSave() { try { return JSON.parse(localStorage.getItem('junction.save.v4') || 'null'); } catch (e) { return null; } }
@@ -643,14 +642,13 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const s = site(siteId), u = UPG.find(x => x.id === upId);
     if (!s || !s.active || !u || !canBuy(s, u).ok) return false;
     G.coins -= u.cost; s.up[u.id] = true;
-    if (u.id === 'lights') { s.ctrl = { phase: 0, target: null, stage: 'G', t: 0 }; s.manualUntil = -1; }
     save(); renderPanel();
     return () => { if (!s.up[u.id]) return; delete s.up[u.id]; G.coins += u.cost; save(); renderPanel(); };   // Undo: the coins back
   }
   function buySite(id) {
     const s = site(id);
     if (!s || s.active || id !== nextForSale() || G.coins < SITE_COST[id]) return false;
-    G.coins -= SITE_COST[id]; s.active = true; s.up = { lights: true }; s.ctrl = { phase: 0, target: null, stage: 'G', t: 0 }; s.manualUntil = -1;
+    G.coins -= SITE_COST[id]; s.active = true; s.up = { lights: true }; s.auto = true; s.ctrl = { phase: 0, target: null, stage: 'G', t: 0 };
     syncSites(); buildWorld(); fitView();
     save(); selectSite(id); return true;
   }
@@ -1009,7 +1007,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       S.section('', S.info({ id: 'shopCoins', title: 'You have ' + coins(Math.floor(G.coins)) }))
       + S.section('Junction ' + s.id, [
         open.length > 1 ? S.select({ id: 'shopPick', title: 'Junction', options: open.map(id => [id, 'Junction ' + id]), value: s.id }) : '',
-        ...UPG.map(u => { const c = canBuy(s, u); return row('up', u.id, u, c.why === 'owned', c.why && c.why !== 'cost' && c.why !== 'owned' ? c.why : ''); }),
+        ...UPG.filter(u => u.id !== 'lights').map(u => {   // every junction comes with lights
+           const c = canBuy(s, u); return row('up', u.id, u, c.why === 'owned', c.why && c.why !== 'cost' && c.why !== 'owned' ? c.why : ''); }),
       ])
       + S.section('Road network', BUY_ORDER.map(id => {
         const t = site(id), k = SITE_DEF[id], prev = BUY_ORDER[BUY_ORDER.indexOf(id) - 1];
@@ -1040,7 +1039,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         S.choice({ id: 'stView', title: 'View', sub: 'Wide shows longer roads, so more cars can queue.', options: [['close', 'Close'], ['normal', 'Normal'], ['wide', 'Wide']], value: view }),
         S.choice({ id: 'stSpeed', title: 'Game speed', options: [['1', '×1'], ['2', '×2'], ['3', '×3']], value: String(speed) }),
         S.choice({ id: 'stDay', title: 'Length of a day', sub: 'Real minutes for a whole day, rush hours and all.', options: [['10', '10 min'], ['16', '16 min'], ['24', '24 min']], value: String(dayMin) }),
-        S.select({ id: 'stHold', title: 'Manual override', sub: 'How long the lights stay yours after you tap a phase.', options: [['10', '10 seconds'], ['20', '20 seconds'], ['40', '40 seconds'], ['0', 'Until you say']], value: String(hold) }),
       ], { value: VIEW_NAMES[view] })
       + S.section('Your data', [
         S.info({ title: 'Saved on this phone', sub: 'Your coins, upgrades and junctions save as you play.' }),
@@ -1064,7 +1062,6 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       closeSheet('moreSheet'); startGame(null); toast('A new game, from 10:00 on day 1.');
     }
   });
-  $('moreBody').addEventListener('change', e => { if (e.target.id === 'stHold') { hold = +e.target.value; store('junction.hold', String(hold)); } });
   $('moreBtn').addEventListener('click', () => { renderMore(); openSheet('moreSheet'); });
   $('jShop').addEventListener('click', () => { shopSite = G.selected; renderShop(); openSheet('shopSheet'); });
 
@@ -1077,29 +1074,31 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     $('jPhases').hidden = !lights;
     $('ph1').hidden = $('ph3').hidden = !s.up.filters;
     $('jPhases').classList.toggle('two', lights && !s.up.filters);
-    $('jMode').hidden = !lights;
+    $('jAutoBox').hidden = !lights;
     const has = UPG.filter(u => s.up[u.id] && u.id !== 'lights').map(u => u.name[0].toLowerCase() + u.name.slice(1));
-    $('jNote').textContent = (lights ? 'Tap a phase to take over the lights.' : `Cars stop, then go in the order they came. Traffic lights are ${coins(UPG[0].cost)} in Upgrades.`)
+    $('jNote').textContent = (lights ? (s.auto ? 'The lights change by themselves. Tap a phase to set them yourself.' : 'Auto is off: the lights stay as you set them until you turn it back on.') : 'Cars stop, then go in the order they came.')
       + (has.length ? ' Has ' + has.join(', ') + '.' : '');
     updatePanelLive(); placeToast();
   }
   function updatePanelLive() {
     const s = site(G.selected); if (!s || !s.up.lights) return;
-    const manual = s.manualUntil === Infinity || G.T < s.manualUntil, m = $('jMode');
-    m.className = 'tagp ' + (manual ? 'manual' : 'auto');
-    m.textContent = manual ? (s.manualUntil === Infinity ? 'Manual' : `Manual · auto in ${Math.ceil(s.manualUntil - G.T)}s`) : 'Auto';
-    $('jAuto').hidden = !manual;
+    const sw = $('jAutoSw');
+    if (sw.getAttribute('aria-checked') !== String(!!s.auto)) sw.setAttribute('aria-checked', String(!!s.auto));
+    sw.setAttribute('aria-label', 'Auto lights at junction ' + s.id);
     for (let i = 0; i < 4; i++) { const el = $('ph' + i); el.classList.toggle('on', s.ctrl.stage === 'G' && s.ctrl.phase === i); el.classList.toggle('next', s.ctrl.target === i); }
   }
   function takeOver(p) {
     const s = site(G.selected);
     if (!s || !s.up.lights || !phasesOf(s).includes(p) || !playing()) return;
-    s.manualUntil = hold ? G.T + hold : Infinity;
-    request(s, p); updatePanelLive();
+    if (s.auto) { s.auto = false; renderPanel(); toast(`Auto is off at junction ${s.id}: the lights are yours.`); }   // a tap takes over until Auto goes back on
+    request(s, p); updatePanelLive(); save();
   }
-  function backToAuto() { const s = site(G.selected); if (s) s.manualUntil = -1; updatePanelLive(); }
+  function setAuto(on) {
+    const s = site(G.selected); if (!s || !s.up.lights) return;
+    s.auto = on; renderPanel(); save();
+  }
   for (const b of document.querySelectorAll('.phase')) b.addEventListener('click', () => takeOver(+b.dataset.p));
-  $('jAuto').addEventListener('click', backToAuto);
+  $('jAutoSw').addEventListener('click', () => setAuto(!site(G.selected).auto));
 
   // ---- the stats along the top ----
   const SUN = 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM11 1h2v3h-2zM11 20h2v3h-2zM1 11h3v2H1zM20 11h3v2h-3zM4.2 5.6l1.4-1.4 2.1 2.1-1.4 1.4zM16.3 17.7l1.4-1.4 2.1 2.1-1.4 1.4zM4.2 18.4l2.1-2.1 1.4 1.4-2.1 2.1zM16.3 6.3l2.1-2.1 1.4 1.4-2.1 2.1z';
@@ -1199,7 +1198,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (k === 'escape') { const w = [...document.querySelectorAll('.sheetwrap')].reverse().find(x => !x.hidden); if (w) closeSheet(w.id); return; }
     if (anyOpen() || !playing()) return;
     if (['1', '2', '3', '4'].includes(k)) takeOver(+k - 1);
-    else if (k === 'a') backToAuto();
+    else if (k === 'a') setAuto(!site(G.selected).auto);
     else if (k === 'j') { const open = G.sites.filter(s => s.active).map(s => s.id); selectSite(open[(open.indexOf(G.selected) + 1) % open.length]); }
     else if (k === 'u') $('jShop').click();
     else if (k === 'p') $('bPause').click();

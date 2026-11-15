@@ -207,6 +207,8 @@ html,body{height:100%;overflow:hidden}
 .tagp.auto{color:var(--accent-text);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 50%,transparent)}
 .tagp.manual{color:var(--flag);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--flag) 55%,transparent)}
 .grow{flex:1}
+.autobox{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 4px}
+.autolbl{font-size:14px;font-weight:600;color:var(--text)}
 .jnote{margin:0;padding:0 4px;color:var(--muted);font-size:13px}
 .phases{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .phases.two{grid-template-columns:1fr 1fr}
@@ -429,9 +431,8 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
     <div class="jrow">
       <span class="jname" id="jName">Junction A</span>
       <span class="tagp" id="jCtrl">Stop signs</span>
-      <span class="tagp" id="jMode" hidden>Auto</span>
       <span class="grow"></span>
-      <button class="btn" id="jAuto" type="button" hidden>Back to auto</button>
+      <span class="autobox" id="jAutoBox"><span class="autolbl" aria-hidden="true">Auto</span><button type="button" class="st-sw" role="switch" aria-checked="true" id="jAutoSw" aria-label="Auto lights at junction A"><i aria-hidden="true"></i><span class="st-hit" aria-hidden="true"></span></button></span>
       <button class="btn cta" id="jShop" type="button">Upgrades</button>
     </div>
     <div class="phases" id="jPhases" hidden>

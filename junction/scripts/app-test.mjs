@@ -1,7 +1,7 @@
 // Drives Junction in headless Chromium at iPhone size (390 x 844): the start card over a working junction,
 // a new game, the stats along the top, the junction's panel, Settings (Design first, the game's own, Your
 // data with a danger row that asks again), Upgrades as a sheet (buying with Undo, a junction that asks first),
-// the lights taken over by a tap and going back to auto, the save and Continue, Vintage and Standard in light
+// a tap on a phase turning Auto off and the lights staying put, each junction's own Auto switch, the save and Continue, Vintage and Standard in light
 // and dark, and a long run of the game with every upgrade bought: no car stays stuck, no two crossing paths
 // are in a junction's box at once, coins come in and traffic grows. Nothing trips the page's Content Security
 // Policy. Screenshots go to the folder given as the second argument.
@@ -63,7 +63,7 @@ async function phone({ scheme = 'light', design = null, seed = {} } = {}) {
 }
 const shot = async (p, name) => { if (SHOTS) await p.screenshot({ path: path.join(SHOTS, name + '.png') }); };
 
-await check('the start card sits over a working junction; New game starts at 10:00 on day 1 with 80 coins', async () => {
+await check('the start card sits over a working junction; New game starts at 10:00 on day 1 with 80 coins and lights at A', async () => {
   const { ctx, p } = await phone();
   assert.ok(await p.isVisible('#startCard'));
   assert.ok(await p.isVisible('#bNew'));
@@ -76,7 +76,9 @@ await check('the start card sits over a working junction; New game starts at 10:
   const g = await p.evaluate(() => { const G = window.__junction.state(); return { coins: G.coins, clock: G.clock, day: G.day, demo: G.demo }; });
   assert.equal(g.demo, false); assert.equal(g.day, 1); assert.ok(g.clock >= 10 && g.clock < 10.2, 'starts at 10:00'); assert.ok(g.coins >= 80);
   assert.match(await p.textContent('#jName'), /Junction A/);
-  assert.match(await p.textContent('#jCtrl'), /Stop signs/);
+  assert.match(await p.textContent('#jCtrl'), /Timed lights/);
+  assert.equal(await p.evaluate(() => { const u = window.__junction.site('A').up; return !!u.lights && !u.filters; }), true, 'lights, no turn arrows');
+  assert.equal(await p.getAttribute('#jAutoSw', 'aria-checked'), 'true', 'Auto on');
   await ctx.close();
 });
 
@@ -93,8 +95,7 @@ await check('Settings: Design first, then Game, then Your data; a new game asks 
   assert.equal(await p.evaluate(() => window.__junction.state().T), t0, 'paused under Settings');
   await p.click('#stSpeed [data-value="2"]');
   assert.equal(await p.getAttribute('#stSpeed [data-value="2"]', 'aria-checked'), 'true');
-  await p.selectOption('#stHold', '40');
-  assert.equal(await p.evaluate(() => localStorage.getItem('junction.hold')), '40');
+  assert.equal(await p.locator('#stHold').count(), 0, 'no override timer any more');
   await p.evaluate(() => { window.__junction.state().coins = 999; });
   await p.click('#stReset');
   assert.match(await p.textContent('#stReset'), /Tap again/);
@@ -105,20 +106,20 @@ await check('Settings: Design first, then Game, then Your data; a new game asks 
   await ctx.close();
 });
 
-await check('Upgrades: buy lights with Undo, then a junction that asks first', async () => {
+await check('Upgrades: buy turn lanes with Undo, then a junction that asks first', async () => {
   const { ctx, p } = await phone();
   await p.click('#bNew');
   await p.evaluate(() => { window.__junction.state().coins = 2000; });
   await p.click('#jShop');
   assert.ok(await p.isVisible('#shopSheet'));
-  await p.click('#up-lights');
-  assert.equal(await p.evaluate(() => !!window.__junction.site('A').up.lights), true);
-  assert.equal(await p.evaluate(() => Math.round(window.__junction.state().coins)), 1900);
+  assert.equal(await p.locator('#up-lights').count(), 0, 'lights come with every junction, not in the shop');
+  await p.click('#up-lanesEW');
+  assert.equal(await p.evaluate(() => !!window.__junction.site('A').up.lanesEW), true);
+  assert.equal(await p.evaluate(() => Math.round(window.__junction.state().coins)), 1780);
   assert.ok(await p.isVisible('#toastAct'), 'Undo in the toast');
   await p.click('#toastAct');
-  assert.equal(await p.evaluate(() => !!window.__junction.site('A').up.lights), false, 'Undo takes it back');
+  assert.equal(await p.evaluate(() => !!window.__junction.site('A').up.lanesEW), false, 'Undo takes it back');
   assert.equal(await p.evaluate(() => Math.round(window.__junction.state().coins)), 2000);
-  await p.click('#up-lights');
   await p.click('#site-B');
   assert.ok(await p.isVisible('.st-ask'), 'a junction asks first');
   await p.click('.st-ask .st-yes');
@@ -130,36 +131,39 @@ await check('Upgrades: buy lights with Undo, then a junction that asks first', a
   await ctx.close();
 });
 
-await check('the lights: a tap takes over, and they go back to auto by themselves or at once', async () => {
+await check('the lights: a tap turns Auto off and they stay as set; each junction has its own Auto switch', async () => {
   const { ctx, p } = await phone();
   await p.click('#bNew');
-  await p.evaluate(() => { const J = window.__junction; J.state().coins = 500; J.buy('A', 'lights'); J.selectSite('A'); });
   assert.ok(await p.isVisible('#jPhases'));
   assert.ok(!(await p.isVisible('#ph1')), 'no turn phases before turn arrows');
   await p.click('#ph2');
-  assert.match(await p.textContent('#jMode'), /Manual/);
-  assert.ok(await p.isVisible('#jAuto'));
-  const s = await p.evaluate(() => { const J = window.__junction; for (let i = 0; i < 30 * 6; i++) J.step(1 / 30); const c = J.site('A').ctrl; return { phase: c.phase, stage: c.stage }; });
-  assert.deepEqual(s, { phase: 2, stage: 'G' }, 'E–W ahead is green');
-  await p.click('#jAuto');
-  assert.equal(await p.evaluate(() => window.__junction.site('A').manualUntil), -1);
-  await p.click('#ph0');
-  const back = await p.evaluate(() => { const J = window.__junction; for (let i = 0; i < 30 * 22; i++) J.step(1 / 30); return J.state().T < J.site('A').manualUntil; });
-  assert.equal(back, false, 'back to auto after 20 seconds');
+  assert.equal(await p.getAttribute('#jAutoSw', 'aria-checked'), 'false', 'a tap turned Auto off');
+  const held = await p.evaluate(() => { const J = window.__junction; for (let i = 0; i < 30 * 90; i++) J.step(1 / 30); const s = J.site('A'), c = s.ctrl; return { phase: c.phase, stage: c.stage, auto: s.auto }; });
+  assert.deepEqual(held, { phase: 2, stage: 'G', auto: false }, 'E–W ahead held for 90 seconds, no auto-return');
+  await p.click('#jAutoSw');
+  assert.equal(await p.getAttribute('#jAutoSw', 'aria-checked'), 'true');
+  const moved = await p.evaluate(() => { const J = window.__junction; for (let i = 0; i < 30 * 8; i++) J.step(1 / 30); return J.site('A').ctrl.phase; });
+  assert.notEqual(moved, 2, 'back on auto, the lights cycle again');
+  // B has a switch of its own
+  await p.evaluate(() => { const J = window.__junction; J.state().coins = 1000; J.buySite('B'); J.selectSite('B'); });
+  assert.equal(await p.getAttribute('#jAutoSw', 'aria-checked'), 'true', 'B on auto');
+  await p.click('#jAutoSw');
+  assert.deepEqual(await p.evaluate(() => [window.__junction.site('A').auto, window.__junction.site('B').auto]), [true, false]);
   await ctx.close();
 });
 
 await check('the save: Continue brings back the coins, the clock and the junctions', async () => {
   const { ctx, p } = await phone();
   await p.click('#bNew');
-  await p.evaluate(() => { const J = window.__junction; J.state().coins = 3000; J.buy('A', 'lights'); J.buy('A', 'lanesEW'); J.buySite('B'); for (let i = 0; i < 30 * 6; i++) J.step(1 / 30); });
+  await p.evaluate(() => { const J = window.__junction; J.state().coins = 3000; J.buy('A', 'lanesEW'); J.buySite('B'); J.site('B').auto = false; for (let i = 0; i < 30 * 6; i++) J.step(1 / 30); });
   const p2 = await ctx.newPage(); p2.on('pageerror', e => errors.push(e.message));
   await p2.goto(BASE + '/junction/'); await p2.waitForFunction(() => window.__junction);
   assert.ok(await p2.isVisible('#bContinue'));
   assert.match(await p2.textContent('#saveLine'), /2 junctions/);
   await p2.click('#bContinue');
-  const g = await p2.evaluate(() => { const J = window.__junction; return { b: J.site('B').active, lanes: !!J.site('A').up.lanesEW, coins: J.state().coins }; });
+  const g = await p2.evaluate(() => { const J = window.__junction; return { b: J.site('B').active, lanes: !!J.site('A').up.lanesEW, coins: J.state().coins, autoB: J.site('B').auto, autoA: J.site('A').auto }; });
   assert.equal(g.b, true); assert.equal(g.lanes, true); assert.ok(g.coins > 2000);
+  assert.deepEqual([g.autoA, g.autoB], [true, false], 'each junction\'s Auto is kept');
   await ctx.close();
 });
 

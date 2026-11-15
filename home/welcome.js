@@ -1193,12 +1193,12 @@
         {
           "i": "sliders",
           "t": "Take over the lights",
-          "d": "Lights run on their own. In a surge, tap a phase to take over; they go back to auto by themselves."
+          "d": "Every junction has lights that run on their own. In a surge, tap a phase to take over, and turn Auto back on when it passes."
         },
         {
           "i": "chart",
           "t": "Build your roads",
-          "d": "Spend coins on lights, turn arrows, turn lanes and smart sensors, then new junctions down the road and upgrades for the whole city."
+          "d": "Spend coins on turn arrows, turn lanes and smart sensors, then new junctions down the road and upgrades for the whole city."
         },
         {
           "i": "star",
@@ -2416,8 +2416,8 @@ html[data-look="grid"] #aos-welcome.mc :is(h1, h2) { font-family: "Orbitron", "E
   SPOTS.junction = { stops: [
     { sel: ['#coinsBox', '#cv'], t: 'Keep it moving', d: 'Cars come from every road. Every one that gets through earns coins, and more the longer traffic keeps flowing. Jams cost coins.' },
     { sel: ['#daybar', '#sClock'], t: 'Rush hours', d: 'A day runs through quiet nights and two rush hours, morning and evening, that build up, peak for a few hours, then ease off. The bar shows the day\'s traffic.' },
-    { sel: ['#jPhases:not([hidden])', '#jpanel'], t: 'Take over the lights', d: 'Lights run on their own. In a surge, tap a phase to take over; they go back to auto by themselves.', g: 'tap' },
-    { sel: '#jShop', t: 'Build your roads', d: 'Spend coins on lights, turn arrows, turn lanes and smart sensors, then new junctions down the road and upgrades for the whole city.', g: 'tap' },
+    { sel: ['#jPhases:not([hidden])', '#jpanel'], t: 'Take over the lights', d: 'Every junction has lights that run on their own. In a surge, tap a phase to take over, and turn Auto back on when it passes.', g: 'tap' },
+    { sel: '#jShop', t: 'Build your roads', d: 'Spend coins on turn arrows, turn lanes and smart sensors, then new junctions down the road and upgrades for the whole city.', g: 'tap' },
     { sel: '#moreBtn', t: 'Your look', d: 'Vintage, mid-century modern, Standard in Sea glass, Pearl or Tron. Pick one in Settings, and change it any time.', g: 'tap' },
   ] };
   SPOTS.sparkle = { stops: [
