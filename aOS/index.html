@@ -991,11 +991,11 @@ html:root[data-look="layers"] .mday.today{background:transparent}
 /* blocks one under another (what were cards: an email, a trip, an order, a group of rows) parted by a very thin, discreet
    hairline of light that fades at its ends, drawn half way across the gap between them (border-image: nothing moves) */
 html:root[data-look="layers"]{--pl-sep:color-mix(in srgb,var(--pl-line) 24%,transparent)}
-html:root[data-look="layers"] :is(.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip) + :is(.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip),html:root[data-look="layers"] ul.list.pills > li + li,html:root[data-look="layers"] .grid .col > .sw + .sw{border-image:linear-gradient(90deg,transparent,var(--pl-sep) 14%,var(--pl-sep) 86%,transparent) 1 / 1px 0 0 0 / var(--pl-sep-out,6px) 0 0 0 !important}
+html:root[data-look="layers"] :is(.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip,.dg,.lroom,.agw) + :is(.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip,.dg,.lroom,.agw),html:root[data-look="layers"] ul.list.pills > li + li,html:root[data-look="layers"] .grid .col > .sw + .sw{border-image:linear-gradient(90deg,transparent,var(--pl-sep) 14%,var(--pl-sep) 86%,transparent) 1 / 1px 0 0 0 / var(--pl-sep-out,6px) 0 0 0 !important}
 html:root[data-look="layers"] ul.list.pills > li,html:root[data-look="layers"] .grid .col > .sw{--pl-sep-out:5px}
 /* and a section: the same hairline above each section's title (or the block that starts with one), across the gap from
    what came before it; not above the first thing on a screen */
-html:root[data-look="layers"] :is(.sechead,.sect,.group,.daylbl,.evhead,.mhead):not(:first-child),html:root[data-look="layers"] :is(div,section,li):has(> .sechead:first-child):not(:first-child){border-image:linear-gradient(90deg,transparent,var(--pl-sep) 14%,var(--pl-sep) 86%,transparent) 1 / 1px 0 0 0 / var(--pl-sec-out,9px) 0 0 0 !important}
+html:root[data-look="layers"] :is(.sechead,.sect,.group,.daylbl,.evhead,.mhead,.vsec-h):not(:first-child),html:root[data-look="layers"] :is(div,section,li):has(> :is(.sechead,.vsec-h):first-child):not(:first-child){border-image:linear-gradient(90deg,transparent,var(--pl-sep) 14%,var(--pl-sep) 86%,transparent) 1 / 1px 0 0 0 / var(--pl-sec-out,9px) 0 0 0 !important}
 /* a text button (Edit, Done) in the light's own colour, not an accent */
 html:root[data-look="layers"] .textbtn:not(.danger){color:var(--pl-line)}
 </style>
