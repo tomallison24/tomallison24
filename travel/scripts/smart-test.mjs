@@ -650,22 +650,23 @@ const pick = (page, f) => page.evaluate(f);
   const { ctx, page, seen, problems } = await open({ calendar: false, auto: true, verify: true, stored: { 'aos.session': JSON.stringify({ token: 'sess-1', user: { id: 'u1', name: 'Pat' } }) } });
   page.on('dialog', d => { problems.push('a browser dialog: ' + d.message()); d.dismiss(); });
   const ua = () => pick(page, () => JSON.parse(JSON.stringify(window.__travel.bookings.find(x => x.conf === 'KQ7T2M'))));
-  await step('Ipsy\'s own check: an upcoming flight is checked against its newest email (a schedule change) as Travel opens, with no press, marked Check', async () => {
+  await step('Ipsy\'s own check: an upcoming flight is checked against its newest email (a schedule change) as Travel opens, with no press, put right and out of To check', async () => {
     await page.waitForFunction(() => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); return b && b.dep.endsWith('T21:05'); }, null, { timeout: 20000 });
     const sent = seen.extract.map((x, i) => [x, seen.auth[i]]).filter(([x]) => x.check);
     assert.ok(sent.some(([x]) => /now departs at 9:05 PM/.test(x.text)), 'the newer email, found by its confirmation code');
     assert.ok(sent.every(([, a]) => a === 'Bearer sess-1'), 'the family session, never a Face ID prompt');
     assert.ok(seen.searches.some(q => q.startsWith('"KQ7T2M" after:')), seen.searches.join(' | '));
     const b = await ua();
-    assert.equal(b.filled.time, 'ai'); assert.equal(b.guess, true); assert.equal(b.source.msgId, 'e6', 'the booking follows the newer email');
+    assert.equal(b.filled.time, 'ai'); assert.equal(b.guess, false, 'Ipsy read it and put it right: nothing left to check'); assert.equal(b.source.msgId, 'e6', 'the booking follows the newer email');
     await page.waitForFunction(() => /against their newest emails and updated 1 booking/.test((document.querySelector('.ipsy-hint') || {}).textContent || ''), null, { timeout: 15000 });
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, APP + '-ipsy-verified.png') });
   });
   await step('Ipsy\'s own check: Undo in the chat puts the flight back', async () => {
     await page.click('.ipsy-hint');
     await page.waitForSelector('.ipsy-change');
-    const ch = page.locator('.ipsy-change:has-text("Marked Check")').first();
-    assert.match(await ch.textContent(), /Updated .*time.*Marked Check\..*Undo/);
+    const ch = page.locator('.ipsy-change:has-text("Updated")').first();
+    assert.match(await ch.textContent(), /Updated .*time\..*Undo/);
+    assert.doesNotMatch(await ch.textContent(), /Marked Check|To check/, 'put right: not marked to check');
     await ch.locator('.ipsy-undo').click();
     await page.waitForFunction(() => window.__travel.bookings.find(x => x.conf === 'KQ7T2M').dep.endsWith('T20:15'), null, { timeout: 5000 });
     await page.keyboard.press('Escape');
@@ -695,7 +696,7 @@ const pick = (page, f) => page.evaluate(f);
     await page.click('[data-trip="' + id + '"]');
     await page.waitForSelector('#tripPage:not([hidden]) #tpAi');
   };
-  await step('Have Ipsy check this trip: on a trip\'s page, it reads the newest email (a schedule change) and updates the flight, marked Check', async () => {
+  await step('Have Ipsy check this trip: on a trip\'s page, it reads the newest email (a schedule change) and updates the flight, out of To check', async () => {
     const was = await ua();
     assert.equal(was.dep, iso(BACK) + 'T20:15');
     await openTrip('KQ7T2M');
@@ -711,7 +712,7 @@ const pick = (page, f) => page.evaluate(f);
     assert.match(sent[0].text, /now departs at 9:05 PM/, 'the newer email, not the confirmation');
     const b = await ua();
     assert.equal(b.dep, iso(BACK) + 'T21:05'); assert.equal(b.arr, iso(day(34)) + 'T00:30'); assert.equal(b.depIso, '');
-    assert.equal(b.filled.time, 'ai'); assert.equal(b.filled.date, undefined, 'the day didn\'t change'); assert.equal(b.guess, true);
+    assert.equal(b.filled.time, 'ai'); assert.equal(b.filled.date, undefined, 'the day didn\'t change'); assert.equal(b.guess, false, 'read and put right: out of To check');
     assert.equal(b.source.msgId, 'e6', 'the booking follows the newer email');
     assert.match(await page.textContent('#tpAi'), /Have Ipsy check this trip/, 'the button is back once Ipsy is done');
   });
@@ -770,8 +771,19 @@ const pick = (page, f) => page.evaluate(f);
     const sent = seen.extract.slice(n).filter(x => x.check);
     assert.ok(sent.length >= 1 && sent.some(x => x.known.depTime === '20:15'), JSON.stringify(sent.map(x => x.known)));
     const b = await ua();
-    assert.equal(b.dep, iso(BACK) + 'T21:05'); assert.equal(b.filled.time, 'ai'); assert.equal(b.guess, true, 'still waiting in To check for you');
+    assert.equal(b.dep, iso(BACK) + 'T21:05'); assert.equal(b.filled.time, 'ai'); assert.equal(b.guess, false, 'Ipsy read it and put it right: out of To check');
     assert.match(await page.textContent('#ckAi'), /Have Ipsy check these/, 'the button is back once Ipsy is done');
+    await page.click('#toastAct');
+    await page.waitForFunction(() => window.__travel.bookings.find(x => x.conf === 'KQ7T2M').dep.endsWith('T20:15'), null, { timeout: 5000 });
+  });
+  await step('Have Ipsy check these: a detail filled in from elsewhere that the email doesn\'t state keeps it in To check', async () => {
+    await page.evaluate(() => { const b = window.__travel.bookings.find(x => x.conf === 'KQ7T2M'); b.edited = false; b.guess = true; b.filled = { seat: 'calendar' }; window.__travel.save(); window.__travel.render(); });
+    await page.click('[data-when="check"]');
+    await page.waitForSelector('#ckAi');
+    await page.click('#ckAi');
+    await page.waitForFunction(() => window.__travel.bookings.find(x => x.conf === 'KQ7T2M').dep.endsWith('T21:05') && /still in To check/.test(document.getElementById('toastMsg').textContent), null, { timeout: 8000 });
+    const b = await ua();
+    assert.equal(b.dep, iso(BACK) + 'T21:05'); assert.equal(b.guess, true, 'Ipsy couldn\'t settle the seat: still in To check');
     await page.click('#toastAct');
     await page.waitForFunction(() => window.__travel.bookings.find(x => x.conf === 'KQ7T2M').dep.endsWith('T20:15'), null, { timeout: 5000 });
   });

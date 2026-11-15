@@ -718,6 +718,14 @@ a.rowbtn{color:var(--text);text-decoration:none}
    position they already have. */
 :where(.iconbtn, .chip, .btn){position:relative}
 :where(.iconbtn, .chip, .btn)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+/* Pearl (id 'layers'): the Next card is drawn in light like everything else: a faint hairline ring, not the booking's own
+   colour (a red ring read as a problem); its label, route line and icons in light */
+html:root[data-look="layers"] .hero{background:transparent !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important}
+html:root[data-look="layers"] .hero::before{display:none}
+html:root[data-look="layers"] .hero .k{background:transparent;box-shadow:inset 0 0 0 1px var(--pl-faint)}
+html:root[data-look="layers"] .hero .k svg,html:root[data-look="layers"] .hero .line svg{color:var(--pl-line)}
+html:root[data-look="layers"] .hero .line{border-top:1px solid var(--pl-faint)}
+html:root[data-look="layers"] .hero .line svg{background:var(--pl-surface);border-radius:50%}
 </style>
 <style id="vintage">
 /* ======================================================================

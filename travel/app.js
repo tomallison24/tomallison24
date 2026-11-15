@@ -1970,7 +1970,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Have Ipsy check this trip, on a trip's page: keeps it up to date. Each booking still to come (not Private, not a ride,
   // from an email in this phone's Gmail) is read again by Claude from its newest email: the newest one in Gmail that names
   // its confirmation code, or the one it came from. Every detail is asked for (not only what is missing) and compared; what
-  // the email says differently goes onto the booking, marked Check, with Undo in Ipsy's chat, and an email that says it
+  // the email says differently goes onto the booking, with Undo in Ipsy's chat (it leaves To check, settle(), unless something
+  // is still missing), and an email that says it
   // was cancelled marks it cancelled. A booking you edited stays as you typed it (as with any email).
   const CHECK_ASK = {
     flight: ['airlineCode', 'flightNo', 'from', 'to', 'date', 'depTime', 'arrTime'],
@@ -2032,6 +2033,17 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (f.cancelled === 'yes' && b.status !== 'cancelled') { b.status = 'cancelled'; ch.push('cancelled'); }
     return ch;
   }
+  // Once Ipsy has read a booking against its email (and put right what the email says differently), it no longer waits in To
+  // check, unless Ipsy couldn't settle it: something is still missing, or a detail filled in from elsewhere (the calendar,
+  // the flight board) is one the email doesn't state. f: what Ipsy read from the email. True when it came out of To check.
+  const SAID = { time: ['depTime'], arr: ['arrTime'], date: ['date', 'pickupDate'], dropoff: ['returnDate'] };
+  function settle(b, f) {
+    if (!b.guess || !startOf(b) || P.missingFields(b).length) return false;
+    const said = k => (SAID[k] || [k]).some(n => typeof f[n] === 'string' && f[n] !== '');
+    if (Object.entries(b.filled || {}).some(([k, src]) => src !== 'ai' && !said(k))) return false;
+    b.guess = false;
+    return true;
+  }
   // The newest email in this Gmail about a booking: the newest that names its confirmation code since the one it came
   // from (a schedule change, new dates), or that one. Never an email of a Private booking.
   async function newestId(b) {
@@ -2062,7 +2074,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // says there were more). quiet: no Face ID prompt (the session it has, or it stops). Email addresses, phone, card and
   // account numbers stay on the phone (home/redact.js), as everywhere Claude reads an email.
   async function verifyPass(list, { quiet, max = 8 } = {}) {
-    const out = { changes: [], said: [], read: 0, cancelled: 0, stop: '', until: '', capped: false };
+    const out = { changes: [], said: [], read: 0, cancelled: 0, cleared: 0, flagged: 0, stop: '', until: '', capped: false };
     const seen = new Set(ls.json(K.verified, [])), sent = new Set();
     try {
       for (const b of list) {
@@ -2091,9 +2103,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         out.read++; noteModel('check', d.model);
         const cur = bookings.find(x => x.id === b.id);
         if (!cur || cur.edited) continue;                     // edited while Ipsy was reading: yours wins
-        const before = JSON.parse(JSON.stringify(cur));
-        const ch = applyCheck(cur, M.show(d.fields || {}));
-        if (!ch.length) continue;
+        const before = JSON.parse(JSON.stringify(cur)), f = M.show(d.fields || {});
+        const ch = applyCheck(cur, f), settled = settle(cur, f);    // read and put right: out of To check, unless Ipsy couldn't settle it
+        if (!ch.length) { if (settled) out.cleared++; continue; }
+        if (cur.guess) out.flagged++;
         // read from a newer email: the booking follows it, so the older one, read again, doesn't put the old details back
         if (m.id !== (cur.source && cur.source.msgId) && m.date >= when(cur)) cur.source = { msgId: m.id, threadId: m.threadId, subject: m.subject.slice(0, 200), from: m.from, date: m.date };
         if (ch.includes('cancelled')) out.cancelled++;
@@ -2102,7 +2115,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       }
     } finally {
       ls.set(K.verified, JSON.stringify([...seen].slice(-500)));
-      if (out.changes.length) { save(); smartSoon(); }
+      if (out.changes.length || out.cleared) { save(); smartSoon(); }
     }
     return out;
   }
@@ -2116,11 +2129,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     try {
       if (aiAvail === null) await pingLive();
       if (!aiAvail) { toast('AI isn’t set up on this copy of the site.'); return; }
-      const { changes, said, read, cancelled, stop, until } = await verifyPass(mine2);
+      const { changes, said, read, cancelled, flagged, stop, until } = await verifyPass(mine2);
       const undo = changes.length ? undoChanges(changes) : null;
-      if (undo && ipsy) ipsy.change('Updated ' + said.join('; ') + '. Marked Check.', undo);
+      if (undo && ipsy) ipsy.change('Updated ' + said.join('; ') + '.' + (flagged ? ' Still in To check.' : ''), undo);
       const bits = [];
-      if (changes.length) bits.push('Ipsy updated ' + plural(changes.length, 'booking') + (cancelled ? ' (' + cancelled + ' cancelled)' : '') + '. Marked Check.');
+      if (changes.length) bits.push('Ipsy updated ' + plural(changes.length, 'booking') + (cancelled ? ' (' + cancelled + ' cancelled)' : '') + '.' + (flagged ? ' ' + (flagged === changes.length ? (flagged === 1 ? 'It’s' : 'They’re') : flagged) + ' still in To check.' : ''));
       else if (read) bits.push('Ipsy read ' + plural(read, 'email') + '. Everything matches.');
       if (stop === 'limit') bits.push('That’s enough AI for today. Try again tomorrow.');
       else if (stop === 'ai-budget') bits.push(AllisonOS.budgetSay(until));
@@ -2176,7 +2189,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // Ipsy check this trip does, but only when that email is one Ipsy hasn't read for it yet: a schedule change, new dates
   // or a cancellation lands with no press, and a booking is sent to Claude once per email. Soonest first, 8 at a time
   // (then the next 8); the Gmail look-ups at most every 20 minutes. Same switch as filling in (Settings > Ipsy fills in
-  // what's missing). What changed is marked Check, with Undo in Ipsy's chat; a booking you edited stays as you typed it.
+  // what's missing). What changed is put right and leaves To check (unless something is still missing), with Undo in Ipsy's chat; a booking you edited stays as you typed it.
   let verifyBusy = false, verifyMore = false;
   async function ipsyVerify() { updating('verify', true); try { await ipsyVerifyNow(); } finally { updating('verify', false); } }
   async function ipsyVerifyNow() {
@@ -2198,8 +2211,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else ls.set(K.verifyAt, String(Date.now()));
     if (!r) return;
     if (r.changes.length) {
-      ipsy.change('Updated ' + r.said.join('; ') + '. Marked Check.', undoChanges(r.changes));
-      ipsy.hint('I checked your upcoming bookings against their newest emails and updated ' + plural(r.changes.length, 'booking') + (r.cancelled ? ' (' + r.cancelled + ' cancelled)' : '') + '. ' + (r.changes.length === 1 ? 'It’s' : 'They’re') + ' marked Check.');
+      ipsy.change('Updated ' + r.said.join('; ') + '.' + (r.flagged ? ' Still in To check.' : ''), undoChanges(r.changes));
+      ipsy.hint('I checked your upcoming bookings against their newest emails and updated ' + plural(r.changes.length, 'booking') + (r.cancelled ? ' (' + r.cancelled + ' cancelled)' : '') + '.' + (r.flagged ? ' ' + plural(r.flagged, 'booking') + ' still ' + (r.flagged === 1 ? 'is' : 'are') + ' in To check.' : ''));
     } else if (r.read) ipsy.note('Checked ' + plural(r.read, 'upcoming booking') + ' against ' + (r.read === 1 ? 'its newest email' : 'their newest emails') + ': everything matches.');
     else if (r.stop === 'signin' && !signinSaid) { signinSaid = true; ipsy.hint('Sign in with Face ID in aOS and I can keep your bookings up to date.'); }
     else if (r.stop === 'ai-budget') ipsy.hint(AllisonOS.budgetSay(r.until));
