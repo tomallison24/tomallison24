@@ -91,8 +91,8 @@ family({
     return `<i class="lp-halo" style="background:radial-gradient(380px circle at ${cx} 50%, rgba(${r.pc},${(0.46 * k).toFixed(3)}) 0%, rgba(${r.pc},${(0.16 * k).toFixed(3)}) 30%, rgba(${r.pc},0) 62%)"></i>`;
   },
   badge(r, size = 40) {
-    const st2 = !r.on ? '' : size > 50 ? `background:linear-gradient(160deg, rgba(${r.pc},1), rgba(${r.pc},0.72));color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6)`
-      : `background:rgb(${r.pc});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)`;
+    const st2 = !r.on ? '' : size > 50 ? `--lit:${r.pc};background:linear-gradient(160deg, rgba(${r.pc},1), rgba(${r.pc},0.72));color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6)`
+      : `--lit:${r.pc};background:rgb(${r.pc});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)`;
     return `<button class="lp-badge${tWaiting(r.d, 'power') ? ' wait' : ''}" data-a="toggle" style="width:${size}px;height:${size}px;${st2}" aria-pressed="${r.on}" aria-label="${r.on ? 'Turn off' : 'Turn on'} ${esc(r.L.name)}"${r.offline ? ' disabled' : ''}>${svg(r.on ? 'lightbulb' : 'lightbulbOff', size > 50 ? 30 : 22)}</button>`;
   },
   // A light's pill: name, brightness, the slider and, for every light that dims, the brightness presets
@@ -163,7 +163,7 @@ family({
   },
   paintDim(el, R) {
     const m = this.roomDim(R), lit = m.on.length > 0;
-    put(el, `<span class="lp-badge rd-ic" aria-hidden="true"${lit ? ` style="background:rgb(${L_TINT.c});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)"` : ''}>${svg('sun', 22)}</span>
+    put(el, `<span class="lp-badge rd-ic" aria-hidden="true"${lit ? ` style="--lit:${L_TINT.c};background:rgb(${L_TINT.c});color:#1A1A1C;box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.7)"` : ''}>${svg('sun', 22)}</span>
       <div class="lp-mid"><div class="lp-row"><span class="lp-name">All lights</span><span class="lp-val">${lit ? (m.on.length < m.rs.length ? `${m.on.length} of ${m.rs.length} · ` : '') + m.avg + '%' : 'Off'}</span></div>
       ${sliderHTML('bri', lit ? m.avg : 1, 1, 100, 1, { tint: L_TINT.c, cls: 'thin', unit: '%', aria: `All of the ${R.name}'s lights, brightness`, dis: m.dis })}
       ${chipsHTML('chip', L_CHIPS(), m.same, { near: 2, dis: m.dis, cls: 'lp-chips' })}</div>`);
