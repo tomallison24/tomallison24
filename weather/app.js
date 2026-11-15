@@ -59,6 +59,7 @@ const PEARL = {
   'weather-fog': () => '<g class="pl-drift"><path d="M14 26h36M18 34h32M14 42h30"/></g>',
   'weather-windy': () => '<g class="pl-drift"><path d="M10 26h28a6 6 0 1 0-6-6M10 34h38a6 6 0 1 1-6 6M10 42h20"/></g>',
   'weather-windy-variant': () => '<g class="pl-drift"><path d="M10 26h28a6 6 0 1 0-6-6M10 34h38a6 6 0 1 1-6 6M10 42h20"/></g>',
+  alert: () => '<path d="M32 12 55 51H9z"/><path d="M32 27v12M32 45.5v.5"/>',   // a warning, in its severity's colour
 };
 const svg = (name, size, style) => {
   if (pearl() && PEARL[name]) return `<svg class="i pl" viewBox="0 0 64 64" width="${size}" height="${size}" style="${style || ''}" fill="none" stroke="currentColor" aria-hidden="true">${PEARL[name]()}</svg>`;
