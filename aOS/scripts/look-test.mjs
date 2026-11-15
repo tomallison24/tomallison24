@@ -634,6 +634,14 @@ for (const scheme of ['light', 'dark']) {
     }
     await c.close();
   }
+  // day or night as the page will be, not as the phone is: Appearance Dark on a phone in light mode is a night intro (a
+  // cream one left the iPhone's status bar cream over the dark page), and Light on a phone in dark mode a day one
+  for (const [scheme, theme, day] of [['light', 'dark', false], ['dark', 'light', true]]) {
+    const { c, p } = await launch({ 'aos.look': 'layers', 'aos.layers.intro': 'silent', 'home.settings': JSON.stringify({ theme }) }, { scheme }); await p.waitForTimeout(200);
+    const d = await p.evaluate(() => { const e = document.getElementById('layersIntro'); return e ? e.classList.contains('day') : null; });
+    if (d !== day) pr.push(`Appearance ${theme} on a phone in ${scheme} mode: the intro was ${d === null ? 'not shown' : d ? 'day' : 'night'}, not ${day ? 'day' : 'night'}`);
+    await c.close();
+  }
   // Sea glass: not this intro
   { const { c, p } = await launch({ 'aos.look': 'glass', 'aos.layers.intro': 'sound' }); await p.waitForTimeout(400);
     if ((await p.evaluate(() => window.__li)).shown) pr.push('the Ignition intro played in Sea glass'); await c.close(); }
@@ -642,7 +650,7 @@ for (const scheme of ['light', 'dark']) {
     if (!(await p.evaluate(() => window.__li)).shown) pr.push('no intro with Reduce Motion');
     await p.waitForFunction(() => !document.getElementById('layersIntro'), null, { timeout: 4000 }).catch(() => pr.push('with Reduce Motion, the intro did not end within 4 seconds'));
     await c.close(); }
-  report('Pearl\'s Ignition intro: dust gathering into a mark of light, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; once a launch, Account\'s Sound, Silent, Off and Play', pr);
+  report('Pearl\'s Ignition intro: dust gathering into a mark of light, "aOS" and a greeting by the clock, "aOS" onto the page\'s own; day or night as the page will be; once a launch, Account\'s Sound, Silent, Off and Play', pr);
 }
 
 
