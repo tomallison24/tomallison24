@@ -147,7 +147,7 @@ async function body(request, max = MAX_BODY) {
 // and Health. There's no bringing it back: inviting them again makes a new account. Today's AI counts
 // (<app>:ai:<id>:<day> and the like) go by themselves in two days.
 async function forget(db, u) {
-  const id = u.id, keys = ['apps', 'sv', 'wipe', 'prefs', 'move', 'push', 'health', 'vitals', 'vitals-sent', 'drinks', 'handoff:want', 'gm'].map(k => k + ':' + id);
+  const id = u.id, keys = ['apps', 'sv', 'wipe', 'prefs', 'move', 'push', 'health', 'vitals', 'vitals-sent', 'drinks', 'handoff:want', 'gm', 'gc', 'gct'].map(k => k + ':' + id);
   for (const a of LAYER_APPS) keys.push('layer:' + a + ':' + id);
   for (const pre of ['handoff:' + id + ':', 'handoff:taken2:' + id + ':']) {
     let cursor;

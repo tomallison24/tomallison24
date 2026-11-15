@@ -181,6 +181,13 @@ It's **off** until the owner sets it up; until then the apps sign in on the phon
 3. Keep **two-step sign-in** on for the Cloudflare and Google accounts: anyone in the Cloudflare account could
    read the sealed keys and the secret together.
 
+**Google Calendar in Calendar** uses the same sign-in (kind `calendar`, `calendar.readonly`, `server/gcal.js`): the
+same client secret and the same redirect URI, plus, once, in that Google Cloud project: **APIs & Services → Library →
+Google Calendar API → Enable**, and under **Google Auth Platform → Data Access → Add or remove scopes** add
+`.../auth/calendar.readonly`. Without the API on, Calendar's Settings says "Google Calendar isn't turned on for aOS's
+Google project yet". Each person connects their own in Calendar > Settings > Connected accounts > Connect Google
+Calendar; it's theirs alone until they turn on Share with the family (calendar/README.md, "Your own Google calendar").
+
 Then each person taps **Check now** (or Connect Gmail) in one of those apps once and signs in; GET `state` says
 `gmail: true` and the apps take it from there. `node aOS/scripts/gmail-api-test.mjs` checks the server's rules.
 

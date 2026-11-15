@@ -117,7 +117,8 @@
         'Junction: a car going ahead no longer stops at a green light while the line in front of it moves off; it only waits when the road beyond is really backing up',
         'Junction: the control panel is half the height, so it covers far less of the south road: one row for the junction, Auto and Upgrades, one row of phases, and no words under them',
         'Travel: once Ipsy has read a booking against its email and put right what it says, the booking leaves To check by itself; it stays there only if Ipsy couldn\'t settle it (something still missing, or a detail from your calendar or the flight board that the email doesn\'t state)',
-        'Travel in Pearl: the Next card is a faint ring of light, not the booking\'s colour, so it no longer looks like a problem'],
+        'Travel in Pearl: the Next card is a faint ring of light, not the booking\'s colour, so it no longer looks like a problem',
+        'Calendar: your own Google calendar alongside the Family calendar. Connect it in Settings > Connected accounts, read-only; only you see it, unless you turn on Share with the family, and then the family sees its times, titles and places in Shared with you, and an event that\'s private in Google only as Busy'],
       apps: {
         aos: { highlights: ['New look: Pearl, lines of light in the dust, in aOS and every app', 'A new intro, Ignition: dust gathers into light as aOS opens', 'In Pearl your helper is Lumen, a beam of light that takes the shapes of the cosmos', 'Pearl takes the place of Layers'],
           tour: [{ sel: '[data-acct]', t: 'Pearl', d: 'Your name, then Appearance: Look. Pearl is new, in place of Layers, for aOS and every app.', g: 'tap' }] },

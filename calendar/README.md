@@ -77,7 +77,10 @@ AllisonOS apps' dates alongside.
     Open-Meteo (as the Weather app uses), with the phone's location. °F or
     °C follows the phone's language, or set it.
 
-  Any layer item but Drinks has **Add to the Family calendar**, which opens
+  - **Personal** and **Shared with you**: your own Google calendar, and the
+    ones the family shares with you (below, "Your own Google calendar").
+
+  Any layer item but Drinks and Shared with you has **Add to the Family calendar**, which opens
   the editor with it filled in.
 - **Calendars** (the button beside Search): which calendars this phone shows,
   the Family calendar and every layer, each with its switch (the same rows as
@@ -244,6 +247,46 @@ here?*
   doesn't wait for iCloud's answer: a failed Undo shows in the app's message,
   while the chat already says Undone.
 
+## Your own Google calendar
+
+Each person can show their own Google calendar (the primary calendar of their
+Gmail account) next to the Family calendar: **Settings → Connected accounts →
+Connect Google Calendar**, then Google's sign-in, read-only
+(`calendar.readonly`).
+
+- **Personal** (slate in Vintage, Google blue in Standard): your events in
+  full, with the place (Open in Maps), notes, **Open in Google Calendar** and
+  **Add to the Family calendar**. **Only you see it.**
+- **Share with the family** (a switch under it in Connected accounts, off to
+  start): everyone signed in to the family then sees your calendar in their
+  **Shared with you** layer (lavender), with your name on each event: its
+  title, place and time, never notes or links, and an event you marked
+  **Private** in Google (or Confidential) only as **Busy**. Off again, it's
+  gone from their phones the next time Calendar reads it (every few minutes,
+  and on opening).
+- Each has its own switch in Settings → Calendars and the Calendars sheet.
+- **Not for Ipsy**: neither layer is read by Ipsy or sent to Claude, and an
+  event from them open on the screen is described to Ipsy only as "a private
+  event". Kept in memory, never in Calendar's storage, as Drinks is.
+- **How**: the sign-in is aOS's server sign-in (`server/gmail.js`, kind
+  `calendar`, the same redirect as Gmail's): Google's long-lived key is kept
+  sealed on the server (`gc:<user>`) and never sent to a phone. Calendar's
+  function reads the events for you (`GET /calendar/api/google/events`,
+  `server/gcal.js`): yours in full, each family member's that is shared, in
+  the family's shape. One Google account a person; another replaces it.
+- **30 days** after connecting it ends (revoked at Google) and you connect
+  again, as with Gmail. **Disconnect Google Calendar** revokes it at once and
+  stops sharing; leaving the family deletes it.
+- **Set up, once (the owner)**: Gmail stays signed in must be on
+  (`GOOGLE_CLIENT_SECRET`, `aOS/RELEASING.md`), and in the same Google Cloud
+  project the **Google Calendar API** enabled and the `calendar.readonly`
+  scope added to the consent screen (`aOS/RELEASING.md`, "Gmail stays signed
+  in"). Until then Settings says it isn't set up.
+- **Not verified live**: Google's real consent screen and Calendar API were
+  not reached from here; `node calendar/scripts/google-test.mjs` (the server,
+  Google stubbed) and `node calendar/scripts/google-app-test.mjs` (the app, two
+  family members) test it against Google's documented shapes.
+
 ## How it reaches iCloud
 
 A web page can't talk to iCloud's calendar server (CalDAV) itself: Apple's
@@ -354,6 +397,8 @@ node calendar/scripts/api-test.mjs    # the CalDAV function, iCloud stubbed; Ips
 node calendar/scripts/access-test.mjs # the Access check in front of every function
 node calendar/scripts/app-test.mjs    # the app in headless Chromium, iCloud stubbed, both designs, Settings > Design, the old Calendar Vintage address
 node calendar/scripts/layers-test.mjs # Notes, Travel, Fitness and Mail through the family account
+node calendar/scripts/google-test.mjs     # your own Google calendar: the sign-in, sharing, Busy, 30 days, Disconnect (Google stubbed)
+node calendar/scripts/google-app-test.mjs # the same in the app, as two family members
 node calendar/scripts/ipsy-test.mjs   # Ipsy and its rules (asks first, 5 a question, no repeating events, etags, Undo), both designs, light and dark
 node calendar/scripts/make-icons.mjs  # icon-*.png from icon.svg (Vintage) and icon-glass-*.png from icon-glass.svg (Standard)
 ```
