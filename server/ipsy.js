@@ -19,7 +19,8 @@ export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 export const IPSY_MODEL = 'claude-sonnet-5-5';
 export const IPSY_DAILY = 80;                    // questions a person a day, per app
 export const IPSY_STEPS = 12;                    // steps (tool results, turns carried on) a question may take, on average, a day
-export const IPSY_MAX_BODY = 1024 * 1024;        // a conversation, as the phone sends it
+export const IPSY_MAX_BODY = 4 * 1024 * 1024;    // a conversation, as the phone sends it (photos and files make it bigger: home/ipsy.js)
+export const IPSY_MAX_ATTACH = 20;               // photos and files in one conversation
 export const IPSY_MAX_MESSAGES = 240;
 const TIMEOUT_MS = 110e3;
 // Server-side fallback for the models that take it; the web tools' newest versions for the models that have them.
@@ -150,12 +151,28 @@ export function requestHead({ model, system, tools, web = true }) {
   };
 }
 
+// A photo or file the person added (home/ipsy.js): only as data in the conversation itself, never an address Anthropic
+// would fetch (a url source) or a file kept there (a file source): a photo as JPEG, PNG, GIF or WebP, a PDF, or plain text.
+const IMAGE_TYPES = /^image\/(jpeg|png|gif|webp)$/;
+export function attachOk(b) {
+  const s = b && b.source;
+  if (!s || typeof s !== 'object' || typeof s.data !== 'string') return false;
+  if (b.type === 'image') return s.type === 'base64' && IMAGE_TYPES.test(s.media_type);
+  return s.type === 'base64' ? s.media_type === 'application/pdf' : s.type === 'text' && s.media_type === 'text/plain';
+}
+
 // What kind of step this is: a new question (counted), tool results, or carrying on a paused turn.
 export function turnKind(messages) {
   if (!Array.isArray(messages) || !messages.length || messages.length > IPSY_MAX_MESSAGES) throw fail('bad-turn', 400);
+  let files = 0;
+  const check = blocks => { for (const b of blocks) if (b && (b.type === 'image' || b.type === 'document')) { if (++files > IPSY_MAX_ATTACH || !attachOk(b)) throw fail('bad-file', 400); } };
   for (const m of messages) {
     if (!m || typeof m !== 'object' || (m.role !== 'user' && m.role !== 'assistant')) throw fail('bad-turn', 400);
     if (!(typeof m.content === 'string' || Array.isArray(m.content)) || !m.content.length) throw fail('bad-turn', 400);
+    if (m.role === 'user' && Array.isArray(m.content)) {
+      check(m.content);
+      for (const b of m.content) if (b && b.type === 'tool_result' && Array.isArray(b.content)) check(b.content);
+    }
   }
   if (messages[0].role !== 'user') throw fail('bad-turn', 400);
   const lastMsg = messages[messages.length - 1];
