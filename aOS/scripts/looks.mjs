@@ -248,6 +248,12 @@ ${SHAPE(1)},${SHAPE(2)},${SHAPE(3)},:root .aos-sky-cap{display:none}
 ${darkBoth('--pl-title-glow:0 0 22px rgba(160,205,255,.32)')}${HEADS}{text-shadow:var(--pl-title-glow,none)}
 :is(.fab,.okbtn){box-shadow:var(--pl-ring);background:var(--pl-fab) !important;color:var(--pl-line) !important}   /* the main button: a ring of light on glass, not a fill */
 :is(.fab,.okbtn) svg{stroke:currentColor}
+/* loading, drawn in light: a placeholder is only its own faint outline, a line of light running round it */
+@property --pl-a{syntax:"<angle>";inherits:false;initial-value:0deg}
+:is(.skel,.skeleton){background:none !important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pl-line) 14%,transparent) !important;animation:none !important;position:relative}
+:is(.skel,.skeleton)::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:conic-gradient(from var(--pl-a),transparent 0 70%,color-mix(in srgb,var(--pl-line) 60%,transparent) 90%,var(--pl-line) 96%,transparent 97%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:var(--pl-trace-glow,none);animation:pl-trace 2.8s linear infinite;animation-delay:calc(var(--i,0) * -.35s)}
+${darkBoth('--pl-trace-glow:drop-shadow(0 0 3px rgba(150,205,255,.8))')}@keyframes pl-trace{to{--pl-a:360deg}}
+@media (prefers-reduced-motion:reduce){:is(.skel,.skeleton)::after{animation:none;opacity:.4}}
 `;
   }
   if (look === 'grid') {

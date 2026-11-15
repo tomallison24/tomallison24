@@ -646,5 +646,27 @@ for (const scheme of ['light', 'dark']) {
 }
 
 
+// 14. Pearl with Appearance on System: day and night follow the sun where you are (Weather's place), not the phone. A
+// place where it is noon now opens light on a phone in dark mode; one where it is midnight opens dark on a phone in light
+// mode; with no place known it follows the phone (no data-theme); Light or Dark picked pins it; another look follows the phone.
+{
+  const utc = new Date().getUTCHours() + new Date().getUTCMinutes() / 60, wrap = x => ((x + 540) % 360) - 180;
+  const noon = JSON.stringify({ lat: 0, lon: wrap(-(utc - 12) * 15), name: 'Noon' }), midnight = JSON.stringify({ lat: 0, lon: wrap(-utc * 15), name: 'Midnight' });
+  const pr = [];
+  const themeOf = async (scheme, seed) => { const { ctx, p, errs } = await open(scheme, Object.assign({ 'aos.look': 'layers' }, seed)); pr.push(...errs);
+    const t = await p.evaluate(() => document.documentElement.getAttribute('data-theme')); await ctx.close(); return t; };
+  let t = await themeOf('dark', { 'wx.here': noon });
+  if (t !== 'light') pr.push('Pearl at a place where it is noon, on a phone in dark mode, is not light: ' + t);
+  t = await themeOf('light', { 'wx.here': midnight });
+  if (t !== 'dark') pr.push('Pearl at a place where it is midnight, on a phone in light mode, is not dark: ' + t);
+  t = await themeOf('dark', {});
+  if (t !== null) pr.push('Pearl with no place known does not follow the phone: ' + t);
+  t = await themeOf('dark', { 'wx.here': noon, 'home.settings': JSON.stringify({ theme: 'dark' }) });
+  if (t !== 'dark') pr.push('Dark picked does not pin Pearl at noon: ' + t);
+  t = await themeOf('dark', { 'wx.here': noon, 'aos.look': 'vintage' });
+  if (t !== null) pr.push('Vintage follows the sun too (it should follow the phone): ' + t);
+  report('Pearl on System follows the sun where you are: light from sunrise, dark from sunset; the phone where no place is known; Light or Dark pins it; other looks follow the phone', pr);
+}
+
 await b.close(); server.close();
 console.log(failed ? failed + ' failed' : 'all passed'); process.exit(failed ? 1 : 0);
