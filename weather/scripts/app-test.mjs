@@ -4,7 +4,8 @@
 // views, the hour and day sheets, Settings (Design, then the search, add a city, units, page dots, and the Trip place from your Travel layer, signed in), the alerts, the
 // radar's forecast frames through Weather's own helper (../weather/api/hrrr), and that nothing trips the
 // page's Content Security Policy; that its storage is wx.*.
-// Pearl is checked too: the weather in lines of light, none of Vintage's shapes (its own rules in index.html).
+// Pearl is checked too: Horizon, with no cards - the weather in lines of light, the next hours one line of light with
+// the rain and its chance under it, the week as lines, none of Vintage's shapes (app.js plHero, plHours, plDays).
 // Both designs (../home/design.js): Vintage, the default, drawn in the Retro look: Futura, flat cream
 // (walnut) cards, a mustard thumb, an orange main button, a flat disc and atomic shapes for the sky instead
 // of a gradient, with text that reads on every colour it lands on; and Standard (Sea glass): the gradient
@@ -430,20 +431,35 @@ for (const scheme of ['light', 'dark']) {
   // whatever the weather, line icons in the hero, the hours and the days, and the thumb a ring of light, not mustard
   const { ctx, page, problems } = await newPage(scheme, { design: 'layers' });
   await page.goto(BASE + '/weather/');
-  await ready(page);
-  await step(scheme + ' Pearl: the weather drawn in lines of light, none of Vintage\'s shapes or colours', async () => {
+  await page.waitForSelector('#hxTray [data-hour]', { timeout: 10000 });   // Horizon: the hours are one line of light, not columns
+  await step(scheme + ' Pearl: Horizon - no cards; the weather in light, the next hours one line of light with the rain and its chance under it, the week as lines', async () => {
     const st = await page.evaluate(() => {
       const cs = (sel, ps) => { const e = document.querySelector(sel); return e ? getComputedStyle(e, ps || null) : null; };
       return { look: document.documentElement.dataset.look, disc: cs('.w3-sky') && cs('.w3-sky').display, pill: cs('#sky', '::before').display, dot: cs('#sky', '::after').display,
-        ground: getComputedStyle(document.documentElement).backgroundImage, hero: !!document.querySelector('.w3-ico svg.i.pl'), plain: document.querySelectorAll('#hxTray svg.i.pl').length,
-        days: document.querySelectorAll('.dcols svg.i.pl').length, thumb: cs('.vsw .slthumb').backgroundColor };
+        ground: getComputedStyle(document.documentElement).backgroundImage, hero: !!document.querySelector('.pl-hero .w3-ico svg.i.pl'), say: (document.querySelector('.pl-say') || {}).textContent || '',
+        card: cs('.w3-hours').backgroundColor, line: !!document.querySelector('#hxTray .pl-hline'), hours: document.querySelectorAll('#hxTray [data-hour]').length,
+        rain: [...document.querySelectorAll('#hxTray .pl-r')].map(t => t.textContent), week: document.querySelectorAll('.pl-week [data-day]').length,
+        hairs: document.querySelectorAll('[data-pl-line]').length, thumb: cs('.vsw .slthumb').backgroundColor };
     });
     assert.equal(st.look, 'layers');
-    assert.equal(st.disc, 'none', 'no Vintage disc'); assert.equal(st.pill, 'none', 'no pill'); assert.equal(st.dot, 'none', 'no dot');
+    assert.ok(st.disc == null || st.disc === 'none', 'no Vintage disc'); assert.equal(st.pill, 'none', 'no pill'); assert.equal(st.dot, 'none', 'no dot');
     assert.match(st.ground, /radial-gradient/, 'Pearl\'s ground, not the weather\'s tint');
-    assert.ok(st.hero && st.plain > 3 && st.days >= 5, 'line icons in the hero, the hours and the days: ' + JSON.stringify(st));
+    assert.match(st.card, /rgba\(0, 0, 0, 0\)|transparent/, 'no card behind the hours: ' + st.card);
+    assert.ok(st.hero, 'the weather in light over the temperature');
+    assert.match(st.say, /rain|Dry/i, 'a line on what the rain will do: ' + st.say);
+    assert.ok(st.line && st.hours >= 12, 'the next hours as one line of light, each hour tappable: ' + JSON.stringify(st));
+    assert.ok(st.rain.length > 0 && st.rain.every(t => /^\d+(\.\d+)?(%|in|mm)$/.test(t)), 'the chance of rain under the hours: ' + st.rain.join());
+    assert.equal(st.week, 7, 'the week as seven lines of light');
+    assert.ok(st.hairs >= 2, 'hairlines part the sections');
     assert.match(st.thumb, /rgba\(0, 0, 0, 0\)|transparent/, 'the thumb is a ring of light, not a fill');
-    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'pearl-' + scheme + '.png') });
+    // an hour opens its sheet, and a day its own
+    await page.locator('#hxTray [data-hour]').nth(2).click();
+    await page.waitForSelector('#hourWrap.open .hd-hero', { timeout: 3000 });
+    await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('#hourWrap.open'), null, { timeout: 3000 });
+    await page.click('.pl-week [data-day="1"]');
+    await page.waitForSelector('#dayWrap.open .dd-chart', { timeout: 3000 });
+    await page.keyboard.press('Escape');
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'pearl-' + scheme + '.png'), fullPage: true });
   });
   await step(scheme + ' Pearl: no script errors', async () => assert.deepEqual(problems, []));
   await ctx.close();

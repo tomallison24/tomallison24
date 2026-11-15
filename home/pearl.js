@@ -189,7 +189,7 @@
   // ---- what's lit: the strip under the title, and the top edges of boxes ----
   const HEADS = '.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.ptitle';
   const ICONS = '.orb.pebble,img[src*="icon-pebble"],img[src*="icon-layers"]';
-  let boxes = [], icons = [], strip = null, lights = [], scanAt = 0;
+  let boxes = [], icons = [], hairs = [], strip = null, lights = [], scanAt = 0;
   // open space: what's at the point is the page itself, not a box or an icon (a mote under a card can't be seen)
   const open = (x, y) => { if (x < 0 || y < 0 || x > W || y > H) return false; const e = document.elementFromPoint(x, y);
     return !e || !(boxes.some(b => b.el.contains(e)) || icons.some(i => i.el.contains(e)) || e.closest('[role="dialog"],[aria-modal="true"],.sheet,.scrim,.ipsy-wrap')); };
@@ -218,6 +218,8 @@
       icons.push(icons.find(i => i.el === el) || { el });
       if (icons.length >= 40) break;
     }
+    // a page's own hairlines (data-pl-line: Weather's, between its parts with no cards): lit like the boxes' edges
+    hairs = [...document.querySelectorAll('[data-pl-line]')].slice(0, 12).map(el => hairs.find(h => h.el === el) || { el, lb: 0.1 });
     // the title's strip: under the title's own header, if it sits near the top
     strip = null;
     const t = [...document.querySelectorAll(HEADS)].find(e => { const r = e.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < H * 0.4 && getComputedStyle(e).visibility !== 'hidden'; });
@@ -272,6 +274,21 @@
         lx.fillStyle = g; lx.fillRect(Math.max(x0, bx - bw), y - 0.9, Math.min(x1, bx + bw) - Math.max(x0, bx - bw), 1.8); lx.restore();
         lights.push({ key: strip.el, x0: x0 + len * 0.12, x1: x1 - len * 0.12, y, w: 1.3 });
       }
+    }
+    // a page's own hairlines: brightest where your eyes rest, as the boxes' edges are
+    for (const hr of hairs) {
+      if (!hr.el.isConnected) continue;
+      const r = hr.el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > H || !r.width) continue;
+      const want = 0.12 + 0.88 * Math.exp(-(((r.top - eye) / 95) ** 2));
+      hr.lb += (want - hr.lb) * (still ? 1 : Math.min(1, dt * 2.6));
+      const y = r.top + r.height / 2, cx = r.left + r.width / 2, hw = r.width / 2, c = day ? '30,33,38' : '255,255,255';
+      let g = lx.createLinearGradient(r.left, 0, r.right, 0);
+      g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(0.5, `rgba(${c},${(day ? 0.75 : 0.95) * hr.lb})`); g.addColorStop(1, `rgba(${c},0)`);
+      lx.fillStyle = g; lx.fillRect(r.left, y - 0.6, r.width, day ? 1.1 : 1.3);
+      if (!day) { lx.save(); lx.translate(cx, y); lx.scale(1, 10 / hw); g = lx.createRadialGradient(0, 0, 0, 0, 0, hw);
+        g.addColorStop(0, `rgba(150,205,255,${0.3 * hr.lb})`); g.addColorStop(1, 'rgba(150,205,255,0)'); lx.fillStyle = g; lx.fillRect(-hw, -hw, hw * 2, hw * 2); lx.restore(); }
+      lights.push({ key: hr.el, x0: cx - hw * 0.5, x1: cx + hw * 0.5, y, w: 0.3 + hr.lb });
     }
     // each icon: a point of light at its middle, pulling a little less than the lines
     for (const i of icons) {
