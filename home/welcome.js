@@ -103,6 +103,8 @@
         'More depth in Pearl: as you scroll, the dust moves with the page at its own depth, the nearer specks more than the far ones',
         'In Pearl, a sheet opening sends one beam of light along its top edge, which stays a faint hairline while the sheet is open',
         'Loading in Pearl is drawn in light: a placeholder is just its faint outline, with a line of light running round it',
+        'In Pearl, an app powers on as you open it from aOS: a spark at its icon, two points of light racing round the screen\'s edge, the outline flickering on as it catches, then the app opening out of a bright line across the middle. Going back, it folds into a line and fades',
+        'Pull to refresh in Pearl, on aOS Home and in Mail: a hairline draws itself out as you pull, gathering the dust; a beam glides along it while it loads, and it flares softly when it\'s done',
         'In Pearl, your helper is Lumen, a mysterious beam of light that keeps changing shape, after things astrophysicists study: a pulsar\'s sweeping beams, a black hole with light bent over its top, a spiral galaxy, a nebula\'s shells and a quasar\'s jets. It listens in gravitational waves, searches as a pulsar, writes as a comet and finishes in a supernova\'s flash, while dust drifts in and is taken into its core. Your own helper and its name come back in the other looks',
         'Everything in Pearl moves slowly, and with Reduce Motion it holds still. The light and dust pause whenever a screen isn\'t showing'],
       apps: {

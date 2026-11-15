@@ -45,7 +45,9 @@ is Pearl's.
   shared heading classes and cards with a ground and rounded corners. It also
   moves the dust with a scroll at its depth, sweeps one beam along a sheet's
   top edge as it opens (`.sheet`, `[role="dialog"]`), and lights an app's own
-  hairlines marked `data-pl-line`; a loading placeholder (`.skel`,
+  hairlines marked `data-pl-line`, and draws pull to refresh in light from the
+  page's own indicator (`#hpull`, `.ptr`: keep its opacity as the pull and
+  `.spin` while loading); in aOS an app powers on as it opens (`aOS/pearl-open.js`); a loading placeholder (`.skel`,
   `.skeleton`) is traced in light by Pearl's block. With Appearance on System,
   Pearl follows the sun where you are, not the phone (`welcome.js`). Pearl's
   icons are one-line drawings in `aOS/scripts/pearl-icons.mjs`: a new app adds
