@@ -148,7 +148,9 @@ from.
   glass), Pearl (aOS 2.4: light in the dust; lines of cool white light on near-black at night, carbon hairlines on cream by day,
   with the phone; titles in Unbounded Light from `home/fonts`; dust drifting behind every screen, falling as rain or snow with Weather's
   `wx.cache`, drawn into the strip of light under each title and the lit top edges of cards, brightest 38% down the screen where the eyes
-  rest: `home/pearl.js`, loaded by `design.js`/`look.js` in Pearl only; the helper becomes Lumen, a beam of light that changes
+  rest: `home/pearl.js`, loaded by `design.js`/`look.js` in Pearl only (it also moves the dust with a scroll at its depth, sweeps a beam along a
+  sheet's top edge as it opens, and lights a page's own `[data-pl-line]` hairlines); loading placeholders (`.skel`, `.skeleton`) are traced in light;
+  with Appearance on System, Pearl follows the sun where you are (`welcome.js` `effective`, from Weather's `wx.here`), not the phone; the helper becomes Lumen, a beam of light that changes
   shape after astrophysics, pulsar, black hole, galaxy, nebula, quasar, `lumSvg` in `home/ipsy.js`, named so in every app. **Pearl's id is `layers`**, the look it replaced, so every
   `data-look`, `design.<app>`, block, file and test that says `layers` means Pearl; Layers had replaced Night Drive, and a phone that had
   Night Drive, `neon`, opens in Pearl) and Tron (light cycles, after the

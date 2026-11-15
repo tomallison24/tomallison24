@@ -99,6 +99,10 @@
         'Weather in Pearl is Horizon: no cards, only light. The weather drawn in light over the temperature, a line on what the rain will do, the next 24 hours as one line of light like a horizon with the rain hanging under it and its chance under each hour, and the week as lines of light. Short hairlines part them, brightest where your eyes rest, and the dust is drawn into them',
         'Ignition, Pearl\'s intro: dust gathers into a rounded square of light, it flares, and aOS appears, in under four seconds. Account > Appearance > Ignition intro: Sound, Silent or Off',
         'Titles in Pearl are in Unbounded Light, kept on the phone so they work offline',
+        'Pearl follows the sun: with Appearance on System, it turns to night at sunset where you are and back to day at sunrise, slowly crossfading if you have an app open (where Weather knows your place; until then it follows your phone). Light or Dark still keeps it one way',
+        'More depth in Pearl: as you scroll, the dust moves with the page at its own depth, the nearer specks more than the far ones',
+        'In Pearl, a sheet opening sends one beam of light along its top edge, which stays a faint hairline while the sheet is open',
+        'Loading in Pearl is drawn in light: a placeholder is just its faint outline, with a line of light running round it',
         'In Pearl, your helper is Lumen, a mysterious beam of light that keeps changing shape, after things astrophysicists study: a pulsar\'s sweeping beams, a black hole with light bent over its top, a spiral galaxy, a nebula\'s shells and a quasar\'s jets. It listens in gravitational waves, searches as a pulsar, writes as a comet and finishes in a supernova\'s flash, while dust drifts in and is taken into its core. Your own helper and its name come back in the other looks',
         'Everything in Pearl moves slowly, and with Reduce Motion it holds still. The light and dust pause whenever a screen isn\'t showing'],
       apps: {
@@ -1324,7 +1328,36 @@
   const readTheme = () => { try { const t = (JSON.parse(localStorage.getItem('home.settings')) || {}).theme; return ['light', 'dark'].includes(t) ? t : 'auto'; } catch { return 'auto'; } };
   // Tron is dark only, as the car's screen is: your own choice is kept, and comes back with another look
   const tron = () => document.documentElement.getAttribute('data-look') === 'grid';
-  const applyTheme = t => { const r = document.documentElement; if (tron()) t = 'dark'; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); forceScheme(t); };
+  // Pearl (data-look 'layers') with System: day and night follow the sun where you are (Weather's place, wx.here, or
+  // its first saved place), not the phone: light from sunrise, dark from sunset. Where's not known yet: the phone's.
+  const pearl = () => document.documentElement.getAttribute('data-look') === 'layers';
+  const sunNight = () => {
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem('wx.here')); if (!p || !Number.isFinite(p.lat)) p = (JSON.parse(localStorage.getItem('wx.places')) || [])[0]; } catch {}
+    if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return null;
+    // the sun's height at this moment (NOAA's low-precision formulas): below -0.83 degrees it has set
+    const rad = Math.PI / 180, d = (Date.now() / 86400000) - 10957.5, g = (357.529 + 0.98560028 * d) * rad, q = 280.459 + 0.98564736 * d;
+    const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * rad, e = (23.439 - 0.00000036 * d) * rad;
+    const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L)), dec = Math.asin(Math.sin(e) * Math.sin(L));
+    const gmst = (18.697374558 + 24.06570982441908 * d) % 24, ha = ((gmst * 15 + p.lon) * rad) - ra;
+    const alt = Math.asin(Math.sin(p.lat * rad) * Math.sin(dec) + Math.cos(p.lat * rad) * Math.cos(dec) * Math.cos(ha)) / rad;
+    return alt < -0.83;
+  };
+  const effective = t => { if (tron()) return 'dark'; if (t !== 'auto' || !pearl()) return t; const n = sunNight(); return n == null ? 'auto' : n ? 'dark' : 'light'; };
+  const applyTheme = t => { const r = document.documentElement; t = effective(t); if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); forceScheme(t); };
+  // at sunrise or sunset, a page left open turns slowly, the day crossfading into the night (a view transition,
+  // where the browser has them); with Reduce Motion, at once
+  let sunWas = null;
+  setInterval(() => {
+    if (readTheme() !== 'auto' || !pearl() || document.hidden) { sunWas = null; return; }
+    const now = effective('auto'); if (sunWas === null) { sunWas = now; return; }
+    if (now === sunWas) return;
+    sunWas = now;
+    const turn = () => applyTheme('auto');
+    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return turn();
+    if (!document.getElementById('aos-dusk')) document.head.insertAdjacentHTML('beforeend', '<style id="aos-dusk">::view-transition-old(root),::view-transition-new(root){animation-duration:3.2s;animation-timing-function:ease-in-out}</style>');
+    document.startViewTransition(turn);
+  }, 30000);
   // Some apps' CSS follows only the iPhone's setting (@media (prefers-color-scheme: ...)).
   // A chosen Light or Dark switches those rules on or off to match, so every app follows
   // it; System puts them back. The theme-color metas are matched the same way.

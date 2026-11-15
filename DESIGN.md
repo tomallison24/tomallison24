@@ -42,7 +42,12 @@ is Pearl's.
   under the title, the lit top edges of cards at the eye line, 38% down the
   screen, the dust behind the page) are `home/pearl.js`, which finds the title
   and the cards itself: an app needs nothing for it but a title in one of the
-  shared heading classes and cards with a ground and rounded corners. Pearl's
+  shared heading classes and cards with a ground and rounded corners. It also
+  moves the dust with a scroll at its depth, sweeps one beam along a sheet's
+  top edge as it opens (`.sheet`, `[role="dialog"]`), and lights an app's own
+  hairlines marked `data-pl-line`; a loading placeholder (`.skel`,
+  `.skeleton`) is traced in light by Pearl's block. With Appearance on System,
+  Pearl follows the sun where you are, not the phone (`welcome.js`). Pearl's
   icons are one-line drawings in `aOS/scripts/pearl-icons.mjs`: a new app adds
   its drawing there. Colours come from tokens (`--bg`,
   `--text`, `--muted`, `--accent`, `--cta`, and the shared `--st-*`), never

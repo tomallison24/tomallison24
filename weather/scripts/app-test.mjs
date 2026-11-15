@@ -455,6 +455,9 @@ for (const scheme of ['light', 'dark']) {
     // an hour opens its sheet, and a day its own
     await page.locator('#hxTray [data-hour]').nth(2).click();
     await page.waitForSelector('#hourWrap.open .hd-hero', { timeout: 3000 });
+    await page.waitForFunction(() => window.aosPearl && aosPearl.stats().sheets >= 1, null, { timeout: 3000 });   // its top edge lit as it opens
+    const hdBg = await page.$eval('#hourWrap .hd-hero', e => getComputedStyle(e).backgroundColor);
+    assert.match(hdBg, /rgba\(0, 0, 0, 0\)|transparent/, 'the hour sheet is drawn in light, not a coloured block: ' + hdBg);
     await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('#hourWrap.open'), null, { timeout: 3000 });
     await page.click('.pl-week [data-day="1"]');
     await page.waitForSelector('#dayWrap.open .dd-chart', { timeout: 3000 });

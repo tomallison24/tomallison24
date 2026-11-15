@@ -14,6 +14,9 @@
 //     with a ground and rounded corners), brightest where the eyes rest on a phone, 38% of the way down the screen,
 //     fading above and below it, so the box you scroll to lights up. Hidden wherever something is over it (a sheet,
 //     a bar): it's only drawn where the box's own edge is what you'd see.
+//   - Depth: as you scroll, the dust moves with it at its own depth, near motes more than far ones, so the screen
+//     has depth behind it. A sheet opening sends one beam of light along its top edge, which then stays a faint
+//     hairline while it's open.
 //   - Night (the phone or aOS in dark): cool white light on near-black. Day: carbon lines on cream, a white gleam for
 //     the beam.
 //   - It pauses while the page isn't on screen (hidden, an app's frame put away, aOS Home under an open app) and,
@@ -81,6 +84,7 @@
 
   function stepDust(T, dt) {
     const step = dt * 60;
+    if (par) { for (const m of motes) if (!m.fall && !m.die) m.y -= par * (0.04 + 0.42 * m.z * m.z); par = 0; }   // near motes (big, z near 1) move most
     falling = 0; for (const m of motes) if (m.fall) falling++;
     for (let i = motes.length - 1; i >= 0; i--) {
       const m = motes[i];
@@ -146,6 +150,45 @@
     }
     dx.globalAlpha = 1;
     dx.globalCompositeOperation = 'source-over';
+  }
+  // ---- sheets: one beam along the top edge as a sheet opens, then a faint hairline while it's open ----
+  const SHEETS = '.sheet,[role="dialog"],.hsheet,.ipsy-panel';
+  let sheets = [];
+  function drawSheets(T, dt, frame, day, still) {
+    if (frame % 3 === 0) {
+      const now = [];
+      for (const el of document.querySelectorAll(SHEETS)) {
+        if (el.closest('[data-pearl-skip]')) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < W * 0.5 || r.height < 120 || r.top > H - 60 || r.bottom < 60) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden' || +cs.opacity < 0.4 || cs.display === 'none') continue;
+        if (sheets.some(s => s.el.contains(el) && s.el !== el)) continue;
+        now.push(sheets.find(s => s.el === el) || { el, t: still ? 9 : 0 });
+      }
+      sheets = now.filter(s => !now.some(o => o !== s && o.el.contains(s.el)));   // the outermost sheet only
+    }
+    const c = day ? '30,33,38' : '255,255,255';
+    for (const s of sheets) {
+      if (!s.el.isConnected) continue;
+      s.t += dt;
+      const r = s.el.getBoundingClientRect(), rad = Math.min(28, parseFloat(getComputedStyle(s.el).borderTopLeftRadius) || 0), x0 = r.left + rad * 0.8, x1 = r.right - rad * 0.8, y = r.top + 0.8, len = x1 - x0;
+      if (len < 40 || y > H || y < -2) continue;
+      // the hairline it keeps, fading in as the beam passes
+      const keep = Math.min(1, s.t / 1.4) * 0.45;
+      let g = lx.createLinearGradient(x0, 0, x1, 0);
+      g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(0.5, `rgba(${c},${(day ? 0.55 : 0.75) * keep})`); g.addColorStop(1, `rgba(${c},0)`);
+      lx.fillStyle = g; lx.fillRect(x0, y - 0.5, len, 1);
+      // the beam: once along the edge, left to right, slowing as it goes
+      const u = s.t / 1.3;
+      if (u < 1) {
+        const e = 1 - (1 - u) ** 2.2, bx = x0 + len * e, bw = len * 0.22, a = Math.sin(Math.PI * Math.min(1, u * 1.15));
+        g = lx.createLinearGradient(bx - bw, 0, bx + bw, 0);
+        g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, day ? `rgba(30,33,38,${0.7 * a})` : `rgba(250,253,255,${a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+        lx.save(); if (!day) { lx.shadowColor = `rgba(170,215,255,${0.9 * a})`; lx.shadowBlur = 12; }
+        lx.fillStyle = g; lx.fillRect(Math.max(x0, bx - bw), y - 0.9, Math.min(x1, bx + bw) - Math.max(x0, bx - bw), 1.8); lx.restore();
+      }
+    }
   }
   // the motes falling into their light, and where each was taken in: over the page, on the light's canvas
   function drawFalls(T) {
@@ -280,6 +323,8 @@
       if (!hr.el.isConnected) continue;
       const r = hr.el.getBoundingClientRect();
       if (r.bottom < 0 || r.top > H || !r.width) continue;
+      if (frame % 4 === 0 || hr.vis == null) hr.vis = !hidden(hr.el, r.left + r.width / 2, r.top + r.height / 2);
+      if (!hr.vis) continue;   // a sheet or a dialog over it
       const want = 0.12 + 0.88 * Math.exp(-(((r.top - eye) / 95) ** 2));
       hr.lb += (want - hr.lb) * (still ? 1 : Math.min(1, dt * 2.6));
       const y = r.top + r.height / 2, cx = r.left + r.width / 2, hw = r.width / 2, c = day ? '30,33,38' : '255,255,255';
@@ -298,9 +343,12 @@
       if (frame % 4 === 0 || i.vis == null) i.vis = shows(i.el, cx, cy);
       if (i.vis) lights.push({ key: i.el, icon: true, x0: cx, x1: cx, y: cy, r: r.width * 0.62, w: 0.8 });
     }
+    drawSheets(T, dt, frame, day, still);
     drawFalls(T);
     lx.globalCompositeOperation = 'source-over';
   }
+  // a hairline on the page: hidden while a sheet or a dialog (anything it isn't inside) is over it
+  const hidden = (el, x, y) => { if (y < 0 || y > H) return true; const e = document.elementFromPoint(x, y); return !!e && !!e.closest(SHEETS + ',[aria-modal="true"],.scrim') && !e.closest(SHEETS + ',[aria-modal="true"],.scrim').contains(el); };
   // the strip sits on the page itself: hidden while a sheet or a dialog is over it
   const covered = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && !!e.closest('[role="dialog"],[aria-modal="true"],.sheet,.scrim') && !strip.el.contains(e); };
 
@@ -319,7 +367,7 @@
     if (innerWidth !== W || innerHeight !== H) size();
     if (now - scanAt > 1500) scan();
     if (Date.now() - wxAt > 60e3) readWx();
-    if (!reduce()) stepDust(T, dt);
+    if (!reduce()) stepDust(T, dt); else par = 0;
     drawDust(T); drawLight(T, dt, frame);
     raf = requestAnimationFrame(tick);
   }
@@ -341,9 +389,18 @@
   new MutationObserver(check).observe(root, { attributes: true, attributeFilter: ['data-look', 'data-theme'] });
   document.addEventListener('visibilitychange', check);
   addEventListener('pageshow', check); addEventListener('focus', check);
-  addEventListener('scroll', () => { scanAt = 0; }, { passive: true, capture: true });
+  // depth: how far the page (or whatever scrolled) moved since the last frame; each mote moves with it by its depth
+  let par = 0;
+  const lastTop = new WeakMap();
+  addEventListener('scroll', e => {
+    scanAt = 0;
+    const el = e.target === document ? document.scrollingElement : e.target;
+    if (!el || el.scrollTop == null) return;
+    const y = el.scrollTop, was = lastTop.get(el); lastTop.set(el, y);
+    if (was != null && Math.abs(y - was) < 400) par += y - was;   // not a jump (a new page, a reset)
+  }, { passive: true, capture: true });
   setInterval(check, 1500);   // an app's frame shown or put away, aOS Home covered or uncovered
   window.aosPearl = { pause: () => { held = true; stop(); }, resume: () => { held = false; check(); }, running: () => running,
-    stats: () => ({ motes: motes.length, lights: lights.length, icons: lights.filter(l => l.icon).length, falling, taken, falls: motes.filter(m => m.fall).map(m => [Math.round(m.x), Math.round(m.y), +(m.fall.t / m.fall.dur).toFixed(2), m.fall.key && m.fall.key.className && String(m.fall.key.className.baseVal ?? m.fall.key.className)]) }) };   // for the tests
+    stats: () => ({ sheets: sheets.length, motes: motes.length, lights: lights.length, icons: lights.filter(l => l.icon).length, falling, taken, falls: motes.filter(m => m.fall).map(m => [Math.round(m.x), Math.round(m.y), +(m.fall.t / m.fall.dur).toFixed(2), m.fall.key && m.fall.key.className && String(m.fall.key.className.baseVal ?? m.fall.key.className)]) }) };   // for the tests
   if (document.body) check(); else addEventListener('DOMContentLoaded', check);
 })();
