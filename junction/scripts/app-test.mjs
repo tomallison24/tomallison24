@@ -210,6 +210,34 @@ await check('Vintage and Standard, light and dark: the frame takes the look, the
   }
 });
 
+await check('a car going ahead never stops at a green light just because the queue in front is still bunched up', async () => {
+  // The 4th car in a line moving off on a green used to stop at the line: the road beyond looked full for a moment,
+  // counted from behind the last car in. Now it goes while the road ahead is moving and has room.
+  const { ctx, p } = await phone();
+  await p.click('#bNew');
+  const stops = await p.evaluate(() => {
+    const J = window.__junction, G = J.state(), seen = new Set(); let n = 0;
+    for (let k = 0; k < 24000; k++) {        // about 13 minutes of the game
+      J.step(1 / 30);
+      for (const s of G.sites) for (const lk in s.lanes) for (const car of s.lanes[lk]) {
+        if (car.committed) continue;
+        const sg = J.signal(s, car.ap), green = sg.main === 'G' || (sg.arrow === 'G' && car.turn !== 'S');
+        if (green && car.turn === 'S' && car.v < 1 && car.mv.dStop - 3 - car.d < 8 && !J.roomAhead(car)) {
+          const nx = car.next, lane = nx && nx.site.lanes[nx.lk];
+          // the road ahead moving and not full (a road filling up toward a red light rightly makes it wait)
+          const used = lane.reduce((u, o) => u + o.len + 6, nx.site.res[nx.lk] + car.len + 6);
+          const room = !nx.site.active || used <= (lane.length ? lane[lane.length - 1].mv.dStop - 10 : Infinity);
+          if (lane && lane.every(o => o.v >= 25) && room && !seen.has(car)) { seen.add(car); n++; }
+        }
+        break;
+      }
+    }
+    return n;
+  });
+  assert.equal(stops, 0, stops + ' cars stopped at a green light with the road ahead moving and room on it');
+  await ctx.close();
+});
+
 await check('no script errors and nothing the page\'s policy blocked', async () => {
   assert.deepEqual(errors, []);
 });
