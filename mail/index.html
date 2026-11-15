@@ -1668,6 +1668,45 @@ ul.list > li.confirm.blue::after{background:linear-gradient(105deg, transparent 
 :root[data-theme="dark"]{--pl-trace-glow:drop-shadow(0 0 3px rgba(150,205,255,.8))}
 @keyframes pl-trace{to{--pl-a:360deg}}
 @media (prefers-reduced-motion:reduce){:is(.skel,.skeleton)::after{animation:none;opacity:.4}}
+/* ---- the rulebook, for every app but Sparkle (a game, kept game style): light, not surfaces (decided with the owner) ----
+   No cards, boxes, pills or bars: their grounds and edges go, and things sit on Pearl's ground, parted by hairlines.
+   Picked means brighter: a ring, a little thicker, never a fill. The main button is a ring of light, the others a
+   hairline, a destructive one a red hairline. Fields and chips are faint rings, brighter while in use. No shadows.
+   Sheets keep their own solid ground (--sheet), the one surface left. html:root outranks the Vintage block's dark rules. */
+html:root[data-look="layers"]{--pl-faint:color-mix(in srgb,var(--pl-line) 20%,transparent);--pl-hairline:color-mix(in srgb,var(--pl-line) 12%,transparent);--pl-pick:inset 0 0 0 1.6px var(--pl-line);
+  --tile:transparent;--tile-edge:transparent;--glass:transparent;--glass-2:transparent;--fill:transparent;--seg-thumb:transparent;
+  --lg-bg:transparent;--lg-rim:0 0 #0000;--bar-solid:var(--pl-frost);--bar-top:var(--pl-frost);--bar-bottom:var(--pl-frost);--bar-rim:transparent;
+  --pl-frost:color-mix(in srgb,var(--pl-top) 74%,transparent);
+  --lift:transparent;--lift-strong:transparent;--hi:transparent;--gb-shine:linear-gradient(transparent,transparent);--gb-edge:var(--pl-faint);
+  --cta:color-mix(in srgb,var(--pl-line) 4%,transparent);--cta-ink:var(--pl-line);--hair:var(--pl-hairline);--hair-2:var(--pl-hairline);
+  --mc-card:transparent;--mc-card-2:transparent;--mc-edge:transparent;--pl-surface:#FBF8F2}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]){--pl-pick-glow:0 0 10px -1px rgba(150,205,255,.7);--pl-in-glow:0 0 14px -3px rgba(150,205,255,.55)}}
+html:root[data-look="layers"][data-theme="dark"]{--pl-pick-glow:0 0 10px -1px rgba(150,205,255,.7);--pl-in-glow:0 0 14px -3px rgba(150,205,255,.55)}
+html:root[data-look="layers"]{--pl-pick-glow:0 0 #0000;--pl-in-glow:0 0 #0000}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]){--pl-surface:#050B18}}
+html:root[data-look="layers"][data-theme="dark"]{--pl-surface:#050B18}
+/* the one solid surface: sheets, menus and the toasts over the page, on Pearl's own ground so their words stay readable */
+html:root[data-look="layers"] :is(.sheet,.dmenu,.menu,.popover,.toast,.st-sheet){background:var(--pl-surface) !important}
+html:root[data-look="layers"] :is(.seg,.segmented,.modes,.rgroup,.card,.empty,.notice,.group,.sum,.kpis,.addbox,.stats,.chartcard,.lead,.list,.box){-webkit-backdrop-filter:none;backdrop-filter:none}
+/* picked: a ring, a little thicker, glowing at night (the sliding thumb, or the button itself where nothing slides) */
+html:root[data-look="layers"] .slthumb{background:transparent !important;box-shadow:var(--pl-pick),var(--pl-pick-glow) !important}
+html:root[data-look="layers"] :is(.seg:not(.slides) button[aria-pressed="true"],.seg button[aria-checked="true"],.tabs:not(.slides) .tab[aria-selected="true"],.chip.on,.chip.pill.on,.pillbtn[aria-pressed="true"],.frow .unit button[aria-pressed="true"]){background:transparent !important;color:var(--pl-line) !important;box-shadow:var(--pl-pick),var(--pl-pick-glow) !important}
+html:root[data-look="layers"] :is(.seg,.slides) :is(button,.tab)[aria-pressed="true"],html:root[data-look="layers"] :is(.tabs) .tab[aria-selected="true"]{color:var(--pl-line)}
+/* bars that float over the page (tab bars, the dock): frosted Pearl ground so what scrolls under them can't show through, no outline */
+html:root[data-look="layers"] :is(.tabbar,.tabs,.dock,.vbar,.tagbtn){box-shadow:none}
+html:root[data-look="layers"] .tagbtn{background:var(--pl-frost) !important;color:var(--pl-line) !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+/* chips and the choices in a row: each a faint ring, its words in the page's ink */
+html:root[data-look="layers"] :is(.chip,.fchip,.opt,.pillbtn,.morebtn){background:transparent;color:var(--text);box-shadow:inset 0 0 0 1px var(--pl-faint)}
+/* buttons: the main one a ring of light; the rest a hairline; destructive a red hairline */
+html:root[data-look="layers"] :is(.btn.main,.btn.cta,.btn.primary,.ctabtn,.send,.banner button,.round.go,.mini.go,.bizacts button:first-child){background:var(--cta) !important;color:var(--pl-line) !important;box-shadow:var(--pl-ring) !important}
+html:root[data-look="layers"] .btn:not(.main):not(.cta):not(.primary):not(.danger):not(.warn){background:transparent;color:var(--pl-line);box-shadow:inset 0 0 0 1px var(--pl-faint)}
+html:root[data-look="layers"] :is(.btn.danger,.btn.warn){background:transparent;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--danger,#C0443A) 70%,transparent)}
+/* fields: a faint ring, brighter and a little thicker while you type; a search box is the ring, its input inside isn't */
+html:root[data-look="layers"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not([type="file"]),textarea,select):not(.search *):not(.sbox *):not(.st-field){background:transparent;box-shadow:inset 0 0 0 1px var(--pl-faint)}
+html:root[data-look="layers"] :is(input,textarea,select):not(.search *):not(.sbox *):focus{box-shadow:var(--pl-pick),var(--pl-in-glow);outline:none}
+html:root[data-look="layers"] :is(.search,.sbox,.st-field){background:transparent !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important}
+html:root[data-look="layers"] :is(.search,.sbox):focus-within,html:root[data-look="layers"] .st-field:focus{box-shadow:var(--pl-pick),var(--pl-in-glow) !important}
+html:root[data-look="layers"] :is(.search,.sbox) :is(input,textarea){box-shadow:none;background:transparent}
 </style>
 <style id="grid" media="not all">
 /* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */

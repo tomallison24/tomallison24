@@ -187,6 +187,11 @@ html[data-look="grid"]:not([data-theme="light"]){--st-card:#0D0F11;--st-edge:rgb
 }
 html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,240,242,.14);--st-text:#EEF0F2;--st-muted:#C8CACD;--st-rule:rgba(238,240,242,.12);--st-accent:#FFA39B;--st-danger:#FE9185;--st-on:#FFA39B;--st-off:rgba(238,240,242,.5);--st-knob:#F8FAFC;--st-glow:rgba(255,163,155,.35);--st-seg:rgba(238,240,242,.08);--st-seg-on:#1E2023;--st-press:rgba(238,240,242,.06)}
 /* generated: end */
+/* Pearl (id 'layers'), the rulebook: Settings' rows sit on the sheet's ground, a hairline between them, not a box each
+   (written by hand, after the generated colours, and outranking them) */
+html:root[data-look="layers"]:is(:not([data-theme]),[data-theme]){--st-card:transparent;--st-edge:transparent}
+html[data-look="layers"] .st-sec.st-fold > summary.st-lbl{border-radius:0;box-shadow:inset 0 -1px 0 var(--st-rule)}
+html[data-look="layers"] .st-group{border-radius:0;-webkit-backdrop-filter:none;backdrop-filter:none}
 `;
   if (!document.getElementById('aos-settings')) { const el = document.createElement('style'); el.id = 'aos-settings'; el.textContent = CSS; document.head.appendChild(el); }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
