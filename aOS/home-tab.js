@@ -933,34 +933,6 @@
   $('hfound').addEventListener('keydown', e => { const o = e.target.closest('[data-open]'); if (o && e.target === o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); o.click(); } });
   function askIpsy(t) { if (!ipsy || !t) return; clearFind(); ipsy.prompt(t); }
 
-  // Now and then your helper crosses the bar, in its own way (home/ipsy.js cross: Mia's zoomies, the fox's
-  // pounce, the owl's loop, the hedgehog's roll, Nova zipping by as a ball of dots), out to the far end
-  // and back. Only on Home with the bar empty and untouched, the chat shut and no
-  // finger down; never with Reduce Motion. The first soon after aOS opens, then a minute or two apart. Any
-  // tap (the helper itself, the bar) sends it straight home.
-  const slot = $('ipsySlot'), rollBar = $('askIpsy');
-  let rolling = null, rollT = null;
-  const rollIn = ms => { clearTimeout(rollT); rollT = setTimeout(roll, ms); };
-  function roll() {
-    const I = AllisonOS.ipsy;
-    if (rolling || !I || !I.cross || !slot.querySelector('.ipsy-char') || !onHome() || down || editing() || q.value || document.activeElement === q || document.querySelector('.ipsy-wrap:not([hidden])')
-      || matchMedia('(prefers-reduced-motion: reduce)').matches) { rollIn(20e3); return false; }
-    rollIn(60e3 + Math.random() * 90e3);
-    const d = rollBar.clientWidth - slot.offsetWidth - 2 * slot.offsetLeft;
-    if (d < 80) return false;
-    const anims = I.cross(slot, d);
-    if (!anims) return false;
-    rollBar.classList.add('rolling');
-    rolling = anims;
-    rolling[0].finished.catch(() => {}).then(() => { rolling = null; rollBar.classList.remove('rolling'); });
-    return true;
-  }
-  const rollHome = () => { if (rolling) rolling.forEach(a => a.finish()); };
-  addEventListener('pointerdown', rollHome, true);
-  slot.addEventListener('click', rollHome, true);   // the chat opens from Ipsy at home, not mid-roll
-  q.addEventListener('focus', rollHome);
-  rollIn(8e3 + Math.random() * 6e3);
-
   let toastT = null;
   function toast(t, ms = 1800) { const el = $('htoast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), ms); }
 
@@ -1036,7 +1008,7 @@
     let n = 0; const tap = () => { try { const b = frames[id].firstChild.contentDocument.querySelector(sel); if (b && frames[id].firstChild.contentWindow.AllisonOS) return b.click(); } catch {} if (n++ < 120) setTimeout(tap, 250); };   // up to 30 seconds for the app to start
     setTimeout(tap, 300);
   };
-  window.aosHomeTab = { glitches: () => get('aos.glitch', []), layout: v => v === undefined ? layout : setLayout(v), everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, roll, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
+  window.aosHomeTab = { glitches: () => get('aos.glitch', []), layout: v => v === undefined ? layout : setLayout(v), everyLook, around, openSettings, show, open: () => open.slice(), favorites, findApps, insets, carried: () => { for (const k in asked) delete asked[k]; } };   // for the tests (aOS/scripts/home-test.mjs)
 
   setLayout(layout, false); readUnread(); freshen(); syncPrefs();
   const start = (/[#&]app=([a-z]+)/.exec(location.hash) || [])[1];

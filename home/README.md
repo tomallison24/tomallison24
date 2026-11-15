@@ -31,9 +31,9 @@ What stays in this folder:
   and names (Mia, the family's Australian Shepherd, a fox, an owl, a hedgehog or
   Nova, ten thousand coloured dots; `aos.helper`, synced with your settings), acting
   out each job (reading, glasses on to search, writing, showing, a hop when a change
-  is saved; `jobOf` reads it from the tool's name), crossing aOS Home's bar in its
-  own way (`cross`), its chat sheet, and the loop that asks Claude through the
-  app's own server route and runs the app's tools on the phone. It takes the app's
+  is saved; `jobOf` reads it from the tool's name), its chat sheet, and the loop
+  that asks Claude through the app's own server route and runs the app's tools on
+  the phone. It takes the app's
   look (Sea glass, or Vintage with `data-look="vintage"`) and its light or dark
   tokens. An app loads it before its own script, lists it in its `sw.js` SHELL and
   calls `AllisonOS.ipsy.mount({...})` with its tools (see the top of the file).
