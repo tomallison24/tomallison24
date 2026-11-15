@@ -223,7 +223,25 @@ html,body{height:100%;overflow:hidden}
 .phase.next{box-shadow:inset 0 0 0 2px var(--flag)}
 .phase.next .lamp{background:#F2A900;animation:blink .6s steps(2) infinite}
 @keyframes blink{50%{opacity:.2}}
-@media (max-width:560px){.phases{grid-template-columns:1fr 1fr}.phase small{display:none}}
+/* compact, so it covers as little of the south road as it can: one row for the junction, Auto and Upgrades, one row of
+   phases (four in a row when it has turn arrows); no words under the controls */
+.jpanel{gap:6px;padding:6px 8px 8px}
+.jrow{flex-wrap:nowrap;min-height:44px;gap:6px}
+.jname{font-size:16px;white-space:nowrap}
+.jnote,.phase small{display:none}
+#jShop{flex:none;min-height:36px;height:36px;padding:0 14px;font-size:14px}
+#jShop{position:relative}#jShop::after{content:'';position:absolute;inset:-4px -2px}   /* still a 44-point tap, drawn smaller */
+.autobox{gap:6px;padding:0 2px}
+.phase{min-height:44px;padding:6px 20px 6px 8px}
+@media (max-width:560px){
+  .tagp{display:none}   /* what kind of lights: Upgrades says, and the Auto switch shows whether they run themselves */
+  .phases{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .phase{grid-template-columns:1fr;justify-items:center;text-align:center;gap:2px;padding:5px 4px 6px;font-size:11.5px}
+  .phase svg{grid-row:auto;width:20px;height:20px}
+  .phase .lamp{top:5px;right:5px;width:7px;height:7px}
+  .phases.two .phase{grid-template-columns:auto 1fr;justify-items:start;text-align:left;gap:0 8px;padding:6px 20px 6px 9px;font-size:13px}
+  .phases.two .phase svg{width:22px;height:22px}
+}
 
 /* the start card: Continue or New game */
 .startwrap{position:fixed;inset:0;z-index:4;display:grid;place-items:center;padding:calc(env(safe-area-inset-top,0px) + 110px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);background:color-mix(in srgb,var(--bg) 22%,transparent)}
