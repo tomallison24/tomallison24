@@ -709,6 +709,13 @@ html:root[data-look="layers"] .banner{background:transparent !important;box-shad
 /* today, in a calendar or a list of days: its number in a ring of light, the brightest thing there; no tinted cell */
 html:root[data-look="layers"] :is(.mday.today .n,.drow.today .dn b,.tghead .dh.today b,.ygrid .today){background:transparent !important;color:var(--pl-line) !important;box-shadow:var(--pl-pick),var(--pl-pick-glow) !important}
 html:root[data-look="layers"] .mday.today{background:transparent}
+/* blocks one under another (what were cards: an email, a trip, an order, a group of rows) parted by a very thin, discreet
+   hairline of light that fades at its ends, drawn half way across the gap between them (border-image: nothing moves) */
+html:root[data-look="layers"]{--pl-sep:color-mix(in srgb,var(--pl-line) 24%,transparent)}
+html:root[data-look="layers"] :is(.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip) + :is(.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip),html:root[data-look="layers"] ul.list.pills > li + li,html:root[data-look="layers"] .grid .col > .sw + .sw{border-image:linear-gradient(90deg,transparent,var(--pl-sep) 14%,var(--pl-sep) 86%,transparent) 1 / 1px 0 0 0 / var(--pl-sep-out,6px) 0 0 0 !important}
+html:root[data-look="layers"] ul.list.pills > li,html:root[data-look="layers"] .grid .col > .sw{--pl-sep-out:5px}
+/* a text button (Edit, Done) in the light's own colour, not an accent */
+html:root[data-look="layers"] .textbtn:not(.danger){color:var(--pl-line)}
 </style>
 <style id="grid" media="not all">
 /* Tron: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
