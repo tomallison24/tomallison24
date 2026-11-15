@@ -64,7 +64,7 @@
 
   // the apps on Home (aOS itself isn't one of them)
   const ALL = ['calendar', 'meals', 'notes', 'house', 'orders', 'weather', 'news', 'mail', 'clock', 'podcasts', 'travel', 'places',
-    'fitness', 'drinks', 'money', 'improve', 'sparkle', 'school'].filter(id => D.APPS.includes(id));
+    'fitness', 'drinks', 'money', 'improve', 'sparkle', 'school', 'junction'].filter(id => D.APPS.includes(id));
   const known = id => ALL.includes(id);
   const name = id => D.NAMES[id] || id;
   const az = ids => ids.slice().sort((a, b) => name(a).localeCompare(name(b), 'en', { sensitivity: 'base' }));
@@ -324,6 +324,7 @@
     drinks: '<path d="M5 4.5h14L12 12zM12 12v7.5M8 19.5h8"/>',
     money: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
     sparkle: '<path d="M12 3c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7z"/>',
+    junction: '<rect x="8" y="3" width="8" height="16" rx="3"/><circle cx="12" cy="7" r="1.4"/><circle cx="12" cy="11" r="1.4"/><circle cx="12" cy="15" r="1.4"/><path d="M12 19v2.5"/>',
   };
   const glyph = id => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[id] || GLYPH.sparkle}</svg>`;
   // Each app as Pearl's pebble (Pearl replaced Layers and keeps its id): a hairline pebble with the app's line drawing at 60% of
@@ -896,7 +897,7 @@
   // with no app to open, it asks Ipsy.
   const q = $('hq');
   // the groups Home once had, still words that find their apps ("kids", "family")
-  const GROUPS = { family: 'calendar meals notes house orders', 'every day': 'weather news mail clock podcasts', 'out and about': 'travel places', you: 'fitness drinks money improve', kids: 'sparkle school' };
+  const GROUPS = { family: 'calendar meals notes house orders', 'every day': 'weather news mail clock podcasts', 'out and about': 'travel places', you: 'fitness drinks money improve', kids: 'sparkle school junction' };
   const group = id => (Object.entries(GROUPS).find(([, ids]) => ids.split(' ').includes(id)) || [''])[0];
   const words = id => [name(id), tag(id), group(id)].join(' ').toLowerCase();
   function findApps(t) {
