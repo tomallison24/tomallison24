@@ -17,6 +17,9 @@
 //   - Depth: as you scroll, the dust moves with it at its own depth, near motes more than far ones, so the screen
 //     has depth behind it. A sheet opening sends one beam of light along its top edge, which then stays a faint
 //     hairline while it's open.
+//   - Pull to refresh (aOS Home's #hpull, Mail's .ptr: they still keep the pull, their arrow is hidden here): a hairline
+//     draws itself out from the middle as you pull, the dust drawn into it; let go, and a beam glides along it while it
+//     loads, then it flares softly as it's done.
 //   - Night (the phone or aOS in dark): cool white light on near-black. Day: carbon lines on cream, a white gleam for
 //     the beam.
 //   - It pauses while the page isn't on screen (hidden, an app's frame put away, aOS Home under an open app) and,
@@ -150,6 +153,34 @@
     }
     dx.globalAlpha = 1;
     dx.globalCompositeOperation = 'source-over';
+  }
+  // ---- pull to refresh: read from the page's own indicator (its opacity is how far it's pulled; .spin, loading) ----
+  const PULLS = '#hpull,.ptr', pullSt = new WeakMap();
+  if (!document.getElementById('pl-pull-css')) document.head.insertAdjacentHTML('beforeend', '<style id="pl-pull-css">html[data-look="layers"] :is(#hpull,.ptr){background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}html[data-look="layers"] :is(#hpull,.ptr) svg{visibility:hidden}</style>');
+  function drawPulls(T, dt, day, still) {
+    for (const el of document.querySelectorAll(PULLS)) {
+      let st = pullSt.get(el); if (!st) pullSt.set(el, st = { spun: false, t: 0, flare: 0, k: 0 });
+      const spin = el.classList.contains('spin'), want = spin ? 1 : Math.max(0, Math.min(1, parseFloat(getComputedStyle(el).opacity) || 0));
+      st.k += (want - st.k) * (still ? 1 : Math.min(1, dt * 14));
+      if (spin) { st.spun = true; st.t += dt; } else if (st.spun) { st.spun = false; st.t = 0; st.flare = 1; }
+      st.flare = Math.max(0, st.flare - dt / 1.1);
+      const k = st.k, f = still ? 0 : Math.sin(Math.PI * Math.min(1, (1 - st.flare) * 1.6)) * (st.flare > 0 ? 1 : 0);
+      if (k < 0.02 && st.flare <= 0) continue;
+      const r = el.getBoundingClientRect(), y = r.top + r.height / 2, cx = W / 2, full = W / 2 - 24;
+      const hw = spin || st.flare > 0 ? full : full * (1 - (1 - k) ** 2), alpha = spin ? 0.6 : st.flare > 0 ? 0.6 * st.flare : 0.25 + 0.6 * k;
+      const c = day ? '30,33,38' : '242,250,255';
+      let g = lx.createLinearGradient(cx - hw, 0, cx + hw, 0);
+      g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(0.5, `rgba(${c},${Math.min(1, alpha + f * 0.4).toFixed(3)})`); g.addColorStop(1, `rgba(${c},0)`);
+      lx.save(); if (!day) { lx.shadowColor = `rgba(150,205,255,${(0.7 + f * 0.3).toFixed(2)})`; lx.shadowBlur = 8 + f * 16; }
+      lx.fillStyle = g; lx.fillRect(cx - hw, y - 0.7, hw * 2, 1.4 + f * 1.2); lx.restore();
+      if (spin && !still) {   // loading: a beam gliding back and forth along it
+        const bx = cx + hw * 0.92 * Math.sin(st.t * 2.2), bw = 34;
+        g = lx.createLinearGradient(bx - bw, 0, bx + bw, 0);
+        g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, day ? 'rgba(30,33,38,.85)' : 'rgba(250,253,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        lx.save(); if (!day) { lx.shadowColor = 'rgba(170,215,255,.95)'; lx.shadowBlur = 12; } lx.fillStyle = g; lx.fillRect(bx - bw, y - 1, bw * 2, 2); lx.restore();
+      }
+      lights.push({ key: el, x0: cx - hw * 0.7, x1: cx + hw * 0.7, y, w: 1.4 });   // the dust is drawn into it
+    }
   }
   // ---- sheets: one beam along the top edge as a sheet opens, then a faint hairline while it's open ----
   const SHEETS = '.sheet,[role="dialog"],.hsheet,.ipsy-panel';
@@ -344,6 +375,7 @@
       if (i.vis) lights.push({ key: i.el, icon: true, x0: cx, x1: cx, y: cy, r: r.width * 0.62, w: 0.8 });
     }
     drawSheets(T, dt, frame, day, still);
+    drawPulls(T, dt, day, still);
     drawFalls(T);
     lx.globalCompositeOperation = 'source-over';
   }

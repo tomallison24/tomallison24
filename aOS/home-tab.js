@@ -123,7 +123,7 @@
   // ---- Home ----
   let open = get(OPEN, []).filter(known).slice(0, MAX_OPEN);   // in the order they were opened
   let used = open.slice();                                      // the same, the one used longest ago first
-  let current = null;                                           // the app showing, or null: aOS
+  let current = null, openFrom = null;                                           // the app showing, or null: aOS
   const frames = {};                                            // id -> its .frame, while it's open
   // Updates under way in the apps (AllisonOS.updating in ../home/welcome.js: Orders, Travel and Money reading Gmail,
   // Ipsy checking what they read, Mail's sorting). While one runs, its app isn't put away to open another, nor started
@@ -589,6 +589,7 @@
     const o = e.target.closest('[data-open]');
     if (!o || e.target.closest('[data-pin], [data-app]') || (editing() && o.closest('#favs, #harc, #hgrid'))) return;
     e.preventDefault();
+    openFrom = o.querySelector('.orb, .ic, img') || o;   // where it opens from (Pearl powers it on from its icon: pearl-open.js)
     if (o.closest('#hfound')) { const at = o.dataset.at; clearFind(); show(o.dataset.open, at); } else show(o.dataset.open);
   });
 
@@ -712,6 +713,10 @@
     if (prev && prev !== current && restartLater.delete(prev)) whenFree(prev, () => restart(prev));   // a look that came while it was on screen
     body.classList.toggle('in-app', !!current);
     $('appwin').setAttribute('aria-hidden', String(!current));
+    // Pearl: the app powers on from its icon, and off as you go back to aOS (pearl-open.js; nothing in other looks)
+    if (current && current !== prev && window.aosPearlOpen) aosPearlOpen(openFrom, $('appwin'));
+    else if (!current && prev && window.aosPearlClose && !body.classList.contains('snap')) aosPearlClose($('appwin'));
+    openFrom = null;
     if (!current) { paintHome(true); if (prev) syncPrefs(); }   // an app's design may have changed its icon; and its settings follow you
     remember();
     tint();

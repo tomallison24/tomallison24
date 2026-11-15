@@ -655,6 +655,10 @@
     font-size: 14px; font-weight: 650; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
   #htoast.on { opacity: 1; transform: translate(-50%, 0); }
   @media (prefers-reduced-motion: reduce) { #appwin, #appshade { transition: none; } body.editing .ic { animation: none; } }
+  /* Pearl (id 'layers'): no slide; the window powers on from a line across the middle and off back into one
+     (pearl-open.js sets its clip-path frame by frame; here it's held open in an app, shut on Home) */
+  html[data-look="layers"] #appwin { transform: none; transition: box-shadow .38s; clip-path: inset(50% 0 50% 0); }
+  html[data-look="layers"] body.in-app #appwin, html[data-look="layers"] body.dragging #appwin { clip-path: inset(0); box-shadow: none; }
 
 html:not([data-look="grid"]) :is(.tronnote,#tronIntroSec){display:none}   /* Tron is dark only: said under Light or dark; Tron's intro, in Tron only */
 html:not([data-look="vintage"]) #vintageIntroSec{display:none}   /* Vintage's Sunrise intro: its setting, in Vintage only */
@@ -980,7 +984,8 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 <script src="look.js"></script>   <!-- the picked look, before the first paint -->
 <script src="../home/names.js"></script>   <!-- your helper's name where the words say Ipsy: before the page is drawn -->
 <script src="tron-intro.js"></script>   <!-- in Tron, a short intro with its sound as aOS opens (aOS only, not the apps) -->
-<script src="tron-shots.js" defer></script>   <!-- in Tron, now and then a shot from the screen's trail round a section or widget on Home -->
+<script src="tron-shots.js" defer></script>
+<script src="pearl-open.js" defer></script>   <!-- in Pearl (id 'layers'), an app powers on as it opens from Home, and off as it closes -->   <!-- in Tron, now and then a shot from the screen's trail round a section or widget on Home -->
 <script src="../home/sky.js"></script>   <!-- the Vintage sky (day and night backgrounds), when the look is Vintage -->
 <script src="vintage-intro.js"></script>   <!-- in Vintage, Sunrise: a short intro with its sound as aOS opens (after sky.js: it uses the sky's colours) -->
 <script src="glass-intro.js"></script>   <!-- in Sea glass, Tide: a short intro with its sound as aOS opens -->

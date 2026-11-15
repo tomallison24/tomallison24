@@ -646,7 +646,8 @@ for (const scheme of ['light', 'dark']) {
 }
 
 
-// 14. Pearl with Appearance on System: day and night follow the sun where you are (Weather's place), not the phone. A
+// 14. Pearl with Appearance on System: day and night follow the sun where you are (Weather's place), not the phone; and
+// an app opening from Home powers on (and off going back). A
 // place where it is noon now opens light on a phone in dark mode; one where it is midnight opens dark on a phone in light
 // mode; with no place known it follows the phone (no data-theme); Light or Dark picked pins it; another look follows the phone.
 {
@@ -665,7 +666,22 @@ for (const scheme of ['light', 'dark']) {
   if (t !== 'dark') pr.push('Dark picked does not pin Pearl at noon: ' + t);
   t = await themeOf('dark', { 'wx.here': noon, 'aos.look': 'vintage' });
   if (t !== null) pr.push('Vintage follows the sun too (it should follow the phone): ' + t);
-  report('Pearl on System follows the sun where you are: light from sunrise, dark from sunset; the phone where no place is known; Light or Dark pins it; other looks follow the phone', pr);
+  // an app opening from Home powers on in Pearl (pearl-open.js): its window held shut, then open; going back powers it off
+  {
+    const { ctx, p, errs } = await open('dark', { 'aos.look': 'layers', 'design.notes': 'layers' }); pr.push(...errs);
+    await p.evaluate(() => aosTabs.show('home')); await p.waitForTimeout(300);
+    await p.locator('#hgrid [data-open="notes"]').first().click();
+    const early = await p.evaluate(() => [getComputedStyle(document.getElementById('appwin')).clipPath, !!document.querySelector('canvas[style*="2147483001"]')]);
+    if (!/inset\(50%/.test(early[0]) || !early[1]) pr.push('in Pearl an app does not power on as it opens: ' + JSON.stringify(early));
+    await p.waitForFunction(() => document.body.classList.contains('in-app') && /^(none|inset\(0px\))$/.test(getComputedStyle(document.getElementById('appwin')).clipPath), null, { timeout: 4000 }).catch(() => pr.push('the app window did not open all the way in Pearl'));
+    await p.evaluate(() => document.querySelector('[data-close-app], #appback, .appback') ? document.querySelector('[data-close-app], #appback, .appback').click() : history.back());
+    await p.waitForFunction(() => !document.body.classList.contains('in-app'), null, { timeout: 4000 }).catch(() => pr.push('could not go back to aOS'));
+    await p.waitForTimeout(900);
+    const shut = await p.evaluate(() => getComputedStyle(document.getElementById('appwin')).clipPath);
+    if (!/inset\(50%/.test(shut)) pr.push('back on Home in Pearl, the app window is not powered off: ' + shut);
+    await ctx.close();
+  }
+  report('Pearl on System follows the sun where you are: light from sunrise, dark from sunset; the phone where no place is known; Light or Dark pins it; other looks follow the phone; an app powers on from Home and off going back', pr);
 }
 
 await b.close(); server.close();
