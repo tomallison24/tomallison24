@@ -114,6 +114,7 @@
         'More of Pearl drawn in light: today is a ring of light in Calendar, Drinks and Fitness; Calendar\'s events are hairlines in their calendar\'s colour; a coloured note is a ring in its colour; the floating view pickers in Fitness and Money and the dock in Home are frosted with icons in light; and aOS\'s search bar is one ring again',
         'Home in Pearl: what\'s running is a list of rows parted by hairlines, not tiles; a light, heater or speaker that\'s on is a ring of light in its own colour, glowing, and one that\'s off a faint ring; the alarm\'s shield a ring in its colour',
         'In Pearl, a very thin hairline of light now parts things that sit one under another, fading at its ends: between emails in Mail, trips in Travel, orders, notes in a column and groups of rows in every app, and above each section\'s title (Arriving today, Coming up, each day of a trip), and in Home between its sections, devices and rooms',
+        'Junction: a car going ahead no longer stops at a green light while the line in front of it moves off; it only waits when the road beyond is really backing up',
         'Travel: once Ipsy has read a booking against its email and put right what it says, the booking leaves To check by itself; it stays there only if Ipsy couldn\'t settle it (something still missing, or a detail from your calendar or the flight board that the email doesn\'t state)',
         'Travel in Pearl: the Next card is a faint ring of light, not the booking\'s colour, so it no longer looks like a problem'],
       apps: {

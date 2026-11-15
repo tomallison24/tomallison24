@@ -486,9 +486,18 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function roomAhead(car) {
     const nx = planNext(car);
     if (!nx) return true;
-    const lane = nx.site.lanes[nx.lk], tail = lane[lane.length - 1];
+    const lane = nx.site.lanes[nx.lk], tail = lane[lane.length - 1], res = nx.site.res[nx.lk];
     const space = tail ? tail.d - tail.len : Infinity;
-    return space >= nx.site.res[nx.lk] + car.len + GAP + 4; // res: road length already promised to cars on their way in
+    if (space >= res + car.len + GAP + 4) return true; // res: road length already promised to cars on their way in
+    // A queue moving off on a green is still bunched up, so the space behind the last car in is short for a moment.
+    // If every car on that road is moving and it isn't full (or it's a plain stretch, where nobody stops), the cars
+    // ahead will make the room: go, rather than stop at a green light for it (the 4th car used to). A road that has
+    // backed up (a car on it slow or stopped) still waits, so a junction is never blocked.
+    if (lane.some(o => o.v < 25)) return false;
+    if (!nx.site.active) return true;   // a plain stretch, where nobody stops: moving traffic keeps moving
+    let used = res + car.len + GAP;
+    for (const o of lane) used += o.len + GAP;
+    return used <= tail.mv.dStop - 10;
   }
 
   // ---------- simulation ----------
@@ -1238,5 +1247,5 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // For the tests (junction/scripts/app-test.mjs) only.
-  window.__junction = { step: dt => step(dt), state: () => G, buy, buySite, buyCity, takeOver, selectSite, startGame, site, cam, CONF, renderShop };
+  window.__junction = { signal, roomAhead, step: dt => step(dt), state: () => G, buy, buySite, buyCity, takeOver, selectSite, startGame, site, cam, CONF, renderShop };
 })();
