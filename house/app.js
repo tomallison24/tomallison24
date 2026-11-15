@@ -641,7 +641,7 @@ function infoHTML(u, r) {
 
 function powerHTML(u, r) {
   const t = u.accents[r.mood] || '190,194,204';
-  const lit = r.on ? `background:rgba(${t},0.85);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
+  const lit = r.on ? `--lit:${t};background:rgba(${t},0.85);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
   return `<button class="pwr${waiting(u, 'power') ? ' wait' : ''}" data-a="power" style="${lit}" aria-pressed="${r.on}" aria-label="${r.on ? 'Turn off' : 'Turn on'} the ${u.name}"${r.mood === 'offline' ? ' disabled' : ''}>${svg('power', 22)}</button>`;
 }
 
@@ -1072,7 +1072,7 @@ function tPill(t, r) {
 // ---- the controls ----
 function tPowerHTML(t, r) {
   const on = !r.offline && r.s !== 'off', a = T_ACC[r.mood] || T_ACC.idle;
-  const lit = on ? `background:rgba(${a},0.85);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
+  const lit = on ? `--lit:${a};background:rgba(${a},0.85);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
   return `<button class="pwr${tWaiting(t, 'mode') ? ' wait' : ''}" data-a="power" style="${lit}" aria-pressed="${on}" aria-label="${on ? 'Turn off' : 'Turn on'} the ${t.name}"${r.offline ? ' disabled' : ''}>${svg('power', 22)}</button>`;
 }
 // The targets the ruler shows: Auto has two (Heat, Cool), Heat / Cool /

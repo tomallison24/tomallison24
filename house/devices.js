@@ -81,7 +81,7 @@ const statsHTML = list => `<div class="stats" style="grid-template-columns:repea
 const lbl = t => `<div class="glbl">${t}</div>`;
 const grp = (inner, first) => inner ? `<div class="group${first ? ' first' : ''}">${inner}</div>` : '';
 function pwrBtn(on, acc, label, o = {}) {
-  const lit = on ? `background:rgba(${acc},0.85);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
+  const lit = on ? `--lit:${acc};background:rgba(${acc},0.85);box-shadow:inset 0 0.5px 0 rgba(255,255,255,0.6);color:#16171B;` : '';
   return `<button class="pwr${o.wait ? ' wait' : ''}" data-a="${o.a || 'power'}" style="${lit}" aria-pressed="${!!on}" aria-label="${label}"${o.dis ? ' disabled' : ''}>${svg(o.icon || 'power', 22)}</button>`;
 }
 // A stepper: the dehumidifiers' target, for any number.

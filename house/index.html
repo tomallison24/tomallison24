@@ -705,6 +705,16 @@
    position they already have. */
 :where(#gear, #bannerBtn, .disc.sm){position:relative}
 :where(#gear, #bannerBtn, .disc.sm)::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px)) min(0px,calc(50% - 22px))}
+/* Pearl (id 'layers'): Home's devices drawn in light (Signal, in ha-config, is not changed). Running now is rows parted by
+   hairlines, not tiles. A control that's on is a ring of light in the device's own colour (--lit, set beside its inline
+   colour in app.js, devices.js and lights.js), glowing; off, a faint ring. Security's shield a ring in its own colour. */
+html:root[data-look="layers"] .runchips{grid-template-columns:1fr;gap:0}
+html:root[data-look="layers"] .runchip{background:transparent !important;border-radius:0;padding:12px 4px;box-shadow:inset 0 -1px 0 var(--pl-hairline) !important}
+html:root[data-look="layers"] .runchip:last-child{box-shadow:none !important}
+html:root[data-look="layers"] :is(.pwr,.round,.disc,.rb-disc,.lp-badge,.es-ic,.chip2){background:transparent !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important}
+html:root[data-look="layers"] :is(.pwr,.lp-badge,.rb-disc)[style*="--lit"],html:root[data-look="layers"] .rb-disc.on{--lit-c:color-mix(in srgb,rgb(var(--lit,255,196,128)) 72%,var(--pl-line));color:var(--lit-c) !important;box-shadow:inset 0 0 0 1.6px var(--lit-c),0 0 14px -3px var(--lit-c) !important}
+html:root[data-look="layers"] .hs-half.lit{background:transparent !important;border-radius:999px;box-shadow:var(--pl-pick),var(--pl-pick-glow)}
+html:root[data-look="layers"] .shield{background:transparent !important;box-shadow:inset 0 0 0 1.4px rgba(var(--a),.85),0 0 14px -4px rgba(var(--a),.7) !important}
 </style>
 <style id="vintage">
   /* ======================================================================
