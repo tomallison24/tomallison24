@@ -474,6 +474,23 @@ html:root[data-look="layers"] :is(.slthumb,.vsw .slthumb){background:transparent
 html:root[data-look="layers"] .hx-rdot{background:var(--pl-line);opacity:.5}
 html:root[data-look="layers"] .w3-chip svg{color:var(--pl-line)}
 html:root[data-look="layers"] .vsw button[aria-pressed="true"]{color:var(--pl-line)}
+/* weather warnings: no card - each on the ground, its severity's colour kept as a ring of light round its icon, a faint hairline between them */
+html:root[data-look="layers"] .alerts{gap:0;margin-bottom:6px}
+html:root[data-look="layers"] .alert{background:none;border:0;border-radius:0;box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--pl-line) 14%,transparent)}
+html:root[data-look="layers"] .alert > button{padding-left:4px;padding-right:4px}
+html:root[data-look="layers"] .alert .dot{background:none !important;box-shadow:inset 0 0 0 1.3px currentColor}
+html:root[data-look="layers"][data-theme="dark"] .alert .dot{box-shadow:inset 0 0 0 1.3px currentColor,0 0 12px -2px currentColor}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]) .alert .dot{box-shadow:inset 0 0 0 1.3px currentColor,0 0 12px -2px currentColor}}
+html:root[data-look="layers"] .alert .body{padding-left:56px}
+/* the view toggles: no pill behind them, each a faint hairline ring on the ground; the one picked brighter, its ring of light a little thicker */
+html:root[data-look="layers"] .vsw{background:none;box-shadow:none;gap:8px;padding:0}
+html:root[data-look="layers"] .vsw button{color:color-mix(in srgb,var(--pl-line) 55%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pl-line) 18%,transparent)}
+html:root[data-look="layers"] .vsw button[aria-pressed="true"]{box-shadow:none}
+html:root[data-look="layers"] .vsw .slthumb{background:none;box-shadow:inset 0 0 0 1.6px var(--pl-line)}
+html:root[data-look="layers"][data-theme="dark"] .vsw .slthumb{box-shadow:inset 0 0 0 1.6px var(--pl-line),0 0 10px -1px rgba(150,205,255,.7),inset 0 0 8px -2px rgba(150,205,255,.5)}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]) .vsw .slthumb{box-shadow:inset 0 0 0 1.6px var(--pl-line),0 0 10px -1px rgba(150,205,255,.7),inset 0 0 8px -2px rgba(150,205,255,.5)}}
+html:root[data-look="layers"][data-theme="dark"] .vsw button[aria-pressed="true"] svg{filter:drop-shadow(0 0 3px rgba(190,225,255,.8))}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]) .vsw button[aria-pressed="true"] svg{filter:drop-shadow(0 0 3px rgba(190,225,255,.8))}}
 html:root[data-look="layers"] .dot.on i{background:var(--pl-line)}
 html:root[data-look="layers"] .hx-now{background:color-mix(in srgb,var(--pl-line) 3%,transparent)}
 /* Horizon (app.js plHero, plHours, plDays): no cards. The temperature centred under the weather in light; a line on

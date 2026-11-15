@@ -59,6 +59,7 @@ const PEARL = {
   'weather-fog': () => '<g class="pl-drift"><path d="M14 26h36M18 34h32M14 42h30"/></g>',
   'weather-windy': () => '<g class="pl-drift"><path d="M10 26h28a6 6 0 1 0-6-6M10 34h38a6 6 0 1 1-6 6M10 42h20"/></g>',
   'weather-windy-variant': () => '<g class="pl-drift"><path d="M10 26h28a6 6 0 1 0-6-6M10 34h38a6 6 0 1 1-6 6M10 42h20"/></g>',
+  alert: () => '<path d="M32 12 55 51H9z"/><path d="M32 27v12M32 45.5v.5"/>',   // a warning, in its severity's colour
 };
 const svg = (name, size, style) => {
   if (pearl() && PEARL[name]) return `<svg class="i pl" viewBox="0 0 64 64" width="${size}" height="${size}" style="${style || ''}" fill="none" stroke="currentColor" aria-hidden="true">${PEARL[name]()}</svg>`;
@@ -621,7 +622,7 @@ function w3Hero(m) {
 
 // ---- Pearl: Horizon. No cards: the weather drawn in light on Pearl's ground. ----
 // The condition in light over the temperature, centred; a line that says what the rain will do; the next 24 hours
-// as one line of light, like a horizon, its temperatures over it, the rain hanging under it with its chance under
+// as one line of light, like a horizon, each hour's weather and temperature over it, the rain hanging under it with its chance under
 // each hour; the week as lines of light alone. Short hairlines part them (data-pl-line: ../home/pearl.js lights them
 // where your eyes rest and draws the dust into them). Feels like, humidity, wind and radar keep their own views.
 const plSmooth = pts => pts.map((p, i) => { if (!i) return `M${p[0].toFixed(1)} ${p[1].toFixed(1)}`; const q = pts[i - 1], k = (p[0] - q[0]) / 2;
@@ -658,17 +659,15 @@ function plHours(m) {
   const a = entity.attributes, unit = a.precipitation_unit || '', metric = (a.temperature_unit || '').indexOf('C') >= 0, pop = m.rKind === 'pop';
   const W = 58, PAD = 22, BASE = 112, H = 160, w = PAD * 2 + W * hrs.length;
   const vs = hrs.map(x => x.v), lo = Math.min(...vs), span = Math.max(metric ? 5 : 9, Math.max(...vs) - lo);
-  const X = i => PAD + W * i + W / 2, Y = v => 40 + (1 - (v - lo) / span) * 44, xAt = t => X(0) + (t - hrs[0].t) / 3600 * W;
+  const X = i => PAD + W * i + W / 2, Y = v => 48 + (1 - (v - lo) / span) * 38, xAt = t => X(0) + (t - hrs[0].t) / 3600 * W;
   const pts = hrs.map((x, i) => [X(i), Y(x.v)]);
   let out = `<line x1="0" y1="${BASE}" x2="${w}" y2="${BASE}" class="pl-base"/><line x1="${X(0)}" y1="14" x2="${X(0)}" y2="${BASE}" class="pl-nowl"/>`
     + `<path class="pl-hline" d="${plSmooth(pts)}"/>`;
-  let was = '';
   hrs.forEach((x, i) => {
     const [px, py] = pts[i], ic = plIcon(x.c, x.dark);
     out += `<circle cx="${px}" cy="${py}" r="${i ? 1.8 : 3}" class="pl-pt"/><text x="${px}" y="${(py - 10).toFixed(1)}">${x.v}°</text>`
       + `<text class="pl-h" x="${px}" y="${BASE - 9}">${x.now ? 'Now' : hrOf(x.t, tz) === 0 ? dayFmt(x.t, tz) : hrFmt(x.t, tz)}</text>`;
-    if (ic !== was) out += `<g transform="translate(${px - 9} 0)">${svg(ic, 18)}</g>`;   // the weather, where it changes
-    was = ic;
+    out += `<g transform="translate(${px - 10} 2)">${svg(ic, 20)}</g>`;   // each hour's weather, in light, over its temperature
     const f = Math.min(1, Math.max(0, pop ? x.r / 100 : x.r / (unit === 'mm' ? 6 : 0.25)));
     if (pop ? x.r >= 5 : x.r > 0) {   // the rain under the line, and its chance under each hour
       const n = Math.max(1, Math.min(5, Math.ceil(f * 5))), len = 5 + f * 16, dry = wet(m, x.r) ? '' : ' dry';
