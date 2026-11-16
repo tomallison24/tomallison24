@@ -1059,6 +1059,14 @@
 .ipsy-vintage .ipsy-bubble{background:var(--mc-card,#FBF5E9);box-shadow:0 0 0 3px var(--mc-mustard,#E3A72F),0 16px 34px rgba(43,37,34,.26)}
 .ipsy-vintage .ipsy-bubble::after{background:var(--mc-card,#FBF5E9);box-shadow:3px 3px 0 0 var(--mc-mustard,#E3A72F)}
 .ipsy-vintage.ipsy-below .ipsy-bubble::after{box-shadow:-3px -3px 0 0 var(--mc-mustard,#E3A72F)}
+/* Pearl: cards are see-through there, but the chat is a sheet, Pearl's one solid ground (--sheet; aOS's own --pl-surface),
+   edged with a hairline of light rather than Vintage's mustard; its suggestions are faint rings. Otherwise the page showed
+   through and ran into the chat. */
+.ipsy-layers .ipsy-bubble{background:var(--sheet,var(--pl-surface,var(--bg,#0B1320)));box-shadow:inset 0 0 0 1px var(--pl-faint,rgba(190,215,255,.24)),0 18px 50px rgba(0,0,0,.45)}
+.ipsy-layers .ipsy-bubble::after{background:var(--sheet,var(--pl-surface,var(--bg,#0B1320)));box-shadow:1px 1px 0 0 var(--pl-faint,rgba(190,215,255,.24))}
+.ipsy-layers.ipsy-below .ipsy-bubble::after{box-shadow:-1px -1px 0 0 var(--pl-faint,rgba(190,215,255,.24))}
+.ipsy-layers.ipsy-layers .ipsy-chip{border:1px solid var(--pl-faint,rgba(190,215,255,.24));background:transparent}
+.ipsy-layers.ipsy-layers .ipsy-add{border:1px solid var(--pl-faint,rgba(190,215,255,.24))}
 @keyframes ipsyPop{from{opacity:0;transform:scale(.12)}60%{opacity:1}}
 @keyframes ipsyShrink{to{opacity:0;transform:scale(.12)}}
 @keyframes ipsyFadeOut{to{opacity:0}}

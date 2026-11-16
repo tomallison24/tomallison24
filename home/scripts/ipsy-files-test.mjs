@@ -5,7 +5,7 @@
 // has a line in its place), but stays with the chat while it's open, for a follow-up; reopened, the next question
 // sends the line, not the photo. Also: a PDF and a text file (its email address as a placeholder); up to 4 a
 // question; one taken off with its ×; a file Ipsy can't read, or too big, says so; the note under them says they go
-// to Claude as they are; in both designs; no script errors.
+// to Claude as they are; the chat solid, never see-through; in Vintage, Standard and Pearl; no script errors.
 //   node home/scripts/ipsy-files-test.mjs [repo root] [screenshot dir]
 import { createRequire } from 'module';
 import { execSync } from 'child_process';
@@ -60,7 +60,7 @@ const SEED = {
   todos: [{ id: 'tmilk', list: 'l3', title: 'Bananas', notes: '', date: null, time: null, prio: 0, flagged: false, done: false, doneAt: null, tags: [], created: 1, updated: 1 }],
 };
 
-for (const design of ['vintage', 'glass']) {
+for (const design of ['vintage', 'glass', 'layers']) {
   const tag = 'ipsy files (' + design + ')';
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', timezoneId: 'America/New_York' });
   await ctx.addInitScript(([d, seed]) => {
@@ -191,6 +191,11 @@ for (const design of ['vintage', 'glass']) {
     assert.equal(attachBlocks([sent[n].at(-1)]).length, 1);
   });
 
+  await step(tag + ': the chat is solid, never see-through (in Pearl the page\'s cards are, and ran into it)', async () => {
+    const bg = await page.$eval('.ipsy-bubble', e => getComputedStyle(e).backgroundColor);
+    const m = /rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?\)/.exec(bg);
+    assert.ok(m && (m[4] === undefined || +m[4] >= 0.9), 'the chat\'s background: ' + bg);
+  });
   await step(tag + ': no script errors', async () => { assert.deepEqual(problems, []); });
   await ctx.close();
 }
