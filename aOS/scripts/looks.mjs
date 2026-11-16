@@ -243,8 +243,8 @@ export function signature(look, app) {
    disc, dot and pill go: the light and the dust (../home/pearl.js, drawn behind everything) are the only shapes. */
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:200;font-display:swap;src:url("../home/fonts/unbounded-200-latin.woff2") format("woff2");unicode-range:${LAT}}
 ${HEADS}{font-family:${LOOKS.layers.display};font-style:normal;font-weight:200;letter-spacing:-.025em;font-size-adjust:.43}   /* Unbounded is wide: a little smaller, so titles fit as they did */
-:root{--pl-ground:${PEARL_DAY[0]};--pl-top:${PEARL_DAY[3]};--pl-line:#1E2126;--pl-glow:rgba(255,255,255,.9);--pl-ring:0 0 0 1.2px #1E2126,0 10px 22px -14px rgba(70,56,32,.55);--pl-fab:rgba(255,253,248,.85)}
-${darkBoth(`--pl-ground:${PEARL_NIGHT[0]};--pl-top:${PEARL_NIGHT[3]};--pl-line:#F2FAFF;--pl-glow:rgba(150,205,255,.55);--pl-ring:inset 0 0 0 1.2px rgba(242,250,255,.85),0 0 18px -2px rgba(150,200,255,.55);--pl-fab:rgba(10,18,32,.72)`)}:root{background:var(--pl-ground);background-color:var(--pl-top);min-height:100%}
+:root{--pl-ground:${PEARL_DAY[0]};--pl-top:${PEARL_DAY[3]};--pl-line:#1E2126;--pl-glow:rgba(255,255,255,.9);--pl-ring:0 0 0 1.2px #1E2126,0 10px 22px -14px rgba(70,56,32,.55);--pl-fab:#FFFDF8}
+${darkBoth(`--pl-ground:${PEARL_NIGHT[0]};--pl-top:${PEARL_NIGHT[3]};--pl-line:#F2FAFF;--pl-glow:rgba(150,205,255,.55);--pl-ring:inset 0 0 0 1.2px rgba(242,250,255,.85),0 0 18px -2px rgba(150,200,255,.55);--pl-fab:#0A1220`)}:root{background:var(--pl-ground);background-color:var(--pl-top);min-height:100%}
 :root :is(body,#app.app){background:transparent}
 ${SHAPE(1)},${SHAPE(2)},${SHAPE(3)},:root .aos-sky-cap{display:none}
 ${darkBoth('--pl-title-glow:0 0 22px rgba(160,205,255,.32)')}${HEADS}{text-shadow:var(--pl-title-glow,none)}
@@ -260,11 +260,12 @@ ${darkBoth('--pl-trace-glow:drop-shadow(0 0 3px rgba(150,205,255,.8))')}@keyfram
    No cards, boxes, pills or bars: their grounds and edges go, and things sit on Pearl's ground, parted by hairlines.
    Picked means brighter: a ring, a little thicker, never a fill. The main button is a ring of light, the others a
    hairline, a destructive one a red hairline. Fields and chips are faint rings, brighter while in use. No shadows.
-   Sheets keep their own solid ground (--sheet), the one surface left. html:root outranks the Vintage block's dark rules. */
+   Sheets keep their own solid ground (--sheet), and the bars and floating buttons along the bottom are solid too (--pl-frost,
+   --pl-fab): over the page, anything see-through let what scrolled behind them show through. html:root outranks the Vintage block's dark rules. */
 html:root[data-look="layers"]{--pl-faint:color-mix(in srgb,var(--pl-line) 20%,transparent);--pl-hairline:color-mix(in srgb,var(--pl-line) 12%,transparent);--pl-pick:inset 0 0 0 1.6px var(--pl-line);
   --tile:transparent;--tile-edge:transparent;--glass:transparent;--glass-2:transparent;--fill:transparent;--seg-thumb:transparent;
   --lg-bg:transparent;--lg-rim:0 0 #0000;--bar-solid:var(--pl-frost);--bar-top:var(--pl-frost);--bar-bottom:var(--pl-frost);--bar-rim:transparent;
-  --pl-frost:color-mix(in srgb,var(--pl-top) 74%,transparent);
+  --pl-frost:var(--pl-top);
   --lift:transparent;--lift-strong:transparent;--hi:transparent;--gb-shine:linear-gradient(transparent,transparent);--gb-edge:var(--pl-faint);
   --cta:color-mix(in srgb,var(--pl-line) 4%,transparent);--cta-ink:var(--pl-line);--hair:var(--pl-hairline);--hair-2:var(--pl-hairline);
   --mc-card:transparent;--mc-card-2:transparent;--mc-edge:transparent;--lgs-field:transparent;--icon:var(--pl-line);--pl-surface:#FBF8F2}
