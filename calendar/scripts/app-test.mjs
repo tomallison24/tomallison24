@@ -494,6 +494,58 @@ await test('Standard (Sea glass), light and dark: no Vintage, iCloud’s and Not
   }
 });
 
+// Pearl (id 'layers'): the simpler Calendar drawn in lines of light (app.js pearlDay, pearlWeek; index.html's Pearl rules).
+await test('Pearl: a strip of light per event in Month, seven lines in Week, a beam for now, and only search and Settings up top', async () => {
+  for (const scheme of ['dark', 'light']) {
+    const g = await newPage(scheme, { design: 'layers' }), p = g.page;
+    await p.goto(BASE + '/calendar/');
+    await p.waitForFunction(() => window.__calendar && window.__calendar.st.api === 'ok' && window.__calendar.st.items.size > 0 && document.documentElement.dataset.look === 'layers');
+    await p.waitForTimeout(400);
+    const shown = sel => p.$eval(sel, e => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0);
+    // the header: search and Settings; Calendars lives in Settings; Today only once you've moved away; the line under
+    // the title has back and forward; the views are words, and Year is a tap on the title
+    assert.equal(await shown('#calBtn'), false, 'no Calendars button'); assert.equal(await shown('#todayBtn'), false, 'no Today while on today');
+    assert.ok(await shown('#searchBtn') && await shown('#setBtn'));
+    assert.ok(await shown('#plPrev') && await shown('#plNext'), 'back and forward under the title');
+    assert.equal(await p.textContent('#plSub'), await p.textContent('#titleSub'));
+    assert.equal(await shown('.tab[data-view="year"]'), false, 'no Year tab');
+    assert.equal(await p.$eval('.tab[data-view="week"]', e => getComputedStyle(e, '::after').content), '"Week"', 'the view as a word');
+    // Month: no words in the grid, a strip per event (three at most, then +n), a stay of several days joined from day to day
+    assert.equal(await p.$$eval('#mgrid .mev', l => l.length), 0, 'no event names in the grid');
+    const td = await p.evaluate(() => { const c = document.querySelector('.pday.today'); return { bars: c.querySelectorAll('.pbar').length, more: (c.querySelector('.pmore') || {}).textContent || '', n: window.__calendar.eventsOn(window.__calendar.st.sel).length }; });
+    assert.equal(td.bars, Math.min(3, td.n), 'today: ' + JSON.stringify(td)); assert.equal(td.more, td.n > 3 ? '+' + (td.n - 3) : '');
+    assert.equal(await p.$eval('.pday.today .pbar', e => getComputedStyle(e).height), '2px', 'a hairline strip');
+    await p.evaluate(d => window.__calendar.goTo(d), TOMORROW);
+    assert.equal(await shown('#todayBtn'), true, 'Today shows once another day is picked');
+    const join = await p.evaluate(d => { const cells = [...document.querySelectorAll('#mgrid .pday')], i = cells.findIndex(c => c.dataset.day === d); return { lastInRow: i % 7 === 6, jr: !!cells[i].querySelector('.pbar.jr') }; }, TOMORROW);
+    if (!join.lastInRow) assert.ok(join.jr, 'Grandma’s visit runs on into the next day as one strip');
+    await p.evaluate(d => window.__calendar.goTo(d), TODAY);
+    // today's list: one beam for now, among the events
+    assert.equal(await p.$$eval('.rgroup.pline .pnow', l => l.length), 1, 'a beam for now');
+    // Week: seven lines from 6am to 11pm, lit where something is on, and the picked day's events under them
+    await p.click('.tab[data-view="week"]'); await p.waitForSelector('.pweek');
+    assert.equal(await p.$$eval('.pweek .pwrow', l => l.length), 7); assert.equal(await p.$('#timeview'), null, 'no time grid');
+    const timed = await p.evaluate(d => window.__calendar.eventsOn(d).filter(x => !x.allDay).length, TODAY);
+    assert.equal(await p.$$eval('.pwrow.today .pseg', l => l.length), timed, 'a lit stretch for each timed event today');
+    assert.ok(await p.$('.pwrow.today .pall'), 'today’s all-day things, a fainter line');
+    const other = await p.$eval('.pwrow:not(.sel)', e => e.dataset.wday);
+    await p.click('.pwrow[data-wday="' + other + '"]');
+    assert.equal(await p.evaluate(() => [window.__calendar.st.view, window.__calendar.st.sel].join(' ')), 'week ' + other, 'a tap picks the day');
+    assert.ok(await p.$('.pwrow.sel[data-wday="' + other + '"]') && await p.$('.pweek + .dayhead'), 'its events under the week');
+    await p.click('.pwrow[data-wday="' + other + '"]');
+    assert.equal(await p.evaluate(() => window.__calendar.st.view), 'day', 'a second tap opens its Day view');
+    // Day: the time grid stays, its events a strip of light and their words, not filled blocks
+    await p.evaluate(d => window.__calendar.goTo(d), TODAY); await p.waitForSelector('#timeview .tev');
+    assert.equal(await p.$eval('.tev', e => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)');
+    assert.equal(await p.$eval('.tev', e => getComputedStyle(e, '::before').width), '3px');
+    await shot(p, '14-pearl-day-' + scheme);
+    violations.push(...(await p.evaluate(() => window.__csp || [])));
+    await g.ctx.close();
+  }
+  // the other looks keep their own views
+  assert.ok(await page.$('#mgrid .mev') && !(await page.$('#mgrid .pday')), 'Vintage keeps its month grid');
+});
+
 await test('Settings > Design: Vintage, then Standard and back, at once and kept across a reload', async () => {
   const { ctx: c, page: p } = await newPage('light');
   await p.goto(BASE + '/calendar/');

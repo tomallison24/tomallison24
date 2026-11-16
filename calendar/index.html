@@ -766,6 +766,79 @@ a.rowbtn{color:var(--text);text-decoration:none}
 /* Pearl (id 'layers'): the day you've picked a ring of light (today's is brighter, from the rulebook); an event a hairline in its calendar's colour */
 html:root[data-look="layers"] .mday.sel:not(.today) .n{box-shadow:inset 0 0 0 1px var(--pl-line) !important}
 html:root[data-look="layers"] .mev{background:transparent !important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 75%,transparent)}
+/* ---- Pearl's simpler Calendar: a day is a line of light, lit where something is on (app.js: pearlDay, pearlWeek,
+   dayList's beam for now). Only lines and light: no cell borders, no filled blocks, no words cut short. ---- */
+.plsub{display:none}
+html:root[data-look="layers"]{--plc-g:0}
+@media (prefers-color-scheme:dark){html:root[data-look="layers"]:not([data-theme="light"]){--plc-g:1}}
+html:root[data-look="layers"][data-theme="dark"]{--plc-g:1}
+html:root[data-look="layers"] .plsub{display:flex;align-items:center;gap:2px;padding:0 4px;margin-top:-14px;min-height:30px}
+html:root[data-look="layers"] #plSub{flex:1;min-width:0;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:root[data-look="layers"] .plnav{display:flex;gap:2px}
+html:root[data-look="layers"] .plnav[hidden]{display:none}
+html:root[data-look="layers"] .plnav .iconbtn{width:32px;height:30px;color:var(--muted);background:transparent;box-shadow:none}
+html:root[data-look="layers"] .plnav .iconbtn svg{width:17px;height:17px}
+html:root[data-look="layers"] #titleSub{display:none}
+/* the header: search and Settings; Today only once you've moved away; Calendars is in Settings */
+html:root[data-look="layers"] #calBtn,html:root[data-look="layers"] #todayBtn.here{display:none}
+/* the views, as words; Year is a tap on the title */
+html:root[data-look="layers"] .tab[data-view="year"]{display:none}
+html:root[data-look="layers"] .tab svg{display:none !important}
+html:root[data-look="layers"] .tab::after{content:attr(aria-label);font-size:14px;font-weight:500;letter-spacing:.01em}
+html:root[data-look="layers"] .tab[aria-selected="true"]::after{font-weight:650}
+html:root[data-look="layers"] .tab{padding:0 12px}
+html:root[data-look="layers"] .tabs > .slthumb{background:linear-gradient(90deg,transparent 34%,var(--pl-line) 34% 66%,transparent 66%) center bottom 5px / 100% 2px no-repeat !important;box-shadow:none !important;filter:drop-shadow(0 0 calc(var(--plc-g) * 4px) color-mix(in srgb,var(--pl-line) 80%,transparent))}
+/* Month: the dates, each with a strip of light per event in its calendar's colour */
+html:root[data-look="layers"] .mgrid{box-shadow:none !important;background:transparent !important;row-gap:4px}
+html:root[data-look="layers"] .mday.pday{border:0 !important;min-height:68px;padding:6px 0 0;gap:5px;align-items:center;position:relative;background:transparent !important}
+html:root[data-look="layers"] .mday.pday .n{width:30px;height:30px;margin:0;font-weight:400;font-size:15px}
+html:root[data-look="layers"] .mday.pday.today .n,html:root[data-look="layers"] .mday.pday.sel .n{font-weight:650}
+html:root[data-look="layers"] .mday.pday.out .n{opacity:.4}
+html:root[data-look="layers"] .pbars{display:flex;flex-direction:column;gap:3px;width:100%}
+html:root[data-look="layers"] .pbar{display:block;height:2px;margin:0 7px;border-radius:2px;background:var(--c);box-shadow:0 0 calc(var(--plc-g) * 6px) color-mix(in srgb,var(--c) 75%,transparent)}
+html:root[data-look="layers"] .pbar.jl{margin-left:0;border-top-left-radius:0;border-bottom-left-radius:0}
+html:root[data-look="layers"] .pbar.jr{margin-right:0;border-top-right-radius:0;border-bottom-right-radius:0}
+html:root[data-look="layers"] .pbar.done{opacity:.45}
+html:root[data-look="layers"] .mday.out .pbar{opacity:.5}
+html:root[data-look="layers"] .pmore{position:absolute;left:0;right:0;bottom:0;font-size:9.5px;line-height:1;color:var(--faint);text-align:center}
+/* the lists: one line through the day, lit beside each event; now, a beam across it */
+html:root[data-look="layers"] .rgroup.pline .evrow .bd{border-left:0;position:relative;padding-left:13px}
+html:root[data-look="layers"] .rgroup.pline .evrow .bd::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;border-radius:3px;background:var(--c);box-shadow:0 0 calc(var(--plc-g) * 7px) color-mix(in srgb,var(--c) 75%,transparent)}
+html:root[data-look="layers"] .rgroup.pline .evrow.past{opacity:.45}
+html:root[data-look="layers"] .pnow{display:grid;grid-template-columns:66px minmax(0,1fr);gap:0 10px;align-items:center;padding:0 14px 0 12px;height:22px}
+html:root[data-look="layers"] .pnow .tm{font-size:11px;font-weight:650;text-align:right;color:var(--pl-line);font-variant-numeric:tabular-nums;white-space:nowrap}
+html:root[data-look="layers"] .pnow i{position:relative;height:1px;background:linear-gradient(90deg,var(--pl-line),transparent);box-shadow:0 0 calc(var(--plc-g) * 8px) color-mix(in srgb,var(--pl-line) 70%,transparent)}
+html:root[data-look="layers"] .pnow i::before{content:"";position:absolute;left:-3px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--pl-line);box-shadow:0 0 calc(var(--plc-g) * 10px) color-mix(in srgb,var(--pl-line) 80%,transparent)}
+/* Week: seven lines, 6am to 11pm, lit where something is on */
+html:root[data-look="layers"] .pweek{display:flex;flex-direction:column;touch-action:pan-y}
+html:root[data-look="layers"] .pticks{position:relative;height:14px;margin:4px 0 2px 58px;font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}
+html:root[data-look="layers"] .pticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+html:root[data-look="layers"] .pwrow{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:center;width:100%;padding:4px 0;color:var(--text);text-align:left}
+html:root[data-look="layers"] .pwd{display:flex;flex-direction:column;align-items:center;line-height:1.1}
+html:root[data-look="layers"] .pwd small{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+html:root[data-look="layers"] .pwd b{width:30px;height:30px;margin-top:2px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:400;font-variant-numeric:tabular-nums}
+html:root[data-look="layers"] .pwrow.today .pwd b{font-weight:650;box-shadow:var(--pl-pick),var(--pl-pick-glow)}
+html:root[data-look="layers"] .pwrow.sel:not(.today) .pwd b{font-weight:650;box-shadow:inset 0 0 0 1px var(--pl-line)}
+html:root[data-look="layers"] .ptrack{position:relative;display:block;height:16px}
+html:root[data-look="layers"] .ptrack::before{content:"";position:absolute;left:0;right:0;top:7px;height:1px;background:var(--pl-faint)}
+html:root[data-look="layers"] .pwrow:not(.sel) .ptrack{opacity:.82}
+html:root[data-look="layers"] .pseg{position:absolute;top:6px;height:3px;min-width:4px;border-radius:3px;background:var(--c);box-shadow:0 0 calc(var(--plc-g) * 7px) color-mix(in srgb,var(--c) 75%,transparent)}
+html:root[data-look="layers"] .pseg.done{opacity:.45}
+html:root[data-look="layers"] .pall{position:absolute;left:0;right:0;top:13px;height:1px;background:var(--c);opacity:.75}
+html:root[data-look="layers"] .ptick{position:absolute;top:0;width:1.5px;height:16px;background:var(--pl-line);box-shadow:0 0 calc(var(--plc-g) * 8px) color-mix(in srgb,var(--pl-line) 80%,transparent)}
+/* Day: the time grid stays (drag, tap empty time to add), its events a strip of light and their words, not blocks */
+html:root[data-look="layers"] .tev{background:transparent !important;border-left:0 !important;box-shadow:none !important;padding-left:10px}
+html:root[data-look="layers"] .tev::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:3px;border-radius:3px;background:var(--c);box-shadow:0 0 calc(var(--plc-g) * 7px) color-mix(in srgb,var(--c) 75%,transparent)}
+html:root[data-look="layers"] .tev.past{opacity:.45}
+html:root[data-look="layers"] .allday .mev{box-shadow:none !important;border-left:0 !important;border-radius:0 !important;position:relative;padding-left:10px}
+html:root[data-look="layers"] .navrow .lbl{visibility:hidden}
+html:root[data-look="layers"] .allday .mev::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;border-radius:3px;background:var(--c);box-shadow:0 0 calc(var(--plc-g) * 7px) color-mix(in srgb,var(--c) 75%,transparent)}
+html:root[data-look="layers"] .tev.drag{background:var(--pl-surface) !important}
+html:root[data-look="layers"] .col,html:root[data-look="layers"] .col.today{background-color:transparent}
+html:root[data-look="layers"] .nowline{height:1px;background:linear-gradient(90deg,var(--pl-line),color-mix(in srgb,var(--pl-line) 25%,transparent));box-shadow:0 0 calc(var(--plc-g) * 8px) color-mix(in srgb,var(--pl-line) 70%,transparent)}
+html:root[data-look="layers"] .nowline::before{background:var(--pl-line);top:-4px}
+html:root[data-look="layers"] .nowlbl{color:var(--pl-line);background:var(--pl-ground)}
+html:root[data-look="layers"] .strip i{background:var(--pl-line)}
 </style>
 <style id="vintage">
 /* ======================================================================
@@ -1134,6 +1207,8 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
           </button>
         </div>
       </div>
+      <!-- Pearl only: the line under the title, with back and forward beside it (app.js, render) -->
+      <div class="plsub" id="plRow"><span id="plSub"></span><span class="plnav" id="plNav"><button class="iconbtn" id="plPrev" type="button" aria-label="Previous month"><svg viewBox="0 0 24 24" class="b"><path d="M14.6 5.4L8.4 11.3a1 1 0 0 0 0 1.4l6.2 5.9"/></svg></button><button class="iconbtn" id="plNext" type="button" aria-label="Next month"><svg viewBox="0 0 24 24" class="b"><path d="M9.4 5.4l6.2 5.9a1 1 0 0 1 0 1.4l-6.2 5.9"/></svg></button></span></div>
       <div class="search" id="searchBar" hidden role="search">
         <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.2"/><path d="M16.2 16.2l4.3 4.3"/></svg>
         <input type="search" id="searchIn" placeholder="Search events" autocomplete="off" autocapitalize="off" enterkeyhint="search" aria-label="Search events">
