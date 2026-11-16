@@ -13,6 +13,15 @@ AllisonOS apps' dates alongside.
   first event. The chosen view sits in a glass thumb that slides across the
   bar to whichever view you tap, stretching on the way; the chosen day in the
   Day view's week strip slides the same way.
+- **In Pearl**, Calendar is simpler, drawn in lines of light: a day is a line, lit where something
+  is on. Month has no cell lines and no names cut short, just the dates with a short strip per event
+  in its calendar's colour (a stay of several days runs on as one strip); Week is seven lines from
+  6am to 11pm with the picked day's events under them (tap a day to pick it, again for its Day
+  view); Day keeps its time grid (drag, tap an empty time to add), each event a strip of light and
+  its words; the lists run along one line with a beam for now. Up top there's only Search and
+  Settings (Today once you've moved away, Calendars in Settings), back and forward sit beside the
+  line under the title, and the views are words, with the year a tap on the title (`pearl()` in
+  `app.js`, the Pearl rules at the end of `index.html`'s first style block).
 - **Events**: tap one for its details: when, how it repeats, the place (opens
   in Maps), travel time, alerts, URL, notes, and who was invited. **Edit** and
   **Delete Event** are there for Family events. A repeating event asks whether

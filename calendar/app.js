@@ -729,6 +729,10 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     let size = parseFloat(getComputedStyle(t).fontSize) || 32;
     while (t.scrollWidth > t.clientWidth + 1 && size > 24) { size -= 1; t.style.fontSize = size + 'px'; }
   }
+  // Pearl (look id 'layers'): a simpler Calendar drawn in lines of light. A day is a line, lit where something is on:
+  // Month is the dates with a short strip per event, Week is seven lines from 6am to 11pm with the picked day's events
+  // under them, and the lists run along one line with a beam for now. The other looks keep their own views.
+  const pearl = () => document.documentElement.dataset.look === 'layers';
   let lastView = null;
   function render() {
     for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.view === st.view && !st.searching));
@@ -745,6 +749,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     else if (st.view === 'week') { const ws = weekStartOf(st.sel), we = addDays(ws, 6); t.firstChild.textContent = MONTHS[p.m - 1]; sub.textContent = fmt(noon(ws), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(we), { day: 'numeric', month: 'short', year: 'numeric' }); }
     else { t.firstChild.textContent = MONTHS[p.m - 1]; sub.textContent = st.view === 'list' ? 'Coming up from ' + medDate(listFrom || st.sel) : String(p.y); }
     $('titleBtn').disabled = st.view === 'year';
+    // Pearl's line under the title: the same words, with back and forward beside them; Today only once you've moved away
+    $('plSub').textContent = sub.textContent;
+    $('plNav').hidden = st.view === 'list';
+    const unit = { day: 'day', week: 'week', month: 'month', year: 'year' }[st.view];
+    if (unit) { $('plPrev').setAttribute('aria-label', 'Previous ' + unit); $('plNext').setAttribute('aria-label', 'Next ' + unit); }
+    const tod = today();
+    const here = st.view === 'week' ? weekStartOf(st.sel) === weekStartOf(tod) : st.view === 'year' ? partsOf(st.sel).y === partsOf(tod).y : st.view === 'list' ? !listFrom && st.sel === tod : st.sel === tod;
+    $('todayBtn').classList.toggle('here', here);
     fitTitle();
     main.innerHTML = notice() + ({ day: renderDay, week: renderWeek, month: renderMonth, year: renderYear, list: renderList }[st.view])();
     // The week strip keeps still (no fade in) when only the chosen day moved,
@@ -788,6 +800,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     for (let i = 0; i < rows * 7; i++) {
       const day = addDays(start, i), out = day.slice(0, 7) !== st.sel.slice(0, 7);
       const evs = eventsOn(day), max = 3;
+      if (pearl()) { cells += pearlDay(day, evs, out, tod); continue; }
       const shown = evs.slice(0, evs.length > max ? max - 1 : max);
       cells += '<button class="mday' + (out ? ' out' : '') + (day === tod ? ' today' : '') + (day === st.sel ? ' sel' : '') + '" type="button" data-day="' + day + '" aria-label="' + esc(longDate(day)) + (evs.length ? ', ' + plural(evs.length, 'event') : '') + '">'
         + '<span class="n">' + +day.slice(8) + '</span>'
@@ -796,9 +809,22 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
         + '</button>';
     }
     const wk = weekHead();
-    return '<div class="navrow"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous month">' + ICON.chevL + '</button><span class="lbl">' + esc(MONTHS[p.m - 1] + ' ' + p.y) + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next month">' + ICON.chevR + '</button></div>'
+    return (pearl() ? '' : '<div class="navrow"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous month">' + ICON.chevL + '</button><span class="lbl">' + esc(MONTHS[p.m - 1] + ' ' + p.y) + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next month">' + ICON.chevR + '</button></div>')
       + '<div class="wkhead">' + wk + '</div><div class="mgrid glass" id="mgrid" data-swipe="month">' + cells + '</div>'
       + dayList(st.sel);
+  }
+  // Pearl's month day: the date, and a strip of light for each of its first three events (all-day ones first, so a
+  // stay of several days runs on as one strip from day to day), then +n for the rest
+  const pearlOrder = evs => evs.slice().sort((a, b) => (b.allDay - a.allDay) || (a.allDay && b.allDay ? (a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0) || ((b.endDate > a.endDate) - (b.endDate < a.endDate)) : a.start - b.start));
+  function pearlDay(day, evs, out, tod) {
+    const shown = pearlOrder(evs).slice(0, 3), first = settings.weekStart === 0 ? 0 : 1, wd = (wdMon(day) + 1) % 7;   // 0 is Sunday
+    const bars = shown.map(x => {
+      const long = x.allDay && x.endDate > addDays(x.startDate, 1);
+      const joinL = long && x.startDate < day && wd !== first, joinR = long && addDays(x.endDate, -1) > day && wd !== (first + 6) % 7;
+      return '<i class="pbar' + (joinL ? ' jl' : '') + (joinR ? ' jr' : '') + (x.done ? ' done' : '') + '" ' + kindColor(x) + '></i>';
+    }).join('');
+    return '<button class="mday pday' + (out ? ' out' : '') + (day === tod ? ' today' : '') + (day === st.sel ? ' sel' : '') + '" type="button" data-day="' + day + '" aria-label="' + esc(longDate(day)) + (evs.length ? ', ' + plural(evs.length, 'event') + ': ' + evs.map(x => x.title).join(', ') : '') + '">'
+      + '<span class="n">' + +day.slice(8) + '</span><span class="pbars" aria-hidden="true">' + bars + '</span>' + (evs.length > 3 ? '<span class="pmore" aria-hidden="true">+' + (evs.length - 3) + '</span>' : '') + '</button>';
   }
   function weekHead() {
     const ws = weekStartOf(today());
@@ -810,8 +836,14 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const evs = eventsOn(day);
     const head = '<div class="dayhead' + (day === today() ? ' today' : '') + '"><b>' + esc(day === today() ? 'Today' : fmt(noon(day), { weekday: 'long' })) + '</b><span>' + esc(fmt(noon(day), { day: 'numeric', month: 'long', year: 'numeric' })) + '</span>' + wxLine(day) + '</div>';
     if (!evs.length) return head + '<div class="empty glass"><strong>Nothing on</strong>Tap + to add an event.</div>';
-    return head + '<div class="rgroup glass">' + evs.map(evRow).join('') + '</div>';
+    if (pearl() && day === today()) {
+      const t = Date.now(); let rows = '', placed = false;
+      for (const x of evs) { if (!placed && !x.allDay && x.start > t) { rows += nowRow(t); placed = true; } rows += evRow(x); }
+      return head + '<div class="rgroup glass pline">' + rows + (placed ? '' : nowRow(t)) + '</div>';
+    }
+    return head + '<div class="rgroup glass' + (pearl() ? ' pline' : '') + '">' + evs.map(evRow).join('') + '</div>';
   }
+  const nowRow = t => '<div class="pnow" role="img" aria-label="Now, ' + esc(fmtTime(t)) + '"><span class="tm">' + esc(fmtTime(t)) + '</span><i></i></div>';
   function evRow(x, opts = {}) {
     const now = Date.now();
     const tm = x.allDay ? 'all-day' + (x.endDate > addDays(x.startDate, 1) ? '<small>' + esc(fmt(noon(x.startDate), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(addDays(x.endDate, -1)), { day: 'numeric', month: 'short' })) + '</small>' : '')
@@ -824,8 +856,28 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   function renderWeek() {
     const ws = weekStartOf(st.sel);
     const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+    if (pearl()) return pearlWeek(days);
     return '<div class="navrow"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous week">' + ICON.chevL + '</button><span class="lbl">' + esc(fmt(noon(ws), { day: 'numeric', month: 'short' }) + ' – ' + fmt(noon(addDays(ws, 6)), { day: 'numeric', month: 'short', year: 'numeric' })) + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next week">' + ICON.chevR + '</button></div>'
       + timeGrid(days);
+  }
+  // Pearl's week: a line for each day from 6am to 11pm, lit where something is on (an all-day event a fainter line
+  // under it, now a bright tick); tap a day for its events under the week, tap it again for its Day view
+  const PW0 = 6, PW1 = 23;
+  function pearlWeek(days) {
+    const tod = today(), t = Date.now();
+    const at = (d, ms) => Math.max(0, Math.min(100, ((ms - dayMs(d)) / H - PW0) / (PW1 - PW0) * 100));
+    let rows = '';
+    for (const d of days) {
+      const evs = eventsOn(d), ad = evs.filter(x => x.allDay), timed = evs.filter(x => !x.allDay);
+      const segs = timed.map(x => { const a = at(d, Math.max(x.start, dayMs(d))), b = at(d, Math.min(Math.max(x.end, x.start + 15 * MIN), dayMs(addDays(d, 1))));
+        return '<i class="pseg' + (x.done ? ' done' : '') + '" ' + 'style="--c:' + esc(x.color) + ';left:' + a.toFixed(2) + '%;width:' + Math.max(1.4, b - a).toFixed(2) + '%"></i>'; }).join('');
+      const all = ad.length ? '<i class="pall" ' + kindColor(ad[0]) + '></i>' : '';
+      const nowT = d === tod && t > dayMs(d) + PW0 * H && t < dayMs(d) + PW1 * H ? '<i class="ptick" style="left:' + at(d, t).toFixed(2) + '%"></i>' : '';
+      const words = evs.length ? evs.map(x => (x.allDay ? '' : fmtTime(x.start) + ' ') + x.title).join(', ') : 'nothing on';
+      rows += '<button class="pwrow' + (d === tod ? ' today' : '') + (d === st.sel ? ' sel' : '') + '" type="button" data-wday="' + d + '" aria-label="' + esc(longDate(d) + ': ' + words) + '"><span class="pwd"><small>' + esc(shortDay(d)) + '</small><b>' + +d.slice(8) + '</b></span><span class="ptrack" aria-hidden="true">' + all + segs + nowT + '</span></button>';
+    }
+    const ticks = [6, 12, 18].map(h => '<span style="left:' + ((h - PW0) / (PW1 - PW0) * 100).toFixed(2) + '%">' + esc(h === 12 ? 'noon' : fmtHour(h)) + '</span>').join('');
+    return '<div class="pweek" data-swipe="week"><div class="pticks" aria-hidden="true">' + ticks + '</div>' + rows + '</div>' + dayList(st.sel);
   }
   function renderDay() {
     const ws = weekStartOf(st.sel);
@@ -913,7 +965,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       for (let d = 1; d <= n; d++) { const s = y + '-' + pad(m) + '-' + pad(d); g += '<span class="' + (s === tod ? 'today ' : '') + (has.has(s) ? 'has' : '') + '">' + d + '</span>'; }
       h += '<button class="ymon glass' + (tod.slice(0, 7) === y + '-' + pad(m) ? ' cur' : '') + '" type="button" data-month="' + first + '"><h4>' + esc(MONTHS[m - 1]) + '</h4><div class="ygrid">' + g + '</div></button>';
     }
-    return '<div class="navrow"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous year">' + ICON.chevL + '</button><span class="lbl">' + y + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next year">' + ICON.chevR + '</button></div><div class="year">' + h + '</div>';
+    return (pearl() ? '' : '<div class="navrow"><button class="iconbtn glass" type="button" data-act="prev" aria-label="Previous year">' + ICON.chevL + '</button><span class="lbl">' + y + '</span><button class="iconbtn glass" type="button" data-act="next" aria-label="Next year">' + ICON.chevR + '</button></div>') + '<div class="year">' + h + '</div>';
   }
 
   // ---- List ----
@@ -932,7 +984,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     if (!keys.length) h += '<div class="empty glass"><strong>Nothing coming up</strong></div>';
     for (const d of keys) {
       const evs = days.get(d).sort((a, b) => (b.allDay - a.allDay) || a.start - b.start);
-      h += '<div class="lsec"><div class="dayhead' + (d === today() ? ' today' : '') + '"><b>' + esc(d === today() ? 'Today' : d === addDays(today(), 1) ? 'Tomorrow' : fmt(noon(d), { weekday: 'long' })) + '</b><span>' + esc(fmt(noon(d), { day: 'numeric', month: 'long', year: partsOf(d).y === partsOf(today()).y ? undefined : 'numeric' })) + '</span>' + wxLine(d) + '</div><div class="rgroup glass">' + evs.map(x => evRow(x, { noPast: true })).join('') + '</div></div>';
+      h += '<div class="lsec"><div class="dayhead' + (d === today() ? ' today' : '') + '"><b>' + esc(d === today() ? 'Today' : d === addDays(today(), 1) ? 'Tomorrow' : fmt(noon(d), { weekday: 'long' })) + '</b><span>' + esc(fmt(noon(d), { day: 'numeric', month: 'long', year: partsOf(d).y === partsOf(today()).y ? undefined : 'numeric' })) + '</span>' + wxLine(d) + '</div><div class="rgroup glass' + (pearl() ? ' pline' : '') + '">' + evs.map(x => evRow(x, { noPast: true })).join('') + '</div></div>';
     }
     return h;
   }
@@ -947,7 +999,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     const days = new Map();
     for (const x of hits) { const d = x.allDay ? x.startDate : ymd(x.start); if (!days.has(d)) days.set(d, []); days.get(d).push(x); }
     let h = '<p class="resulthead">' + plural(hits.length, 'match') + (hits.length === 200 ? ' (first 200)' : '') + '</p>';
-    for (const [d, evs] of days) h += '<div class="lsec"><div class="dayhead"><b>' + esc(fmt(noon(d), { weekday: 'long' })) + '</b><span>' + esc(fmt(noon(d), { day: 'numeric', month: 'long', year: 'numeric' })) + '</span></div><div class="rgroup glass">' + evs.map(x => evRow(x, { noPast: true })).join('') + '</div></div>';
+    for (const [d, evs] of days) h += '<div class="lsec"><div class="dayhead"><b>' + esc(fmt(noon(d), { weekday: 'long' })) + '</b><span>' + esc(fmt(noon(d), { day: 'numeric', month: 'long', year: 'numeric' })) + '</span></div><div class="rgroup glass' + (pearl() ? ' pline' : '') + '">' + evs.map(x => evRow(x, { noPast: true })).join('') + '</div></div>';
     main.innerHTML = h;
   }
 
@@ -965,6 +1017,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   document.querySelectorAll('.tab').forEach(b => b.onclick = () => { closeSearch(); setView(b.dataset.view); });
   $('todayBtn').onclick = () => { listFrom = null; goTo(today()); };
   $('titleBtn').onclick = () => { if (st.view !== 'year') setView('year'); };
+  $('plPrev').onclick = () => step(-1); $('plNext').onclick = () => step(1);
   main.addEventListener('click', e => {
     const act = e.target.closest('[data-act]');
     if (act) {
@@ -977,6 +1030,8 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     }
     const ev = e.target.closest('[data-ev]');
     if (ev) { if (ev.classList.contains('tev') && ev.dataset.dragged) { delete ev.dataset.dragged; return; } const x = st.occ.find(o => o.id === ev.dataset.ev); if (x) openEvent(x); return; }
+    const pw = e.target.closest('.pwrow');
+    if (pw) { const d = pw.dataset.wday; if (d === st.sel) setView('day'); else { st.sel = d; render(); } return; }
     const mday = e.target.closest('.mday');
     if (mday) { const d = mday.dataset.day; if (d === st.sel) { setView('day'); } else { st.sel = d; render(); } return; }
     const sd = e.target.closest('.strip button[data-day], .dh[data-day]');
