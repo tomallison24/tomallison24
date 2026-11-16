@@ -281,7 +281,9 @@ Settings > AI helper, and anything marked Private stays out of what it reads.**
   Account > AI helper), then the app's own (Ipsy fills in what's missing, Ipsy
   can search Gmail), with the models it uses in the line under the section. A note, order, booking or event can be marked
   Private (a switch in its editor): the app's tools leave it out of everything
-  they read (`AllisonOS.ipsy.privacy`). In Tron the helper is Ares; in Pearl it is Lumen, a beam of light that changes shape (pulsar, black hole, galaxy, nebula, quasar).
+  they read (`AllisonOS.ipsy.privacy`). The + beside the box adds photos, PDFs and text files to a question (up to 4):
+  shown above the box with a ×, and the line under them says they go to Claude as they are; they are never kept on
+  the phone. In Tron the helper is Ares; in Pearl it is Lumen, a beam of light that changes shape (pulsar, black hole, galaxy, nebula, quasar).
 - **Enforced:** Review (Undo and the chat's asking are `home/ipsy.js`'s own;
   CI: `order` checks where the AI helper section sits).
 - **Known gaps:** none.
