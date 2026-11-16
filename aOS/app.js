@@ -535,12 +535,21 @@
       <circle cx="42.5" cy="22" r="6.2" opacity=".9"/><path d="M31 46c0-7.4 5.2-12.6 11.5-12.6S54 38.6 54 46z" opacity=".9"/></g>
       <g fill="#fff" stroke="#9FB0C9" stroke-width="1.2"><circle cx="26" cy="36" r="4.8"/><path d="M17.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/>
       <circle cx="38" cy="36" r="4.8"/><path d="M29.5 54c0-5.8 3.8-9.6 8.5-9.6s8.5 3.8 8.5 9.6z"/></g></svg>`;
-  // Layers and Tron: the mid-century one, repainted (aOS/scripts/looks.mjs)
+  // Pearl: the family as its app icons are drawn, a line drawing in a hairline pebble, the heart its dot of colour (not the
+  // mid-century one repainted, which stayed Vintage in Pearl); colours from aOS/index.html's Pearl rules (.ficon-pl)
+  const FAMILY_ICON_PEARL = `<svg class="ficon ficon-pl" viewBox="0 0 64 64" aria-hidden="true"><rect class="pt" x="1.5" y="1.5" width="61" height="61" rx="18"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="15" cy="26" r="5"/><path d="M7 47c0-7.4 3.6-12.4 8-12.4s8 5 8 12.4"/>
+      <circle cx="49" cy="26" r="5"/><path d="M41 47c0-7.4 3.6-12.4 8-12.4s8 5 8 12.4"/>
+      <circle cx="27.5" cy="35.5" r="3.4"/><path d="M23.5 47c0-4.6 1.8-7.2 4-7.2s4 2.6 4 7.2"/>
+      <circle cx="36.5" cy="35.5" r="3.4"/><path d="M32.5 47c0-4.6 1.8-7.2 4-7.2s4 2.6 4 7.2"/></g>
+      <path class="ph" d="M32 15.2c-1.2-2-4.4-1.6-4.4 1 0 2.2 4.4 4.7 4.4 4.7s4.4-2.5 4.4-4.7c0-2.6-3.2-3-4.4-1z"/></svg>`;
+  // Tron: the mid-century one, repainted (aOS/scripts/looks.mjs)
   const FAMILY_PAINT = {
     layers: { '#1F6F6B': '#306E61', '#A9D3C7': '#ACD2C8', '#B9C6E0': '#C2C5CA', '#D8572A': '#CF5C59', '#E3A72F': '#D8AB63', '#E3C5C3': '#CBCED3', '#E9D6B4': '#E6D6BF', '#FBF5E9': '#F9FBFE' },
     grid: { '#1F6F6B': '#973835', '#A9D3C7': '#F2AEA8', '#B9C6E0': '#C4C7CA', '#D8572A': '#E41F24', '#E3A72F': '#FB6049', '#E3C5C3': '#CDD0D3', '#E9D6B4': '#E9AEA3', '#FBF5E9': '#FAFCFE' },
   };
-  const familyIcon = () => { const l = aosLook.get(); return l === 'glass' ? FAMILY_ICON_GLASS : FAMILY_PAINT[l] ? FAMILY_ICON_VINTAGE.replace(/#[0-9A-F]{6}/g, c => FAMILY_PAINT[l][c] || c) : FAMILY_ICON_VINTAGE; };
+  const familyIcon = () => { const l = aosLook.get(); return l === 'glass' ? FAMILY_ICON_GLASS : l === 'layers' ? FAMILY_ICON_PEARL : FAMILY_PAINT[l] ? FAMILY_ICON_VINTAGE.replace(/#[0-9A-F]{6}/g, c => FAMILY_PAINT[l][c] || c) : FAMILY_ICON_VINTAGE; };
   addEventListener('aos:look', () => {   // the picker: the family icon and every app's icon follow the look
     if (state) paintHero(state);
     paintList();
