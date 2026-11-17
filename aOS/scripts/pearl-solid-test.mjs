@@ -17,10 +17,15 @@ for (const dir of fs.readdirSync(ROOT)) {
   const m = /<style id="layers"[^>]*>([\s\S]*?)<\/style>/.exec(html);
   if (!m) continue;
   pages++;
+  // the menus that float over the page (a topic or view picker, a pill's menu, the tags) sit on the solid surface
+  // (only where the rulebook clears the card colours: Clock and the games keep their own grounds)
+  const surf = /:is\(([^)]*)\)\{background:var\(--pl-surface\) !important\}/.exec(m[1]);
+  if (/--mc-card:transparent/.test(m[1])) assert.ok(surf, dir + ': no solid surface rule in Pearl');
+  if (surf) for (const menu of ['.viewmenu', '.pmenu', '.tagmenu', '.dmenu', '.menu']) assert.ok(surf[1].split(',').includes(menu), `${dir}: Pearl's ${menu} is see-through (not on --pl-surface)`);
   for (const name of ['--pl-frost', '--pl-fab']) {
     const vals = [...m[1].matchAll(new RegExp(name + ':([^;}]+)', 'g'))].map(x => x[1].trim());
     for (const v of vals) assert.ok(solid(v), `${dir}: Pearl's ${name} is see-through: ${v}`);
   }
 }
 assert.ok(pages >= 15, 'Pearl blocks found: ' + pages);
-console.log('ok - Pearl\'s bars and floating buttons are solid in ' + pages + ' pages');
+console.log('ok - Pearl\'s bars, floating buttons and floating menus are solid in ' + pages + ' pages');
