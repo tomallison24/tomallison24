@@ -325,6 +325,16 @@ html:root[data-look="layers"] ul.list.pills > li,html:root[data-look="layers"] .
 /* and a section: the same hairline above each section's title (or the block that starts with one), across the gap from
    what came before it; not above the first thing on a screen */
 html:root[data-look="layers"] :is(.sechead,.sect,.group,.daylbl,.evhead,.mhead,.vsec-h):not(:first-child),html:root[data-look="layers"] :is(div,section,li):has(> :is(.sechead,.vsec-h):first-child):not(:first-child){border-image:linear-gradient(90deg,transparent,var(--pl-sep) 14%,var(--pl-sep) 86%,transparent) 1 / 1px 0 0 0 / var(--pl-sec-out,9px) 0 0 0 !important}
+/* sections and cards, drawn by ../home/pearl.js (which finds them and measures into these): each section's title set
+   into a bright line of light, a stub turning down into a rail past every card under it, a dot at each card's middle;
+   the hairlines above go where it draws. One pseudo-element of the title (or of a run's first card) paints it all */
+html:root[data-look="layers"] :is([data-pl-sec],[data-pl-wrap],[data-pl-on]):not(#pl-none){border-image:none !important}
+html:root[data-look="layers"] [data-pl-pos]{position:relative}
+html:root[data-look="layers"] [data-pl-shift]{padding-left:var(--pl-pad) !important}
+html:root[data-look="layers"] [data-pl-draw="b"]::before,html:root[data-look="layers"] [data-pl-draw="a"]::after{content:"" !important;display:block !important;position:absolute !important;inset:auto !important;left:var(--pl-x) !important;top:var(--pl-y) !important;width:var(--pl-w) !important;height:var(--pl-h) !important;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:var(--pl-bg) !important;box-shadow:none !important;opacity:1 !important;transform:none !important;filter:none !important;-webkit-mask:none !important;mask:none !important;animation:none !important;transition:none !important;pointer-events:none !important;z-index:1 !important}
+${darkBoth('--pl-sec-glow:0 0 8px rgba(150,205,255,.75),0 0 20px rgba(150,205,255,.45)').replace(/:root/g, 'html:root[data-look="layers"]')}html:root[data-look="layers"]{--pl-sec-glow:0 0 #0000}
+html:root[data-look="layers"] [data-pl-title]{font-family:${LOOKS.layers.display} !important;font-weight:200 !important;font-size:15px !important;letter-spacing:.14em !important;font-size-adjust:none;color:var(--pl-line) !important;text-shadow:var(--pl-sec-glow) !important;opacity:1 !important}
+html:root[data-look="layers"] :is([data-pl-title="fit"],[data-pl-title="sub"]){font-size:12.5px !important;letter-spacing:.08em !important}
 /* a text button (Edit, Done) in the light's own colour, not an accent */
 html:root[data-look="layers"] .textbtn:not(.danger){color:var(--pl-line)}
 `);
