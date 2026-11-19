@@ -536,7 +536,8 @@
      in the bottom corner your thumb rests on (data-hand="left": the other), every other app above them; the rest of Home gives way */
   .arconly, html[data-home="arc"] #hmain > :not(.arconly) { display: none; }
   /* Layers' grid (aOS/home-tab.js, html[data-home="grid"]): Classic in Layers. The weather and what's next on the sky, then
-     every app on one screen as a pebble in its own colour with its drawing in white (home-tab.js, pebble); the top row is yours */
+     every app as a pebble in its own colour with its drawing in white (home-tab.js, pebble), a quarter bigger since Nov 2026 so the
+     last row may need a little scroll (the owner's choice); the top row is yours */
   .gridonly, html[data-home="grid"] #hmain > :not(.gridonly):not(#hbrief) { display: none; }
   html[data-home="grid"] #hmain > .gridonly:not([hidden]) { display: block; }
   html[data-home="grid"] #hmain > .sec.gridonly { display: flex; }
@@ -569,11 +570,11 @@
   .gapp .orb svg { width: 26px; height: 26px; }
   /* the pebble (aOS/glyphs.js): drawn by its svg, not the round button's background; the drawing 60% of it, and in Edit the
      one picked has a ring round its own edge */
-  .gapp .orb.pebble { position: relative; border-radius: 0; background: none; box-shadow: none; }
+  .gapp .orb.pebble { position: relative; width: min(72.5px, 100% - 6px); height: auto; aspect-ratio: 1; border-radius: 0; background: none; box-shadow: none; }   /* a quarter bigger than the 58px orb (the owner's ask) */
   .gapp .orb.pebble .peb { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 8px 10px rgba(70,56,32,.14)); }
   .gapp .orb.pebble .edge { fill: #FBF8F2; stroke: rgba(30,33,38,.38); stroke-width: 6; }
   .gapp .orb.pebble .gl { position: relative; width: 60%; height: 60%; overflow: visible; fill: none; stroke: #1E2126; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-  .gapp .orb.pebble .pdot { position: absolute; top: 8px; right: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--dot); }
+  .gapp .orb.pebble .pdot { position: absolute; top: 10px; right: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .gapp .orb.pebble .peb { filter: drop-shadow(0 0 1.5px rgba(200,235,255,.35)) drop-shadow(0 8px 10px rgba(0,0,0,.6)); } :root:not([data-theme="light"]) .gapp .orb.pebble .edge { fill: #0B1222; stroke: rgba(214,236,255,.45); } :root:not([data-theme="light"]) .gapp .orb.pebble .gl { stroke: #F2FAFF; filter: drop-shadow(0 0 1.4px rgba(214,240,255,.9)) drop-shadow(0 0 6px rgba(130,190,255,.35)); } :root:not([data-theme="light"]) .gapp .orb.pebble .pdot { box-shadow: 0 0 6px var(--dot); } }
   :root[data-theme="dark"] .gapp .orb.pebble .peb { filter: drop-shadow(0 0 1.5px rgba(200,235,255,.35)) drop-shadow(0 8px 10px rgba(0,0,0,.6)); } :root[data-theme="dark"] .gapp .orb.pebble .edge { fill: #0B1222; stroke: rgba(214,236,255,.45); } :root[data-theme="dark"] .gapp .orb.pebble .gl { stroke: #F2FAFF; filter: drop-shadow(0 0 1.4px rgba(214,240,255,.9)) drop-shadow(0 0 6px rgba(130,190,255,.35)); } :root[data-theme="dark"] .gapp .orb.pebble .pdot { box-shadow: 0 0 6px var(--dot); }
   .editing .gapp .orb.pebble, .editing .gapp.sel .orb.pebble { box-shadow: none; }
