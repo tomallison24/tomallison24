@@ -121,6 +121,7 @@
         'Travel in Pearl: the Next card is a faint ring of light, not the booking\'s colour, so it no longer looks like a problem',
         'Your helper can read photos and files now: tap + beside the box to add a photo (from your library or the camera), a PDF or a text file. Snap a recipe and ask for a shopping list, and it goes on your grocery list. Up to 4 a question; they go to Claude as they are, and aren\'t kept on your phone',
         'Pearl: the app icons on aOS Home are a quarter bigger',
+        'Pearl: the weather and calendar cards on aOS Home are a fifth taller',
         'Pearl: the family card at the top of Today is drawn in light now, like the app icons, a line drawing of the family with a heart, in place of the mid-century picture',
         'Pearl: the bars along the bottom of every app (Notes and Reminders, Trips and Explore, Calendar\'s views) and the round buttons beside them are solid now, so what scrolls behind them no longer shows through',
         'Pearl: your helper\'s chat is solid again, with a hairline of light round it and faint rings for its suggestions, so the page behind no longer shows through it',
