@@ -117,6 +117,7 @@
         'Junction: a car going ahead no longer stops at a green light while the line in front of it moves off; it only waits when the road beyond is really backing up',
         'Junction: the control panel is half the height, so it covers far less of the south road: one row for the junction, Auto and Upgrades, one row of phases, and no words under them',
         'Pearl: with Appearance set to Dark on a phone in light mode (or the other way round, or Pearl following the sun), the strip at the top of the screen now matches the page, not the cream or dark of the phone\'s own mode; the Ignition intro is day or night as the page will be',
+        'aOS Home in Pearl: the This morning / afternoon / evening bar is a faint ring of light like the widgets under it, with no coloured disc, its words in light and each app\'s Pearl icon',
         'Travel: once Ipsy has read a booking against its email and put right what it says, the booking leaves To check by itself; it stays there only if Ipsy couldn\'t settle it (something still missing, or a detail from your calendar or the flight board that the email doesn\'t state)',
         'Travel in Pearl: the Next card is a faint ring of light, not the booking\'s colour, so it no longer looks like a problem',
         'Your helper can read photos and files now: tap + beside the box to add a photo (from your library or the camera), a PDF or a text file. Snap a recipe and ask for a shopping list, and it goes on your grocery list. Up to 4 a question; they go to Claude as they are, and aren\'t kept on your phone',
