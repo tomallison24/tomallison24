@@ -391,7 +391,9 @@
   // So: a short stub of light, the title, then a line of light to the edge (or to what sits beside the title: a count, a
   // button); the stub turns down into a rail that runs past every card under the title, down to the next title, a dot at
   // each card's middle, fading out after the last. Cards with no title over them keep their hairlines, and a card that
-  // still has a frame of its own in Pearl (a note's colour) shows its edges already: no dot.
+  // still has a frame of its own in Pearl (a note's colour) shows its edges already: no dot (nor a card of buttons only).
+  // A title with no cards under it keeps its place: a line after it, and a stub only where there's room; a group's own
+  // title inside it (an aisle of a shopping list) is a size smaller, as is a title that would wrap.
   // It's all one pseudo-element of the title (its ::before, or ::after when the app uses ::before), painted from
   // backgrounds this measures into custom properties (the rules are Pearl's, aOS/scripts/looks.mjs: data-pl-*): so it
   // scrolls with the page, in a sheet as anywhere, and nothing is added to the page. The rail sits 12px in from the
@@ -400,7 +402,7 @@
   // Measured again when the page changes (a card added, a section folded, a font loaded), never while you scroll. An app
   // can mark its own: data-pl-head (a title), data-pl-card (a card), data-pl-norail (nothing in here).
   const marks = (() => {
-    const HEADS = '.sechead,.sect,.daylbl,.mhead,.vsec-h,[data-pl-head]';   // (Calendar's .evhead heads an event, not a section)
+    const HEADS = '.sechead,.sect,.daylbl,.dayhead,.mhead,.vsec-h,.group > h2:first-child,p.label:has(+ .rgroup),[data-pl-head]';   // (Places' lists; Drinks' Analysis)   // (Calendar's .evhead heads an event, not a section)
     const CARDS = '.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip,.dg,.lroom,.agw,.lpw,[data-pl-card]';
     const ATTRS = ['data-pl-sec', 'data-pl-wrap', 'data-pl-on', 'data-pl-title', 'data-pl-draw', 'data-pl-pos', 'data-pl-shift'];
     const VARS = ['--pl-x', '--pl-y', '--pl-w', '--pl-h', '--pl-bg', '--pl-pad'];
@@ -422,6 +424,7 @@
       }
       return null;
     };
+    const lines = node => { const rg = document.createRange(); rg.selectNodeContents(node); return new Set([...rg.getClientRects()].filter(b => b.width).map(b => Math.round(b.top))).size; };
     // where a card's words or marks start (its first text, icon, picture or ring), so the rail keeps clear of them
     const inkLeft = (card, cr) => {
       let x = Infinity, n = 0;
@@ -462,7 +465,16 @@
       }
       return x;
     };
-    const drawer = run => { const s = slot(run.head); return s && host(run.head) ? { el: run.head, s } : null; };
+    // a card of buttons only (Copy the list, Add to Notes: the shared button classes, not a row you tap): something to do, not one of the section's things
+    const actions = el => {
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let any = false;
+      for (let t = w.nextNode(); t; t = w.nextNode()) { if (!t.textContent.trim()) continue; any = true; if (!t.parentElement.closest('.btn,.ctabtn,.pillbtn,.linkbtn,.textbtn,select')) return false; }
+      return any;
+    };
+    const drawer = run => {   // the title; else the section around it (News's: its title holds a menu that can't move)
+      for (const el of [run.head, run.wrap || run.head.parentElement]) { if (!el || el === document.body) continue; const s = slot(el); if (s && host(el)) return { el, s }; }
+      return null;
+    };
     // a card that still has a frame of its own in Pearl (a ground, a ring, a border: a note's colour) shows its edges already
     const clear = c => /rgba\(0, 0, 0, 0\)|transparent/.test(c);
     const framed = el => { const cs = getComputedStyle(el); return !clear(cs.backgroundColor) || cs.backgroundImage !== 'none' || cs.boxShadow !== 'none'
@@ -486,7 +498,9 @@
             hr = h.getBoundingClientRect(); if (hr.width < VW * 0.42 || !hr.height) continue;
           }
           const t = words(h); if (!t) continue;
-          run = { head: h, wrap: h !== el ? el : null, hr, last: hr, t, scope: scopeOf(el), cards: [] }; runs.push(run);
+          const sub = !!(el.parentElement && el.parentElement.closest(CARDS));   // a group's own title, inside it (a shopping list's aisle): a line, no rail
+          run = { head: h, wrap: h !== el ? el : null, hr, last: hr, t, sub, scope: scopeOf(el), cards: [] }; runs.push(run);
+          if (sub) run = null;
           continue;
         }
         if (r.height < 34 || cardEls.some(c => c.contains(el)) || el.querySelector(HEADS)) continue;   // a card in a card: the outer one; a block holding a title: the section, not a card
@@ -495,7 +509,7 @@
         const fits = run && run.scope === scopeOf(el) && r.top >= prev.r.bottom - 4 && r.left < run.hr.left + 48 && r.right > run.hr.left
           && (!run.cards.length || Math.abs(r.left - prev.r.left) < 40);
         if (run) run.last = r;
-        if (fits) { if (!framed(el)) run.cards.push({ el, r }); }
+        if (fits) { if (!framed(el) && !actions(el)) run.cards.push({ el, r }); }
         else run = null;   // cards with no title over them keep their hairlines
       }
       // 2. which can be drawn, and the rail's place: one for every section on a screen (or in a sheet), clear of the words
@@ -518,13 +532,20 @@
         if (getComputedStyle(x.d.el).position === 'static' || x.d.el.hasAttribute('data-pl-pos')) mark(x.d.el, 'data-pl-pos', '');
         if (x.head) {
           mark(x.head, 'data-pl-sec', '');
-          const te = x.t.node.parentElement; if (te) mark(te, 'data-pl-title', '');
+          const te = x.t.node.parentElement; if (te) mark(te, 'data-pl-title', x.sub ? 'sub' : te.getAttribute('data-pl-title') === 'fit' ? 'fit' : '');
+          x.te = te;
           const p = x.wrap || x.head.parentElement; if (p && p.firstElementChild === x.head && p !== document.body) mark(p, 'data-pl-wrap', '');
-          shiftTo(x.head, x.rail + STUB + GAP - tl);
+          shiftTo(x.head, x.cards.length ? x.rail + STUB + GAP - tl : 0);   // with no rail, the title stays where the app put it
           now.add(x.head);
         }
         for (const c of x.cards) { mark(c.el, 'data-pl-on', ''); shiftTo(c.el, x.rail + INK - c.ink); now.add(c.el); }
       }
+      // a title that no longer fits on one line in Unbounded: a size smaller (tried once, then kept)
+      let refit = false;
+      for (const x of keep) if (x.te && x.te.getAttribute('data-pl-title') === '') {
+        const t = words(x.head); if (t && lines(t.node) > 1) { attr(x.te, 'data-pl-title', 'fit'); refit = true; }
+      }
+      if (refit) document.body.offsetWidth;
       // 3. measure again (titles moved, fonts changed) and paint
       for (const x of keep) {
         const D = x.d.el, dr = D.getBoundingClientRect(), dcs = getComputedStyle(D);
@@ -539,13 +560,14 @@
         };
         if (x.head) {
           const t = words(x.head); if (!t) continue;
+          const rg = document.createRange(); rg.selectNodeContents(t.node); t.r = rg.getClientRects()[0] || t.r;   // its first line
           const hr = x.head.getBoundingClientRect(), hcs = getComputedStyle(x.head), y = n1(t.r.top + t.r.height / 2);
           let end = hr.right - (parseFloat(hcs.paddingRight) || 0);
           for (const e of x.head.querySelectorAll('*')) {   // what sits beside the title (a count, a button): the line stops short of it
             if (e.contains(t.node)) continue;
             const b = e.getBoundingClientRect(); if (b.width && b.height && b.left > t.r.right + 2 && b.bottom > t.r.top && b.top < t.r.bottom) end = Math.min(end, b.left - GAP);
           }
-          line(x.rail, t.r.left - GAP, y, false);
+          if (x.cards.length || t.r.left - GAP - x.rail >= STUB) line(x.rail, t.r.left - GAP, y, false);   // the stub, where there's room for it
           if (end - (t.r.right + 12) >= 24) line(t.r.right + 12, end, y, true);
           top = y;
         }
