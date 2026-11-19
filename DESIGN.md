@@ -57,8 +57,9 @@ is Pearl's.
   card's middle; the title moves right to sit after its stub, and a card's words stay 18px clear of the rail. It's one
   pseudo-element of the title (or of the section around it), so one of them needs a free `::before` or `::after` (`data-pl-norail` keeps it off a part of
   a page). A card that keeps a frame of its own in Pearl shows its edges already, and a card of buttons only is
-  something to do: no dot for either. A title with no cards under it stays put, with its line (and a stub where there's
-  room); a group's own title inside it, or one that would wrap, is a size smaller. Picked is a brighter,
+  something to do: no dot for either. Every card on a screen (or in a sheet) moves in by the same, so what lined up
+  still does; on a screen with no rail, a title stays put with its line (and a stub where there's room); `.otl` or
+  `data-pl-stop`, something drawing its own line down the page, ends a rail above it; a group's own title inside it, or one that would wrap, is a size smaller. Picked is a brighter,
   thicker ring (`--pl-pick`), never a fill; the main button a ring of light, the others a hairline; fields and chips
   faint rings that brighten in use; sheets and menus keep one solid ground (`--pl-surface`). So an app gets it by using
   the shared tokens and classes; what an app draws its own way (a coloured disc, a filled badge) needs its own Pearl

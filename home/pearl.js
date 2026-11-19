@@ -392,7 +392,7 @@
   // button); the stub turns down into a rail that runs past every card under the title, down to the next title, a dot at
   // each card's middle, fading out after the last. Cards with no title over them keep their hairlines, and a card that
   // still has a frame of its own in Pearl (a note's colour) shows its edges already: no dot (nor a card of buttons only).
-  // A title with no cards under it keeps its place: a line after it, and a stub only where there's room; a group's own
+  // On a screen with no rail at all, a title keeps its place: a line after it, a stub only where there's room; a group's own
   // title inside it (an aisle of a shopping list) is a size smaller, as is a title that would wrap.
   // It's all one pseudo-element of the title (its ::before, or ::after when the app uses ::before), painted from
   // backgrounds this measures into custom properties (the rules are Pearl's, aOS/scripts/looks.mjs: data-pl-*): so it
@@ -400,10 +400,13 @@
   // column's edge (or from the edge of a box that would cut it), the title moves right to sit after its stub, and a card
   // whose words would come within 18px of the rail moves them in; titles are Unbounded, glowing a little at night.
   // Measured again when the page changes (a card added, a section folded, a font loaded), never while you scroll. An app
-  // can mark its own: data-pl-head (a title), data-pl-card (a card), data-pl-norail (nothing in here).
+  // can mark its own: data-pl-head (a title), data-pl-card (a card), data-pl-stop (a rail ends above it: Orders' timeline
+  // is one already), data-pl-norail (nothing in here). Every card in a sheet (or on the page) moves in by the same, and
+  // where any section there has a rail, every title there sits after its stub.
   const marks = (() => {
     const HEADS = '.sechead,.sect,.daylbl,.dayhead,.mhead,.vsec-h,.group > h2:first-child,p.label:has(+ .rgroup),[data-pl-head]';   // (Places' lists; Drinks' Analysis)   // (Calendar's .evhead heads an event, not a section)
     const CARDS = '.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip,.dg,.lroom,.agw,.lpw,[data-pl-card]';
+    const STOPS = '.otl,[data-pl-stop]';   // what draws its own line down the page (Orders' return timeline): a rail stops above it
     const ATTRS = ['data-pl-sec', 'data-pl-wrap', 'data-pl-on', 'data-pl-title', 'data-pl-draw', 'data-pl-pos', 'data-pl-shift'];
     const VARS = ['--pl-x', '--pl-y', '--pl-w', '--pl-h', '--pl-bg', '--pl-pad'];
     const STUB = 14, GAP = 10, INK = 18, EDGE = 12;   // the stub, and its gap to the title; from the rail to a card's words; the rail in from the column's edge
@@ -486,9 +489,10 @@
       const VW = innerWidth, runs = [], cardEls = [];
       let run = null;
       // 1. the titles and the cards, in the order they are on the page
-      for (const el of document.body.querySelectorAll(HEADS + ',' + CARDS)) {
+      for (const el of document.body.querySelectorAll(HEADS + ',' + CARDS + ',' + STOPS)) {
         if (el.closest('[data-pearl-skip],[data-pl-norail],[hidden],[aria-hidden="true"]')) continue;
         const r = el.getBoundingClientRect();
+        if (el.matches(STOPS)) { if (r.height && run && run.scope === scopeOf(el) && r.top >= run.last.top) run = null; continue; }   // a line of its own (a timeline): the rail ends above it
         if (r.width < VW * 0.42 || !r.height || getComputedStyle(el).visibility === 'hidden') continue;
         if (el.matches(HEADS)) {
           if (cardEls.some(c => c.contains(el)) || el.closest('button,summary,a,[role="menu"],.menu,.dmenu,.pmenu,.viewmenu,.tagmenu')) continue;   // a card's own title; a sender, a link, a menu's label
@@ -525,9 +529,16 @@
         if (by > 0.5) { mark(el, 'data-pl-shift', ''); prop(el, '--pl-pad', n1(pad.get(el) + by) + 'px'); }
         else { attr(el, 'data-pl-shift', null); prop(el, '--pl-pad', null); }
       };
+      // in each sheet (or the page): whether any section there has a rail (then every title there sits after its stub), and
+      // how far its cards' words move in to clear the rail: all by the same, so what lined up still does
+      const railed = new Set(), moveBy = new Map();
+      for (const x of keep) {
+        x.rail = Math.max(clipLeft(x.d.el), edgeAt.get(x.scope)) + EDGE;
+        if (x.cards.length) railed.add(x.scope);
+        for (const c of x.cards) moveBy.set(x.scope, Math.max(moveBy.get(x.scope) || 0, x.rail + INK - c.ink));
+      }
       for (const x of keep) {
         const tl = x.t.r.left - shift(x.head);
-        x.rail = Math.max(clipLeft(x.d.el), edgeAt.get(x.scope)) + EDGE;
         mark(x.d.el, 'data-pl-draw', x.d.s);
         if (getComputedStyle(x.d.el).position === 'static' || x.d.el.hasAttribute('data-pl-pos')) mark(x.d.el, 'data-pl-pos', '');
         if (x.head) {
@@ -535,10 +546,11 @@
           const te = x.t.node.parentElement; if (te) mark(te, 'data-pl-title', x.sub ? 'sub' : te.getAttribute('data-pl-title') === 'fit' ? 'fit' : '');
           x.te = te;
           const p = x.wrap || x.head.parentElement; if (p && p.firstElementChild === x.head && p !== document.body) mark(p, 'data-pl-wrap', '');
-          shiftTo(x.head, x.cards.length ? x.rail + STUB + GAP - tl : 0);   // with no rail, the title stays where the app put it
+          x.moved = railed.has(x.scope) && !x.sub;   // with no rail on the screen, a title stays where the app put it
+          shiftTo(x.head, x.moved ? x.rail + STUB + GAP - tl : 0);
           now.add(x.head);
         }
-        for (const c of x.cards) { mark(c.el, 'data-pl-on', ''); shiftTo(c.el, x.rail + INK - c.ink); now.add(c.el); }
+        for (const c of x.cards) { mark(c.el, 'data-pl-on', ''); shiftTo(c.el, moveBy.get(x.scope) || 0); now.add(c.el); }
       }
       // a title that no longer fits on one line in Unbounded: a size smaller (tried once, then kept)
       let refit = false;
@@ -567,7 +579,7 @@
             if (e.contains(t.node)) continue;
             const b = e.getBoundingClientRect(); if (b.width && b.height && b.left > t.r.right + 2 && b.bottom > t.r.top && b.top < t.r.bottom) end = Math.min(end, b.left - GAP);
           }
-          if (x.cards.length || t.r.left - GAP - x.rail >= STUB) line(x.rail, t.r.left - GAP, y, false);   // the stub, where there's room for it
+          if (x.moved || t.r.left - GAP - x.rail >= STUB) line(x.rail, t.r.left - GAP, y, false);   // the stub, where there's room for it
           if (end - (t.r.right + 12) >= 24) line(t.r.right + 12, end, y, true);
           top = y;
         }
