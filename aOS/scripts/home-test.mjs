@@ -527,7 +527,11 @@ for (const [w, h, scheme] of [[390, 844, 'light'], [375, 667, 'dark']]) {
   const peb = await pg.evaluate(() => [...document.querySelectorAll('#hgrid .orb')].map(o => { const g = o.querySelector('svg.gl'), r = o.getBoundingClientRect();
     return o.classList.contains('pebble') && !!o.querySelector('svg.peb path') && g && Math.abs(g.getBoundingClientRect().width / r.width - .6) < .02; }));
   check(peb.length === APPS.length && peb.every(Boolean), `every app is a pebble with its drawing at 60% (${peb.filter(Boolean).length} of ${peb.length}) ${tag}`);
-  if (h > 800) check(fit.on, `every app on the first screen ${tag}`);
+  // a quarter bigger than the old 58 pt (the owner's ask, who chose that over every app on the first screen): 72.5 pt, and none
+  // past the screen's sides or over another
+  const size = await pg.evaluate(() => { const rs = [...document.querySelectorAll('#hgrid .orb.pebble')].map(e => e.getBoundingClientRect());
+    return { w: Math.min(...rs.map(r => r.width)), side: rs.every(r => r.left >= 0 && r.right <= innerWidth), over: rs.some((a, i) => rs.some((b, j) => j > i && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom)) }; });
+  check(Math.abs(size.w - 72.5) < 0.6 && size.side && !size.over, `the icons a quarter bigger, 72.5 pt, inside the screen and apart (${size.w}) ${tag}`);
   await pg.evaluate(() => window.aosHome.unread('mail', 3)); await pg.waitForTimeout(100);
   check(await pg.textContent('#hgrid [data-gapp="mail"] em') === '3', `Mail's unread count on its button ${tag}`);
   await pg.locator('#hgrid [data-gapp="mail"]').click(); await pg.waitForTimeout(900);
