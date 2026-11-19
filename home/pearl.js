@@ -384,6 +384,219 @@
   // the strip sits on the page itself: hidden while a sheet or a dialog is over it
   const covered = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && !!e.closest('[role="dialog"],[aria-modal="true"],.sheet,.scrim') && !strip.el.contains(e); };
 
+  // ---- sections and cards: each section's title set into a bright line of light, and a rail of light down the section
+  // with a dot at the middle of each card on it ----
+  // Pearl clears the cards' grounds, and the same faint hairline parted two cards and two sections, so you couldn't tell
+  // where a card ended or a section began (the owner: Home's Favorites, where the thermostats end and the lights begin).
+  // So: a short stub of light, the title, then a line of light to the edge (or to what sits beside the title: a count, a
+  // button); the stub turns down into a rail that runs past every card under the title, down to the next title, a dot at
+  // each card's middle, fading out after the last. Cards with no title over them keep their hairlines, and a card that
+  // still has a frame of its own in Pearl (a note's colour) shows its edges already: no dot.
+  // It's all one pseudo-element of the title (its ::before, or ::after when the app uses ::before), painted from
+  // backgrounds this measures into custom properties (the rules are Pearl's, aOS/scripts/looks.mjs: data-pl-*): so it
+  // scrolls with the page, in a sheet as anywhere, and nothing is added to the page. The rail sits 12px in from the
+  // column's edge (or from the edge of a box that would cut it), the title moves right to sit after its stub, and a card
+  // whose words would come within 18px of the rail moves them in; titles are Unbounded, glowing a little at night.
+  // Measured again when the page changes (a card added, a section folded, a font loaded), never while you scroll. An app
+  // can mark its own: data-pl-head (a title), data-pl-card (a card), data-pl-norail (nothing in here).
+  const marks = (() => {
+    const HEADS = '.sechead,.sect,.daylbl,.mhead,.vsec-h,[data-pl-head]';   // (Calendar's .evhead heads an event, not a section)
+    const CARDS = '.card,.rgroup,.group,.box,.obox,.ocard,.tripwrap,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.tl,.addbox,.wstrip,.dg,.lroom,.agw,.lpw,[data-pl-card]';
+    const ATTRS = ['data-pl-sec', 'data-pl-wrap', 'data-pl-on', 'data-pl-title', 'data-pl-draw', 'data-pl-pos', 'data-pl-shift'];
+    const VARS = ['--pl-x', '--pl-y', '--pl-w', '--pl-h', '--pl-bg', '--pl-pad'];
+    const STUB = 14, GAP = 10, INK = 18, EDGE = 12;   // the stub, and its gap to the title; from the rail to a card's words; the rail in from the column's edge
+    const pad = new WeakMap(), watched = new WeakSet();
+    let live = new Set(), pending = 0, lastPass = 0, ro = null, mo = null, started = false;
+    const n1 = v => Math.round(v * 10) / 10;
+    const attr = (el, k, v) => { if (v == null) { if (el.hasAttribute(k)) el.removeAttribute(k); } else if (el.getAttribute(k) !== v) el.setAttribute(k, v); };
+    const prop = (el, k, v) => { if (v == null) { if (el.style.getPropertyValue(k)) el.style.removeProperty(k); } else if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v); };
+    const shift = el => el.hasAttribute('data-pl-shift') ? (parseFloat(getComputedStyle(el).paddingLeft) || 0) - (pad.get(el) || 0) : 0;
+    const scopeOf = el => el.closest('[role="dialog"],[aria-modal="true"],dialog,.sheet,.st-sheet') || document.body;
+    // the first words in it that are on screen (a title's own text)
+    const words = el => {
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), r = document.createRange();
+      for (let t = w.nextNode(), n = 0; t && n < 40; t = w.nextNode(), n++) {
+        if (!t.textContent.trim()) continue;
+        r.selectNodeContents(t); const b = r.getBoundingClientRect();
+        if (b.width && b.height) return { node: t, r: b };
+      }
+      return null;
+    };
+    // where a card's words or marks start (its first text, icon, picture or ring), so the rail keeps clear of them
+    const inkLeft = (card, cr) => {
+      let x = Infinity, n = 0;
+      const w = document.createTreeWalker(card, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT), rg = document.createRange();
+      for (let nd = w.nextNode(); nd && n < 160; nd = w.nextNode(), n++) {
+        let b = null;
+        if (nd.nodeType === 3) { if (!nd.textContent.trim()) continue; rg.selectNodeContents(nd); b = rg.getBoundingClientRect(); }
+        else if (/^(svg|IMG|CANVAS|VIDEO|INPUT|SELECT|TEXTAREA)$/.test(nd.tagName)) b = nd.getBoundingClientRect();
+        else if (!(nd instanceof HTMLElement)) continue;
+        else { const cs = getComputedStyle(nd); if (cs.boxShadow === 'none' && !(parseFloat(cs.borderLeftWidth) > 0) && /rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor)) continue;
+          b = nd.getBoundingClientRect(); if (b.width > cr.width * 0.8) continue; }
+        if (b && b.width >= 4 && b.height >= 4 && b.left >= cr.left - 1) x = Math.min(x, b.left);
+      }
+      return x === Infinity ? cr.left + 16 : x;
+    };
+    // a pseudo-element the app doesn't use, to draw with
+    const slot = el => {
+      const had = el.getAttribute('data-pl-draw'); if (had) return had;
+      for (const [k, p] of [['b', '::before'], ['a', '::after']]) { const c = getComputedStyle(el, p).content; if (c === 'none' || c === 'normal') return k; }
+      return null;
+    };
+    // it can hold the drawing: nothing clipped at its edges, and made a containing block without moving anything in it
+    const host = el => {
+      const cs = getComputedStyle(el);
+      if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') return false;
+      if (cs.position !== 'static' || el.hasAttribute('data-pl-pos')) return true;
+      let n = 0;
+      for (const d of el.querySelectorAll('*')) { if (++n > 400 || getComputedStyle(d).position === 'absolute') return false; }
+      return true;
+    };
+    // the left edge of what the drawing would be cut at: the nearest box around it that clips (or its sheet, or the screen)
+    const clipLeft = el => {
+      let x = 0;
+      for (let a = el.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+        const cs = getComputedStyle(a);
+        if (cs.overflowX !== 'visible' || a === document.body || cs.position === 'fixed') x = Math.max(x, a.getBoundingClientRect().left + (parseFloat(cs.borderLeftWidth) || 0));
+        if (cs.position === 'fixed') break;
+      }
+      return x;
+    };
+    const drawer = run => { const s = slot(run.head); return s && host(run.head) ? { el: run.head, s } : null; };
+    // a card that still has a frame of its own in Pearl (a ground, a ring, a border: a note's colour) shows its edges already
+    const clear = c => /rgba\(0, 0, 0, 0\)|transparent/.test(c);
+    const framed = el => { const cs = getComputedStyle(el); return !clear(cs.backgroundColor) || cs.backgroundImage !== 'none' || cs.boxShadow !== 'none'
+      || (parseFloat(cs.borderTopWidth) > 0 && !clear(cs.borderTopColor) && cs.borderTopStyle !== 'none' && parseFloat(cs.borderLeftWidth) > 0); };
+
+    function pass() {
+      pending = 0; lastPass = performance.now();
+      if (!on() || !document.body) return;
+      const VW = innerWidth, runs = [], cardEls = [];
+      let run = null;
+      // 1. the titles and the cards, in the order they are on the page
+      for (const el of document.body.querySelectorAll(HEADS + ',' + CARDS)) {
+        if (el.closest('[data-pearl-skip],[data-pl-norail],[hidden],[aria-hidden="true"]')) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < VW * 0.42 || !r.height || getComputedStyle(el).visibility === 'hidden') continue;
+        if (el.matches(HEADS)) {
+          if (cardEls.some(c => c.contains(el)) || el.closest('button,summary,a,[role="menu"],.menu,.dmenu,.pmenu,.viewmenu,.tagmenu')) continue;   // a card's own title; a sender, a link, a menu's label
+          let h = el, hr = r;
+          if (el.querySelector(CARDS)) {   // a section holding its title and its cards (News's .sect): the title is its first part
+            h = el.firstElementChild; if (!h || h.matches(CARDS)) continue;
+            hr = h.getBoundingClientRect(); if (hr.width < VW * 0.42 || !hr.height) continue;
+          }
+          const t = words(h); if (!t) continue;
+          run = { head: h, wrap: h !== el ? el : null, hr, last: hr, t, scope: scopeOf(el), cards: [] }; runs.push(run);
+          continue;
+        }
+        if (r.height < 34 || cardEls.some(c => c.contains(el)) || el.querySelector(HEADS)) continue;   // a card in a card: the outer one; a block holding a title: the section, not a card
+        cardEls.push(el);
+        const prev = run && (run.cards[run.cards.length - 1] || { r: run.last });
+        const fits = run && run.scope === scopeOf(el) && r.top >= prev.r.bottom - 4 && r.left < run.hr.left + 48 && r.right > run.hr.left
+          && (!run.cards.length || Math.abs(r.left - prev.r.left) < 40);
+        if (run) run.last = r;
+        if (fits) { if (!framed(el)) run.cards.push({ el, r }); }
+        else run = null;   // cards with no title over them keep their hairlines
+      }
+      // 2. which can be drawn, and the rail's place: one for every section on a screen (or in a sheet), clear of the words
+      const keep = runs.map(x => Object.assign(x, { d: drawer(x) })).filter(x => x.d);
+      const edgeAt = new Map();   // the column's left edge in each sheet (or the page): its cards' and titles' edge
+      for (const x of keep) {
+        edgeAt.set(x.scope, Math.min(edgeAt.has(x.scope) ? edgeAt.get(x.scope) : Infinity, x.hr.left, ...x.cards.map(c => c.r.left)));
+        for (const c of x.cards) c.ink = inkLeft(c.el, c.r) - shift(c.el);
+      }
+      const now = new Set(), mark = (el, k, v) => { attr(el, k, v); now.add(el); };
+      const shiftTo = (el, by) => {   // move its content right by `by` (from where the app put it)
+        if (!pad.has(el) || !el.hasAttribute('data-pl-shift')) pad.set(el, parseFloat(getComputedStyle(el).paddingLeft) || 0);
+        if (by > 0.5) { mark(el, 'data-pl-shift', ''); prop(el, '--pl-pad', n1(pad.get(el) + by) + 'px'); }
+        else { attr(el, 'data-pl-shift', null); prop(el, '--pl-pad', null); }
+      };
+      for (const x of keep) {
+        const tl = x.t.r.left - shift(x.head);
+        x.rail = Math.max(clipLeft(x.d.el), edgeAt.get(x.scope)) + EDGE;
+        mark(x.d.el, 'data-pl-draw', x.d.s);
+        if (getComputedStyle(x.d.el).position === 'static' || x.d.el.hasAttribute('data-pl-pos')) mark(x.d.el, 'data-pl-pos', '');
+        if (x.head) {
+          mark(x.head, 'data-pl-sec', '');
+          const te = x.t.node.parentElement; if (te) mark(te, 'data-pl-title', '');
+          const p = x.wrap || x.head.parentElement; if (p && p.firstElementChild === x.head && p !== document.body) mark(p, 'data-pl-wrap', '');
+          shiftTo(x.head, x.rail + STUB + GAP - tl);
+          now.add(x.head);
+        }
+        for (const c of x.cards) { mark(c.el, 'data-pl-on', ''); shiftTo(c.el, x.rail + INK - c.ink); now.add(c.el); }
+      }
+      // 3. measure again (titles moved, fonts changed) and paint
+      for (const x of keep) {
+        const D = x.d.el, dr = D.getBoundingClientRect(), dcs = getComputedStyle(D);
+        const ox = dr.left + (parseFloat(dcs.borderLeftWidth) || 0), oy = dr.top + (parseFloat(dcs.borderTopWidth) || 0);
+        const L = [], C = 'var(--pl-line)', G = 'var(--pl-glow)', R = 'color-mix(in srgb,var(--pl-line) 72%,transparent)';
+        let y0 = Infinity, y1 = -Infinity, x1 = x.rail + 11, top = null;
+        const line = (a, b, y, fade) => {   // a bright line with its glow, from a to b at y
+          if (b - a < 4) return;
+          L.push([`linear-gradient(90deg,${C},${C} ${fade ? 86 : 100}%,${fade ? 'color-mix(in srgb,var(--pl-line) 45%,transparent)' : C})`, a, y - 1.5, b - a, 3]);
+          L.push([`linear-gradient(transparent,${G},transparent)`, a, y - 9, b - a, 18]);
+          y0 = Math.min(y0, y - 9); y1 = Math.max(y1, y + 9); x1 = Math.max(x1, b);
+        };
+        if (x.head) {
+          const t = words(x.head); if (!t) continue;
+          const hr = x.head.getBoundingClientRect(), hcs = getComputedStyle(x.head), y = n1(t.r.top + t.r.height / 2);
+          let end = hr.right - (parseFloat(hcs.paddingRight) || 0);
+          for (const e of x.head.querySelectorAll('*')) {   // what sits beside the title (a count, a button): the line stops short of it
+            if (e.contains(t.node)) continue;
+            const b = e.getBoundingClientRect(); if (b.width && b.height && b.left > t.r.right + 2 && b.bottom > t.r.top && b.top < t.r.bottom) end = Math.min(end, b.left - GAP);
+          }
+          line(x.rail, t.r.left - GAP, y, false);
+          if (end - (t.r.right + 12) >= 24) line(t.r.right + 12, end, y, true);
+          top = y;
+        }
+        const cards = x.cards.map(c => c.el.getBoundingClientRect()).filter(r => r.height);
+        if (cards.length) {
+          const mid = r => n1(r.top + r.height / 2), from = top != null ? top : mid(cards[0]), to = cards[cards.length - 1].bottom;
+          if (to - from > 4) {
+            L.push([`linear-gradient(${R},${R} ${Math.max(0, 100 - Math.round(2400 / (to - from)))}%,transparent)`, x.rail - 0.75, from, 1.5, to - from]);
+            y0 = Math.min(y0, from); y1 = Math.max(y1, to);
+          }
+          for (const r of cards) {
+            const m = mid(r);
+            L.unshift([`radial-gradient(circle closest-side,${C} 0 66%,transparent)`, x.rail - 5, m - 5, 10, 10]);
+            L.push([`radial-gradient(circle closest-side,${G},transparent)`, x.rail - 12, m - 12, 24, 24]);
+            y0 = Math.min(y0, m - 12); y1 = Math.max(y1, m + 12);
+          }
+        }
+        if (!L.length) continue;
+        const bx = x.rail - 12;
+        prop(D, '--pl-x', n1(bx - ox) + 'px'); prop(D, '--pl-y', n1(y0 - oy) + 'px');
+        prop(D, '--pl-w', n1(x1 - bx) + 'px'); prop(D, '--pl-h', n1(y1 - y0) + 'px');
+        prop(D, '--pl-bg', L.map(([img, lx, ly, w, h]) => `${img} ${n1(lx - bx)}px ${n1(ly - y0)}px/${n1(w)}px ${n1(h)}px no-repeat`).join(','));
+        for (const e of [D, x.head, ...x.cards.map(c => c.el)]) if (e && ro && !watched.has(e)) { watched.add(e); ro.observe(e); }
+      }
+      // 4. what was marked before and isn't now: back as the app drew it
+      for (const el of live) if (!now.has(el)) {
+        for (const k of ATTRS) el.removeAttribute(k);
+        for (const k of VARS) el.style.removeProperty(k);
+      }
+      for (const el of now) if (!el.hasAttribute('data-pl-draw')) for (const k of ['--pl-x', '--pl-y', '--pl-w', '--pl-h', '--pl-bg']) el.style.removeProperty(k);
+      live = now;
+    }
+    const schedule = () => {
+      if (pending || !on()) return;
+      pending = setTimeout(() => requestAnimationFrame(pass), Math.max(16, 160 - (performance.now() - lastPass)));
+    };
+    const start = () => {
+      if (!started && document.body) {
+        started = true;
+        ro = new ResizeObserver(schedule); ro.observe(document.body);
+        mo = new MutationObserver(ms => { if (ms.some(m => [...m.addedNodes, ...m.removedNodes].some(n => n.nodeType === 1 && !(n.dataset && n.dataset.pearl != null)))) schedule(); });
+        mo.observe(document.body, { childList: true, subtree: true });
+        addEventListener('resize', schedule);
+        for (const ev of ['transitionend', 'animationend', 'toggle']) document.addEventListener(ev, schedule, true);
+        if (document.fonts) { document.fonts.addEventListener('loadingdone', schedule); document.fonts.ready.then(schedule); }
+      }
+      schedule();
+    };
+    return { start, pass, stats: () => [...live].filter(e => e.hasAttribute('data-pl-draw')).length };
+  })();
+
   // ---- the clock ----
   let raf = 0, last = 0, frame = 0, running = false;
   const away = () => document.hidden || held || !on()
@@ -409,7 +622,7 @@
     if (!dustC.isConnected) document.body.prepend(dustC);
     if (!lightC.isConnected) document.body.append(lightC);
     dustC.style.display = lightC.style.display = 'block';
-    size(); readWx(); scan();
+    size(); readWx(); scan(); marks.start();
     if (motes.length < target * 0.5) motes = Array.from({ length: target }, () => mote(true));
     last = 0; raf = requestAnimationFrame(tick);
   }
@@ -432,7 +645,7 @@
     if (was != null && Math.abs(y - was) < 400) par += y - was;   // not a jump (a new page, a reset)
   }, { passive: true, capture: true });
   setInterval(check, 1500);   // an app's frame shown or put away, aOS Home covered or uncovered
-  window.aosPearl = { pause: () => { held = true; stop(); }, resume: () => { held = false; check(); }, running: () => running,
+  window.aosPearl = { pause: () => { held = true; stop(); }, resume: () => { held = false; check(); }, running: () => running, sections: () => { marks.pass(); return marks.stats(); },
     stats: () => ({ sheets: sheets.length, motes: motes.length, lights: lights.length, icons: lights.filter(l => l.icon).length, falling, taken, falls: motes.filter(m => m.fall).map(m => [Math.round(m.x), Math.round(m.y), +(m.fall.t / m.fall.dur).toFixed(2), m.fall.key && m.fall.key.className && String(m.fall.key.className.baseVal ?? m.fall.key.className)]) }) };   // for the tests
   if (document.body) check(); else addEventListener('DOMContentLoaded', check);
 })();

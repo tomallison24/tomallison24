@@ -50,7 +50,13 @@ is Pearl's.
   `.spin` while loading); in aOS an app powers on as it opens (`aOS/pearl-open.js`); a loading placeholder (`.skel`,
   `.skeleton`) is traced in light by Pearl's block. Pearl draws in light, not surfaces, in every app but
   the games (Sparkle and Junction, `GAMES` in `aOS/scripts/looks.mjs`): its block clears the shared surface tokens (`--tile`, `--glass`, `--fill`, `--mc-card`, `--seg-thumb`,
-  ...), so cards, boxes and filled pills go and things sit on the ground parted by hairlines; picked is a brighter,
+  ...), so cards, boxes and filled pills go and things sit on the ground parted by hairlines. Sections are told apart
+  by light, also `home/pearl.js`: each section's title (`.sechead`, `.sect`, `.daylbl`, `.mhead`, `.vsec-h`, or
+  `data-pl-head`) is set into a bright line of light, a short stub to its left turning down into a rail that runs past
+  every frameless card under it (the shared card classes, or `data-pl-card`) to the next title, with a dot at each
+  card's middle; the title moves right to sit after its stub, and a card's words stay 18px clear of the rail. It's one
+  pseudo-element of the title, so a title needs a free `::before` or `::after` (`data-pl-norail` keeps it off a part of
+  a page). A card that keeps a frame of its own in Pearl shows its edges already: no dot. Picked is a brighter,
   thicker ring (`--pl-pick`), never a fill; the main button a ring of light, the others a hairline; fields and chips
   faint rings that brighten in use; sheets and menus keep one solid ground (`--pl-surface`). So an app gets it by using
   the shared tokens and classes; what an app draws its own way (a coloured disc, a filled badge) needs its own Pearl
