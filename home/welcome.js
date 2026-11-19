@@ -95,7 +95,7 @@
         'Dust drifts slowly behind every screen in Pearl, at many depths. Dust near the light is drawn in, slowly at first, then falls the last of the way into a line or an app\'s icon, where the line brightens a moment or the icon glows. New dust quietly appears elsewhere. When Weather says rain or snow where you are, the dust falls as rain or drifts down as snow',
         'Under each title, a strip of light with a beam gliding slowly back and forth along it',
         'The top edge of each card lights up where your eyes rest on the screen, a little above the middle, and fades above and below it, so the card you scroll to brightens',
-        'In Pearl, you can see where each section starts and where each card ends: a section\'s title sits in a bright line of light, and a rail of light runs down the section from it, with a dot beside each card. In every app',
+        'In Pearl, you can see where each section starts: its title sits in a bright line of light. In every app',
         'New app icons in Pearl: each app is one simple line drawing with a dot in its own colour, on aOS Home, in search, in the app store and on your Home Screen',
         'aOS Home in Pearl: the weather and what\'s next in faint rings of light, the weather drawn in light; Today\'s stories drawn in light too, each with its own colour as a glow in its corner, and the Home button a ring of light',
         'Clock in Pearl: every clock face a hairline ring of light with hands of light, its second hand in Clock\'s own blue, in place of Vintage\'s starburst; thin numbers; Start, the tab bar and the timers as rings of light on glass',
