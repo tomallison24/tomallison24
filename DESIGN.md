@@ -51,15 +51,13 @@ is Pearl's.
   `.skeleton`) is traced in light by Pearl's block. Pearl draws in light, not surfaces, in every app but
   the games (Sparkle and Junction, `GAMES` in `aOS/scripts/looks.mjs`): its block clears the shared surface tokens (`--tile`, `--glass`, `--fill`, `--mc-card`, `--seg-thumb`,
   ...), so cards, boxes and filled pills go and things sit on the ground parted by hairlines. Sections are told apart
-  by light, also `home/pearl.js`: each section's title (`.sechead`, `.sect`, `.daylbl`, `.dayhead`, `.mhead`, `.vsec-h`, a `.group`'s first `h2`, a `p.label` over an `.rgroup`, or
-  `data-pl-head`) is set into a bright line of light, a short stub to its left turning down into a rail that runs past
-  every frameless card under it (the shared card classes, or `data-pl-card`) to the next title, with a dot at each
-  card's middle; the title moves right to sit after its stub, and a card's words stay 18px clear of the rail. It's one
-  pseudo-element of the title (or of the section around it), so one of them needs a free `::before` or `::after` (`data-pl-norail` keeps it off a part of
-  a page). A card that keeps a frame of its own in Pearl shows its edges already, and a card of buttons only is
-  something to do: no dot for either. Every card on a screen (or in a sheet) moves in by the same, so what lined up
-  still does; on a screen with no rail, a title stays put with its line (and a stub where there's room); `.otl` or
-  `data-pl-stop`, something drawing its own line down the page, ends a rail above it; a group's own title inside it, or one that would wrap, is a size smaller. Picked is a brighter,
+  by light, also `home/pearl.js`: each section's title (`.sechead`, `.sect`, `.daylbl`, `.dayhead`, `.mhead`, `.vsec-h`,
+  a `.group`'s first `h2`, a `p.label` over an `.rgroup`, or `data-pl-head`) is set into a bright line of light with a
+  short stub before it, and moves right to sit after its stub; the hairline above it goes. Cards keep their hairlines
+  and stay where the app puts them (a rail with a dot at each card was tried and taken out: too busy). It's one
+  pseudo-element of the title (or of the section around it), so one of them needs a free `::before` or `::after`
+  (`data-pl-norail` keeps it off a part of a page). A group's own title inside it stays put with a line after it, a size
+  smaller, as is a title that would wrap. Picked is a brighter,
   thicker ring (`--pl-pick`), never a fill; the main button a ring of light, the others a hairline; fields and chips
   faint rings that brighten in use; sheets and menus keep one solid ground (`--pl-surface`). So an app gets it by using
   the shared tokens and classes; what an app draws its own way (a coloured disc, a filled badge) needs its own Pearl

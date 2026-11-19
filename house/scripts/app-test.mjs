@@ -405,66 +405,55 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
   });
   await ctx.close();
 }
-{ // Pearl (home/pearl.js, the rules in aOS/scripts/looks.mjs): you see where each section starts and each card ends. Each
-  // section's title in a line of light, a stub turning down into a rail past the section's cards, a dot at each card's
-  // middle, the words kept clear of it; the old hairlines gone where it draws. Night and day.
+{ // Pearl (home/pearl.js, the rules in aOS/scripts/looks.mjs): you see where each section starts. Each section's title
+  // in a line of light, a stub before it, the old hairline above it gone; the cards keep their hairlines and stay where
+  // Home puts them (no rail, no dots: tried and taken out). Night and day.
   for (const scheme of ['dark', 'light']) {
     const { ctx, page, errors } = await phone(scheme, { design: 'layers' });
-    await test(`Pearl, ${scheme}: Favorites' sections each start with their title in a line of light, a rail down past their cards with a dot at each one's middle`, async () => {
+    await test(`Pearl, ${scheme}: Favorites' sections each start with their title in a line of light; the cards keep their hairlines, where Home puts them`, async () => {
       assert.equal(await look(page), 'layers');
       assert.ok(await page.evaluate(() => window.aosPearl.sections()) >= 3, 'Automations, Thermostats and Lights are drawn');
       const r = await page.evaluate(() => {
         const out = {};
         for (const h of document.querySelectorAll('#g-fav .vsec-h')) {
           const name = h.textContent.trim(), k = h.dataset.plDraw, ps = k && getComputedStyle(h, k === 'b' ? '::before' : '::after');
-          const hr = h.getBoundingClientRect(), cs = getComputedStyle(h), ox = hr.left + parseFloat(cs.borderLeftWidth), oy = hr.top + parseFloat(cs.borderTopWidth);
-          const bx = ox + parseFloat(h.style.getPropertyValue('--pl-x')), by = oy + parseFloat(h.style.getPropertyValue('--pl-y'));
-          const bg = h.style.getPropertyValue('--pl-bg');
-          const dots = [...bg.matchAll(/radial-gradient\(circle closest-side,var\(--pl-line\) 0 66%,transparent\) ([\d.-]+)px ([\d.-]+)px\/10px 10px/g)].map(m => [bx + +m[1] + 5, by + +m[2] + 5]).sort((a, b) => a[1] - b[1]);
+          const hr = h.getBoundingClientRect(), cs = getComputedStyle(h), bx = hr.left + parseFloat(cs.borderLeftWidth) + parseFloat(h.style.getPropertyValue('--pl-x'));
+          const by = hr.top + parseFloat(cs.borderTopWidth) + parseFloat(h.style.getPropertyValue('--pl-y'));
           const span = h.querySelector('span'), sr = span.getBoundingClientRect();
-          out[name] = { k, content: ps && ps.content, pos: ps && ps.position, image: ps && ps.backgroundImage, dots, title: [sr.left, sr.right], font: getComputedStyle(span).fontFamily,
-            rail: dots.length ? dots[0][0] : null, hairline: cs.borderImageSource };
+          out[name] = { k, content: ps && ps.content, pos: ps && ps.position, image: ps && ps.backgroundImage, h: ps && ps.height, bg: h.style.getPropertyValue('--pl-bg'),
+            stub: bx, mid: by + 9, title: [sr.left, sr.right, sr.top + sr.height / 2], font: getComputedStyle(span).fontFamily, hairline: cs.borderImageSource };
         }
-        const mid = e => { const b = e.getBoundingClientRect(); return b.top + b.height / 2; };
-        const ink = e => { const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT), rg = document.createRange(); for (let t = w.nextNode(); t; t = w.nextNode()) { if (!t.textContent.trim()) continue; rg.selectNodeContents(t); const b = rg.getBoundingClientRect(); if (b.width) return b.left; } return null; };
-        out.thermostats = [...document.querySelectorAll('#g-fav .fcards > .dg')].map(e => [mid(e), ink(e), e.getBoundingClientRect().left]);
-        out.lamps = [...document.querySelectorAll('#g-fav .lpills > .lpw')].map(e => [mid(e), e.querySelector('.lp-badge,.pwr,svg').getBoundingClientRect().left]);
+        const dg = [...document.querySelectorAll('#g-fav .fcards > .dg')];
+        out.cards = { moved: dg.concat([...document.querySelectorAll('#g-fav .lpills > .lpw')]).some(e => e.hasAttribute('data-pl-shift') || e.hasAttribute('data-pl-on')), hairline: getComputedStyle(dg[1]).borderImageSource };
         return out;
       });
       for (const name of ['Automations', 'Thermostats', 'Lights']) {
         const x = r[name]; assert.ok(x, name + ' is a section');
         assert.ok(x.k && x.content === '""' && x.pos === 'absolute', `${name}: drawn by its title's own pseudo-element: ${JSON.stringify([x.k, x.content, x.pos])}`);
         assert.match(x.image, /linear-gradient/, name + ': its line of light');
+        assert.doesNotMatch(x.bg, /radial-gradient/, name + ': no dots');
+        assert.equal(x.h, '18px', name + ': only the line, no rail down the section');
+        assert.ok(Math.abs(x.mid - x.title[2]) < 1.5, `${name}: the line through the middle of its title (${x.mid} vs ${x.title[2]})`);
+        assert.ok(x.title[0] - x.stub >= 22, `${name}: the title sits after its stub (${x.title[0]} vs ${x.stub})`);
         assert.match(x.font, /Unbounded/, name + ': its title in Unbounded');
         assert.equal(x.hairline, 'none', name + ': no hairline above it any more');
-        assert.ok(x.rail != null && x.title[0] - x.rail >= 22, `${name}: the title sits after its stub, right of the rail: ${x.title[0]} vs ${x.rail}`);
       }
-      const T = r.Thermostats, L = r.Lights;
-      assert.equal(T.dots.length, r.thermostats.length, 'a dot for each thermostat');
-      assert.equal(L.dots.length, r.lamps.length, 'a dot for each lamp');
-      T.dots.forEach(([dx, dy], i) => {
-        assert.ok(Math.abs(dy - r.thermostats[i][0]) < 1.5, `thermostat ${i}: its dot at its middle (${dy} vs ${r.thermostats[i][0]})`);
-        assert.ok(r.thermostats[i][1] - dx >= 13, `thermostat ${i}: its words clear of the rail (${r.thermostats[i][1]} vs ${dx})`);
-        assert.ok(dx >= r.thermostats[i][2] - 1, `thermostat ${i}: the rail inside the column, where nothing cuts it (${dx} vs ${r.thermostats[i][2]})`);
-      });
-      L.dots.forEach(([dx, dy], i) => {
-        assert.ok(Math.abs(dy - r.lamps[i][0]) < 1.5, `lamp ${i}: its dot at its middle`);
-        assert.ok(r.lamps[i][1] - dx >= 13, `lamp ${i}: its switch clear of the rail`);
-      });
-      for (const d of [...T.dots, ...L.dots]) assert.ok(Math.abs(d[0] - T.dots[0][0]) < 0.5, 'one rail, at the same place in every section');
+      for (const name of ['Thermostats', 'Lights']) assert.ok(Math.abs(r[name].stub - r.Automations.stub) < 0.5, 'every stub starts at the same place');
+      assert.equal(r.cards.moved, false, 'the cards stay where Home puts them');
+      assert.match(r.cards.hairline, /gradient/, 'two thermostats still parted by their hairline');
       assert.deepEqual(errors, []);
     });
-    if (scheme === 'dark') await test('Pearl: a card added, and the rail follows with a dot for it: measured again when the page changes', async () => {
-      await page.evaluate(() => { const p = document.querySelector('#g-fav .lpills'), c = p.lastElementChild.cloneNode(true); c.id = ''; c.dataset.test = 'added'; p.append(c); });
+    if (scheme === 'dark') await test('Pearl: a section added, and it gets its line: measured again when the page changes', async () => {
+      await page.evaluate(() => { const h = [...document.querySelectorAll('#g-fav .vsec-h')].pop(), c = h.cloneNode(true); c.removeAttribute('style'); for (const k of [...c.attributes]) if (k.name.startsWith('data-pl')) c.removeAttribute(k.name); c.querySelector('span').textContent = 'More'; c.dataset.test = 'added'; h.parentElement.append(c); });
       await page.waitForTimeout(700);
-      const after = await page.evaluate(() => { const h = [...document.querySelectorAll('#g-fav .vsec-h')].find(e => /Lights/.test(e.textContent)); return [h.style.getPropertyValue('--pl-bg').match(/0 66%/g).length, document.querySelectorAll('#g-fav .lpills > .lpw').length]; });
-      assert.equal(after[0], after[1], 'a dot for the lamp added');
+      const added = await page.evaluate(() => { const c = document.querySelector('[data-test="added"]'); return [c.dataset.plDraw || '', c.style.getPropertyValue('--pl-bg')]; });
+      assert.ok(added[0] && /linear-gradient/.test(added[1]), 'the new title is drawn: ' + JSON.stringify(added));
     });
     await ctx.close();
   }
   { // and only in Pearl: in Vintage nothing is drawn or moved
     const { ctx, page } = await phone('dark');
-    await test('Vintage: no line, rail or dot, and the titles where Home puts them', async () => {
+    await test('Vintage: no line, and the titles where Home puts them', async () => {
       assert.equal(await look(page), 'vintage');
       const r = await page.evaluate(() => [...document.querySelectorAll('#g-fav .vsec-h')].map(h => [getComputedStyle(h, '::before').content, getComputedStyle(h, '::after').content, h.hasAttribute('data-pl-draw'), getComputedStyle(h.querySelector('span')).fontFamily]));
       for (const [b, a, drawn, font] of r) { assert.ok(b === 'none' && a === 'none' && !drawn, JSON.stringify([b, a, drawn])); assert.doesNotMatch(font, /Unbounded/); }
