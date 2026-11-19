@@ -22,6 +22,16 @@ for (const dir of fs.readdirSync(ROOT)) {
   const surf = /:is\(([^)]*)\)\{background:var\(--pl-surface\) !important\}/.exec(m[1]);
   if (/--mc-card:transparent/.test(m[1])) assert.ok(surf, dir + ': no solid surface rule in Pearl');
   if (surf) for (const menu of ['.viewmenu', '.pmenu', '.tagmenu', '.dmenu', '.menu']) assert.ok(surf[1].split(',').includes(menu), `${dir}: Pearl's ${menu} is see-through (not on --pl-surface)`);
+  // and everything else that floats over the page or a map (found by going through every app and page): the Updated
+  // pill, Podcasts' player bar, Mail's selection bar and toast, Places' map hint, Calendar's drag time, aOS's story
+  // captions, Weather's radar bar; the floating round buttons; Podcasts' show header
+  if (surf) {
+    const all = [...m[1].matchAll(/:is\(([^)]*(?:\([^)]*\)[^)]*)*)\)\{background:var\(--pl-(surface|fab)\) !important/g)].map(x => x[1].split(','));
+    const on = sel => all.some(l => l.includes(sel));
+    for (const sel of ['.updpill', '.mbar', '#selbar', '#toast', '.maphint', '.dragtime', '.story .foot', '.rd-bar', '.page > .back', '.page > .close', '.mapbtns .iconbtn', '.rd-zoom button', '.rd-play'])
+      assert.ok(on(sel), `${dir}: Pearl's ${sel} is see-through (no solid ground)`);
+    assert.ok(/\.pushhead::before\{background:var\(--pl-frost\) !important\}/.test(m[1]), dir + ': Podcasts\' show header is see-through in Pearl');
+  }
   for (const name of ['--pl-frost', '--pl-fab']) {
     const vals = [...m[1].matchAll(new RegExp(name + ':([^;}]+)', 'g'))].map(x => x[1].trim());
     for (const v of vals) assert.ok(solid(v), `${dir}: Pearl's ${name} is see-through: ${v}`);

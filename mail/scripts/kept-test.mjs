@@ -36,8 +36,9 @@ let failed = 0;
 const ok = (label, cond, extra) => { if (!cond) failed++; console.log((cond ? 'ok - ' : 'not ok - ') + label + (cond || !extra ? '' : '  ' + extra)); };
 
 // answer(path, body) is aOS's server; gmailOk(token) says which keys the stand-in Gmail takes.
-async function phone({ answer = () => ({ status: 404, json: {} }), gmailOk = t => /^kept-/.test(t), seed = {}, at = '/mail/', kept = true, me = 'me@example.com' } = {}) {
+async function phone({ answer = () => ({ status: 404, json: {} }), gmailOk = t => /^kept-/.test(t), seed = {}, at = '/mail/', kept = true, me = 'me@example.com', slow401 = 0 } = {}) {
   const asked = [], urls = [];
+  let refused = 0;   // slow401: every 401 after the first comes that much later (a slow phone or network)
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
   await ctx.route('**/aOS/api/**', route => {
     const u = new URL(route.request().url()), body = JSON.parse(route.request().postData() || '{}');
@@ -51,7 +52,7 @@ async function phone({ answer = () => ({ status: 404, json: {} }), gmailOk = t =
     if (u.host !== 'gmail.googleapis.com') return route.abort();
     const t = (req.headers().authorization || '').replace(/^Bearer /, '');
     const json = o => route.fulfill({ contentType: 'application/json', body: JSON.stringify(o) });
-    if (!gmailOk(t)) return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":{"code":401}}' });
+    if (!gmailOk(t)) { const no = () => route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":{"code":401}}' }).catch(() => {}); return refused++ && slow401 ? setTimeout(no, slow401) : no(); }
     const p = u.pathname.replace('/gmail/v1/users/me', '');
     if (p === '/profile') return json({ emailAddress: me });
     if (p === '/labels') return json({ labels: [{ id: 'INBOX', name: 'INBOX', type: 'system' }] });
@@ -130,6 +131,21 @@ const toGoogle = urls => urls.find(u => u.url.startsWith('https://accounts.googl
   ok('an hour run out mid-session (Gmail says 401): one new key from the server, and Gmail is asked again with it',
     read(urls, 'old-hour') && read(urls, 'kept-1') && asked.filter(a => a.path === '/aOS/api/gmail/token').length === 1, JSON.stringify(asked));
   ok('Mail stays open', await page.locator('[data-act="signin"]').count() === 0);
+  await ctx.close();
+}
+
+{
+  // the same, with the other requests' 401s coming back only after the new hour is in (as on a slow phone or in CI):
+  // they go again with that hour; they don't forget it or ask the server for another
+  let n = 0;
+  const { ctx, page, asked, urls } = await phone({
+    slow401: 900,
+    seed: { 'mail.token': JSON.stringify({ t: 'old-hour', exp: Date.now() + 600e3, scope: MODIFY }) },
+    answer: p => (p.endsWith('/gmail/token') ? { json: { token: 'kept-' + (++n), exp: Date.now() + 3500e3, scope: MODIFY, email: 'me@example.com', until: Date.now() + 20 * 864e5 } } : { status: 404, json: {} }),
+  });
+  await page.waitForTimeout(1200);
+  const keys = asked.filter(a => a.path === '/aOS/api/gmail/token').length, held = await page.evaluate(() => JSON.parse(localStorage.getItem('mail.token') || 'null'));
+  ok('401s that come back after the new hour is in: still one new key, and Mail keeps it', keys === 1 && held && held.t === 'kept-1' && read(urls, 'kept-1') && !read(urls, 'kept-2'), JSON.stringify({ keys, held: held && held.t }));
   await ctx.close();
 }
 
