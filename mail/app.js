@@ -124,6 +124,11 @@ function redirectUri() {
   return location.origin + location.pathname.replace(/index\.html$/, '');
 }
 
+// Gmail refused this hour: forget it, unless a newer one has been kept since the request went (another request renewed)
+function forgetToken(tok) {
+  try { const o = JSON.parse(ls.get(K.token, 'null')); if (o && tok && o.t !== tok.t) return; } catch {}
+  ls.del(K.token);
+}
 function getToken() {
   try {
     const o = JSON.parse(ls.get(K.token, 'null'));
@@ -285,7 +290,11 @@ async function api(path, { method = 'GET', body, params, tries = 0, once = false
     throw new Error(ctl.signal.aborted ? 'Gmail took too long to answer' : 'No connection to Gmail');
   }
   if (res.status === 401) {
-    ls.del(K.token);
+    // Two requests sent with the same old hour both come back 401: the first brings a new hour from the server, so the
+    // second, arriving after, just goes again with that one; it neither forgets it nor asks the server for another.
+    const cur = getToken();
+    if (!renewed && cur && cur.t !== tok.t) return api(path, { method, body, params, tries, once, bg, renewed: true });
+    forgetToken(tok);
     if (!renewed && keepG() && await renewKept()) return api(path, { method, body, params, tries, once, bg, renewed: true });   // refused before it was done: safe to ask again
     throw new AuthError('token expired');
   }
@@ -2616,7 +2625,7 @@ async function uploadMime(what, raw, meta) {
     err.unsure = true;
     throw err;
   } finally { clearTimeout(timer); }
-  if (res.status === 401) { ls.del(K.token); throw new AuthError('token expired'); }
+  if (res.status === 401) { forgetToken(tok); throw new AuthError('token expired'); }
   if (!res.ok) {
     let msg = text.slice(0, 200);
     try { msg = JSON.parse(text).error.message; } catch {}

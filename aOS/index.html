@@ -394,6 +394,13 @@
   html:root[data-look="layers"] .quick .qhome { background: var(--pl-fab); color: var(--pl-line); box-shadow: var(--pl-ring); }
   html:root[data-look="layers"] :is(.sec h2, .glbl)::before { background: transparent; box-shadow: inset 0 0 0 1.2px var(--pl-line); }
   html:root[data-look="layers"] .sec :is(a, button) { color: var(--pl-line); }
+  /* the brief (This afternoon · 1 thing): a faint ring of light like the widgets under it, no disc in Calendar's colour,
+     its words in light, its apps' pebbles (home-tab.js icon) */
+  html:root[data-look="layers"] .wid.brief { background: transparent; box-shadow: inset 0 0 0 1px var(--pl-faint); }
+  html:root[data-look="layers"] .wid.brief::before, html:root[data-look="layers"] .wid.brief::after { display: none; }
+  html:root[data-look="layers"] .wid.brief .bhead em { color: var(--muted); }
+  html:root[data-look="layers"] .wid.brief .bsum { color: var(--pl-line); }
+  html:root[data-look="layers"] .wid.brief .bl:active { background: transparent; box-shadow: inset 0 0 0 1px var(--pl-faint); }
   .dsheet h1 { margin: 6px 0 6px; font-size: 28px; letter-spacing: -.5px; } .dsheet p { margin: 0 0 16px; color: var(--muted); font-size: 15.5px; line-height: 1.4; }
   .dlist { display: grid; gap: 8px; } .dlist .dopt { background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); } .dlist .dopt[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
   .dgo { display: flex; margin-top: 20px; } .dgo .get.big { flex: 1; min-width: 0; height: 52px; border-radius: 17px; font-size: 17px; }
@@ -536,13 +543,15 @@
      in the bottom corner your thumb rests on (data-hand="left": the other), every other app above them; the rest of Home gives way */
   .arconly, html[data-home="arc"] #hmain > :not(.arconly) { display: none; }
   /* Layers' grid (aOS/home-tab.js, html[data-home="grid"]): Classic in Layers. The weather and what's next on the sky, then
-     every app on one screen as a pebble in its own colour with its drawing in white (home-tab.js, pebble); the top row is yours */
+     every app as a pebble in its own colour with its drawing in white (home-tab.js, pebble), a quarter bigger since Nov 2026 so the
+     last row may need a little scroll (the owner's choice); the top row is yours */
   .gridonly, html[data-home="grid"] #hmain > :not(.gridonly):not(#hbrief) { display: none; }
   html[data-home="grid"] #hmain > .gridonly:not([hidden]) { display: block; }
   html[data-home="grid"] #hmain > .sec.gridonly { display: flex; }
-  /* Pearl's widgets (Pearl replaced Layers and keeps its id): the weather and what's next as two panes of glass, the sky drawn in light */
+  /* Pearl's widgets (Pearl replaced Layers and keeps its id): the weather and what's next as two panes of glass, the sky drawn in light;
+     a fifth taller than they were (92 pt to 110.4 pt), the same width (the owner's ask) */
   html[data-home="grid"] #hmain > .hgsky.gridonly { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 2px 0 10px; }
-  .hgsky button { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 92px; padding: 10px 12px; border: 0; border-radius: 20px; font: inherit; text-align: left; color: var(--text); cursor: pointer;
+  .hgsky button { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 110.4px; padding: 10px 12px; border: 0; border-radius: 20px; font: inherit; text-align: left; color: var(--text); cursor: pointer;
     background: linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,.45)); box-shadow: inset 0 0 0 1px rgba(30,33,38,.11), inset 0 1px 0 #fff, 0 12px 26px -20px rgba(70,56,32,.4); --wfill: #FBF8F2; }
   .hgsky .wk { font-style: normal; font-size: 11px; font-weight: 600; color: var(--muted); max-width: 66%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hgsky b { margin-top: auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: "Unbounded", "Avenir Next", system-ui, sans-serif; font-weight: 200; font-size: 28px; line-height: 1.1; letter-spacing: -.03em; font-size-adjust: .43; }
@@ -569,11 +578,11 @@
   .gapp .orb svg { width: 26px; height: 26px; }
   /* the pebble (aOS/glyphs.js): drawn by its svg, not the round button's background; the drawing 60% of it, and in Edit the
      one picked has a ring round its own edge */
-  .gapp .orb.pebble { position: relative; border-radius: 0; background: none; box-shadow: none; }
+  .gapp .orb.pebble { position: relative; width: min(72.5px, 100% - 6px); height: auto; aspect-ratio: 1; border-radius: 0; background: none; box-shadow: none; }   /* a quarter bigger than the 58px orb (the owner's ask) */
   .gapp .orb.pebble .peb { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 8px 10px rgba(70,56,32,.14)); }
   .gapp .orb.pebble .edge { fill: #FBF8F2; stroke: rgba(30,33,38,.38); stroke-width: 6; }
   .gapp .orb.pebble .gl { position: relative; width: 60%; height: 60%; overflow: visible; fill: none; stroke: #1E2126; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-  .gapp .orb.pebble .pdot { position: absolute; top: 8px; right: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--dot); }
+  .gapp .orb.pebble .pdot { position: absolute; top: 10px; right: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .gapp .orb.pebble .peb { filter: drop-shadow(0 0 1.5px rgba(200,235,255,.35)) drop-shadow(0 8px 10px rgba(0,0,0,.6)); } :root:not([data-theme="light"]) .gapp .orb.pebble .edge { fill: #0B1222; stroke: rgba(214,236,255,.45); } :root:not([data-theme="light"]) .gapp .orb.pebble .gl { stroke: #F2FAFF; filter: drop-shadow(0 0 1.4px rgba(214,240,255,.9)) drop-shadow(0 0 6px rgba(130,190,255,.35)); } :root:not([data-theme="light"]) .gapp .orb.pebble .pdot { box-shadow: 0 0 6px var(--dot); } }
   :root[data-theme="dark"] .gapp .orb.pebble .peb { filter: drop-shadow(0 0 1.5px rgba(200,235,255,.35)) drop-shadow(0 8px 10px rgba(0,0,0,.6)); } :root[data-theme="dark"] .gapp .orb.pebble .edge { fill: #0B1222; stroke: rgba(214,236,255,.45); } :root[data-theme="dark"] .gapp .orb.pebble .gl { stroke: #F2FAFF; filter: drop-shadow(0 0 1.4px rgba(214,240,255,.9)) drop-shadow(0 0 6px rgba(130,190,255,.35)); } :root[data-theme="dark"] .gapp .orb.pebble .pdot { box-shadow: 0 0 6px var(--dot); }
   .editing .gapp .orb.pebble, .editing .gapp.sel .orb.pebble { box-shadow: none; }
@@ -962,6 +971,14 @@ html:root[data-look="layers"][data-theme="dark"]{--pl-surface:#050B18}
    menu, Podcasts' tags) too, with a faint ring round them: they took the cleared card colour and were see-through */
 html:root[data-look="layers"] :is(.sheet,.dmenu,.menu,.popover,.toast,.st-sheet,.viewmenu,.pmenu,.tagmenu){background:var(--pl-surface) !important}
 html:root[data-look="layers"] :is(.viewmenu,.pmenu,.tagmenu){-webkit-backdrop-filter:none !important;backdrop-filter:none !important;box-shadow:inset 0 0 0 1px var(--pl-faint),0 18px 40px -18px rgba(0,0,0,.55) !important}
+/* everything else that floats over the page or a map took a cleared colour too and went see-through: on the same solid
+   ground, with a faint ring (the Updated pill; Podcasts' player bar; Mail's selection bar and toast; Places' map hint;
+   Calendar's time while dragging; the caption on aOS's stories; Weather's radar bar) */
+html:root[data-look="layers"] :is(.updpill,.mbar,#selbar,#toast,.maphint,.dragtime,.story .foot,.rd-bar,.rd-note.small){background:var(--pl-surface) !important;color:var(--text) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important}
+/* ...and the round buttons that float (aOS's back and close over a page, Places' map buttons, Weather's radar zoom and
+   play), on the floating buttons' solid ground; Podcasts' show header, once scrolled, a solid bar like the others */
+html:root[data-look="layers"] :is(.page > .back,.page > .close,.mapbtns .iconbtn,.rd-zoom button,.rd-play){background:var(--pl-fab) !important;color:var(--pl-line) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important}
+html:root[data-look="layers"] .pushhead::before{background:var(--pl-frost) !important}
 html:root[data-look="layers"] :is(.seg,.segmented,.modes,.rgroup,.card,.empty,.notice,.group,.sum,.kpis,.addbox,.stats,.chartcard,.lead,.list,.box){-webkit-backdrop-filter:none;backdrop-filter:none}
 /* picked: a ring, a little thicker, glowing at night (the sliding thumb, or the button itself where nothing slides) */
 html:root[data-look="layers"] .slthumb{background:transparent !important;box-shadow:var(--pl-pick),var(--pl-pick-glow) !important}

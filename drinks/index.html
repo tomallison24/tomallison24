@@ -679,6 +679,14 @@ html:root[data-look="layers"][data-theme="dark"]{--pl-surface:#050B18}
    menu, Podcasts' tags) too, with a faint ring round them: they took the cleared card colour and were see-through */
 html:root[data-look="layers"] :is(.sheet,.dmenu,.menu,.popover,.toast,.st-sheet,.viewmenu,.pmenu,.tagmenu){background:var(--pl-surface) !important}
 html:root[data-look="layers"] :is(.viewmenu,.pmenu,.tagmenu){-webkit-backdrop-filter:none !important;backdrop-filter:none !important;box-shadow:inset 0 0 0 1px var(--pl-faint),0 18px 40px -18px rgba(0,0,0,.55) !important}
+/* everything else that floats over the page or a map took a cleared colour too and went see-through: on the same solid
+   ground, with a faint ring (the Updated pill; Podcasts' player bar; Mail's selection bar and toast; Places' map hint;
+   Calendar's time while dragging; the caption on aOS's stories; Weather's radar bar) */
+html:root[data-look="layers"] :is(.updpill,.mbar,#selbar,#toast,.maphint,.dragtime,.story .foot,.rd-bar,.rd-note.small){background:var(--pl-surface) !important;color:var(--text) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important}
+/* ...and the round buttons that float (aOS's back and close over a page, Places' map buttons, Weather's radar zoom and
+   play), on the floating buttons' solid ground; Podcasts' show header, once scrolled, a solid bar like the others */
+html:root[data-look="layers"] :is(.page > .back,.page > .close,.mapbtns .iconbtn,.rd-zoom button,.rd-play){background:var(--pl-fab) !important;color:var(--pl-line) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;box-shadow:inset 0 0 0 1px var(--pl-faint) !important}
+html:root[data-look="layers"] .pushhead::before{background:var(--pl-frost) !important}
 html:root[data-look="layers"] :is(.seg,.segmented,.modes,.rgroup,.card,.empty,.notice,.group,.sum,.kpis,.addbox,.stats,.chartcard,.lead,.list,.box){-webkit-backdrop-filter:none;backdrop-filter:none}
 /* picked: a ring, a little thicker, glowing at night (the sliding thumb, or the button itself where nothing slides) */
 html:root[data-look="layers"] .slthumb{background:transparent !important;box-shadow:var(--pl-pick),var(--pl-pick-glow) !important}

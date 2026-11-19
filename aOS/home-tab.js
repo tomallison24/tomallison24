@@ -78,7 +78,7 @@
   // the design it opens in here
   // in Layers, its pebble (icon-pebble.svg, made by make-looks.mjs), as on Layers' grid
   const icon = id => { let d = null; try { d = localStorage.getItem(id === 'clock' ? 'allison-clock-v1' : 'design.' + id); if (id === 'clock') d = ((JSON.parse(d) || {}).set || {}).design; } catch {} if (d === 'neon') d = 'layers';
-    if (d === 'layers' && window.aosGlyphs && aosGlyphs[id]) return `../${id}/icon-pebble.svg`;
+    if ((d === 'layers' || document.documentElement.dataset.look === 'layers') && window.aosGlyphs && aosGlyphs[id]) return `../${id}/icon-pebble.svg`;   // in aOS's Pearl, every app's pebble (an app not yet told its look kept its Vintage tile)
     return `../${id}/icon${/^(glass|layers|grid)$/.test(d || '') ? '-' + d : ''}-180.png`; };   // neon: Night Drive's, which Layers replaced
 
   const MAX_OPEN = 4, MAX_PINS = 4, OPEN = 'aos.home.open', PINS = 'aos.home.picks', USED = 'aos.home.used';
