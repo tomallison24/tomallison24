@@ -390,8 +390,8 @@
   // title sits in light: a short stub, the title, then a bright line to the edge (or to what sits beside the title: a
   // count, a button). The cards keep their hairlines and stay where the app put them (a rail with a dot at each card was
   // tried and taken out: too busy). A title moves right to sit after its stub; a group's own title inside it (an aisle of
-  // a shopping list) stays put with a line after it, a size smaller, as is a title that would wrap; titles are Unbounded,
-  // glowing a little at night. It's one pseudo-element of the title (its ::before, or ::after when the app uses ::before;
+  // a shopping list) stays put with a line after it, a size smaller, as is a title that would wrap; titles are Unbounded
+  // Medium (../home/fonts), glowing a little at night. It's one pseudo-element of the title (its ::before, or ::after when the app uses ::before;
   // else of the section around it), painted from backgrounds this measures into custom properties (the rules are Pearl's,
   // aOS/scripts/looks.mjs: data-pl-*): so it scrolls with the page, in a sheet as anywhere, and nothing is added to the
   // page. Measured again when the page changes (a section added or folded, a font loaded), never while you scroll. An app

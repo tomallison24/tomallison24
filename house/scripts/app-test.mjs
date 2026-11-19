@@ -421,7 +421,7 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
           const by = hr.top + parseFloat(cs.borderTopWidth) + parseFloat(h.style.getPropertyValue('--pl-y'));
           const span = h.querySelector('span'), sr = span.getBoundingClientRect();
           out[name] = { k, content: ps && ps.content, pos: ps && ps.position, image: ps && ps.backgroundImage, h: ps && ps.height, bg: h.style.getPropertyValue('--pl-bg'),
-            stub: bx, mid: by + 9, title: [sr.left, sr.right, sr.top + sr.height / 2], font: getComputedStyle(span).fontFamily, hairline: cs.borderImageSource };
+            stub: bx, mid: by + 9, title: [sr.left, sr.right, sr.top + sr.height / 2], font: getComputedStyle(span).fontFamily, weight: getComputedStyle(span).fontWeight, hairline: cs.borderImageSource };
         }
         const dg = [...document.querySelectorAll('#g-fav .fcards > .dg')];
         out.cards = { moved: dg.concat([...document.querySelectorAll('#g-fav .lpills > .lpw')]).some(e => e.hasAttribute('data-pl-shift') || e.hasAttribute('data-pl-on')), hairline: getComputedStyle(dg[1]).borderImageSource };
@@ -436,9 +436,11 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
         assert.ok(Math.abs(x.mid - x.title[2]) < 1.5, `${name}: the line through the middle of its title (${x.mid} vs ${x.title[2]})`);
         assert.ok(x.title[0] - x.stub >= 22, `${name}: the title sits after its stub (${x.title[0]} vs ${x.stub})`);
         assert.match(x.font, /Unbounded/, name + ': its title in Unbounded');
+        assert.equal(x.weight, '500', name + ': its title in Unbounded Medium');
         assert.equal(x.hairline, 'none', name + ': no hairline above it any more');
       }
       for (const name of ['Thermostats', 'Lights']) assert.ok(Math.abs(r[name].stub - r.Automations.stub) < 0.5, 'every stub starts at the same place');
+      assert.ok(await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].some(f => f.family.replace(/"/g, '') === 'Unbounded' && f.weight === '500' && f.status === 'loaded'); }), 'Unbounded Medium is loaded, from ../home/fonts');
       assert.equal(r.cards.moved, false, 'the cards stay where Home puts them');
       assert.match(r.cards.hairline, /gradient/, 'two thermostats still parted by their hairline');
       assert.deepEqual(errors, []);

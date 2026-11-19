@@ -53,7 +53,7 @@ is Pearl's.
   ...), so cards, boxes and filled pills go and things sit on the ground parted by hairlines. Sections are told apart
   by light, also `home/pearl.js`: each section's title (`.sechead`, `.sect`, `.daylbl`, `.dayhead`, `.mhead`, `.vsec-h`,
   a `.group`'s first `h2`, a `p.label` over an `.rgroup`, or `data-pl-head`) is set into a bright line of light with a
-  short stub before it, and moves right to sit after its stub; the hairline above it goes. Cards keep their hairlines
+  short stub before it, in Unbounded Medium, and moves right to sit after its stub; the hairline above it goes. Cards keep their hairlines
   and stay where the app puts them (a rail with a dot at each card was tried and taken out: too busy). It's one
   pseudo-element of the title (or of the section around it), so one of them needs a free `::before` or `::after`
   (`data-pl-norail` keeps it off a part of a page). A group's own title inside it stays put with a line after it, a size
