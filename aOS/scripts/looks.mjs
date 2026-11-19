@@ -242,6 +242,7 @@ export function signature(look, app) {
    cool white light. Titles in Unbounded Light (SIL Open Font License, ../home/fonts), glowing a little at night. Vintage's
    disc, dot and pill go: the light and the dust (../home/pearl.js, drawn behind everything) are the only shapes. */
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:200;font-display:swap;src:url("../home/fonts/unbounded-200-latin.woff2") format("woff2");unicode-range:${LAT}}
+@font-face{font-family:"Unbounded";font-style:normal;font-weight:500;font-display:swap;src:url("../home/fonts/unbounded-500-latin.woff2") format("woff2");unicode-range:${LAT}}   /* Medium: the section titles set into their line of light (../home/pearl.js) */
 ${HEADS}{font-family:${LOOKS.layers.display};font-style:normal;font-weight:200;letter-spacing:-.025em;font-size-adjust:.43}   /* Unbounded is wide: a little smaller, so titles fit as they did */
 :root{--pl-ground:${PEARL_DAY[0]};--pl-top:${PEARL_DAY[3]};--pl-line:#1E2126;--pl-glow:rgba(255,255,255,.9);--pl-ring:0 0 0 1.2px #1E2126,0 10px 22px -14px rgba(70,56,32,.55);--pl-fab:#FFFDF8}
 ${darkBoth(`--pl-ground:${PEARL_NIGHT[0]};--pl-top:${PEARL_NIGHT[3]};--pl-line:#F2FAFF;--pl-glow:rgba(150,205,255,.55);--pl-ring:inset 0 0 0 1.2px rgba(242,250,255,.85),0 0 18px -2px rgba(150,200,255,.55);--pl-fab:#0A1220`)}:root{background:var(--pl-ground);background-color:var(--pl-top);min-height:100%}
@@ -332,7 +333,7 @@ html:root[data-look="layers"] [data-pl-pos]{position:relative}
 html:root[data-look="layers"] [data-pl-shift]{padding-left:var(--pl-pad) !important}
 html:root[data-look="layers"] [data-pl-draw="b"]::before,html:root[data-look="layers"] [data-pl-draw="a"]::after{content:"" !important;display:block !important;position:absolute !important;inset:auto !important;left:var(--pl-x) !important;top:var(--pl-y) !important;width:var(--pl-w) !important;height:var(--pl-h) !important;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:var(--pl-bg) !important;box-shadow:none !important;opacity:1 !important;transform:none !important;filter:none !important;-webkit-mask:none !important;mask:none !important;animation:none !important;transition:none !important;pointer-events:none !important;z-index:1 !important}
 ${darkBoth('--pl-sec-glow:0 0 8px rgba(150,205,255,.75),0 0 20px rgba(150,205,255,.45)').replace(/:root/g, 'html:root[data-look="layers"]')}html:root[data-look="layers"]{--pl-sec-glow:0 0 #0000}
-html:root[data-look="layers"] [data-pl-title]{font-family:${LOOKS.layers.display} !important;font-weight:200 !important;font-size:15px !important;letter-spacing:.14em !important;font-size-adjust:none;color:var(--pl-line) !important;text-shadow:var(--pl-sec-glow) !important;opacity:1 !important}
+html:root[data-look="layers"] [data-pl-title]{font-family:${LOOKS.layers.display} !important;font-weight:500 !important;font-size:15px !important;letter-spacing:.14em !important;font-size-adjust:none;color:var(--pl-line) !important;text-shadow:var(--pl-sec-glow) !important;opacity:1 !important}
 html:root[data-look="layers"] :is([data-pl-title="fit"],[data-pl-title="sub"]){font-size:12.5px !important;letter-spacing:.08em !important}
 /* a text button (Edit, Done) in the light's own colour, not an accent */
 html:root[data-look="layers"] .textbtn:not(.danger){color:var(--pl-line)}
