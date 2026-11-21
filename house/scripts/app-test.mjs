@@ -231,6 +231,68 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await card('lr').locator('.dg-sky').evaluate(e => e.style.background), skyHome, 'the sky is back to the room\'s');
   });
 
+  await test(`${label}: Vacation: a switch in a Nest's popup, not on the card; on, both Nest cards say so; the Windmill's popup has none`, async () => {
+    const card = id => page.locator(`#g-fav [data-th="${id}"]`);
+    assert.equal(await page.locator('#g-fav .alert.vac').count(), 0, 'no vacation chip while it is off');
+    assert.equal(await card('lr').locator('[data-a="tvac"]').count(), 0, 'the switch is not on the card');
+    await page.evaluate(() => openThermo('lr'));
+    const sw = page.locator('#thermoWrap [data-s="vac"] [data-a="tvac"]');
+    assert.ok(await sw.isVisible(), 'the popup has the Vacation switch');
+    assert.equal(await sw.getAttribute('aria-checked'), 'false');
+    assert.match(await page.textContent('#thermoWrap [data-s="vacWrap"] .tnote'), /55° heat and 90° cool/);
+    await sw.click();
+    await page.waitForFunction(() => document.querySelector('#thermoWrap [data-a="tvac"]')?.getAttribute('aria-checked') === 'true');
+    assert.equal(await page.evaluate(() => (ents['input_boolean.thermostat_vacation'] || {}).state), 'on', 'Home Assistant\'s flag is turned on');
+    if (SHOTS) { await sw.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, `home-vacation-${design}-${scheme}.png`) }); }
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    for (const id of ['lr', 'of']) assert.match(await card(id).locator('.alert.vac').textContent(), /Vacation · 55–90°/, id + ': the chip');
+    await page.evaluate(() => openThermo('wm'));
+    assert.ok(await page.locator('#thermoWrap [data-s="vacWrap"]').isHidden(), 'no Vacation for the Windmill');
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    // Off again, from the Office's popup: it is one switch for the house.
+    await page.evaluate(() => openThermo('of'));
+    assert.equal(await sw.getAttribute('aria-checked'), 'true', 'the Office shows the same switch, on');
+    await sw.click();
+    await page.waitForFunction(() => document.querySelector('#thermoWrap [data-a="tvac"]')?.getAttribute('aria-checked') === 'false');
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    assert.equal(await page.locator('#g-fav .alert.vac').count(), 0, 'the chips go');
+  });
+
+  await test(`${label}: Schedule: Home Assistant's steps in the popup, the one under way lit, following its profile helper as it moves; Vacation pauses it`, async () => {
+    const steps = page.locator('#thermoWrap [data-sched] .sstep');
+    const now = () => page.locator('#thermoWrap [data-sched] .sstep.now .st-a').textContent();
+    await page.evaluate(() => openThermo('lr'));
+    assert.equal(await steps.count(), 6, 'morning, day, evening, night, then Eco and Vacation');
+    assert.match(await page.locator('#thermoWrap [data-sched]').textContent(), /Morning[\s\S]*70–78°[\s\S]*Day · Mon–Fri[\s\S]*68–80°[\s\S]*Evening[\s\S]*Goodnight[\s\S]*Night[\s\S]*64–82°/);
+    // The step under way is the helper's, and moves when Home Assistant moves it.
+    for (const [ph, word] of [['evening', /^Evening/], ['night', /^Night/], ['morning', /^Morning/]]) {
+      await page.evaluate(ph => { patchEnt('input_select.thermostat_lr_phase', ph); render(); }, ph);
+      assert.match(await now(), word, ph + ' is lit');
+      assert.equal(await page.locator('#thermoWrap [data-sched] .sstep.now').count(), 1, 'one step lit');
+      assert.equal((await page.locator('#thermoWrap [data-sched] .sstep.now .st-tag').textContent()).trim().toLowerCase(), 'now');
+    }
+    // After the evening, the next step is Goodnight's.
+    await page.evaluate(() => { patchEnt('input_select.thermostat_lr_phase', 'evening'); render(); });
+    assert.match(await page.locator('#thermoWrap [data-sched] .sstep.next .st-tag').textContent(), /goodnight/i);
+    // Vacation in front of it: Vacation lit, the evening paused, and a line saying so.
+    await page.evaluate(() => { patchEnt('input_boolean.thermostat_vacation', 'on'); render(); });
+    assert.match(await now(), /^Vacation/);
+    assert.match(await page.locator('#thermoWrap [data-sched] .sstep.paused .st-a').textContent(), /^Evening/);
+    assert.match(await page.textContent('#thermoWrap .sched-why'), /Vacation is on[\s\S]*paused/);
+    if (SHOTS) { await page.locator('#thermoWrap [data-sched]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, `home-schedule-${design}-${scheme}.png`) }); }
+    await page.evaluate(() => { patchEnt('input_boolean.thermostat_vacation', 'off'); render(); });
+    assert.match(await now(), /^Evening/, 'back on the schedule');
+    assert.equal(await page.locator('#thermoWrap .sched-why').count(), 0);
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    // The Office's own three steps; the Windmill has none.
+    await page.evaluate(() => openThermo('of'));
+    assert.equal(await steps.count(), 5, 'morning, evening, night, Eco, Vacation');
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    await page.evaluate(() => openThermo('wm'));
+    assert.equal(await page.locator('#thermoWrap [data-sched]').count(), 0);
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+  });
+
   await test(`${label}: every view in the bar at the bottom opens in one tap, with something in it`, async () => {
     const ids = await page.$$eval('#vtop [data-view]', els => els.map(e => e.dataset.view));
     assert.ok(['fav', 'climate', 'lights', 'media', 'security', 'around', 'autos'].every(id => ids.includes(id)), 'views in the bar: ' + ids.join());

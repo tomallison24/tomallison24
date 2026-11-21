@@ -14,6 +14,76 @@
 //   next_slot, next_trigger (when the next step starts)
 // The switch is on while the schedule is enabled; turning it off pauses it.
 'use strict';
+// HOME ASSISTANT'S OWN SCHEDULE (the Nests). The house runs its thermostat
+// schedule in Home Assistant itself, not the Scheduler integration: the
+// "Thermostat - daily schedule" automation moves each Nest's profile helper
+// (input_select.thermostat_lr_phase / _of_phase) at its times, Goodnight moves
+// it to night, and script.thermostat_apply writes the profile's setpoints
+// (ha-config). So the step under way is just that helper's state, and the
+// popup lights it the moment Home Assistant moves it. What can stand in front
+// of the schedule, in the script's order: Vacation (55/90), the sitter hold
+// (the Nests left where they are), Eco (everyone out, 64/80).
+// THE NUMBERS MUST MATCH script.thermostat_apply and the `thermostat_schedule`
+// automation's times (and Signal's tf_card `scheds`), which is where they
+// take effect; here they are only shown. `wk`: Monday to Friday only. A step
+// with no time is Goodnight's.
+const HA_SCHED = {
+  lr: { phase: 'input_select.thermostat_lr_phase', steps: [
+    { p: 'morning', name: 'Morning', at: '06:00', lo: 70, hi: 78 },
+    { p: 'day', name: 'Day', at: '08:00', lo: 68, hi: 80, wk: true },
+    { p: 'evening', name: 'Evening', at: '17:00', lo: 70, hi: 78 },
+    { p: 'night', name: 'Night', at: null, lo: 64, hi: 82 },
+  ] },
+  of: { phase: 'input_select.thermostat_of_phase', steps: [
+    { p: 'morning', name: 'Morning', at: '07:00', lo: 68, hi: 80 },
+    { p: 'evening', name: 'Evening', at: '19:00', lo: 68, hi: 78 },
+    { p: 'night', name: 'Night', at: null, lo: 64, hi: 78 },
+  ] },
+};
+const HA_ECO = [64, 80];
+const weekday = d => d.getDay() % 6 !== 0;
+// The next step the clock will start, and when: the first timed step after now
+// (a Mon-Fri step only on a weekday), within the week. Goodnight comes before
+// it when the step under way is the one before night.
+function haNext(sc, cur, now = new Date()) {
+  const i = sc.steps.findIndex(x => x.p === cur);
+  if (i >= 0 && sc.steps[i + 1] && !sc.steps[i + 1].at) return { step: sc.steps[i + 1], when: 'At Goodnight' };
+  for (let d = 0; d < 8; d++) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+    for (const x of sc.steps) {
+      if (!x.at || (x.wk && !weekday(day))) continue;
+      const [h, m] = x.at.split(':').map(Number), t = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m);
+      if (t > now) return { step: x, when: schWhen(t.toISOString()), at: t };
+    }
+  }
+  return null;
+}
+// Where the Nest is: { sc, cur (the profile under way), lit ('vacation' | 'eco' | 'hold' | a profile), next }.
+function haSchedRead(t, now = new Date()) {
+  const sc = HA_SCHED[t.id]; if (!sc || t.kind !== 'nest') return null;
+  const ph = st(sc.phase), cur = ph && sc.steps.some(x => x.p === ph.state) ? ph.state : null;
+  const lit = vacOn() ? 'vacation' : isOn('input_boolean.thermostat_hold') ? 'hold' : isOn(AWAY_FLAG) ? 'eco' : cur;
+  return { sc, cur, lit, known: !!ph, next: haNext(sc, cur, now) };
+}
+function haSchedHTML(t) {
+  const s = haSchedRead(t); if (!s) return '';
+  if (!s.known) return '<p class="tnote">Home Assistant hasn’t said where the schedule is yet.</p>';
+  const we = !weekday(new Date());
+  const why = s.lit === 'vacation' ? `Vacation is on: ${VAC_SET[0]}° heat, ${VAC_SET[1]}° cool until you turn it off. The schedule is paused.`
+    : s.lit === 'hold' ? 'Sitter hold: the thermostats stay where they are until it’s released. The schedule is paused.'
+    : s.lit === 'eco' ? 'Everyone is out: Eco until someone is home, then back to the schedule.' : '';
+  const row = (cls, time, name, temps, tag) => `<div class="sstep${cls}"><span class="st-t">${time}</span><span class="st-a">${name}<small>${temps}</small></span><span class="st-tag">${tag}</span></div>`;
+  const steps = s.sc.steps.map(x => {
+    const now = x.p === s.cur, off = x.wk && we, nx = s.next && s.next.step === x && s.lit === s.cur;
+    const tag = now ? (s.lit === s.cur ? 'Now' : 'Paused') : nx ? esc(s.next.when) : off ? 'Not today' : '';
+    return row((now && s.lit === s.cur ? ' now' : now ? ' paused' : '') + (nx ? ' next' : '') + (off ? ' off' : ''),
+      x.at ? esc(schTime(x.at)) : 'Goodnight', esc(x.name) + (x.wk ? ' · Mon–Fri' : ''), `${x.lo}–${x.hi}°`, tag);
+  }).join('');
+  const eco = row(s.lit === 'eco' ? ' now' : '', 'When away', 'Eco', `${HA_ECO[0]}–${HA_ECO[1]}°`, s.lit === 'eco' ? 'Now' : '');
+  const vac = row(s.lit === 'vacation' ? ' now vac' : ' vac', 'When on', 'Vacation', `${VAC_SET[0]}–${VAC_SET[1]}°`, s.lit === 'vacation' ? 'Now' : '');
+  return `<div class="group sgroup ha"><div class="ssteps solo" data-sched="${t.id}">${steps}<i class="ssep"></i>${eco}${vac}</div></div>`
+    + (why ? `<p class="tnote sched-why">${why}</p>` : '');
+}
 const SCH_DAYS = { daily: 'Every day', workday: 'Weekdays', weekend: 'Weekends' };
 const SCH_DAY = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
 
@@ -84,9 +154,9 @@ function tSchedChip(t) {
 }
 // The popup: each schedule, its steps, the one under way lit, and its switch.
 function tSchedHTML(t) {
-  const ids = tSchedules(t);
-  if (!ids.length) return '<p class="tnote">No schedule.</p>';
-  return ids.map(id => {
+  const ids = tSchedules(t), ha = haSchedHTML(t);
+  if (!ids.length && !ha) return '<p class="tnote">No schedule.</p>';
+  return ha + ids.map(id => {
     const s = schRead(t, id);
     const steps = s.slots.map((slot, i) => `<div class="sstep${s.on && i === s.cur ? ' now' : ''}${s.on && i === s.next ? ' next' : ''}">
         <span class="st-t">${esc(hhmm(slot))}</span><span class="st-a">${schAction(t, s.acts[i])}</span>
@@ -106,19 +176,13 @@ document.addEventListener('click', e => {
   tsend(d, 'switch', on ? 'turn_off' : 'turn_on', { entity_id: id }, ['on']);
 });
 
-// The preview's schedules: the Living Room on weekdays, the Office every day.
+// The preview: Home Assistant's profile helpers, where the clock puts them
+// (as script.thermostat_set_phase_from_clock), and the sitter hold off.
 SAMPLES.push(e => {
-  const at = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); return d.toISOString(); };
-  const LR = 'climate.living_room_living_room', OF = 'climate.office_office';
+  const d = new Date(), h = d.getHours() + d.getMinutes() / 60, wk = weekday(d);
   return {
-    'switch.schedule_living_room_weekdays': e('on', { friendly_name: 'Living Room weekdays', weekdays: ['workday'], entities: [LR],
-      timeslots: ['06:30:00', '08:30:00', '17:00:00', '22:00:00'],
-      actions: [{ service: 'climate.set_temperature', service_data: { target_temp_low: 68, target_temp_high: 74 } }, { service: 'climate.set_preset_mode', service_data: { preset_mode: 'eco' } },
-        { service: 'climate.set_temperature', service_data: { target_temp_low: 68, target_temp_high: 74 } }, { service: 'climate.set_temperature', service_data: { target_temp_low: 64, target_temp_high: 78 } }],
-      current_slot: null, next_slot: 3, next_trigger: at(22, 0), tags: [] }),
-    'switch.schedule_office': e('on', { friendly_name: 'Office', weekdays: ['daily'], entities: [OF],
-      timeslots: ['07:00:00 - 18:00:00', '18:00:00 - 07:00:00'],
-      actions: [{ service: 'climate.set_temperature', service_data: { temperature: 70, hvac_mode: 'heat' } }, { service: 'climate.set_temperature', service_data: { temperature: 64 } }],
-      current_slot: 0, next_slot: 1, next_trigger: at(18, 0), tags: [] }),
+    'input_select.thermostat_lr_phase': e(h < 6 ? 'night' : h >= 17 ? 'evening' : wk && h >= 8 ? 'day' : 'morning', { options: ['morning', 'day', 'evening', 'night'] }),
+    'input_select.thermostat_of_phase': e(h < 7 ? 'night' : h >= 19 ? 'evening' : 'morning', { options: ['morning', 'evening', 'night'] }),
+    'input_boolean.thermostat_hold': e('off'),
   };
 });

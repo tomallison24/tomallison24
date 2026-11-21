@@ -125,6 +125,8 @@
         'Pearl: the app icons on aOS Home are a quarter bigger',
         'Pearl: the weather and calendar cards on aOS Home are a fifth taller',
         'Pearl: the family card at the top of Today is drawn in light now, like the app icons, a line drawing of the family with a heart, in place of the mid-century picture',
+        'Home: a Vacation switch in the Living Room and Office thermostats\' popups. On, both thermostats hold 55° heat and 90° cool, whatever the schedule says, until you turn it off; their cards say Vacation while it is on',
+        'Home: the Living Room and Office thermostats\' popups show their whole schedule (each step\'s time and temperatures, then Eco and Vacation), with the step they\'re on lit as Now the moment it changes, and when the next one starts',
         'Money: a new view, Credit cards, with what\'s gone on each credit card this month and the total, so the mortgage and other bills paid from a bank account aren\'t in it. Pick it from the menu at the bottom',
         'Pearl: the bars along the bottom of every app (Notes and Reminders, Trips and Explore, Calendar\'s views) and the round buttons beside them are solid now, so what scrolls behind them no longer shows through',
         'Pearl: your helper\'s chat is solid again, with a hairline of light round it and faint rings for its suggestions, so the page behind no longer shows through it',

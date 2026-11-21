@@ -159,6 +159,29 @@ the same rules:
   foot with its own weather icon and "outside" ("Idle  ☁ 52° outside"). Each
   reading has an accessible name ("Inside, 70 degrees"). The popup's own line
   is unchanged.
+- **Schedule** (the Living Room and Office Nests' popups): Home Assistant's own
+  schedule, every step with its time and its heat-cool setpoints (Living Room:
+  Morning 06:00, Day 08:00 Mon-Fri, Evening 17:00, Night at Goodnight; Office:
+  Morning 07:00, Evening 19:00, Night at Goodnight), then Eco (when away) and
+  Vacation. The step under way is lit with a **Now** tag: it is the profile
+  helper Home Assistant moves (`input_select.thermostat_lr_phase` /
+  `_of_phase`), so it changes the moment Home Assistant does, and the next step
+  says when ("5 PM", "At Goodnight"; read again each minute while the popup is
+  open). Vacation, the sitter hold or Eco in front of the schedule is lit
+  instead, the step it is holding back says **Paused**, and a line says why. A
+  Mon-Fri step reads "Not today" at the weekend. The numbers are in
+  `schedule.js` (`HA_SCHED`) and MUST MATCH `script.thermostat_apply` in
+  ha-config, where they take effect. Any Scheduler-integration schedules for a
+  thermostat are still listed under it.
+- **Vacation** (the Living Room and Office Nests): a switch in a Nest's popup, not on
+  the card, so the card stays clean. It is Home Assistant's
+  `input_boolean.thermostat_vacation`, one for the house: turned on, "Thermostat -
+  vacation" runs `script.thermostat_apply`, which puts both Nests in Auto at 55 heat /
+  90 cool and keeps them there (it beats the schedule, Eco and the sitter hold) until
+  it is turned off, when they go back to the schedule (or Eco if the house is empty).
+  While it is on, both Nest cards have a **Vacation · 55–90°** chip. The Windmill has
+  no switch. Signal's Nest cards have the same switch, under the chevron on the
+  Climate view (ha-config, tf_card `vac`).
 - **Away, the house's Eco** (the Living Room and Office Nests): Home Assistant has
   its own Eco, a flag of the house, `input_boolean.thermostat_eco`: it turns on
   five minutes after the last person leaves ("Away - everyone out" starts

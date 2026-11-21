@@ -68,7 +68,9 @@ await check('the start card sits over a working junction; New game starts at 10:
   assert.ok(await p.isVisible('#startCard'));
   assert.ok(await p.isVisible('#bNew'));
   assert.ok(!(await p.isVisible('#bContinue')), 'no saved game, no Continue');
-  const cars = await p.evaluate(() => window.__junction.state().cars.length);
+  // the traffic behind the card is random (app.js runs 10 s of it first): now and then the road is empty for a
+  // moment as the last car leaves, so wait for one rather than count at one instant
+  const cars = await p.waitForFunction(() => window.__junction.state().cars.length, null, { timeout: 5000 }).then(h => h.jsonValue(), () => 0);
   assert.ok(cars > 0, 'traffic behind the card');
   await shot(p, 'start');
   await p.click('#bNew');
