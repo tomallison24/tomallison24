@@ -231,6 +231,33 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     assert.equal(await card('lr').locator('.dg-sky').evaluate(e => e.style.background), skyHome, 'the sky is back to the room\'s');
   });
 
+  await test(`${label}: Vacation: a switch in a Nest's popup, not on the card; on, both Nest cards say so; the Windmill's popup has none`, async () => {
+    const card = id => page.locator(`#g-fav [data-th="${id}"]`);
+    assert.equal(await page.locator('#g-fav .alert.vac').count(), 0, 'no vacation chip while it is off');
+    assert.equal(await card('lr').locator('[data-a="tvac"]').count(), 0, 'the switch is not on the card');
+    await page.evaluate(() => openThermo('lr'));
+    const sw = page.locator('#thermoWrap [data-s="vac"] [data-a="tvac"]');
+    assert.ok(await sw.isVisible(), 'the popup has the Vacation switch');
+    assert.equal(await sw.getAttribute('aria-checked'), 'false');
+    assert.match(await page.textContent('#thermoWrap [data-s="vacWrap"] .tnote'), /55° heat and 90° cool/);
+    await sw.click();
+    await page.waitForFunction(() => document.querySelector('#thermoWrap [data-a="tvac"]')?.getAttribute('aria-checked') === 'true');
+    assert.equal(await page.evaluate(() => (ents['input_boolean.thermostat_vacation'] || {}).state), 'on', 'Home Assistant\'s flag is turned on');
+    if (SHOTS) { await sw.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, `home-vacation-${design}-${scheme}.png`) }); }
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    for (const id of ['lr', 'of']) assert.match(await card(id).locator('.alert.vac').textContent(), /Vacation · 55–90°/, id + ': the chip');
+    await page.evaluate(() => openThermo('wm'));
+    assert.ok(await page.locator('#thermoWrap [data-s="vacWrap"]').isHidden(), 'no Vacation for the Windmill');
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    // Off again, from the Office's popup: it is one switch for the house.
+    await page.evaluate(() => openThermo('of'));
+    assert.equal(await sw.getAttribute('aria-checked'), 'true', 'the Office shows the same switch, on');
+    await sw.click();
+    await page.waitForFunction(() => document.querySelector('#thermoWrap [data-a="tvac"]')?.getAttribute('aria-checked') === 'false');
+    await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
+    assert.equal(await page.locator('#g-fav .alert.vac').count(), 0, 'the chips go');
+  });
+
   await test(`${label}: every view in the bar at the bottom opens in one tap, with something in it`, async () => {
     const ids = await page.$$eval('#vtop [data-view]', els => els.map(e => e.dataset.view));
     assert.ok(['fav', 'climate', 'lights', 'media', 'security', 'around', 'autos'].every(id => ids.includes(id)), 'views in the bar: ' + ids.join());

@@ -578,6 +578,7 @@
 /* The leaf chip on a Nest card while the house is in Eco. */
 .alert.eco { background: rgba(140,214,160,0.2); color: inherit; }
 .alert.eco svg { color: #A8E6A1; }
+.alert.vac { background: rgba(236,214,150,0.24); color: inherit; }
 .away-note { display: flex; align-items: flex-start; gap: 6px; }
 .away-note svg { flex: none; margin-top: 2px; color: #A8E6A1; }
 
