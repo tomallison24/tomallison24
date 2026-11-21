@@ -414,6 +414,27 @@ await test('Transactions: by day; search finds any month’s', async () => {
   await p.fill('#q', '');
   await snap(p, 'activity');
 });
+await test('Credit cards: this month on each card, the mortgage from checking left out', async () => {
+  await view(p, 'credit');
+  const t = await mainText(p);
+  assert.match(t, /on credit cards/);
+  assert.match(t, /Rocket Credit Card/); assert.match(t, /Customized Cash Rewards Visa Signature/);
+  assert.doesNotMatch(t, /Shared Checking/); assert.match(t, /Only credit cards count/);
+  const want = await p.evaluate(([a, b]) => {
+    const m = new Date(), ym = m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0');
+    // a summary's charge counts on the card its merchant's alerts always use (Corner Diner: Customized Cash), shown with a ?
+    const card = x => x.account || (x.merchant === 'Corner Diner' ? b : '');
+    const n = window.__money.view().filter(x => x.dir === 'out' && x.date.slice(0, 7) === ym && [a, b].includes(card(x))).reduce((s, x) => s + x.amt, 0);
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }, [ROCKET, CUSTOM]);
+  assert.equal((await p.locator('#main .sum .big b').innerText()).trim(), want, 'every charge on the two cards, and nothing else');
+  await p.click('#main [data-card="' + CUSTOM + '"]');
+  await p.waitForSelector('#txSheet:not([hidden])');
+  assert.doesNotMatch(await p.locator('#txBody').innerText(), /Mortgage/);
+  await p.click('#txSheet .okbtn');
+  await p.waitForSelector('#txSheet', { state: 'hidden' });
+  await snap(p, 'credit');
+});
 await test('Cards and rewards: per card, the chart and its table, the better card', async () => {
   await view(p, 'cards');
   const t = await mainText(p);

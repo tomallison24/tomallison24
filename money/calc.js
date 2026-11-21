@@ -158,6 +158,23 @@
     return [...m.values()].map(c => { const rule = c.card ? ruleFor(c.card, settings) : null; return { card: c.card, spent: c.spent, n: c.n, earned: c.earned, guessed: c.guessed, isCard: c.card_, rule }; })
       .sort((a, b) => (!a.card) - (!b.card) || b.spent - a.spent);
   }
+  // Credit cards only, for a month: what went on each card (a bank account's spending, such as a mortgage
+  // or bills paid from checking, and a summary's charge with no card known, are left out), and what
+  // came back on them (refunds). { cards: [{ card, spent, n, guessed, back }], spent, n, back, left: { n, spent } }.
+  const creditCard = (name, settings) => !!name && (isCard(name) || !!ruleFor(name, settings));
+  function creditCards(txs, ym, settings) {
+    const acct = accounts(txs), m = new Map(), left = { n: 0, spent: 0 };
+    for (const x of txs) {
+      if (ymOf(x.date) !== ym) continue;
+      const a = acct(x);
+      if (!creditCard(a.name, settings)) { if (x.dir === 'out') { left.n++; left.spent = r2(left.spent + x.amt); } continue; }
+      const c = m.get(cardKey(a.name)) || { card: a.name, spent: 0, n: 0, guessed: 0, back: 0 };
+      if (x.dir === 'out') { c.spent = r2(c.spent + x.amt); c.n++; if (a.guess) c.guessed++; } else c.back = r2(c.back + x.amt);
+      m.set(cardKey(a.name), c);
+    }
+    const cards = [...m.values()].sort((a, b) => b.spent - a.spent);
+    return { cards, spent: r2(cards.reduce((t, c) => t + c.spent, 0)), n: cards.reduce((t, c) => t + c.n, 0), back: r2(cards.reduce((t, c) => t + c.back, 0)), left };
+  }
   // Rewards you missed: spends where another of your cards pays more, grouped by
   // the card used, the card to use and the kind of spend, over the months given.
   function missed(txs, settings, fromYm, toYm) {
@@ -512,7 +529,7 @@
   // injection); it gets a ' in front, as a spreadsheet keeps text, unless it is just a number (-12.50).
   const csvCell = v => { const s = String(v == null ? '' : v); return '"' + (/^[=+\-@]/.test(s) && !/^[+-]?\d+(\.\d+)?$/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"'; };
 
-  root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, sameCharge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, missed,
+  root.MoneyCalc = { DEFAULT_RULES, ONLINE, okTx, norm, ymOf, ymAdd, daysIn, merge, sameCharge, accounts, isCard, cardKey, ruleFor, kindOf, rateOf, rewards, best, rewardMonths, byCard, creditCard, creditCards, missed,
     recurring, minFor, month, pace, compare, weeks, byDay, usualByDay, tips, openAlerts, toCheck, applyCheck, undoCheck, KEEP_MONTHS, keepFrom, prune, MAX_MONTH, newest, csvCell,
     catKey, recat, categories, mergeSettings, ideasInput, edited, setEdit, cardList, EDITS_MAX };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -103,6 +103,19 @@ test('rewards a month, per card, and spending by card', () => {
   assert.equal(c[0].isCard, false); assert.equal(c[1].isCard, true);
 });
 
+test('credit cards: only what went on a card, the mortgage from checking left out', () => {
+  const list = [T('2026-10-02', 100, 'Little Learners', ROCKET), T('2026-10-03', 40.25, 'Amazon', CUSTOM), T('2026-10-04', 300, 'Costco', TRAVEL),
+    T('2026-10-05', 50, 'Little Learners', { src: 'summary' }), T('2026-10-06', 1999, 'Mortgage Co', { account: 'Shared Checking', cat: 'Mortgage' }),
+    T('2026-10-07', 12, 'Mystery Shop', { src: 'summary' }), T('2026-10-08', 15, 'Amazon', Object.assign({ dir: 'in' }, CUSTOM)), T('2026-09-30', 70, 'Amazon', CUSTOM)];
+  const c = C.creditCards(list, '2026-10', RULES);
+  assert.deepEqual(c.cards.map(x => [x.card, x.spent, x.n, x.guessed, x.back]), [
+    ['Everyday Travel Visa Signature', 300, 1, 0, 0], ['Rocket Credit Card', 150, 2, 1, 0], ['Customized Cash Rewards Visa Signature', 40.25, 1, 0, 15]]);
+  assert.equal(c.spent, 490.25); assert.equal(c.n, 4); assert.equal(c.back, 15);
+  assert.deepEqual(c.left, { n: 2, spent: 2011 }, 'the mortgage, and a summary charge with no card known');
+  assert.equal(C.creditCard('Shared Checking', RULES), false);
+  assert.equal(C.creditCard('Robinhood Gold', {}), true, 'a card with a cash back rule is a card, whatever its name');
+});
+
 test('missed rewards: online shopping on the 3% card would earn 6% on Customized Cash', () => {
   const list = [T('2026-10-03', 100, 'Amazon', CUSTOM), T('2026-10-04', 400, 'Amazon', ROCKET), T('2026-09-04', 100, 'Amazon', ROCKET), T('2026-10-05', 200, 'Diner', Object.assign({ cat: 'Restaurants' }, CUSTOM))];
   const m = C.missed(list, RULES, '2026-08', '2026-10');

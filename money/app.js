@@ -6,10 +6,11 @@
 //   over the amounts set in its notification settings (set both to $1 and it's
 //   every one), and a bank it can no longer sync. parse.js reads those emails;
 //   calc.js does the sums.
-// - One page, four views from the pill at the bottom (as Home's views):
+// - One page, five views from the pill at the bottom (as Home's views):
 //   This month (spent against the usual, with a meter and Trends behind it: week by
 //   week and day by day; where you could save and by category, folded until opened),
-//   Transactions (search them all), Cards and rewards (spending per
+//   Transactions (search them all), Credit cards (what's gone on each credit card
+//   this month, bank accounts such as the mortgage left out), Cards and rewards (spending per
 //   card, rewards a month as a chart, a better card for a kind of spend) and
 //   Recurring (what repeats, and what it costs a year). A bank Monarch can't
 //   sync shows as a card at the top of This month until it syncs again or you
@@ -88,6 +89,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     month: '<svg viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="16" rx="3.2"/><path d="M3.4 9.6h17.2M8 2.8v3.6M16 2.8v3.6"/></svg>',
     list: '<svg viewBox="0 0 24 24"><path d="M8.6 6.6h11.2M8.6 12h11.2M8.6 17.4h11.2"/><circle cx="4.6" cy="6.6" r="1" fill="currentColor"/><circle cx="4.6" cy="12" r="1" fill="currentColor"/><circle cx="4.6" cy="17.4" r="1" fill="currentColor"/></svg>',
     card: '<svg viewBox="0 0 24 24"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.8"/><path d="M2.8 9.8h18.4M6.4 14.8h4"/></svg>',
+    credit: '<svg viewBox="0 0 24 24"><rect x="2.8" y="7.6" width="16" height="11.6" rx="2.6"/><path d="M2.8 11.4h16M6.2 15.8h3.4"/><path d="M6.4 4.8h12a2.8 2.8 0 0 1 2.8 2.8v8"/></svg>',
     repeat: '<svg viewBox="0 0 24 24"><path d="M17 3.6l3 3-3 3"/><path d="M4 11.4V10a3.4 3.4 0 0 1 3.4-3.4H20"/><path d="M7 20.4l-3-3 3-3"/><path d="M20 12.6V14a3.4 3.4 0 0 1-3.4 3.4H4"/></svg>',
     trend: '<svg viewBox="0 0 24 24"><path d="M3.6 16.4l5.6-5.6 4 4 7.2-7.2"/><path d="M15.4 7.6h5v5"/></svg>',
     store: '<svg viewBox="0 0 24 24"><path d="M4 9.4l1.4-4.8h13.2L20 9.4"/><path d="M4 9.4h16v1a2.6 2.6 0 0 1-5.2 0 2.6 2.6 0 0 1-5.2 0 2.6 2.6 0 0 1-5.6 0z"/><path d="M5.4 12.6v6.8h13.2v-6.8"/></svg>',
@@ -190,6 +192,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   const VIEWS = [
     { id: 'month', name: 'This month', sub: 'Spent, the usual, where to save', icon: I.month },
     { id: 'activity', name: 'Transactions', sub: 'Every one, and search', icon: I.list },
+    { id: 'credit', name: 'Credit cards', sub: 'Spent on each card this month', icon: I.credit },
     { id: 'cards', name: 'Cards and rewards', sub: 'Spending and cash back per card', icon: I.card },
     { id: 'repeats', name: 'Recurring', sub: 'What repeats, and a year of it', icon: I.repeat },
   ];
@@ -214,7 +217,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     placeIpsy();
     $('readBtn').hidden = !hasGmail() || !mayRead();
     if (!D.tx.length && !D.alerts.length) { main.innerHTML = emptyHtml(); return; }
-    main.innerHTML = { month: monthHtml, activity: activityHtml, cards: cardsHtml, repeats: repeatsHtml }[st.view]();
+    main.innerHTML = { month: monthHtml, activity: activityHtml, credit: creditHtml, cards: cardsHtml, repeats: repeatsHtml }[st.view]();
     if (st.view === 'activity') { const s = $('q'); if (s && st.focusQ) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); st.focusQ = false; } }
   }
   function emptyHtml() {
@@ -485,6 +488,21 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
       + (rows ? '<p class="sechead"><span>By card</span></p><div class="rgroup">' + rows + '</div>' : '<div class="empty"><strong>Nothing this month yet</strong>Monarch hasn’t emailed anything for ' + esc(monthName(st.ym)) + '.</div>')
       + '<p class="sechead"><span>Rewards a month</span></p>' + rewardChart(months, colour) + missHtml
       + '<p class="note">Each card’s cash back is in Settings, Card rewards. A card with a ? was guessed from where you usually use it.</p>';
+  }
+  // Credit cards: only what went on a card this month, so a mortgage or bills paid from a bank account aren't in it.
+  function creditHtml() {
+    prep();
+    const colour = cardColours(), c = C.creditCards(base(), st.ym, settings()), now = st.ym === curYm();
+    const rows = c.cards.map(k => '<button class="row" type="button" data-card="' + esc(k.card) + '"><span class="em" aria-hidden="true" data-k="' + colour(k.card) + '">' + I.card + '</span>'
+      + '<span class="rt"><b>' + no(k.card) + '</b><small><span>' + esc(plural(k.n, 'charge')) + (k.guessed ? ', ' + k.guessed + ' guessed' : '') + '</span>' + (k.back ? ' · ' + esc(usd2(k.back)) + ' <span>refunded</span>' : '') + '</small></span>'
+      + '<span class="rv">' + esc(usd2(k.spent)) + (c.spent ? '<small>' + Math.round(k.spent / c.spent * 100) + '%</small>' : '') + '</span></button>').join('');
+    const left = c.left.n ? ' <span>Left out:</span> ' + esc(usdR(c.left.spent)) + ' <span>in</span> ' + esc(plural(c.left.n, 'charge')) + '<span>.</span>' : '';
+    return navRow()
+      + '<div class="sum" role="group" aria-label="Spent on credit cards"><span class="big"><b>' + esc(usd2(c.spent)) + '</b><span>on credit cards <span>' + (now ? 'so far this month' : 'in ' + esc(monthName(st.ym))) + '</span></span></span>'
+      + '<span class="line">' + esc(plural(c.n, 'charge')) + ' <span>on</span> ' + esc(plural(c.cards.filter(k => k.n).length, 'card')) + (c.back ? '<span>, and</span> ' + esc(usd2(c.back)) + ' <span>refunded</span>' : '') + '</span></div>'
+      + (rows ? '<p class="sechead"><span>By card</span></p><div class="rgroup">' + rows + '</div>' : '<div class="empty"><strong>Nothing on a card yet</strong>Monarch hasn’t emailed a credit card charge for ' + esc(monthName(st.ym)) + '.</div>')
+      + '<p class="note">Only credit cards count: spending from a bank account, such as the mortgage or bills paid from checking, isn’t here, and nor is a charge from Monarch’s summaries whose card isn’t known.' + left
+      + (c.cards.some(k => k.guessed) ? ' A guessed charge came in Monarch’s summary, which doesn’t say the card: it’s put on the card that merchant’s charges always go on.' : '') + '</p>';
   }
   const rateText = r => r.online > r.base || r.grocery > r.base
     ? [r.online > r.base ? r.online + '% online' : '', r.grocery > r.base ? r.grocery + '% groceries' : '', r.base + '% else'].filter(Boolean).join(', ')

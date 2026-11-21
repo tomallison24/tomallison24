@@ -125,6 +125,7 @@
         'Pearl: the app icons on aOS Home are a quarter bigger',
         'Pearl: the weather and calendar cards on aOS Home are a fifth taller',
         'Pearl: the family card at the top of Today is drawn in light now, like the app icons, a line drawing of the family with a heart, in place of the mid-century picture',
+        'Money: a new view, Credit cards, with what\'s gone on each credit card this month and the total, so the mortgage and other bills paid from a bank account aren\'t in it. Pick it from the menu at the bottom',
         'Pearl: the bars along the bottom of every app (Notes and Reminders, Trips and Explore, Calendar\'s views) and the round buttons beside them are solid now, so what scrolls behind them no longer shows through',
         'Pearl: your helper\'s chat is solid again, with a hairline of light round it and faint rings for its suggestions, so the page behind no longer shows through it',
         'Pearl: the menus that open from a bar are solid too (the topic menu in News, the view menus in Drinks, Fitness, Money and School, Podcasts\' tags), so the page behind no longer shows through them',

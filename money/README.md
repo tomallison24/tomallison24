@@ -27,6 +27,12 @@ One page, and a pill at the bottom to pick the view (as Home's and Drinks' views
 - **Transactions**: every one for the month, by day, each with its card, category and cash back;
   search finds any of them, in any month (merchant, card, category or amount). Tap one for its card,
   category, cash back, and **Open in Monarch** (and the email itself, on the phone that read it).
+- **Credit cards**: what's gone on each credit card this month (or the month the arrows step back to),
+  and the total: the cards only, so spending from a bank account (the mortgage, bills paid from
+  checking) is left out, as is a summary's charge whose card isn't known; the note says how much was
+  left out. A card is an account whose name says so (card, Visa, Mastercard, Amex, Discover, credit,
+  rewards, signature) or one with cash back set (`calc.js`, `creditCards`). Refunds on a card are shown
+  beside it, not taken off. Tap a card for its charges.
 - **Cards and rewards**: what went on each card this month and the cash back it earned, a chart of
   rewards a month for the last six months (stacked by card, with a table), and **Use the better
   card**: spends of the last three months where another of your cards pays more, and how much more.
