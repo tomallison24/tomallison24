@@ -54,6 +54,7 @@ const ICONS = {
   ac: 'M6.59,0.66C8.93,-1.15 11.47,1.06 12.04,4.5C12.47,4.5 12.89,4.62 13.27,4.84C13.79,4.24 14.25,3.42 14.07,2.5C13.65,0.35 16.06,-1.39 18.35,1.58C20.16,3.92 17.95,6.46 14.5,7.03C14.5,7.46 14.39,7.89 14.16,8.27C14.76,8.78 15.58,9.24 16.5,9.06C18.63,8.64 20.38,11.04 17.41,13.34C15.07,15.15 12.53,12.94 11.96,9.5C11.53,9.5 11.11,9.37 10.74,9.15C10.22,9.75 9.75,10.58 9.93,11.5C10.35,13.64 7.94,15.39 5.65,12.42C3.83,10.07 6.05,7.53 9.5,6.97C9.5,6.54 9.63,6.12 9.85,5.74C9.25,5.23 8.43,4.76 7.5,4.94C5.37,5.36 3.62,2.96 6.59,0.66M5,16H7A2,2 0 0,1 9,18V24H7V22H5V24H3V18A2,2 0 0,1 5,16M5,18V20H7V18H5M12.93,16H15L12.07,24H10L12.93,16M18,16H21V18H18V22H21V24H18A2,2 0 0,1 16,22V18A2,2 0 0,1 18,16Z',
   fan: 'M12,11A1,1 0 0,0 11,12A1,1 0 0,0 12,13A1,1 0 0,0 13,12A1,1 0 0,0 12,11M12.5,2C17,2 17.11,5.57 14.75,6.75C13.76,7.24 13.32,8.29 13.13,9.22C13.61,9.42 14.03,9.73 14.35,10.13C18.05,8.13 22.03,8.92 22.03,12.5C22.03,17 18.46,17.1 17.28,14.73C16.78,13.74 15.72,13.3 14.79,13.11C14.59,13.59 14.28,14 13.88,14.34C15.87,18.03 15.08,22 11.5,22C7,22 6.91,18.42 9.27,17.24C10.25,16.75 10.69,15.71 10.89,14.79C10.4,14.59 9.97,14.27 9.65,13.87C5.96,15.85 2,15.07 2,11.5C2,7 5.56,6.89 6.74,9.26C7.24,10.25 8.29,10.68 9.22,10.87C9.41,10.39 9.73,9.97 10.14,9.65C8.15,5.96 8.94,2 12.5,2Z',
   outside: 'M12.74,5.47C15.1,6.5 16.35,9.03 15.92,11.46C17.19,12.56 18,14.19 18,16V16.17C18.31,16.06 18.65,16 19,16A3,3 0 0,1 22,19A3,3 0 0,1 19,22H6A4,4 0 0,1 2,18A4,4 0 0,1 6,14H6.27C5,12.45 4.6,10.24 5.5,8.26C6.72,5.5 9.97,4.24 12.74,5.47M11.93,7.3C10.16,6.5 8.09,7.31 7.31,9.07C6.85,10.09 6.93,11.22 7.41,12.13C8.5,10.83 10.16,10 12,10C12.7,10 13.38,10.12 14,10.34C13.94,9.06 13.18,7.86 11.93,7.3M13.55,3.64C13,3.4 12.45,3.23 11.88,3.12L14.37,1.82L15.27,4.71C14.76,4.29 14.19,3.93 13.55,3.64M6.09,4.44C5.6,4.79 5.17,5.19 4.8,5.63L4.91,2.82L7.87,3.5C7.25,3.71 6.65,4.03 6.09,4.44M18,9.71C17.91,9.12 17.78,8.55 17.59,8L19.97,9.5L17.92,11.73C18.03,11.08 18.05,10.4 18,9.71M3.04,11.3C3.11,11.9 3.24,12.47 3.43,13L1.06,11.5L3.1,9.28C3,9.93 2.97,10.61 3.04,11.3M19,18H16V16A4,4 0 0,0 12,12A4,4 0 0,0 8,16H6A2,2 0 0,0 4,18A2,2 0 0,0 6,20H19A1,1 0 0,0 20,19A1,1 0 0,0 19,18Z',
+  suitcase: 'M9,3H15A1,1 0 0,1 16,4V6H18A2,2 0 0,1 20,8V18A2,2 0 0,1 18,20V21A1,1 0 0,1 17,22A1,1 0 0,1 16,21V20H8V21A1,1 0 0,1 7,22A1,1 0 0,1 6,21V20A2,2 0 0,1 4,18V8A2,2 0 0,1 6,6H8V4A1,1 0 0,1 9,3M10,5V6H14V5H10M8,9V17H9.5V9H8M11.25,9V17H12.75V9H11.25M14.5,9V17H16V9H14.5Z',
   leaf: 'M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z',
   auto: 'M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22C12.4 22 12.7 22 13.1 21.9L15.4 15.3L14.8 14.7C15.5 14 16 13 16 11.9C16 11.2 15.8 10.5 15.4 9.9L17.6 7.7C18.5 9 19 10.4 19 12H20C20.3 12 20.6 12.1 20.8 12.2C20.8 12.2 20.9 12.2 20.9 12.3C21.3 12.5 21.7 12.9 21.9 13.4C22 12.9 22 12.5 22 12C22 6.5 17.5 2 12 2M14 8.6C13.4 8.2 12.7 8 12 8C9.8 8 8 9.8 8 12C8 13.1 8.4 14.1 9.2 14.8L7.1 16.9C5.8 15.7 5 13.9 5 12C5 8.1 8.1 5 12 5C13.6 5 15 5.5 16.2 6.4L14 8.6M20 14H18L14.8 23H16.7L17.4 21H20.6L21.3 23H23.2L20 14M17.8 19.7L19 16L20.2 19.7H17.8Z',
   chevR: 'M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z',
@@ -256,6 +257,7 @@ function sampleStates() {
     'climate.windmill_ac': e('cool', { hvac_modes: ['off', 'cool', 'auto', 'fan_only'], current_temperature: 76, temperature: 72,
       fan_mode: 'Auto', fan_modes: ['Auto', 'Low', 'Medium', 'High'], min_temp: 60, max_temp: 86 }),
     'input_boolean.thermostat_eco': e('off'),   // Home Assistant's house-wide Eco: on while everyone is out
+    'input_boolean.thermostat_vacation': e('off'),   // the Vacation switch: both Nests at 55 / 90
     'sensor.living_room_ac_runtime_today': e(0.75, { unit_of_measurement: 'h' }),
     'sensor.office_ac_runtime_today': e(2.4, { unit_of_measurement: 'h' }),
     'sensor.windmill_ac_runtime_today': e(1.15, { unit_of_measurement: 'h' }),
@@ -919,6 +921,15 @@ const T_LO = 50, T_HI = 90, T_GAP = 3, T_HOLD = 20000;
 // has its own Eco. Home Assistant is what decides who is home; the app only
 // listens, so a change to the automations needs no change here.
 const AWAY_FLAG = 'input_boolean.thermostat_eco';
+// VACATION: Home Assistant's input_boolean.thermostat_vacation, house-wide. While
+// it is on, script.thermostat_apply holds BOTH Nests in Auto at 55 heat / 90 cool
+// (it beats the schedule, Eco and the sitter hold); off, they go back to the
+// schedule, or Eco if the house is empty ("Thermostat - vacation" runs it on
+// every change). The switch is in a Nest's popup, not on the card, so the card
+// stays clean; while it is on the card says so with a small chip. Signal's
+// Nest cards have the same switch (ha-config, tf_card `vac`).
+const VAC_FLAG = 'input_boolean.thermostat_vacation', VAC = { id: 'house', name: 'Vacation' }, VAC_SET = [55, 90];
+const vacOn = () => held(VAC, 'vac', (st(VAC_FLAG) || {}).state) === 'on';
 const T_SKY = {
   heat: 'linear-gradient(160deg, #221E19 0%, #382E24 50%, #5C4A36 100%)',   // amber, not red (light mode made red read as pink)
   cool: 'linear-gradient(160deg, #1A1E26 0%, #262E3B 50%, #3E4B5E 100%)',
@@ -964,8 +975,9 @@ function tread(t) {
   const canEco = t.kind === 'nest' && Array.isArray(A.preset_modes) && A.preset_modes.includes('eco');
   const eco = canEco && !offline && s !== 'off' && held(t, 'preset', A.preset_mode) === 'eco';
   const away = t.kind === 'nest' && !offline && s !== 'off' && isOn(AWAY_FLAG);   // the house is empty: Home Assistant has both Nests in Eco
+  const vac = t.kind === 'nest' && vacOn();   // the Vacation switch: both Nests at 55 / 90
   const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : (eco || away) ? 'eco' : 'idle';  // Eco resting has its own look (the Nest's own, or the house's); heating or cooling in Eco shows as that
-  return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto', canEco, eco, away };
+  return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto', canEco, eco, away, vac };
 }
 
 // The idle sky: the room's palette from its day colours at the horizon, a
@@ -1063,6 +1075,7 @@ function tSub(t, r, card) {
 // Away: a small leaf chip on the card, the Nest's room beside it. Only on the
 // two Nest cards, and only while Home Assistant has the house in Eco.
 const tAwayChip = r => r.away ? `<span class="alert eco">${svg('leaf', 13)}Away · Eco</span>` : '';
+const tVacChip = r => r.vac ? `<span class="alert vac">${svg('suitcase', 13)}Vacation · ${VAC_SET[0]}–${VAC_SET[1]}°</span>` : '';
 function tPill(t, r) {
   const word = r.offline ? 'Offline' : r.s === 'off' ? 'Off' : r.act === 'heating' ? 'Heating' : r.act === 'cooling' ? 'Cooling' : r.act === 'fan' ? 'Fan' : 'Idle';
   const md = r.eco || r.away ? 'Eco' : modeName(t, r.s);
@@ -1112,6 +1125,10 @@ function tTargetHTML(t, r, sub) {
 
 function tEcoRow(t, r) {
   return `<button class="rowi${tWaiting(t, 'preset') ? ' wait' : ''}" data-a="teco" data-v="${r.eco ? 'none' : 'eco'}" role="switch" aria-checked="${r.eco}"${r.offline || r.s === 'off' ? ' disabled' : ''}>${icon('leaf')}<span class="k">Eco</span><span class="sw${r.eco ? ' on' : ''}" style="--tint:120,200,120"></span></button>`;
+}
+// Vacation: one switch for the house (both Nests), in each Nest's popup.
+function tVacRow(r) {
+  return `<button class="rowi${tWaiting(VAC, 'vac') ? ' wait' : ''}" data-a="tvac" role="switch" aria-checked="${r.vac}"${st(VAC_FLAG) ? '' : ' disabled'}>${icon('suitcase')}<span class="k">Vacation</span><span class="sw${r.vac ? ' on' : ''}" style="--tint:236,214,150"></span></button>`;
 }
 function tPowerRow(t, r) {
   const on = !r.offline && r.s !== 'off';
@@ -1193,7 +1210,7 @@ function renderThermos() {
     put(R('fx'), tfxHTML(t, r, 60));
     put(R('info'), `<button class="dg-name" data-a="open" aria-label="All of the ${t.name}'s controls"><span translate="no">${t.name}</span>${svg('chevR', 16)}</button>
       ${tInside(r)}
-      ${(c => c ? `<div class="alerts">${c}</div>` : '')(tAwayChip(r) + tSchedChip(t))}`);
+      ${(c => c ? `<div class="alerts">${c}</div>` : '')(tVacChip(r) + tAwayChip(r) + tSchedChip(t))}`);
     put(R('pwr'), tPowerHTML(t, r));
     put(R('tgt'), tTargetHTML(t, r, tLine(t, r)));
     card.classList.toggle('offline', r.offline);
@@ -1214,6 +1231,8 @@ function renderThermo() {
     + (r.away ? `<p class="tnote away-note">${svg('leaf', 13)}Away from the house: in Eco until someone arrives.</p>` : ''));
   put(S('tgt'), tTargetHTML(t, r));
   put(S('power'), tPowerRow(t, r));
+  S('vacWrap').hidden = t.kind !== 'nest';
+  if (t.kind === 'nest') put(S('vac'), tVacRow(r));
   S('ecoWrap').hidden = !r.canEco;
   if (r.canEco) put(S('eco'), tEcoRow(t, r));
   put(S('mode'), tModeSeg(t, r));
@@ -1230,6 +1249,10 @@ function renderThermo() {
   slide(S('mode'), S('mode').querySelector('[aria-pressed="true"]'), 'tmode-' + t.id);
   if (t.fans) slide(S('fanSeg'), S('fanSeg').querySelector('[aria-pressed="true"]'), 'tfan-' + t.id);
 }
+// The popup's schedule moves with the clock: its next step's "in"/time and the
+// step under way are read again each minute while it is open (Home Assistant's
+// own changes redraw it at once anyway).
+setInterval(() => { if (openTId && thermoWrap.classList.contains('open')) renderThermo(); }, 60000);
 function openThermo(id) {
   openTId = id; tsheet.dataset.th = id;
   tsheet.querySelector('.sheet-body').scrollTop = 0;
@@ -1303,6 +1326,11 @@ document.addEventListener('click', e => {
   if (a === 'tmode') return tMode(t, b.dataset.v);
   if (a === 'tfan') { if (r.fm !== b.dataset.v) { tset(t, 'fan', b.dataset.v); render(); tsend(t, 'climate', 'set_fan_mode', { entity_id: t.ent, fan_mode: b.dataset.v }, ['fan']); } return; }
   if (a === 'tfanon') { const v = r.fm === 'on' ? 'off' : 'on'; tset(t, 'fan', v); render(); return tsend(t, 'climate', 'set_fan_mode', { entity_id: t.ent, fan_mode: v }, ['fan']); }
+  if (a === 'tvac') {
+    const on = vacOn();
+    tset(VAC, 'vac', on ? 'off' : 'on'); render();
+    return tsend(VAC, 'input_boolean', on ? 'turn_off' : 'turn_on', { entity_id: VAC_FLAG }, ['vac']);
+  }
   if (a === 'teco') {
     tset(t, 'preset', b.dataset.v); render();
     return tsend(t, 'climate', 'set_preset_mode', { entity_id: t.ent, preset_mode: b.dataset.v }, ['preset']);
