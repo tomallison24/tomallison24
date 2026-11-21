@@ -1249,6 +1249,10 @@ function renderThermo() {
   slide(S('mode'), S('mode').querySelector('[aria-pressed="true"]'), 'tmode-' + t.id);
   if (t.fans) slide(S('fanSeg'), S('fanSeg').querySelector('[aria-pressed="true"]'), 'tfan-' + t.id);
 }
+// The popup's schedule moves with the clock: its next step's "in"/time and the
+// step under way are read again each minute while it is open (Home Assistant's
+// own changes redraw it at once anyway).
+setInterval(() => { if (openTId && thermoWrap.classList.contains('open')) renderThermo(); }, 60000);
 function openThermo(id) {
   openTId = id; tsheet.dataset.th = id;
   tsheet.querySelector('.sheet-body').scrollTop = 0;

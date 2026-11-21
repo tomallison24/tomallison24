@@ -670,6 +670,21 @@
 .sstep.now .st-tag { color: #8BE0A4; }
 .sstep.next { opacity: .9; }
 .sstep.next .st-tag { opacity: .7; text-transform: none; letter-spacing: 0; font-weight: 600; }
+/* Home Assistant's own schedule (schedule.js, haSchedHTML): every step, the one under way lit with a
+   bar and a Now tag, in light and dark alike (currentColor, so it follows the sheet's text). */
+.ssteps.solo { padding: 4px; }
+.sstep .st-t { display: inline-flex; align-items: center; gap: 6px; }
+.sstep .st-a small { margin-left: 8px; font-variant-numeric: tabular-nums; opacity: .85; }
+.ssteps.solo .sstep { position: relative; padding-left: 14px; }
+.ssteps.solo .sstep.now::before, .ssteps.solo .sstep.paused::before { content: ''; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--bar, #5FC48A); }
+.ssteps.solo .sstep.now { background: color-mix(in srgb, currentColor 10%, transparent); box-shadow: none; }
+.ssteps.solo .sstep.now .st-tag { color: inherit; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #5FC48A 32%, transparent); }
+.ssteps.solo .sstep.now.vac { --bar: #E2B866; }
+.ssteps.solo .sstep.now.vac .st-tag { background: color-mix(in srgb, #E2B866 38%, transparent); }
+.sstep.paused { opacity: .85; --bar: color-mix(in srgb, currentColor 30%, transparent); }
+.sstep.paused .st-tag { opacity: .7; }
+.sstep.off { opacity: .35; }
+.ssep { display: block; height: 1px; margin: 6px 6px; background: color-mix(in srgb, currentColor 14%, transparent); }
 
 
 /* ---- Labs: ideas tried live ---- */
