@@ -459,4 +459,44 @@ test('a flight\'s airline and number tidied: the name to its code, the code out 
   assert.deepEqual(t('Nowhere Air', '3073'), { code: 'Nowhere Air', no: '3073' }, 'what can\'t be made out stays as given');
 });
 
+// Airbnb, in the shapes of its November 2026 emails (made up: no real listing, host or code). Its confirmation carries
+// schema.org JSON-LD, read first; what follows is what has to be read from the words.
+const ABNB_REF = Date.parse('2026-11-23T19:38:38Z');
+const ABNB_FOOT = '\n\nGet the app.\n\nAirbnb, Inc.\n888 Brannan St\nSan Francisco, CA 94103\n';
+test('an Airbnb confirmation read from its words: the listing, the city, the two columns of dates, the code; not Airbnb\'s own address', () => {
+  const text = 'YOU’RE ALL SET FOR SAVANNAH\n\nhttps://www.airbnb.com/rooms/1?src=x\n\nHARBOUR VIEW LOFT, BRIGHT | QUIET https://www.airbnb.com/users/profile/1\n\n'
+    + 'Entire home/apt hosted by Sam & Alex\n\nCheck-in Checkout\n\nFri, Nov 27 Sun, Nov 29\n\nAfter 4:00 PM By 10:00 AM\n\nGUESTS\n2 adults\n\n'
+    + 'PRICE BREAKDOWN\n\n$200.00 x 2 nights $400.00\n\nGET IN TOUCH WITH AIRBNB\nConfirmation code: HMTEST1234' + ABNB_FOOT;
+  const { list, b } = one({ text, subject: 'Confirmed: Your November 27 – 29 trip, here’s your Airbnb receipt', from: 'Airbnb <automated@airbnb.com>', date: ABNB_REF }, 'hotel');
+  assert.equal(list.length, 1);
+  assert.equal(b.name, 'Harbour View Loft, Bright | Quiet', 'the listing, out of capitals');
+  assert.equal(b.city, 'Savannah', 'from "You\'re all set for", not the footer\'s San Francisco');
+  assert.equal(b.address, '');
+  assert.equal(b.conf, 'HMTEST1234');
+  assert.deepEqual([b.checkIn, b.checkInTime, b.checkOut, b.checkOutTime], ['2026-11-27', '16:00', '2026-11-29', '10:00']);
+});
+test('an Airbnb host message about a stay: the same listing and dates (the subject\'s own capitals), so it lands on the same stay', () => {
+  const text = 'RESERVATION FOR HARBOUR VIEW LOFT, BRIGHT | QUIET, NOV 27 – 29\n\n   SAM & ALEX\n\n   Host\n\n   Sounds good, see you then.\n\n'
+    + 'HARBOUR VIEW LOFT, BRIGHT | QUIET\n\nCondo - Entire home/apt hosted by Sam & Alex\n\nCheck-in Checkout\n\nFRIDAY SUNDAY\n\n'
+    + 'November 27, 2026 November 29, 2026\n\n4:00 PM 10:00 AM\n\nGUESTS\n\n2 adults' + ABNB_FOOT;
+  const { b } = one({ text, subject: 'RE: Reservation for Harbour View Loft, Bright | Quiet, Nov 27 – 29', from: 'Airbnb <express@airbnb.com>', date: ABNB_REF }, 'hotel');
+  assert.equal(b.name, 'Harbour View Loft, Bright | Quiet');
+  assert.deepEqual([b.checkIn, b.checkInTime, b.checkOut, b.checkOutTime], ['2026-11-27', '16:00', '2026-11-29', '10:00']);
+  assert.ok(P.sameStay(b, { type: 'hotel', conf: 'HMTEST1234', name: 'Harbour View Loft, Bright | Quiet', checkIn: '2026-11-27', checkOut: '2026-11-29' }), 'the confirmation\'s stay');
+});
+test('an Airbnb stay with a label each (older emails), and a request that was never accepted is not a stay', () => {
+  const { b } = one({ text: 'Reservation confirmed\nYou\'re going to Big Bear!\nPine Cabin\nEntire home hosted by Jo\nCheck In\nFri, Jun 19\n3:00 PM\nCheck Out\nSun, Jun 21\n11:00 AM\nConfirmation code\nHMOLD12345' + ABNB_FOOT,
+    subject: 'Reservation confirmed for Big Bear', from: 'automated@airbnb.com', date: Date.parse('2026-06-01') }, 'hotel');
+  assert.deepEqual([b.name, b.city, b.conf, b.checkIn, b.checkInTime, b.checkOut, b.checkOutTime], ['Pine Cabin', 'Big Bear', 'HMOLD12345', '2026-06-19', '15:00', '2026-06-21', '11:00']);
+  const req = one({ text: 'Check-in Checkout\nJun 19 Jun 21', subject: 'Reservation request at Pine Cabin for Jun 19 - 21, 2026', from: 'express@airbnb.com', date: Date.parse('2026-06-01') });
+  assert.equal(req.r.bookings.length, 0);
+});
+test('an Airbnb confirmation with JSON-LD is still read from it (its address included)', () => {
+  const html = `<html><head><script type="application/ld+json">${JSON.stringify({ '@context': 'http://schema.org', '@type': 'LodgingReservation', reservationNumber: 'HMTEST1234',
+    reservationStatus: 'http://schema.org/ReservationConfirmed', reservationFor: { '@type': 'LodgingBusiness', name: 'Harbour View Loft', address: { '@type': 'PostalAddress', streetAddress: '1 Bay St', addressLocality: 'Savannah', addressRegion: 'GA' } },
+    checkinDate: '2026-11-27T16:00', checkoutDate: '2026-11-29T10:00' })}</script></head><body>You’re all set</body></html>`;
+  const { b } = one({ html, subject: 'Confirmed: Your November 27 – 29 trip', from: 'automated@airbnb.com', date: ABNB_REF }, 'hotel');
+  assert.equal(b.guess, false); assert.equal(b.name, 'Harbour View Loft'); assert.equal(b.city, 'Savannah'); assert.equal(b.checkOut, '2026-11-29');
+});
+
 console.log(n + ' passed');

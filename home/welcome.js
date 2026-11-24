@@ -126,6 +126,7 @@
         'Pearl: the weather and calendar cards on aOS Home are a fifth taller',
         'Pearl: the family card at the top of Today is drawn in light now, like the app icons, a line drawing of the family with a heart, in place of the mid-century picture',
         'Home: a Vacation switch in the Living Room and Office thermostats\' popups. On, both thermostats hold 55° heat and 90° cool, whatever the schedule says, until you turn it off; their cards say Vacation while it is on',
+        'Travel: Airbnb stays read better: a message from your host no longer makes a second stay, a request that wasn\'t accepted isn\'t a stay, and a stay read from the email\'s words has its listing, its city and the right checkout time',
         'Home: Vacation lighting, a switch on the Lights view. While nobody is home, the lights go on and off through the evening as if someone is, a little differently each night, in place of the usual light automations. It turns itself off when someone is home',
         'Home: the Living Room and Office thermostats\' popups show their whole schedule (each step\'s time and temperatures, then Eco and Vacation), with the step they\'re on lit as Now the moment it changes, and when the next one starts',
         'Money: a new view, Credit cards, with what\'s gone on each credit card this month and the total, so the mortgage and other bills paid from a bank account aren\'t in it. Pick it from the menu at the bottom',

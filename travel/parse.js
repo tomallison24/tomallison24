@@ -512,6 +512,56 @@
     }];
   }
 
+  // ---------------------------------------------------------------------
+  // Airbnb (2026-11-24, checked against a real confirmation of that month and a host message
+  // about the same stay). What the generic hotel reader got wrong:
+  //   - check-in and checkout sit side by side: "Check-in Checkout / Fri, Nov 27 Sun, Nov 29 /
+  //     After 4:00 PM By 10:00 AM", so "the date after Checkout" was the check-in's, and the
+  //     checkout time too;
+  //   - the stay is the listing, the line before "Entire home/apt hosted by ..." (often in capitals),
+  //     not a hotel brand: it was named "Airbnb";
+  //   - the only street address in the email is Airbnb's own, in San Francisco, in the footer: the
+  //     city comes from "You're all set for Savannah" / "You're going to ..." instead.
+  // A reservation request (not yet accepted) or an inquiry is not a stay. A host's message about a
+  // stay still is (it has the dates and the listing): it lands on the same stay as the confirmation.
+  // ---------------------------------------------------------------------
+  const isAirbnb = from => /@(?:[\w-]+\.)*airbnb\./i.test(from || '');
+  const titleCase = s => /[a-z]/.test(s) ? s : s.toLowerCase().replace(/(^|[\s(/&|-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+  function airbnbFromText(text, subject, ref) {
+    if (/\brequest\b|inquiry|pre-?approv|has not been sent/i.test(subject)) return [];
+    const clean = text.replace(/\[?https?:\/\/\S+\]?/g, ' ');
+    const lines = clean.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    // The listing: the line before "... hosted by ...".
+    const at = lines.findIndex(l => /\bhosted by\b/i.test(l));
+    let name = at > 0 && lines[at - 1].length < 120 && !/hosted by|check-?in|you(?:'|’)re/i.test(lines[at - 1]) ? lines[at - 1] : '';
+    const subj = String(subject || '').replace(/^(?:re|fwd?):\s*/i, '');
+    if (!name) { const m = /\breservation(?:\s+confirmed)?\s+(?:for|at)\s+(.+?)(?:,?\s+(?:for\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d.*)?$/i.exec(subj); if (m) name = m[1]; }
+    if (name) {   // the subject's own capitals, when it names the same listing
+      const i = subj.toLowerCase().indexOf(name.toLowerCase());
+      name = i >= 0 ? subj.slice(i, i + name.length) : titleCase(name);
+    }
+    const cityM = /you(?:'|’)re (?:all set for|going to)\s+([^\n!.,]{2,40})/i.exec(clean);
+    const city = cityM ? titleCase(cityM[1].trim()) : '';
+    // Dates: the two columns, or a label each.
+    let checkIn = '', checkOut = '', inT = '', outT = '';
+    const cols = /check[- ]?in\s{0,6}check[- ]?out/i.exec(clean);
+    if (cols) {
+      const seg = clean.slice(cols.index + cols[0].length, cols.index + cols[0].length + 320);
+      const ds = findDates(seg, ref), ts = findTimes(seg);
+      if (ds.length >= 2) { checkIn = ds[0].date; checkOut = ds[1].date; inT = ts[0] ? ts[0].time : ''; outT = ts[1] ? ts[1].time : ''; }
+    }
+    if (!checkIn) {
+      const ci = dateAfter(clean, /check[- ]?in(?:\s+date)?\s*[:\-]?/i, ref), co = dateAfter(clean, /check[- ]?out(?:\s+date)?\s*[:\-]?/i, ref);
+      if (ci) { checkIn = ci.date; inT = ci.time; }
+      if (co && (!checkIn || co.date > checkIn)) { checkOut = co.date; outT = co.time; }
+    }
+    if (checkIn && (!checkOut || checkOut <= checkIn)) { const n = /(\d{1,2})\s+nights?/i.exec(clean); checkOut = n ? addDays(checkIn, +n[1]) : ''; }
+    const conf = ((/confirmation\s+code\s*[:#]?\s*([A-Z0-9]{6,12})\b/.exec(text) || [])[1]) || ((/\breservation\s+([A-Z0-9]{6,12})\b/.exec(subj) || [])[1]) || findConf(clean) || '';
+    if (!checkIn && !(conf && BOOKINGISH.test(subj))) return [];
+    return [{ type: 'hotel', status: 'confirmed', conf, traveller: '', name: name || 'Airbnb stay', address: '', city, phone: '',
+      checkIn, checkInTime: inT, checkOut, checkOutTime: outT, guess: true }];
+  }
+
   const CAR_CLASSES = 'economy|compact|intermediate|mid-?size|standard|full-?size|premium|luxury|(?:small |mid-?size |standard |full-?size |large |premium )?suv|minivan|pickup|truck|convertible|electric';
   function carClassIn(text) {
     const m = new RegExp('reserved an? (' + CAR_CLASSES + ')\\b', 'i').exec(text)
@@ -639,7 +689,8 @@
       const bodies = full.length > bare.length ? [full, text] : [text, full];
       for (const body of bodies) {
         const parking = parkingFromText(body, subject, from, ref);
-        found = parking.length ? parking : [...flightsFromText(body, subject, from, ref), ...hotelFromText(body, subject, from, ref), ...carFromText(body, subject, from, ref)];
+        found = parking.length ? parking : isAirbnb(from) ? airbnbFromText(body, subject, ref)
+          : [...flightsFromText(body, subject, from, ref), ...hotelFromText(body, subject, from, ref), ...carFromText(body, subject, from, ref)];
         // A hotel or car email that mentions a flight number (e.g. "for your
         // arrival on UA123") shouldn't also make a flight, and vice versa.
         const sender = airlineFromSender(from);
