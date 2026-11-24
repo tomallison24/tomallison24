@@ -159,6 +159,17 @@ the same rules:
   foot with its own weather icon and "outside" ("Idle  ☁ 52° outside"). Each
   reading has an accessible name ("Inside, 70 degrees"). The popup's own line
   is unchanged.
+- **Vacation lighting** (the Lights view, under All on | All off): a switch for Home
+  Assistant's `input_boolean.vacation_lighting`. While it is on and nobody is home,
+  ha-config's "Lights - vacation lighting" runs the lights the way the family does
+  (the living room and lounge lamps from about sunset, the kitchen through dinner,
+  Sofia's lamp at bedtime, the bedroom lamps, all off about 23:10, the kitchen on dark
+  weekday mornings; each step 0-20 min late at random), and the Sunset Ladder,
+  Manual Off Suppresses and Outdoor Front Off at 22:30 stand down. It turns itself
+  off when Tom or Elena is home (with a push to Tom); switched off by hand while
+  the house is empty, the lights it uses go off. Its second line says what it is
+  doing ("running the lights until someone is home", or "starts when everyone has
+  left"). Signal's Lights view has the same switch.
 - **Schedule** (the Living Room and Office Nests' popups): Home Assistant's own
   schedule, every step with its time and its heat-cool setpoints (Living Room:
   Morning 06:00, Day 08:00 Mon-Fri, Evening 17:00, Night at Goodnight; Office:

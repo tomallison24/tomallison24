@@ -20,6 +20,11 @@
 //     Fireplace, are left alone), and it reads their average while any is on. Signal has the same pill,
 //     on a light group per room (ha-config configuration.yaml, light.all_<room>_lights); this one sends
 //     to the lights themselves, so it doesn't wait for that group.
+//   - Vacation lighting (2026-11-24): a switch under the whole-house pill for Home Assistant's
+//     input_boolean.vacation_lighting. While it's on and nobody is home, ha-config's "Lights - vacation
+//     lighting" runs the lights as the family does (lounge lamps from sunset, the kitchen through dinner,
+//     the bedroom lamps, all off about 23:10, each step 0-20 min late at random), over the usual evening
+//     automations, and it turns itself off when Tom or Elena is home. Signal's Lights view has the same switch.
 // The groups are helpers in Home Assistant, so a group's members are read from
 // its entity_id attribute, falling back to the dashboard's drawer lists.
 'use strict';
@@ -47,6 +52,7 @@ const L_ROOMS = [
 ];
 const L_HOUSE = ['light.side_lamps', 'light.floor_lamps', 'light.morocco', 'light.spotlight', 'light.living_room_fireplace_lights_socket', 'light.cocktail_main',
   'light.tv_lamps', 'light.bar_main_light_1', 'light.kitchen', 'light.kitchen_fan', 'light.master_bedroom', 'light.sofias_lamp', 'light.tian_hao_rgbdeng_dai_kong_zhi_qi_wifi'];
+const L_VAC = 'input_boolean.vacation_lighting', L_PEOPLE = ['person.tomallison24', 'person.elena'];
 const L_PRESETS = [[1, '1%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']];   // brightness, one tap
 // 1% is the night level: a moon, not a number; 100% the brightest: a sun.
 const L_CHIPS = () => L_PRESETS.map(([v, l]) => v === 1 ? [v, svg('night', 16), { cls: 'night', aria: 'Night, 1%' }]
@@ -111,13 +117,21 @@ family({
     return `<button class="rb-mid" data-a="fold" aria-expanded="${!folded}" aria-label="${folded ? 'Show' : 'Hide'} the ${esc(R.name)}'s lights"><span class="rb-name" translate="no">${esc(R.name)}</span><span class="rb-line">${line}</span><span class="rb-chev${folded ? '' : ' open'}">${svg('chev', 18)}</span></button>
       <button class="rb-disc${on ? ' on' : ''}" data-a="room" aria-label="${on ? 'Turn off' : 'Turn on'} the ${esc(R.name)}">${svg(on ? 'lightbulb' : 'lightbulbOff', 20)}</button>`;
   },
+  // Vacation lighting: one switch row, with what it is doing on its second line.
+  vac() {
+    const s = st(L_VAC), d = dv('lights', 'vac', 'Vacation lighting'), on = held(d, 'on', s && s.state) === 'on';
+    const away = L_PEOPLE.every(p => st(p) && st(p).state !== 'home'), known = L_PEOPLE.some(p => st(p));
+    const sub = !on ? 'Lights on and off as if someone is home' : !known ? 'On, until someone is home'
+      : away ? 'On · running the lights until someone is home' : 'On · starts when everyone has left';
+    return swRow('vac', 'Vacation lighting', 'suitcase', on, '255,196,128', { sub, dis: !s, wait: tWaiting(d, 'on') });
+  },
   house() {
     const anyOn = L_HOUSE.some(id => this.read(id).on);
     return `<button class="hs-half${anyOn ? ' lit' : ''}" data-a="houseOn">${svg('lightbulb', 20)}All on</button><i class="hs-hair"></i><button class="hs-half${!anyOn ? ' lit off' : ''}" data-a="houseOff">${svg('lightbulbOff', 20)}All off</button>`;
   },
 
   mount(el) {
-    el.innerHTML = `<div class="hsplit" data-dv="lights:house"></div>` + L_ROOMS.map(R => `
+    el.innerHTML = `<div class="hsplit" data-dv="lights:house"></div><div class="group lvac" data-dv="lights:vac"></div>` + L_ROOMS.map(R => `
       <div class="lroom" data-room="${R.id}">
         <div class="rbar" data-dv="lights:room/${R.id}"></div>
         <div class="lpwrap"><div class="lpills">${L_ALLPILL(R) ? `<div class="lpw rdw" style="--i:0"><article class="lp dvc rdim" data-dv="lights:dim/${R.id}"></article></div>` : ''}${R.lights.map(([id], i) => `<div class="lpw" style="--i:${i + (L_ALLPILL(R) ? 1 : 0)}"><i class="lglow"></i><article class="lp dvc" data-dv="lights:${id}"></article></div>`).join('')}</div></div>
@@ -125,6 +139,7 @@ family({
   },
   render() {
     for (const h of cardsOf('lights:house')) put(h, this.house());
+    for (const h of cardsOf('lights:vac')) { put(h, this.vac()); h.classList.toggle('on', isOn(L_VAC)); }
     let n = 0;
     for (const R of L_ROOMS) {
       const box = this.el.querySelector(`[data-room="${R.id}"]`), folded = lfold().includes(R.id);
@@ -231,6 +246,11 @@ family({
   },
   act(id, a, b) {
     if (id === 'house') return this.setMany(L_HOUSE, a === 'houseOn');
+    if (id === 'vac') {
+      const d = dv('lights', 'vac', 'Vacation lighting'), on = held(d, 'on', (st(L_VAC) || {}).state) === 'on';
+      tset(d, 'on', on ? 'off' : 'on'); render();
+      return tsend(d, 'input_boolean', on ? 'turn_off' : 'turn_on', { entity_id: L_VAC }, ['on']);
+    }
     if (id.startsWith('dim/')) { if (a === 'chip') return this.setRoom(L_ROOMS.find(x => x.id === id.slice(4)), Number(b.dataset.v)); return; }
     if (id.startsWith('room/')) {
       const R = L_ROOMS.find(x => x.id === id.slice(5)), list = R.lights.map(x => x[0]);
@@ -287,6 +307,8 @@ family({
       'light.master_bedroom': L('off', 0, amber, grp(['light.tom_lamp', 'light.elena_lamp'])), 'light.tom_lamp': L('off', 0, amber), 'light.elena_lamp': L('off', 0, amber),
       'light.outdoor_front': L('on', 80, warm, grp(['light.outdoor_front_1', 'light.outdoor_front_2'])), 'light.outdoor_front_1': L('on', 80, warm), 'light.outdoor_front_2': L('on', 80, warm),
       'light.garage_door': L('off', 0, amber), 'light.outdoor_deck': L('off', 0, warm),
+      [L_VAC]: e('off'),
+      'person.tomallison24': e('home', { friendly_name: 'Tom' }), 'person.elena': e('home', { friendly_name: 'Elena' }),
     };
   },
   preview(domain, service, d) {

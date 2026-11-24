@@ -293,6 +293,32 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
   });
 
+  await test(`${label}: Lights: a Vacation lighting switch under All on | All off, with what it is doing; Home Assistant's flag on and off`, async () => {
+    await page.evaluate(() => goView('lights'));
+    const row = page.locator('#g-lights [data-dv="lights:vac"] [data-a="vac"]');
+    assert.ok(await row.isVisible(), 'the switch is on the Lights view');
+    assert.ok(await page.$eval('#g-lights [data-dv="lights:vac"]', el => el.previousElementSibling.classList.contains('hsplit')), 'right under the whole-house pill');
+    assert.equal(await row.getAttribute('aria-checked'), 'false');
+    assert.match(await row.textContent(), /Vacation lighting[\s\S]*as if someone is home/);
+    await row.click();
+    await page.waitForFunction(() => document.querySelector('#g-lights [data-a="vac"]')?.getAttribute('aria-checked') === 'true');
+    assert.equal(await page.evaluate(() => ents['input_boolean.vacation_lighting'].state), 'on', 'Home Assistant\'s flag is turned on');
+    // What it says follows who is home.
+    await page.evaluate(() => { patchEnt('person.tomallison24', 'not_home'); patchEnt('person.elena', 'not_home'); render(); });
+    assert.match(await row.textContent(), /running the lights until someone is home/);
+    await page.evaluate(() => { patchEnt('person.elena', 'home'); render(); });
+    assert.match(await row.textContent(), /starts when everyone has left/);
+    if (SHOTS) { await row.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, `home-vaclights-${design}-${scheme}.png`) }); }
+    // Home Assistant turning it off (someone is home) shows at once.
+    await page.evaluate(() => { patchEnt('input_boolean.vacation_lighting', 'off'); render(); });
+    assert.equal(await row.getAttribute('aria-checked'), 'false');
+    await row.click();
+    await page.waitForFunction(() => document.querySelector('#g-lights [data-a="vac"]')?.getAttribute('aria-checked') === 'true');
+    await row.click();
+    await page.waitForFunction(() => document.querySelector('#g-lights [data-a="vac"]')?.getAttribute('aria-checked') === 'false');
+    await page.evaluate(() => goView('fav'));
+  });
+
   await test(`${label}: every view in the bar at the bottom opens in one tap, with something in it`, async () => {
     const ids = await page.$$eval('#vtop [data-view]', els => els.map(e => e.dataset.view));
     assert.ok(['fav', 'climate', 'lights', 'media', 'security', 'around', 'autos'].every(id => ids.includes(id)), 'views in the bar: ' + ids.join());
