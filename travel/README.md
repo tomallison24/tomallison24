@@ -193,7 +193,15 @@ Airlines it knows by flight number: the major US ones (United, Delta,
 American, Southwest, Alaska, JetBlue, Hawaiian, Spirit, Allegiant, Sun
 Country), **Frontier (F9)** and **Breeze (MX)**, plus Air Canada, WestJet and
 the big European, Middle East and Asian carriers (`AIRLINES` in `parse.js`).
-Hotels: any, with Marriott's brands recognised by name. Rental cars: National,
+Hotels: any, with Marriott's brands recognised by name. **Airbnb**
+(`airbnbFromText` in `parse.js`, from Nov 2026 emails): its confirmations carry
+the structured data above and are read from it; without it (an older email, a
+host's message about the stay) Travel reads the listing (the line before
+"hosted by", taken out of capitals), the city ("You're all set for …"; never
+Airbnb's own San Francisco address in the footer), the check-in and checkout
+dates and times written side by side, and the confirmation code. A host's
+message lands on the same stay; a reservation request that wasn't accepted, or
+an inquiry, isn't a stay. Rental cars: National,
 Enterprise, Alamo, Hertz, Avis, Budget, Sixt. Parking (e.g. ParkRDU) shows as
 its own entry in the trip.
 
