@@ -415,6 +415,28 @@ await test('Calendar\'s News layer: nothing when you follow nothing; a team\'s g
   await s.ctx.close();
 });
 
+await test('Pearl at night: the chosen News | Scores | Table reads in light, as bright as the others or more (it was dark ink on the dark ground)', async () => {
+  const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
+  for (const scheme of ['dark', 'light']) {
+    const s = await newPage(scheme, {}, { design: 'layers' });
+    assert.equal(await s.page.evaluate(() => document.documentElement.dataset.look), 'layers');
+    assert.equal(await s.page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches), scheme === 'dark');
+    for (const mode of ['news', 'scores', 'table']) {
+      const tab = s.page.locator(`.modes [data-mode="${mode}"]`);
+      if (!(await tab.count())) continue;
+      await tab.click();
+      await s.page.waitForFunction(m => document.querySelector(`.modes [data-mode="${m}"]`)?.getAttribute('aria-selected') === 'true', mode);
+      const [on] = await q(s.page, `.modes [data-mode="${mode}"]`, ['color']);
+      const [off] = await q(s.page, `.modes .seg[aria-selected="false"]`, ['color']);
+      if (scheme === 'dark') assert.ok(lum(on) > 0.6, `${mode}, chosen, in light at night: ${on}`);
+      else assert.ok(lum(on) < 0.4, `${mode}, chosen, in carbon by day: ${on}`);
+      assert.ok(scheme === 'dark' ? lum(on) >= lum(off) - 0.02 : lum(on) <= lum(off) + 0.02, `${mode}: the chosen one is not fainter than the others (${on} / ${off})`);
+    }
+    await shot(s.page, 'pearl-modes-' + scheme);
+    await s.ctx.close();
+  }
+});
+
 await test('nothing trips the Content Security Policy, and no script errors', async () => {
   assert.deepEqual(await page.evaluate(() => window.__csp || []), []);
   assert.deepEqual(errors, []);
