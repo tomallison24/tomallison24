@@ -104,17 +104,18 @@ export const LOOKS = {
   material: {
     // Material: Google's Material 3 Expressive, as the Google Home app wears it. Grounds and inks are Google's own static
     // scheme (surface container #F0F4F9 with white cards by day; #131314 with #1E1F20 cards at night); the accent is its
-    // blue (primary #0B57D0 / #A8C7FA). The other families keep their roles in Google's colours, as Home gives each a
-    // meaning: yellow (a light that's on), orange-red (heating), green, violet and pink.
+    // blue (primary #0B57D0 / #A8C7FA). Nothing of the Retro palette is left: what Vintage fills with mustard is a light
+    // tonal blue (a container), its burnt orange is Google's red where it is written out (and the primary where it is
+    // --mc-orange, a fill: the rulebook), olive is Google's green; violet and pink stay.
     name: 'Material',
     light: {
       neutral: { L: [[0.2, 0.2], [0.27, 0.235], [0.55, 0.5], [0.92, 0.945], [0.94, 0.965], [0.97, 1], [1, 1]], h: 255, C: L => (L > 0.6 ? Math.min(0.012, (1 - L) * 0.25) : 0.003) },
-      orange: { h: 38, C: 1.1, dL: 0 }, mustard: { h: 88, C: 1.05, dL: 0.03 }, olive: { h: 150, C: 1.25, dL: 0 },
+      orange: { h: 27, C: 1.0, dL: 0 }, mustard: { h: 245, C: 0.5, dL: 0.09 }, olive: { h: 150, C: 1.25, dL: 0 },
       teal: { h: 262, C: 2.3, dL: 0 }, blue: { h: 292, C: 1.1, dL: 0 }, pink: { h: 355, C: 1.0, dL: 0 },
     },
     dark: {
       neutral: { L: [[0.2, 0.15], [0.245, 0.185], [0.29, 0.24], [0.335, 0.285], [0.36, 0.31], [0.6, 0.62], [0.94, 0.915], [1, 1]], h: 255, C: L => (L < 0.5 ? 0.004 : 0.003) },
-      orange: { h: 40, C: 0.95, dL: 0.05 }, mustard: { h: 88, C: 0.9, dL: 0.04 }, olive: { h: 150, C: 1.1, dL: 0.06 },
+      orange: { h: 27, C: 0.9, dL: 0.05 }, mustard: { h: 250, C: 0.55, dL: 0.06 }, olive: { h: 150, C: 1.1, dL: 0.06 },
       teal: { h: 258, C: 1.05, dL: 0.07 }, blue: { h: 292, C: 1.0, dL: 0.06 }, pink: { h: 355, C: 0.9, dL: 0.05 },
     },
     font: '"Google Sans Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif',
@@ -401,6 +402,14 @@ ${BAND}::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:
 // buttons that square off a little while pressed, tonal cards with no edge or shadow, a secondary-container pill under
 // what is picked. Sparkle Kingdom keeps its own style (the owner's call): it takes the colours and the type only.
 const MATERIAL_OWN = ['sparkle'];
+// what one app draws that no other does, in Material
+const MATERIAL_APP = {
+  // Weather draws its own sky: in Material the ground is Material's own whatever the weather, and the disc the weather sits
+  // on is a tonal shape in the primary container
+  weather: M => `${M}[data-c],${M} [data-c]{--disc:var(--md-primary-container);--ground:var(--md-ground);--wv-disc-ink:var(--md-on-primary-container);--wv-night-disc:var(--md-primary-container)}
+${M}[data-c]{background:var(--md-ground)}
+`,
+};
 function material(app) {
   const M = 'html:root[data-look="material"]';
   const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
@@ -409,12 +418,12 @@ function material(app) {
   const LIGHT = '--md-primary:#0B57D0;--md-on-primary:#FFFFFF;--md-primary-container:#D3E3FD;--md-on-primary-container:#041E49;--md-secondary-container:#C2E7FF;--md-on-secondary-container:#001D35;'
     + '--md-ground:#F0F4F9;--md-surface:#FFFFFF;--md-low:#F8FAFD;--md-container:#E9EEF6;--md-highest:#DDE3EA;--md-sheet:#F0F4F9;--md-sheet-card:#FFFFFF;'
     + '--md-on-surface:#1F1F1F;--md-on-surface-variant:#444746;--md-outline:#747775;--md-outline-variant:#C4C7C5;--md-error:#B3261E;--md-error-container:#F9DEDC;'
-    + '--md-inverse-surface:#303030;--md-inverse-on-surface:#F2F2F2;--md-scrim:rgba(0,0,0,.32);'
+    + '--md-inverse-surface:#303030;--md-inverse-on-surface:#F2F2F2;--md-scrim:rgba(0,0,0,.32);--md-fill:#0B57D0;'
     + '--md-elev1:0 1px 2px rgba(0,0,0,.3),0 1px 3px 1px rgba(0,0,0,.15);--md-elev2:0 1px 2px rgba(0,0,0,.3),0 2px 6px 2px rgba(0,0,0,.15);--md-elev3:0 1px 3px rgba(0,0,0,.3),0 4px 8px 3px rgba(0,0,0,.15)';
   const DARK = '--md-primary:#A8C7FA;--md-on-primary:#062E6F;--md-primary-container:#0842A0;--md-on-primary-container:#D3E3FD;--md-secondary-container:#004A77;--md-on-secondary-container:#C2E7FF;'
     + '--md-ground:#131314;--md-surface:#1E1F20;--md-low:#1B1B1B;--md-container:#282A2C;--md-highest:#333537;--md-sheet:#1E1F20;--md-sheet-card:#282A2C;'
     + '--md-on-surface:#E3E3E3;--md-on-surface-variant:#C4C7C5;--md-outline:#8E918F;--md-outline-variant:#444746;--md-error:#F2B8B5;--md-error-container:#8C1D18;'
-    + '--md-inverse-surface:#E3E3E3;--md-inverse-on-surface:#303030;--md-scrim:rgba(0,0,0,.5)';
+    + '--md-inverse-surface:#E3E3E3;--md-inverse-on-surface:#303030;--md-scrim:rgba(0,0,0,.5);--md-fill:#1A73E8';
   const head = `/* Material: Google's Material 3 Expressive, as the Google Home app wears it. Google Sans Flex for every word (SIL
    Open Font License, ../home/fonts); Google's static colour scheme as --md-* tokens. Vintage's disc, dot and pill behind
    the title go, and the three little bars under it. */
@@ -429,7 +438,7 @@ ${SHAPE(1)},${SHAPE(2)},${SHAPE(3)},:root .aos-sky-cap{display:none}
   const CARDS = ':is(.card,.rgroup,.group,.box,.obox,.ocard,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.addbox,.banner)';
   return head + `/* ---- the rulebook, the same in every app (Sparkle Kingdom aside) ---- */
 ${M}{--bg:var(--md-ground);--accent:var(--md-primary);--accent-text:var(--md-primary);--accent-ink:var(--md-primary);--on-accent:var(--md-on-primary);--icon:var(--md-primary);
-  --cta:var(--md-primary);--cta-ink:var(--md-on-primary);--seg-thumb:var(--md-secondary-container);--sel-ink:var(--md-on-secondary-container);--mc-on-mustard:var(--md-on-secondary-container);
+  --cta:var(--md-primary);--cta-ink:var(--md-on-primary);--seg-thumb:var(--md-secondary-container);--sel-ink:var(--md-on-secondary-container);--mc-on-mustard:var(--md-on-secondary-container);--mc-orange:var(--md-fill);--today:var(--md-primary);--today-text:var(--md-primary);--mc-walnut:var(--md-container);
   --mc-card:var(--md-surface);--mc-card-2:var(--md-container);--glass:var(--md-surface);--glass-2:var(--md-container);--tile:var(--md-surface);--pill:var(--md-container);
   --mc-edge:transparent;--gb-edge:transparent;--tile-edge:transparent;--bar-rim:transparent;--lg-rim:0 0 #0000;--lgs-edge:transparent;--lgs-rim:transparent;--gb-shadow:none;
   --hair:var(--md-outline-variant);--hair-2:color-mix(in srgb,var(--md-outline-variant) 55%,transparent);--fill:color-mix(in srgb,var(--md-on-surface) 8%,transparent);
@@ -492,7 +501,7 @@ ${M} :is(.vbar .vb-ic,.vtop .vt-ic){background:var(--md-secondary-container) !im
 ${M} .vbar .vb-chev svg{color:var(--md-on-surface-variant) !important}
 /* sheets: 28 round at the top, a short handle; menus 16 round, lifted; the toast is a snackbar on the inverse surface */
 ${M} .sheet:not(.page){border-radius:28px 28px 0 0;box-shadow:none;background:var(--md-sheet) !important}
-${M} .sheet.page::before{display:none}
+${M} :is(.sheet.page,.sheet.np,#cook,#sky)::before,${M} :is(#sky,.ring)::after{display:none}   /* Vintage's sun, dot and pill, wherever a page draws them itself */
 ${M} .grab{width:32px;height:4px}
 ${M} :is(.dmenu,.menu,.popover,.viewmenu,.pmenu,.tagmenu){border-radius:16px;background:var(--md-low) !important;box-shadow:var(--md-elev2) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
 ${M} :is(.dmenu,.menu,.popover,.viewmenu,.pmenu,.tagmenu) button{border-radius:12px}
@@ -505,5 +514,5 @@ ${M} :is(.search,.sbox,.askipsy) :is(input,textarea){box-shadow:none;background:
 /* today, in a calendar or a list of days: its number on the primary */
 ${M} :is(.mday.today .n,.drow.today .dn b,.tghead .dh.today b,.ygrid .today){background:var(--md-primary) !important;color:var(--md-on-primary) !important;box-shadow:none !important}
 @media (prefers-reduced-motion:reduce){${M} :is(.btn,.ctabtn,.okbtn,.fab){transition:none}}
-`;
+` + (MATERIAL_APP[app] ? MATERIAL_APP[app](M) : '');
 }

@@ -725,6 +725,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // "September" in Vintage's 38 points is wider than the room left. Down to 24 points at most, then the ellipsis.
   function fitTitle() {
     const t = $('title'); if (!t) return;
+    t.style.transition = 'none';   // with Reduce Motion every change is a (very short) transition, and a size read back at once is still the old one
     t.style.fontSize = '';
     let size = parseFloat(getComputedStyle(t).fontSize) || 32;
     while (t.scrollWidth > t.clientWidth + 1 && size > 24) { size -= 1; t.style.fontSize = size + 'px'; }
@@ -1790,6 +1791,11 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
   // A new design: the Family calendar's and Notes' colours follow it; Futura and the system font are
   // different widths, so the view bar's sliding thumb is measured again.
   addEventListener('aos:design', () => requestAnimationFrame(fitTitle));
+  // the room the title has changes after the first draw (a look's own font arrives, wider or narrower; the buttons beside it
+  // settle): fit it again whenever the room for it changes
+  { const btn = $('titleBtn'); if (window.ResizeObserver && btn) { let w = -1; new ResizeObserver(() => { const n = btn.clientWidth; if (n !== w) { w = n; requestAnimationFrame(fitTitle); } }).observe(btn); } }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(fitTitle)).catch(() => {});
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => requestAnimationFrame(fitTitle));
   addEventListener('aos:design', () => {
     rebuild(); render();
     const fam = $('stFamily'); if (fam) fam.style.setProperty('--c', calColor());
