@@ -21,7 +21,7 @@
 // it to night, and script.thermostat_apply writes the profile's setpoints
 // (ha-config). So the step under way is just that helper's state, and the
 // popup lights it the moment Home Assistant moves it. What can stand in front
-// of the schedule, in the script's order: Vacation (55/90), the sitter hold
+// of the schedule, in the script's order: Vacation (55/85), the sitter hold
 // (the Nests left where they are), Eco (everyone out, 64/80).
 // THE NUMBERS MUST MATCH script.thermostat_apply and the `thermostat_schedule`
 // automation's times (and Signal's tf_card `scheds`), which is where they
