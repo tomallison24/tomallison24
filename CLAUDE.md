@@ -144,8 +144,11 @@ from.
 - Light or dark: `home.settings.theme` (`auto`/`light`/`dark`), applied as
   `data-theme` on `<html>` by `welcome.js`, which also switches an app's
   `@media (prefers-color-scheme)` rules to match.
-- **Four designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
-  glass), Pearl (aOS 2.4: light in the dust; lines of cool white light on near-black at night, carbon hairlines on cream by day,
+- **Five designs in every app**: Vintage (mid-century modern, the default), Standard (Sea
+  glass), Material (id `material`: Google's Material 3 Expressive, as the Google Home app wears it: Google's static colour scheme as
+  `--md-*` tokens, Google Sans Flex from `home/fonts`, tonal cards with no edge, fully round buttons, a secondary-container pill under
+  what is picked; one rulebook for every app, `material()` in `aOS/scripts/looks.mjs`, with Settings' own in `home/settings.js`, aOS's own
+  screens in `aOS/index.html` and the welcome screens in `home/welcome.js`; Sparkle Kingdom keeps its own style, taking the colours and type only), Pearl (aOS 2.4: light in the dust; lines of cool white light on near-black at night, carbon hairlines on cream by day,
   with the phone; titles in Unbounded Light from `home/fonts`; dust drifting behind every screen, falling as rain or snow with Weather's
   `wx.cache`, drawn into the strip of light under each title and the lit top edges of cards, brightest 38% down the screen where the eyes
   rest: `home/pearl.js`, loaded by `design.js`/`look.js` in Pearl only (it also moves the dust with a scroll at its depth, sweeps a beam along a
@@ -164,9 +167,9 @@ from.
   the app's own Settings > Design, and kept on the phone (`design.<app>`; Clock's `set.design`).
   `home/design.js` (Clock: `clock/design.js`) applies it in `<head>`: the page's `<style
   id="vintage">` block on or off, `data-look` on `<html>`, the icon (`icon-*.png` Vintage,
-  `icon-glass-*.png` Sea glass, `icon-layers-*.png`, `icon-grid-*.png`), status bar and bar colours.
-  A change to how an app looks is made in Vintage and Sea glass; **Pearl and Tron are
-  generated from Vintage** (`<style id="layers">`, `<style id="grid">` and the icons, by
+  `icon-glass-*.png` Sea glass, `icon-layers-*.png`, `icon-grid-*.png`, `icon-material-*.png`), status bar and bar colours.
+  A change to how an app looks is made in Vintage and Sea glass; **Pearl, Tron and Material are
+  generated from Vintage** (`<style id="layers">`, `<style id="grid">`, `<style id="material">` and the icons, by
   `node aOS/scripts/make-looks.mjs`, palettes in `aOS/scripts/looks.mjs`): run it after changing a
   Vintage block or an `icon.svg` (check-apps fails until you do), never edit those blocks by hand.
   The Vintage designs used to be apps of their own (`<app>vintage/`): those folders are gone, and the deploy copies each app to its old Vintage address so phones

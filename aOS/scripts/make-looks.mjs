@@ -15,7 +15,7 @@ import { lookBlock, signature, mapColor, LOOKS } from './looks.mjs';
 import { LINES, GROUND } from './pearl-icons.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const NEW = ['layers', 'grid'];
+const NEW = ['layers', 'grid', 'material'];
 const GONE = ['neon'];   // Night Drive, which Layers replaced: its old blocks and icons are taken out
 const check = process.argv.includes('--check');
 const pages = readdirSync(ROOT, { withFileTypes: true }).filter(d => d.isDirectory() && existsSync(path.join(ROOT, d.name, 'index.html')))
@@ -102,6 +102,12 @@ function iconFor(look, svg) {
     svg = svg.replace(MARK, '').replace(PILL, '').replace(bgRe, m => m.replace(`fill="${bg}"`, 'fill="url(#lyg)"'));
     defs = `<linearGradient id="lyg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(bg, '#FFFFFF', 0.6)}"/><stop offset="1" stop-color="${bg}"/></linearGradient>`;
     svg = /<defs>/.test(svg) ? svg.replace('<defs>', '<defs>' + defs) : svg.replace(/(<svg[^>]*>)/, `$1<defs>${defs}</defs>`);
+    return svg.replace(/\u0000(\d+)\u0000/g, (_, i) => masks[+i]);
+  }
+  if (look === 'material') {   // Material: the app's own tinted tile as it is, flat, with no Vintage mark; aOS's own in Google's colours, no pill
+    const tile = bg && MARK.test(svg);
+    svg = svg.replace(MARK, '').replace(PILL, '').replace(/\n[ \t]*(?=\n)/g, '');
+    if (!tile) svg = svg.replace(/(fill|stroke|stop-color)="(#[0-9A-Fa-f]{3,8})"/g, (m, k, c) => `${k}="${mapColor('material', c, false)}"`);
     return svg.replace(/\u0000(\d+)\u0000/g, (_, i) => masks[+i]);
   }
   if (look === 'grid' && bg && MARK.test(svg)) {   // Tron, from a tinted tile: no sun, and the drawing light as it always is in Tron

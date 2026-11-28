@@ -54,9 +54,9 @@
   // The look: fixed by data-look on this script, else the page's (data-look on <html>), and kept in step with it.
   const FIXED = me && me.dataset.look;
   // Layers and Tron wear the Vintage outfit, in their own colours (ipsy-layers, ipsy-grid on top of ipsy-vintage).
-  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return l === 'neon' ? 'layers' : /^(vintage|layers|grid)$/.test(l || '') ? l : 'glass'; };
+  const LOOK = () => { const l = FIXED || document.documentElement.dataset.look; return l === 'neon' ? 'layers' : /^(vintage|layers|grid|material)$/.test(l || '') ? l : 'glass'; };
   const followers = new Set();                       // elements that wear the page's look
-  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'layers', 'grid']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'layers' || l === 'grid'))); };
+  const dress = (el, l) => { for (const k of ['vintage', 'glass', 'layers', 'grid', 'material']) el.classList.toggle('ipsy-' + k, l === k || (k === 'vintage' && (l === 'layers' || l === 'grid' || l === 'material'))); };
   const wear = (el, l) => dress(el, l || LOOK());
   const follow = el => { followers.add(el); wear(el); };
   for (const ev of ['aos:design', 'aos:look']) addEventListener(ev, () => { followers.forEach(el => wear(el)); redrawAll(); });
@@ -1204,7 +1204,7 @@
   // family's things, and Meals' "Never in a plan" (the family's allergies): for those, open_setting shows where.
   // ---------------------------------------------------------------------------
   const SET_APPS = ['calendar', 'clock', 'drinks', 'fitness', 'house', 'mail', 'meals', 'news', 'notes', 'orders', 'places', 'podcasts', 'travel', 'weather'];
-  const LOOKS = ['vintage', 'glass', 'layers', 'grid'];
+  const LOOKS = ['vintage', 'glass', 'layers', 'grid', 'material'];
   const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
   const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const CLOCK = 'allison-clock-v1', CAL = 'allison-calendar-v1-settings', POD = 'allison-podcasts-v1', ORD = 'allison-orders-v1';
@@ -1227,7 +1227,7 @@
   const SETTINGS = {
     theme: { app: '*', live: true, about: 'Light or dark, for aOS and every app', ...choice({ auto: 'auto', light: 'light', dark: 'dark' }, {
       get: () => (AOS.welcome && AOS.welcome.theme ? AOS.welcome.theme.read() : 'auto'), put: v => AOS.welcome && AOS.welcome.theme && AOS.welcome.theme.set(v) }) },
-    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Pearl (its id is layers) or Tron Special Edition', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, {
+    look: { app: '*', live: true, about: 'The look of aOS and every app: Vintage, Sea glass, Pearl (its id is layers), Tron Special Edition or Material (Material 3 Expressive, as in Google Home)', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid', material: 'material' }, {
       get: () => { const l = ls.get('aos.look', 'vintage'); return l === 'neon' ? 'layers' : l; },
       put: v => {   // every app, as aOS's own Look picker writes it (AllisonOS.welcome.data.APPS): Money and Sparkle too, not only the apps with settings here
         const all = (AOS.welcome && AOS.welcome.data && AOS.welcome.data.APPS) || SET_APPS;
@@ -1263,7 +1263,7 @@
       get: () => (helper() || {}).name || '', put: v => setHelper((helper() || {}).who || 'mia', v) },
     'helper.dress_for_weather': { app: '*', live: true, about: 'Your helper dresses for the weather (an umbrella in the rain, a coat when it\'s cold, a sun hat when it\'s warm and sunny)', ...onoff({
       get: dressing, put: v => { ls.set(WEAR_KEY, v ? 'on' : 'off'); refit(); } }) },
-    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
+    ...Object.fromEntries(SET_APPS.map(id => ['design_' + id, { app: id, live: true, about: 'Just ' + id + '\'s own design (look sets every app)', ...choice({ vintage: 'vintage', glass: 'glass', layers: 'layers', grid: 'grid', material: 'material' }, { get: () => lookOf(id), put: v => putLook(id, v) }) }])),
   };
   // where a setting is: each app's Settings (the button that opens it), and aOS's Account sections
   const OPENER = { calendar: '#setBtn', clock: '#setBtn', drinks: '#moreBtn', fitness: '#setBtn', house: '#gear', mail: '#gear', meals: '#setBtn', news: '#setBtn', notes: '#setBtn', orders: '#setBtn', places: '#setBtn', podcasts: '#setBtn', travel: '#setBtn', weather: '[data-action="location"]' };

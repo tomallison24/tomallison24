@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Material: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs></defs>
+  <rect width="512" height="512" fill="#DDE6FE"/>
+  <g>
+    <g transform="scale(.5)"><g fill="none" stroke="#5C76AD" stroke-linecap="round" stroke-width="56">
+      <path d="M358 648a220 220 0 1 1 308 0"/>
+      <path d="M256 752a364 364 0 1 1 512 0" stroke-opacity="0.55"/>
+    </g>
+    <circle cx="512" cy="492" r="86" fill="#5C76AD"/>
+    <rect x="478" y="600" width="68" height="236" rx="34" fill="#5C76AD"/></g>
+  </g>
+</svg>

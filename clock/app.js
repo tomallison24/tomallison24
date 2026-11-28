@@ -113,7 +113,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     S.sw.acc = +S.sw.acc || 0; S.sw.t0 = +S.sw.t0 || 0; S.sw.run = !!S.sw.run && S.sw.t0 > 0;
     if (S.sw.face !== 'analog') S.sw.face = 'digital';
     if (S.set.design === 'neon') S.set.design = 'layers';   // Night Drive, which Layers replaced
-    if (!['glass', 'layers', 'grid'].includes(S.set.design)) S.set.design = 'vintage';
+    if (!['glass', 'layers', 'grid', 'material'].includes(S.set.design)) S.set.design = 'vintage';
     const hm = S.set.home;   // the main clock's city: null is this phone's own time zone
     S.set.home = hm && typeof hm.name === 'string' && L.validZone(hm.tz) ? { name: hm.name.slice(0, 60), where: String(hm.where || '').slice(0, 60), tz: hm.tz } : null;
     ['h', 'm', 's'].forEach(k => { const v = Math.floor(+S.pick[k] || 0); S.pick[k] = Math.max(0, Math.min(k === 'h' ? 23 : 59, v)); });
@@ -825,6 +825,7 @@ if (window.top !== window.self && (() => { try { return window.top.location.orig
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
     ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'],
     ['grid', 'Tron <span class="se">Special Edition</span>', 'Light cycles: red light on a black grid, as in Tron: Ares'],
+    ['material', 'Material', 'Material 3 Expressive, as in Google Home: tonal cards, round buttons, Google Sans'],
   ];
   const designPicker = () => '<div role="radiogroup" aria-label="Design">' + DESIGNS.map(([id, name, note]) => `<button class="snd" type="button" role="radio" data-design="${id}" aria-checked="${S.set.design === id}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${name}</b><small>${note}</small></span><span class="tick">${ICON.tick}</span></button>`).join('') + '</div>';
   function paintSettings() {

@@ -364,6 +364,8 @@
   .dth.vintage::before { content: ''; position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #E3A72F; }
   .dth.layers { background: radial-gradient(80% 70% at 50% 45%, #0B1A37, #02050C 80%); } .dth.layers i { background: rgba(160,200,255,.07); box-shadow: inset 0 0 0 1px rgba(220,240,255,.24); }
   .dth.layers::before { content: ''; position: absolute; right: 7px; top: 5px; width: 13px; height: 7px; border-radius: 3px; box-shadow: inset 0 0 0 1.2px #F2FAFF, 0 0 6px rgba(150,205,255,.8); }
+  .dth.material { background: #F0F4F9; } .dth.material i { background: #FFFFFF; border-radius: 6px; } .dth.material i:first-child { background: #C2E7FF; }
+  .dth.material::before { content: ''; position: absolute; right: 5px; bottom: 5px; width: 13px; height: 13px; border-radius: 4px; background: #0B57D0; z-index: 1; }
   .dth.grid { background: #08090B; } .dth.grid i { background: #131519; box-shadow: inset 0 0 0 1px rgba(255,42,42,.6), 0 0 6px rgba(255,42,42,.35); }
   .dth.grid::before { content: ''; position: absolute; right: -10px; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #FF2A2A 0 12%, transparent 13% 38%, #FF2A2A 39% 50%, transparent 51% 70%, #E9EDF1 71%); filter: drop-shadow(0 0 4px #FF2A2A); }
   .dth.grid::before { animation: aosSePulse 1.1s ease-in-out infinite alternate; } .dth.grid::after {content:'';position:absolute;left:-60%;bottom:9px;width:60%;height:2px;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent,#FF2A2A 80%,#fff);box-shadow:0 0 6px #FF2A2A;animation:aosSeRide 2.2s cubic-bezier(.5,0,.5,1) infinite}   /* a special edition: a light cycle rides across, the disc glows */
@@ -696,6 +698,31 @@ html[data-look="grid"] .wid.wx{background:#121215;color:#F1F3F5;box-shadow:inset
 html[data-look="grid"] .wid.wx small{color:#A3A8B0}
 html[data-look="grid"] .wid.wx::before{right:-34px;top:-34px;width:110px;height:110px;opacity:1;background:radial-gradient(circle,#FF2A2A 0 6%,transparent 6.5% 30%,#FF2A2A 31% 34%,transparent 35% 55%,rgba(255,42,42,.6) 56% 60%,transparent 61%);filter:drop-shadow(0 0 6px #FF2A2A)}
 html[data-look="grid"] .wid.wx::after{display:none}
+/* Material: the weather widget is a tonal card in the primary container, no Vintage sun or pill */
+html[data-look="material"] .wid.wx{background:var(--md-primary-container,#D3E3FD);color:var(--md-on-primary-container,#041E49);box-shadow:none}
+html[data-look="material"] .wid.wx small{color:inherit;opacity:.8}
+html[data-look="material"] .wid.wx::before,html[data-look="material"] .wid.wx::after{display:none}
+/* Material, aOS's own screens (the rest is the generated block's rulebook, aOS/scripts/looks.mjs): tonal cards with no
+   edge and none of Vintage's discs, dots or pills; the stories in Material's containers; the dock and the Home button
+   as floating toolbars, the picked tab on the secondary container; the look picker's choices outlined, the picked one tonal */
+html:root[data-look="material"]{--edge:transparent;--card:var(--md-surface);--glass:var(--md-surface);--solid:var(--md-surface);--line:color-mix(in srgb,var(--md-outline-variant) 55%,transparent);--pastel:var(--md-secondary-container);--sand:var(--md-primary);--ink2:var(--md-primary);--md-tertiary-container:#C4EED0;--md-on-tertiary-container:#072711}
+@media (prefers-color-scheme:dark){html:root[data-look="material"]:not([data-theme="light"]){--md-tertiary-container:#0F5223;--md-on-tertiary-container:#C4EED0}}
+html:root[data-look="material"][data-theme="dark"]{--md-tertiary-container:#0F5223;--md-on-tertiary-container:#C4EED0}
+html:root[data-look="material"] :is(.story,.shot,.hero,.askipsy,.wid)::before,html:root[data-look="material"] .story .art::before,html:root[data-look="material"] .apphead::before,html:root[data-look="material"] .apphead::after,html:root[data-look="material"] .wid::after,html:root[data-look="material"] :is(.sec h2,.body h3,.glbl)::before{display:none}
+html:root[data-look="material"] :is(.s0,.shot:nth-child(4n+1)){--bgc:var(--md-primary-container);--ink:var(--md-on-primary-container)}
+html:root[data-look="material"] :is(.s1,.shot:nth-child(4n+2)){--bgc:var(--md-secondary-container);--ink:var(--md-on-secondary-container)}
+html:root[data-look="material"] :is(.s3,.shot:nth-child(4n+3)){--bgc:var(--md-tertiary-container);--ink:var(--md-on-tertiary-container)}
+html:root[data-look="material"] :is(.s4,.shot:nth-child(4n)){--bgc:var(--md-highest);--ink:var(--md-on-surface)}
+html:root[data-look="material"] :is(.story,.shot,.hero){border-radius:28px;box-shadow:none}
+html:root[data-look="material"] .sec h2{color:var(--md-primary);font-weight:500}
+html:root[data-look="material"] .tabs .ind{background:var(--md-secondary-container);box-shadow:none}
+html:root[data-look="material"] .quick{background:var(--md-container);box-shadow:var(--md-elev2)}
+html:root[data-look="material"] .quick .qhome{border-radius:16px;background:var(--md-primary-container);color:var(--md-on-primary-container)}
+html:root[data-look="material"] :is(.hbtn,#appback){background:var(--md-container);box-shadow:none;color:var(--md-on-surface-variant)}
+html:root[data-look="material"] .hask{background:var(--md-primary);color:var(--md-on-primary)}
+html:root[data-look="material"] .dlist .dopt{border-radius:16px;box-shadow:inset 0 0 0 1px var(--md-outline-variant)}
+html:root[data-look="material"] .dlist .dopt[aria-selected="true"]{background:var(--md-secondary-container);color:var(--md-on-secondary-container);box-shadow:none}
+html:root[data-look="material"] .dlist .dopt[aria-selected="true"] small{color:inherit}
 </style>
 <style id="vintage">
   /* ======================================================================
@@ -1098,6 +1125,130 @@ body{font-family:"Exo 2","Avenir Next","Helvetica Neue",system-ui,sans-serif}
 @keyframes trRun{to{--tr-a:360deg}}
 @media (prefers-reduced-motion:reduce){:root::after{animation:none;opacity:0}}
 :is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
+</style>
+<style id="material" media="not all">
+/* Material: generated from the Vintage block above by aOS/scripts/make-looks.mjs - don't edit by hand */
+:root{--mc-card:#FFFFFF;--mc-card-2:#E9EFF7;--mc-edge:rgba(29,30,31,.14);--mc-mustard:#E5B52B;--mc-teal:#255AC1;--mc-orange:#DF4F1A;--mc-walnut:#2F3031;--mc-on-mustard:#1D1E1F;--bg:#F2F6FA;--card:#FFFFFF;--solid:#FFFFFF;--text:#1D1E1F;--muted:#414244;--line:rgba(29,30,31,.12);--dot:rgba(29,30,31,.07);--glass:#FFFFFF;--edge:rgba(29,30,31,.10);--accent:#255AC1;--sand:#7B6114;--on:#FFFFFF;--pastel:#E5B52B;--cta:#BD4010;--cta-ink:#FFFFFF;--ink2:#BD4010;--danger-text:#A33407}
+@media (prefers-color-scheme: dark){
+:root:not([data-theme="light"]){--mc-card:#1E2022;--mc-card-2:#27292B;--mc-edge:rgba(228,229,231,.14);--mc-teal:#8FB8F5;--bg:#111214;--card:#1E2022;--solid:#1E2022;--text:#E4E5E7;--muted:#BFC0C2;--line:rgba(228,229,231,.12);--dot:rgba(228,229,231,.07);--glass:#1E2022;--edge:rgba(228,229,231,.12);--accent:#99C2FF;--sand:#F8D680;--on:#0D0E10;--ink2:#F8D680;--danger-text:#FBA486}
+}
+:root[data-theme="dark"]{--mc-card:#1E2022;--mc-card-2:#27292B;--mc-edge:rgba(228,229,231,.14);--mc-teal:#8FB8F5;--bg:#111214;--card:#1E2022;--solid:#1E2022;--text:#E4E5E7;--muted:#BFC0C2;--line:rgba(228,229,231,.12);--dot:rgba(228,229,231,.07);--glass:#1E2022;--edge:rgba(228,229,231,.12);--accent:#99C2FF;--sand:#F8D680;--on:#0D0E10;--ink2:#F8D680;--danger-text:#FBA486}
+body{font-family:"Google Sans Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif}
+.head h1::after{background:none}
+.s0{--bgc:#255AC1;--ink:#FFFFFF;--a1:#E5B52B;--a2:#DF4F1A}
+.s1{--bgc:#E5B52B;--ink:#1D1E1F;--a1:#255AC1;--a2:#DF4F1A}
+.s2{--a1:#E5B52B;--a2:#255AC1}
+.s3{--bgc:#BD4010;--ink:#FFFFFF;--a1:#E5B52B;--a2:#2F3031}
+.s4{--bgc:#2F3031;--ink:#FFFFFF;--a1:#E5B52B;--a2:#255AC1}
+.story .art img,.story.half .art img,.story.wide .art img{box-shadow:0 0 0 7px rgba(255,255,255,.9)}
+.story .art svg{color:rgba(255,255,255,.2)}
+.s1 .art svg{color:rgba(29,30,31,.14)}
+.chip{background:#FFFFFF;color:#1D1E1F}
+.ipsy-say{background:#FFFFFF;color:#1D1E1F}
+.wid.wx{background:#0254E9;color:#FFFFFF}
+.wid.wx small{color:#FFFFFF}
+.hask{color:#1D1E1F}
+#appback{box-shadow:inset 0 0 0 1.5px var(--edge), 0 2px 10px rgba(29,30,31,.12)}
+.tabs{box-shadow:inset 0 0 0 1px rgba(242,246,250,.12), 0 12px 24px -10px rgba(0,0,0,.6)}
+.tabs button{color:#F2F6FA}
+.tabs button[aria-selected="true"]{color:#1D1E1F}
+.quick{box-shadow:inset 0 0 0 1px rgba(242,246,250,.12), 0 12px 24px -10px rgba(0,0,0,.6)}
+.quick .qhome{color:#1D1E1F}
+.shot:nth-child(4n+1){--bgc:#255AC1;--ink:#FFFFFF;--a1:#E5B52B}
+.shot:nth-child(4n+2){--bgc:#E5B52B;--ink:#1D1E1F;--a1:#255AC1}
+.shot:nth-child(4n+3){--bgc:#BD4010;--ink:#FFFFFF;--a1:#E5B52B}
+.shot:nth-child(4n){--bgc:#2F3031;--ink:#FFFFFF;--a1:#DF4F1A}
+.hero .art img{box-shadow:0 0 0 8px rgba(255,255,255,.9)}
+.ptitle::after{background:none}
+.dmenu{box-shadow:inset 0 0 0 1.5px var(--mc-edge), 0 18px 40px -12px rgba(29,30,31,.4)}
+/* Material: Google's Material 3 Expressive, as the Google Home app wears it. Google Sans Flex for every word (SIL
+   Open Font License, ../home/fonts); Google's static colour scheme as --md-* tokens. Vintage's disc, dot and pill behind
+   the title go, and the three little bars under it. */
+@font-face{font-family:"Google Sans Flex";font-style:normal;font-weight:100 1000;font-display:swap;src:url("../home/fonts/google-sans-flex-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+html:root[data-look="material"]{--md-primary:#0B57D0;--md-on-primary:#FFFFFF;--md-primary-container:#D3E3FD;--md-on-primary-container:#041E49;--md-secondary-container:#C2E7FF;--md-on-secondary-container:#001D35;--md-ground:#F0F4F9;--md-surface:#FFFFFF;--md-low:#F8FAFD;--md-container:#E9EEF6;--md-highest:#DDE3EA;--md-sheet:#F0F4F9;--md-sheet-card:#FFFFFF;--md-on-surface:#1F1F1F;--md-on-surface-variant:#444746;--md-outline:#747775;--md-outline-variant:#C4C7C5;--md-error:#B3261E;--md-error-container:#F9DEDC;--md-inverse-surface:#303030;--md-inverse-on-surface:#F2F2F2;--md-scrim:rgba(0,0,0,.32);--md-elev1:0 1px 2px rgba(0,0,0,.3),0 1px 3px 1px rgba(0,0,0,.15);--md-elev2:0 1px 2px rgba(0,0,0,.3),0 2px 6px 2px rgba(0,0,0,.15);--md-elev3:0 1px 3px rgba(0,0,0,.3),0 4px 8px 3px rgba(0,0,0,.15)}
+@media (prefers-color-scheme:dark){html:root[data-look="material"]:not([data-theme="light"]){--md-primary:#A8C7FA;--md-on-primary:#062E6F;--md-primary-container:#0842A0;--md-on-primary-container:#D3E3FD;--md-secondary-container:#004A77;--md-on-secondary-container:#C2E7FF;--md-ground:#131314;--md-surface:#1E1F20;--md-low:#1B1B1B;--md-container:#282A2C;--md-highest:#333537;--md-sheet:#1E1F20;--md-sheet-card:#282A2C;--md-on-surface:#E3E3E3;--md-on-surface-variant:#C4C7C5;--md-outline:#8E918F;--md-outline-variant:#444746;--md-error:#F2B8B5;--md-error-container:#8C1D18;--md-inverse-surface:#E3E3E3;--md-inverse-on-surface:#303030;--md-scrim:rgba(0,0,0,.5)}}
+html:root[data-look="material"][data-theme="dark"]{--md-primary:#A8C7FA;--md-on-primary:#062E6F;--md-primary-container:#0842A0;--md-on-primary-container:#D3E3FD;--md-secondary-container:#004A77;--md-on-secondary-container:#C2E7FF;--md-ground:#131314;--md-surface:#1E1F20;--md-low:#1B1B1B;--md-container:#282A2C;--md-highest:#333537;--md-sheet:#1E1F20;--md-sheet-card:#282A2C;--md-on-surface:#E3E3E3;--md-on-surface-variant:#C4C7C5;--md-outline:#8E918F;--md-outline-variant:#444746;--md-error:#F2B8B5;--md-error-container:#8C1D18;--md-inverse-surface:#E3E3E3;--md-inverse-on-surface:#303030;--md-scrim:rgba(0,0,0,.5)}
+:is(.title,.head h1,.top h1,header h1,.masthead h1,.hx-title,.sheethead h2,.ptitle){font-family:"Google Sans Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif;font-style:normal;font-weight:500;letter-spacing:-.015em}
+html:root[data-look="material"] body{font-family:"Google Sans Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif}
+:root :is(.ambient i,.aurora b,.atoms b):nth-child(1),:root :is(.ambient i,.aurora b,.atoms b):nth-child(2),:root :is(.ambient i,.aurora b,.atoms b):nth-child(3),:root .aos-sky-cap{display:none}
+/* ---- the rulebook, the same in every app (Sparkle Kingdom aside) ---- */
+html:root[data-look="material"]{--bg:var(--md-ground);--accent:var(--md-primary);--accent-text:var(--md-primary);--accent-ink:var(--md-primary);--on-accent:var(--md-on-primary);--icon:var(--md-primary);
+  --cta:var(--md-primary);--cta-ink:var(--md-on-primary);--seg-thumb:var(--md-secondary-container);--sel-ink:var(--md-on-secondary-container);--mc-on-mustard:var(--md-on-secondary-container);
+  --mc-card:var(--md-surface);--mc-card-2:var(--md-container);--glass:var(--md-surface);--glass-2:var(--md-container);--tile:var(--md-surface);--pill:var(--md-container);
+  --mc-edge:transparent;--gb-edge:transparent;--tile-edge:transparent;--bar-rim:transparent;--lg-rim:0 0 #0000;--lgs-edge:transparent;--lgs-rim:transparent;--gb-shadow:none;
+  --hair:var(--md-outline-variant);--hair-2:color-mix(in srgb,var(--md-outline-variant) 55%,transparent);--fill:color-mix(in srgb,var(--md-on-surface) 8%,transparent);
+  --sheet:var(--md-sheet);--toast:var(--md-inverse-surface);--scrim:var(--md-scrim);--lgs-scrim:var(--md-scrim);--grab:color-mix(in srgb,var(--md-on-surface-variant) 40%,transparent);--ring:var(--md-outline);
+  --bar-top:var(--md-ground);--bar-bottom:var(--md-ground);--bar-solid:var(--md-ground);--lg-bg:var(--md-container);--lgs-top:var(--md-sheet);--lgs-bottom:var(--md-sheet);--lgs-field:var(--md-container);
+  --danger:var(--md-error);--danger-text:var(--md-error);--danger-ink:var(--md-error);
+  --md-state:color-mix(in srgb,var(--md-on-surface) 10%,transparent);--md-ease:cubic-bezier(.2,0,0,1)}
+/* no capitals or tracking anywhere: Material's labels are sentence case (the Special Edition badge aside) */
+html:root[data-look="material"] body :where(*):not(.se){text-transform:none !important;letter-spacing:normal !important}
+/* a sheet is one step up, so what sits on it is a step up again */
+html:root[data-look="material"] :is(.sheet,.st-sheet){--mc-card:var(--md-sheet-card);--glass:var(--md-sheet-card);--tile:var(--md-sheet-card)}
+/* section titles: Material's label, in the primary colour, as Android's Settings has them; no capitals or tracking */
+html:root[data-look="material"] :is(.sechead,.label,.sect,.vsec-h){font-size:14px;font-weight:500;letter-spacing:.006em;text-transform:none;color:var(--md-primary)}
+html:root[data-look="material"] :is(.sechead,.label) span{letter-spacing:0}
+/* cards: a tonal surface, 20 round (large increased), no edge, no shadow */
+html:root[data-look="material"] :is(.card,.rgroup,.group,.box,.obox,.ocard,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.addbox,.banner){border-radius:20px;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html:root[data-look="material"] :is(.sheet,.st-sheet) :is(.card,.rgroup,.group,.box,.obox,.ocard,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.addbox,.banner){border-radius:16px}
+/* buttons: fully round; while pressed the corners square off a little (Expressive's shape change). Filled is the
+   primary; the quiet one outlined; a destructive one outlined in the error colour */
+html:root[data-look="material"] :is(.btn,.ctabtn,.okbtn,.send,.textbtn,.banner button){border-radius:999px;font-weight:500;letter-spacing:.006em;text-transform:none;transition:border-radius .2s var(--md-ease),background-color .2s,transform .18s}
+html:root[data-look="material"] :is(.btn,.ctabtn,.okbtn):active{border-radius:14px;filter:none}
+html:root[data-look="material"] .btn.quiet:not(.danger){background:transparent;color:var(--md-primary);box-shadow:inset 0 0 0 1px var(--md-outline-variant)}
+html:root[data-look="material"] :is(.btn.danger,.btn.warn,.btn.quiet.danger){background:transparent;color:var(--md-error);box-shadow:inset 0 0 0 1px var(--md-outline-variant)}
+html:root[data-look="material"] .textbtn:not(.danger){color:var(--md-primary)}
+html:root[data-look="material"] .empty > .btn{display:flex;width:fit-content;margin-left:auto;margin-right:auto}
+/* the floating action button: a rounded square in the primary container, lifted */
+html:root[data-look="material"] .fab{border-radius:16px;background:var(--md-primary-container) !important;color:var(--md-on-primary-container) !important;box-shadow:var(--md-elev3) !important;transition:border-radius .2s var(--md-ease),transform .18s}
+html:root[data-look="material"] .fab.small{border-radius:12px}
+html:root[data-look="material"] .fab:active{border-radius:28px}
+html:root[data-look="material"] .fab svg{stroke:currentColor}
+/* icon buttons: no container; a state layer while pressed */
+html:root[data-look="material"] .iconbtn{background:transparent;box-shadow:none;color:var(--md-on-surface-variant)}
+html:root[data-look="material"] .iconbtn:active{background:var(--md-state);color:var(--md-on-surface)}
+html:root[data-look="material"] .iconbtn[aria-pressed="true"]{background:var(--md-secondary-container);color:var(--md-on-secondary-container)}
+/* search: a full pill in a higher surface, no edge */
+html:root[data-look="material"] :is(.search,.sbox,.askipsy){background:var(--md-container) !important;box-shadow:none !important;border-color:transparent !important;border-radius:999px}
+html:root[data-look="material"] :is(.search,.sbox,.askipsy):focus-within{box-shadow:inset 0 0 0 2px var(--md-primary) !important}
+/* chips: 8 round with a thin outline; picked, the secondary container and no outline */
+html:root[data-look="material"] :is(.chip,.fchip,.opt,.pillbtn,.morebtn){border-radius:8px;background:transparent;color:var(--md-on-surface-variant);font-weight:500;box-shadow:inset 0 0 0 1px var(--md-outline-variant);border-color:transparent}
+/* picked: the secondary container under it (the sliding thumb, or the button itself where nothing slides) */
+html:root[data-look="material"] :is(.slthumb,.vt-thumb){background:var(--md-secondary-container) !important;box-shadow:none !important;border-radius:999px}
+html:root[data-look="material"] :is(.seg:not(.slides) button[aria-pressed="true"],.seg button[aria-checked="true"],.tabs:not(.slides) .tab[aria-selected="true"],.chip.on,.chip[aria-pressed="true"],.chip[aria-selected="true"],.fchip[aria-pressed="true"],.opt[aria-checked="true"],.opt[aria-pressed="true"],.pillbtn[aria-pressed="true"],.frow .unit button[aria-pressed="true"]),html:root[data-look="material"] :not(.slides) > .seg[aria-selected="true"]{background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important;box-shadow:none !important}
+html:root[data-look="material"] :is(.seg,.slides,.tabs) :is(button,.tab)[aria-pressed="true"],html:root[data-look="material"] :is(.seg,.slides,.tabs) :is(button,.tab)[aria-selected="true"],html:root[data-look="material"] :is(.seg,.slides,.tabs) :is(button,.tab)[aria-checked="true"],html:root[data-look="material"] .seg[aria-selected="true"]{color:var(--md-on-secondary-container) !important}
+html:root[data-look="material"] :is(.tabs,.seg,.slides) :is(.tab[aria-selected="true"],button[aria-pressed="true"],button[aria-selected="true"]) svg{color:var(--md-on-secondary-container) !important}
+/* the selectors: a tonal track, fully round */
+html:root[data-look="material"] :is(.seg,.segmented,.modes):not(button){background:var(--md-container);border-color:transparent;box-shadow:none;border-radius:24px}
+html:root[data-look="material"] :is(.seg,.segmented,.modes) > button{border-radius:20px}
+/* bars that float over the page (tab bars, a dock's tabs, a view picker): Expressive's floating toolbar, a pill in a
+   higher surface, lifted */
+html:root[data-look="material"] :is(.tabs,.tabbar,.dock > .tabs){background:var(--md-container) !important;box-shadow:var(--md-elev2) !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-color:transparent}
+html:root[data-look="material"] .tabs:has(> .seg){background:transparent !important;box-shadow:none !important}   /* a strip of tabs in the header (Meals), not a floating bar */
+html:root[data-look="material"] .tabs :is(button,.tab){font-weight:500}
+html:root[data-look="material"] .tabs :is(button,.tab):not([aria-selected="true"]):not([aria-pressed="true"]){color:var(--md-on-surface-variant) !important}
+html:root[data-look="material"] .tagbtn{background:var(--md-container) !important;color:var(--md-on-surface) !important;box-shadow:var(--md-elev2) !important;font-weight:500}
+html:root[data-look="material"] .tagbtn .tb-ic{background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important}
+html:root[data-look="material"] .tagbtn .tb-chev{color:var(--md-on-surface-variant) !important}
+html:root[data-look="material"] :is(.vbar,.vtop)::before{background:var(--md-container) !important;box-shadow:var(--md-elev2) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+html:root[data-look="material"] :is(.vbar,.vtop) > button{color:var(--md-on-surface) !important;text-transform:none;letter-spacing:.006em;font-weight:500}
+html:root[data-look="material"] :is(.vbar .vb-ic,.vtop .vt-ic){background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important}
+html:root[data-look="material"] .vbar .vb-chev svg{color:var(--md-on-surface-variant) !important}
+/* sheets: 28 round at the top, a short handle; menus 16 round, lifted; the toast is a snackbar on the inverse surface */
+html:root[data-look="material"] .sheet:not(.page){border-radius:28px 28px 0 0;box-shadow:none;background:var(--md-sheet) !important}
+html:root[data-look="material"] .sheet.page::before{display:none}
+html:root[data-look="material"] .grab{width:32px;height:4px}
+html:root[data-look="material"] :is(.dmenu,.menu,.popover,.viewmenu,.pmenu,.tagmenu){border-radius:16px;background:var(--md-low) !important;box-shadow:var(--md-elev2) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+html:root[data-look="material"] :is(.dmenu,.menu,.popover,.viewmenu,.pmenu,.tagmenu) button{border-radius:12px}
+html:root[data-look="material"] :is(.viewmenu,.pmenu) .ic{background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important}
+html:root[data-look="material"] :is(.toast,#toast){background:var(--md-inverse-surface) !important;color:var(--md-inverse-on-surface) !important;border-radius:12px;box-shadow:var(--md-elev3) !important}
+/* fields: outlined, 4 round as Material's text fields; the outline thicker and primary while you type */
+html:root[data-look="material"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not([type="file"]),textarea,select):not(.search *):not(.sbox *):not(.askipsy *):not(.st-field){border-radius:4px;box-shadow:inset 0 0 0 1px var(--md-outline);border-color:transparent;background:transparent}
+html:root[data-look="material"] :is(input,textarea,select):not(.search *):not(.sbox *):not(.askipsy *):focus{box-shadow:inset 0 0 0 2px var(--md-primary);outline:none}
+html:root[data-look="material"] :is(.search,.sbox,.askipsy) :is(input,textarea){box-shadow:none;background:transparent}
+/* today, in a calendar or a list of days: its number on the primary */
+html:root[data-look="material"] :is(.mday.today .n,.drow.today .dn b,.tghead .dh.today b,.ygrid .today){background:var(--md-primary) !important;color:var(--md-on-primary) !important;box-shadow:none !important}
+@media (prefers-reduced-motion:reduce){html:root[data-look="material"] :is(.btn,.ctabtn,.okbtn,.fab){transition:none}}
 </style>
 <script src="look.js"></script>   <!-- the picked look, before the first paint -->
 <script src="../home/names.js"></script>   <!-- your helper's name where the words say Ipsy: before the page is drawn -->

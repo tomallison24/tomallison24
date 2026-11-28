@@ -7,7 +7,7 @@
   const pick = (o, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);   // a message of the list itself, never 'constructor'
   const line = k => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W.lines[k] || W.lines.sparkle}</svg>`;
   // Every app carries both its designs itself (picked in its own Settings, ../home/design.js), so its folder has
-  // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-layers-512.png, icon-grid-512.png. aOS shows
+  // its icons: icon-512.png (Vintage), icon-glass-512.png (Sea glass), icon-layers-512.png, icon-grid-512.png, icon-material-512.png. aOS shows
   // the one for its own look. The app's own icon (what a Home Screen shows) follows the design picked in the app.
   const lookNow = () => (window.aosLook ? aosLook.get() : 'vintage');
   const icon = id => lookNow() === 'layers' && window.aosGlyphs && aosGlyphs[id] ? `../${id}/icon-pebble.svg`   // in Pearl, its pebble (make-looks.mjs)
@@ -311,7 +311,7 @@
   // Look: Vintage (mid-century, the default), Standard (Sea glass), Pearl (id 'layers', the look it replaced) or Tron, kept on this phone (look.js); every app takes it
   // too. Named and described word for word as in every app's Settings > Design (home/design.js, aosDesign.picker())
   const LOOKS = [['vintage', 'Vintage', 'Mid-century: cream and walnut, mustard, teal and orange'], ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
-    ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares']];
+    ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'], ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares'], ['material', 'Material', 'Material 3 Expressive, as in Google Home: tonal cards, round buttons, Google Sans']];
   const lookOpts = () => LOOKS.map(([id, n, note]) => `<button type="button" role="option" class="dopt" data-look="${id}" aria-selected="${aosLook.get() === id}"><span class="dth ${id}" aria-hidden="true"><i></i><i></i><i></i></span><span class="dt"><b>${id === 'grid' ? 'Tron <span class="se">Special Edition</span>' : esc(n)}</b><small>${esc(note)}</small></span><span class="dck" aria-hidden="true">✓</span></button>`).join('');
   // Account: your name and Sign out, then every section folded under its heading until it's tapped (fold);
   // a link to Updates or Subscription (a notification, the plan card) opens that one

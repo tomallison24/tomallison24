@@ -24,11 +24,16 @@ must say the same thing.
 
 ---
 
-## 1. Four looks, one app
+## 1. Five looks, one app
 
-**Every app has the four looks: Vintage (the default), Standard (Sea glass),
-Pearl and Tron; you write Vintage and Sea glass, and Pearl and Tron are
-generated from Vintage.** Pearl (aOS 2.4) replaced Layers and keeps its id,
+**Every app has the five looks: Vintage (the default), Standard (Sea glass),
+Pearl, Tron and Material; you write Vintage and Sea glass, and Pearl, Tron and
+Material are generated from Vintage.** Material is Google's Material 3
+Expressive, as the Google Home app wears it: Google's own colour scheme as
+`--md-*` tokens, Google Sans Flex, tonal cards with no edge, fully round
+buttons, and one rulebook for every app (`material()` in
+`aOS/scripts/looks.mjs`); Sparkle Kingdom keeps its own style and takes only
+the colours and the type. Pearl (aOS 2.4) replaced Layers and keeps its id,
 `layers`: every `data-look="layers"`, `<style id="layers">` and `icon-layers-*`
 is Pearl's.
 
@@ -36,7 +41,8 @@ is Pearl's.
   app wears it. One app that can't breaks the suite.
 - **Done:** `home/design.js` loaded in `<head>` with the app's `data-app`; the
   page's main `<style>` is Sea glass, `<style id="vintage">` follows it, and
-  `<style id="layers">` (Pearl) and `<style id="grid">` (Tron) are written by
+  `<style id="layers">` (Pearl), `<style id="grid">` (Tron) and
+  `<style id="material">` (Material) are written by
   `node aOS/scripts/make-looks.mjs` from the Vintage block (palettes in
   `aOS/scripts/looks.mjs`), never by hand. Pearl's light and dust (the strip
   under the title, the lit top edges of cards at the eye line, 38% down the
@@ -397,7 +403,7 @@ are line drawings in the accent colour.**
 - **Why:** people find an app by its tint and its glyph, in every look.
 - **Done:** `icon.svg` → `icon-180.png`, `icon-512.png` (Vintage) and
   `icon-glass.svg` → `icon-glass-*.png` (`scripts/make-icons.mjs`);
-  `icon-layers-*` and `icon-grid-*` from `make-looks.mjs`; `home/design.js`
+  `icon-layers-*`, `icon-grid-*` and `icon-material-*` from `make-looks.mjs`; `home/design.js`
   swaps them with the look. A tint no other app uses; detail cut out of the
   glyph, not drawn in another colour. In the app: line icons at about 1.7
   stroke, rounded ends (`home/settings.js`'s `ICONS` for action rows), in
@@ -417,11 +423,11 @@ are line drawings in the accent colour.**
   The other glyphs: Review.
 - **Known gaps:** none.
 
-![Icons in the four looks](docs/design/icons.png)
+![Icons in the five looks](docs/design/icons.png)
 
-![The gear on each app's Settings button, in the four looks](docs/design/gear.png)
+![The gear on each app's Settings button, in the five looks](docs/design/gear.png)
 
-![One refresh, the two arrows, on Travel's and Orders' Gmail buttons and News' Refresh, in the four looks](docs/design/refresh.png)
+![One refresh, the two arrows, on Travel's and Orders' Gmail buttons and News' Refresh, in the five looks](docs/design/refresh.png)
 
 ## 14. Shared parts: use `home/`, never a copy
 

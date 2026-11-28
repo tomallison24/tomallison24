@@ -66,13 +66,13 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/#F1DFBB/i.test(await tint(p))) pr.push('the status bar tint is not the day sky\'s cream and mustard (home/sky.js): ' + await tint(p));
   await openLook(p);
   const names = await p.locator('#looks .dopt b').allTextContents();
-  if (names.join() !== 'Vintage,Standard,Pearl,Tron Special Edition') pr.push('the picker offers ' + names.join());
+  if (names.join() !== 'Vintage,Standard,Pearl,Tron Special Edition,Material') pr.push('the picker offers ' + names.join());
   // the same names and words as every app's Settings > Design (home/design.js)
   const notes = await p.locator('#looks .dopt small').allTextContents();
-  if (notes.join('|') !== 'Mid-century: cream and walnut, mustard, teal and orange|Sea glass: frosted glass in the AllisonOS colors|Light in the dust: lines of light on near-black, carbon on cream by day|Light cycles: red light on a black grid, as in Tron: Ares') pr.push('the picker describes them as ' + notes.join('|'));
+  if (notes.join('|') !== 'Mid-century: cream and walnut, mustard, teal and orange|Sea glass: frosted glass in the AllisonOS colors|Light in the dust: lines of light on near-black, carbon on cream by day|Light cycles: red light on a black grid, as in Tron: Ares|Material 3 Expressive, as in Google Home: tonal cards, round buttons, Google Sans') pr.push('the picker describes them as ' + notes.join('|'));
   if (await selected(p) !== 'vintage') pr.push('Vintage is not the one picked: ' + await selected(p));
   if (await p.locator('#looks [data-look="grid"] .se').evaluate(e => getComputedStyle(e).animationName) !== 'aosSeShine') pr.push('Tron\'s Special Edition badge does not animate');
-  report('aOS opens in Vintage; Appearance > Look offers Vintage, Standard, Pearl and Tron Special Edition, in every app\'s words (its badge animated), Vintage picked', pr); await ctx.close();
+  report('aOS opens in Vintage; Appearance > Look offers Vintage, Standard, Pearl, Tron Special Edition and Material, in every app\'s words (its badge animated), Vintage picked', pr); await ctx.close();
 }
 
 // 2. Sea glass at once, kept over a reload, with no flash of Vintage; Vintage again
@@ -118,7 +118,7 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   const h2 = async () => (await p.locator('#aos-welcome h2').first().innerText().catch(() => '')).trim();
   if (await h2() !== 'Choose your look') pr.push('the first step was ' + await h2());
   const names = await p.locator('#aos-welcome .c-look b').allTextContents();
-  if (names.join() !== 'Vintage,Standard,Pearl,Tron Special Edition') pr.push('the install step offers ' + names.join());
+  if (names.join() !== 'Vintage,Standard,Pearl,Tron Special Edition,Material') pr.push('the install step offers ' + names.join());
   const touch = () => p.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href'));
   const bar = () => p.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
   if (await touch() !== 'icon-180.png?v=3' || await bar() !== 'default') pr.push('Vintage: icon ' + await touch() + ', status bar ' + await bar());
@@ -198,7 +198,17 @@ const selected = p => p.locator('#looks .dopt[aria-selected="true"]').evaluateAl
   if (!/icon-grid-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Tron\'s: ' + st.icon);
   const gfont = await p.evaluate(async () => { await Promise.all(['700 16px "Orbitron"', '16px "Exo 2"'].map(f => document.fonts.load(f, 'Home'))); return document.fonts.check('700 16px "Orbitron"', 'Home') && document.fonts.check('16px "Exo 2"', 'Home'); });
   if (!gfont) pr.push('Tron\'s fonts (Orbitron, Exo 2) did not load from ../home/fonts');
-  report('Layers and Tron: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts, and Pearl\'s helper Lumen; Night Drive moves to Layers', pr); await ctx.close();
+  // Material (Material 3 Expressive): aOS and every app take it, with its own block, Google's ground, its icon and Google Sans Flex
+  await p.click('#looks [data-look="material"]'); await p.waitForTimeout(200);   // Appearance is still open from Tron
+  st = await state();
+  if (st.look !== 'material' || await p.evaluate(() => document.getElementById('material').media) !== 'all') pr.push('Material did not apply: ' + st.look);
+  if (st.media !== 'all,not all,not all') pr.push('Material should keep Vintage on and Pearl and Tron off: ' + st.media);
+  if (!/^material,material,material,material$/.test(st.designs) || st.clock !== 'material') pr.push('not every app took Material: ' + st.designs + ' / clock ' + st.clock);
+  if (!/icon-material-180\.png/.test(st.icon)) pr.push('the Home Screen icon is not Material\'s: ' + st.icon);
+  if (!st.tint.split(',').every(c => ['#F0F4F9', '#131314'].includes(c.toUpperCase()))) pr.push('Material\'s bar colours are not its ground: ' + st.tint);
+  if (!await p.evaluate(async () => { await document.fonts.load('500 16px "Google Sans Flex"', 'Home'); return document.fonts.check('500 16px "Google Sans Flex"', 'Home'); })) pr.push('Material\'s font (Google Sans Flex) did not load from ../home/fonts');
+  if (await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--md-primary').trim().toUpperCase()) !== '#0B57D0') pr.push('Material\'s tokens (--md-primary) are not set');
+  report('Layers, Tron and Material: picked in Appearance, aOS and every app take it, with its own block, tint, icons and fonts, and Pearl\'s helper Lumen; Night Drive moves to Layers', pr); await ctx.close();
 }
 
 // 7. under an iPhone's solid status bar, an app's shapes fade in from its ground in every flat look (../home/sky.js),

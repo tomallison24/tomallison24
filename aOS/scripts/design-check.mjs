@@ -70,7 +70,7 @@ const NA = { aos: SETTINGS_CHECKS, house: ['switch-css'] };
 // Design section draws Clock's own picker rather than aosDesign.picker(): design-first takes that picker there, as
 // long as Design is still the first section and offers the four looks.
 const OWN_PICKER = { clock: true };
-const FOUR_LOOKS = ['vintage', 'glass', 'layers', 'grid'];
+const FOUR_LOOKS = ['vintage', 'glass', 'layers', 'grid', 'material'];
 
 // ---------------------------------------------------------------------------------------------------
 // The static checks: the app's files as they are

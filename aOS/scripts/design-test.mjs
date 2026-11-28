@@ -4,7 +4,7 @@
 //   - every app opens in Vintage, and in Standard, Layers (light and dark) or Tron when design.<app> says so, with
 //     the matching blocks (Layers and Tron keep Vintage on under their own), icon, status bar and
 //     bar colour (Layers': the top of its sky, by the time of day), an app still set to Night Drive (gone) in Layers, and no script errors any way; a change aOS makes (design.<app> written while the app
-//     is open) is followed at once, and Settings > Design offers all four;
+//     is open) is followed at once, and Settings > Design offers all five;
 //   - at an old Vintage address (the deploy copies the app there, news.yml), the old app's data is
 //     moved over once: localStorage by prefix, what it had seen, and its IndexedDB databases, store by
 //     store; never when the app already has data of its own on the phone.
@@ -65,21 +65,21 @@ const BORN = ['sparkle', 'money', 'school', 'improve', 'junction'];
 }
 
 // 2. every app in each design, light and dark: the right look, icon, status bar and bar colour, no script errors
-const NAME = { vintage: 'Vintage', glass: 'Standard', layers: 'Layers', grid: 'Tron' };
-for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['layers', 'light'], ['layers', 'dark'], ['grid', 'dark']]) {
+const NAME = { vintage: 'Vintage', glass: 'Standard', layers: 'Layers', grid: 'Tron', material: 'Material' };
+for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['layers', 'light'], ['layers', 'dark'], ['grid', 'dark'], ['material', 'light'], ['material', 'dark']]) {
   const pr = [];
   for (const id of APPS) {
     const seed = { 'aos.seen': JSON.stringify({ [id]: '999' }), 'aos.signin.asked': '1', 'aos.sky': 'day' };
     if (design !== 'vintage') seed['design.' + id] = design;
     const { ctx, p, errs } = await phone(scheme, seed);
     await p.goto(BASE + '/' + id + '/'); await p.waitForTimeout(700);
-    const st = await p.evaluate(() => ({ look: document.documentElement.dataset.look, media: (document.getElementById('vintage') || {}).media, own: ['layers', 'grid'].map(k => (document.getElementById(k) || {}).media).join(), tod: document.documentElement.dataset.tod,
+    const st = await p.evaluate(() => ({ look: document.documentElement.dataset.look, media: (document.getElementById('vintage') || {}).media, own: ['layers', 'grid', 'material'].map(k => (document.getElementById(k) || {}).media).join(), tod: document.documentElement.dataset.tod,
       tint: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => m.content).join(),
       icon: (document.querySelector('link[rel="apple-touch-icon"]') || {}).href || '', bar: (document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') || {}).content }));
     const glass = design === 'glass';
     if (st.look !== design) pr.push(`${id}: data-look ${st.look}`);
     if (st.media !== (glass ? 'not all' : 'all')) pr.push(`${id}: the Vintage styles are "${st.media}"`);
-    if (st.own !== ['layers', 'grid'].map(k => k === design ? 'all' : 'not all').join()) pr.push(`${id}: the Layers and Tron blocks are "${st.own}"`);
+    if (st.own !== ['layers', 'grid', 'material'].map(k => k === design ? 'all' : 'not all').join()) pr.push(`${id}: the Layers, Tron and Material blocks are "${st.own}"`);
     if (!/^(morning|afternoon|evening|night)$/.test(st.tod || '')) pr.push(`${id}: no time of day for Layers' sky (data-tod ${st.tod})`);
     if (design === 'layers' && !st.tint.split(',').every(c => SKY_TOP[st.tod].includes(c.toUpperCase()))) pr.push(`${id}: Layers' bar colours ${st.tint} are not the top of its ${st.tod} sky`);
     if (!new RegExp(`/icon-${design === 'vintage' ? '' : design + '-'}180\\.png`).test(st.icon)) pr.push(`${id}: icon ${st.icon}`);
@@ -93,7 +93,7 @@ for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['layer
 }
 
 // 2b. aOS picks a look for every app (aOS/look.js writes design.<app>): an app open in another frame follows at once;
-// and its Settings > Design rows offer all four
+// and its Settings > Design rows offer all five
 {
   const pr = [];
   const { ctx, p, errs } = await phone('light', { 'aos.seen': JSON.stringify({ meals: '999' }), 'aos.signin.asked': '1', 'aos.sky': 'day' });
@@ -103,9 +103,9 @@ for (const [design, scheme] of [['vintage', 'light'], ['glass', 'dark'], ['layer
   await p.waitForTimeout(300);
   if (await p.evaluate(() => document.documentElement.dataset.look + '/' + document.getElementById('layers').media) !== 'layers/all') pr.push('an open app did not follow a look written elsewhere: ' + await p.evaluate(() => document.documentElement.dataset.look));
   const rows = await p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = aosDesign.picker(); return [...d.querySelectorAll('[data-design]')].map(b => b.dataset.design).join(); });
-  if (rows !== 'vintage,glass,layers,grid') pr.push('Settings > Design offers ' + rows);
+  if (rows !== 'vintage,glass,layers,grid,material') pr.push('Settings > Design offers ' + rows);
   pr.push(...errs);
-  report('a look aOS writes is followed at once by an open app; Settings > Design offers all four', pr); await ctx.close();
+  report('a look aOS writes is followed at once by an open app; Settings > Design offers all five', pr); await ctx.close();
 }
 
 // 2c. Folk is gone: an app still set to it from before opens in Vintage
