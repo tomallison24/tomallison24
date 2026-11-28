@@ -127,7 +127,8 @@ function mediaFamily(cfg) {
       return { d, A, state, offline, playing, on, tv, mood, can: k => (sf & MF[k]) !== 0, vol, muted, group, dur, pos,
         art: haPic(A.entity_picture), shuffle: !!held(d, 'shuffle', A.shuffle), repeat: held(d, 'repeat', A.repeat || 'off') };
     },
-    acc(p, r) { const v = vintageLook(); return r.mood === 'tv' && p.tvAcc ? (v ? MEDIA_V[p.id + 'Tv'] : p.tvAcc) : (v && MEDIA_V[p.id]) || p.acc; },
+    acc(p, r) { if (materialLook()) return '26,115,232';   // Material: every speaker and screen in the primary blue, as Google Home has them
+      const v = vintageLook(); return r.mood === 'tv' && p.tvAcc ? (v ? MEDIA_V[p.id + 'Tv'] : p.tvAcc) : (v && MEDIA_V[p.id]) || p.acc; },
     sky(p, r) {
       const a = this.acc(p, r);
       if (r.mood === 'offline') return grad('#121316', '#1C1D21', '#2C2E34');

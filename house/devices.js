@@ -111,7 +111,7 @@ const pillHTML2 = (word, dot) => `<span class="dg-pill">${dot ? `<i style="backg
 // The card's frame: sky behind, then the family's own regions.
 const cardsOf = key => document.querySelectorAll(`[data-dv="${key}"]:not(.sheet)`);   // not the popup, which carries its device's key too
 const cardHTML = (key, inner, cls = '') => `<article class="dg dvc ${cls}" data-dv="${key}"><div class="dg-fx" data-r="fx"></div><div class="dg-in">${inner}</div></article>`;
-function shadow(card, acc) { card.style.boxShadow = `0 18px 40px -16px rgba(${acc},0.26)`; }
+function shadow(card, acc) { card.style.boxShadow = `0 18px 40px -16px rgba(${acc},0.26)`; card.style.setProperty('--acc', acc); }   // --acc: Material tints the card itself with its colour (devices.css)
 
 // The sky: a gradient, and what is going on in it.
 //   embers (heat), frost (cold), air (a fan), motes (rising), and a pool of
