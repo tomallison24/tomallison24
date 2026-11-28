@@ -69,7 +69,7 @@ function haSchedHTML(t) {
   const s = haSchedRead(t); if (!s) return '';
   if (!s.known) return '<p class="tnote">Home Assistant hasn’t said where the schedule is yet.</p>';
   const we = !weekday(new Date());
-  const why = s.lit === 'vacation' ? `Vacation is on: ${VAC_SET[0]}° heat, ${VAC_SET[1]}° cool until you turn it off. The schedule is paused.`
+  const why = s.lit === 'vacation' ? `Vacation is on: ${VAC_SET[0]}° heat, ${VAC_SET[1]}° cool until you turn it off or Tom or Elena gets home. The schedule is paused.`
     : s.lit === 'hold' ? 'Sitter hold: the thermostats stay where they are until it’s released. The schedule is paused.'
     : s.lit === 'eco' ? 'Everyone is out: Eco until someone is home, then back to the schedule.' : '';
   const row = (cls, time, name, temps, tag) => `<div class="sstep${cls}"><span class="st-t">${time}</span><span class="st-a">${name}<small>${temps}</small></span><span class="st-tag">${tag}</span></div>`;
