@@ -818,3 +818,126 @@
     .chips .chip2.full[aria-pressed="true"] { color: #5A3A00; background: linear-gradient(145deg, #FFE29A, #F5A623); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.8), 0 0 12px rgba(230,160,40,0.45); }
     .lp:not(.on) .lp-chips .chip2.full { color: rgba(168,101,10,0.8); }
   }
+
+/* ==========================================================================
+   Material (Material 3 Expressive, as the Google Home app): Home's cards.
+   The generated block (aOS/scripts/looks.mjs) gives the page Google's tokens
+   (--md-*), its type and the shared controls; this is what only Home draws.
+   A device's card is a tonal tile: plain on the surface while it is off, and
+   filled with a soft tone of its own colour (--acc, set by the script: yellow
+   for a light, orange for heat, blue for cooling, green for holding) while it
+   is running, as Google Home fills a tile that is on. Controls are Material's:
+   tonal round buttons, the 52 by 32 switch, a thick slider with a bar for a
+   handle, outlined chips that fill when picked.
+   ========================================================================== */
+html:root[data-look="material"] body { --m-ink: #000; --m-tint: 15%; --m-btn: 34%; --m-on: 36%; }
+@media (prefers-color-scheme: dark) { html:root[data-look="material"]:not([data-theme="light"]) body { --m-ink: #fff; --m-tint: 20%; --m-btn: 42%; --m-on: 30%; } }
+html:root[data-look="material"][data-theme="dark"] body { --m-ink: #fff; --m-tint: 20%; --m-btn: 42%; --m-on: 30%; }
+
+/* ---- the tile ---- */
+html:root[data-look="material"] body :is(.dg, .lp, .en, .runpanel, .group, .estrip, .wxpill, .ag, .hsplit) { --acc: 116,119,117;
+  --m-card: var(--md-surface); --m-fill: color-mix(in oklab, rgb(var(--acc)) var(--m-btn), var(--md-surface)); --m-onfill: color-mix(in oklab, rgb(var(--acc)) var(--m-on), var(--m-ink));
+  background: var(--m-card); box-shadow: none !important; }
+html:root[data-look="material"] body .dg { border-radius: 28px; padding: 20px 18px 18px; transition: background-color .3s; }
+html:root[data-look="material"] body .dg::after { display: none; }
+html:root[data-look="material"] body :is(.dg:has(.pwr[aria-pressed="true"]), .dg.playing, .lp.on) { --m-card: color-mix(in oklab, rgb(var(--acc)) var(--m-tint), var(--md-surface)); }
+html:root[data-look="material"] body .dg:is([data-mood="idle"], [data-mood="off"]) { --m-card: var(--md-surface); }   /* on, but doing nothing: plain */
+html:root[data-look="material"] body .dg.offline { opacity: 1; --m-card: color-mix(in srgb, var(--md-on-surface) 6%, var(--md-ground)); color: var(--md-on-surface-variant); }
+html:root[data-look="material"] body .dg-name { font-size: 14px; font-weight: 500; opacity: 1; color: var(--md-on-surface-variant); }
+html:root[data-look="material"] body .dg-title { font-size: 22px; font-weight: 400; line-height: 28px; margin-top: 2px; }
+html:root[data-look="material"] body .dg-sub { font-size: 14px; font-weight: 400; opacity: 1; color: var(--md-on-surface-variant); }
+html:root[data-look="material"] body .vsec-h > span { color: var(--md-primary); font-size: 14px; font-weight: 500; }
+html:root[data-look="material"] body .vsec-h > small { color: var(--md-on-surface-variant); font-size: 12px; font-weight: 500; opacity: 1; }
+html:root[data-look="material"] body .dg-ctl .hair { background: color-mix(in srgb, var(--md-on-surface) 14%, transparent); }
+
+/* ---- round buttons: tonal; the power button filled with the device's tone while it runs ---- */
+html:root[data-look="material"] body :is(.pwr, .disc, .rb-disc, .round, .mcplay) { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important; color: var(--md-on-surface-variant) !important; box-shadow: none !important; }
+html:root[data-look="material"] body .pwr { width: 48px; height: 48px; }
+html:root[data-look="material"] body .pwr[aria-pressed="true"] { background: var(--m-fill) !important; color: var(--m-onfill) !important; }
+html:root[data-look="material"] body :is(.pwr, .disc, .rb-disc):active { transform: none; border-radius: 16px; }
+html:root[data-look="material"] body :is(.pwr, .disc, .rb-disc) { transition: border-radius .2s cubic-bezier(.2,0,0,1), background-color .3s, color .3s; }
+html:root[data-look="material"] body .ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline-variant); color: var(--md-primary); font-weight: 500; height: 40px; }
+html:root[data-look="material"] body .armbtn { height: 40px; padding: 0 24px; font-weight: 500; box-shadow: none; background: var(--md-primary) !important; color: var(--md-on-primary) !important; }
+html:root[data-look="material"] body .armbtn.on { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; }
+html:root[data-look="material"] body :is(.shield, .en-ic, .es-ic, .mcover.none, .mslim-cv .mcover) { border-radius: 50%; background: color-mix(in oklab, rgb(var(--a, var(--acc))) var(--m-btn), var(--md-surface)); color: color-mix(in oklab, rgb(var(--a, var(--acc))) var(--m-on), var(--m-ink)); box-shadow: none; }
+html:root[data-look="material"] body .mcover { border-radius: 16px; box-shadow: none; }
+html:root[data-look="material"] body .mcover.none { background-image: none !important; }
+html:root[data-look="material"] body .es-ic { --a: 251,188,4; }
+
+/* ---- the switch: Material's 52 by 32 ---- */
+html:root[data-look="material"] body .sw { width: 52px; height: 32px; background: var(--md-highest) !important; box-shadow: inset 0 0 0 2px var(--md-outline) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html:root[data-look="material"] body .sw::after { top: 8px; left: 8px; width: 16px; height: 16px; background: var(--md-outline) !important; box-shadow: none !important; transition: translate .25s cubic-bezier(.2,0,0,1), scale .25s cubic-bezier(.2,0,0,1), background-color .2s; transform: none; }
+html:root[data-look="material"] body .sw.on { background: var(--md-primary) !important; box-shadow: none !important; }
+html:root[data-look="material"] body .sw.on::after { transform: none; translate: 20px 0; scale: 1.5; background: var(--md-on-primary) !important; }
+
+/* ---- sliders: a thick track, a bar for a handle ---- */
+html:root[data-look="material"] body .gsl input::-webkit-slider-runnable-track { height: 16px; border-radius: 8px; box-shadow: none;
+  background: linear-gradient(90deg, var(--md-primary) 0, var(--md-primary) calc(var(--p) - 6px), transparent calc(var(--p) - 6px), transparent calc(var(--p) + 6px), var(--md-secondary-container) calc(var(--p) + 6px)); }
+html:root[data-look="material"] body .gsl input::-webkit-slider-thumb { width: 4px; height: 36px; margin-top: -10px; border-radius: 2px; background: var(--md-primary); box-shadow: none; }
+html:root[data-look="material"] body .gsl.thin input { height: 32px; }
+html:root[data-look="material"] body .gsl.thin input::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; }
+html:root[data-look="material"] body .gsl.thin input::-webkit-slider-thumb { width: 4px; height: 24px; margin-top: -8px; }
+html:root[data-look="material"] body .gsl input::-moz-range-track { height: 16px; border-radius: 8px; background: var(--md-secondary-container); }
+html:root[data-look="material"] body .gsl input::-moz-range-progress { height: 16px; border-radius: 8px; background: var(--md-primary); }
+html:root[data-look="material"] body .gsl input::-moz-range-thumb { width: 4px; height: 36px; border-radius: 2px; background: var(--md-primary); box-shadow: none; }
+html:root[data-look="material"] body .lp.on .gsl { --md-primary: color-mix(in oklab, rgb(var(--acc)) 62%, var(--m-ink)); --md-secondary-container: color-mix(in srgb, var(--md-on-surface) 12%, transparent); }
+html:root[data-look="material"] body .lp:not(.on) .gsl { --md-primary: var(--md-outline); --md-secondary-container: color-mix(in srgb, var(--md-on-surface) 12%, transparent); }   /* a light that is off: its slider quiet */
+html:root[data-look="material"] body .tgt-bar { height: 4px; background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); }
+html:root[data-look="material"] body .tgt-bar i { background: var(--m-onfill, var(--md-primary)); }
+html:root[data-look="material"] body .vmeter b { border-radius: 3px; background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); }
+html:root[data-look="material"] body .vmeter b.on { background: var(--m-onfill, var(--md-primary)); }
+
+/* ---- chips ---- */
+html:root[data-look="material"] body .chip2 { border-radius: 8px; background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline-variant); color: var(--md-on-surface-variant); font-weight: 500; }
+html:root[data-look="material"] body .chip2[aria-pressed="true"] { background: var(--md-secondary-container); color: var(--md-on-secondary-container); box-shadow: none; }
+html:root[data-look="material"] body :is(.alert, .dg-pill) { border-radius: 8px; background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); box-shadow: none; font-weight: 500; }
+
+/* ---- Favorites: Running now, the shortcuts, the pills ---- */
+html:root[data-look="material"] body .runpanel { border-radius: 28px; padding: 16px; }
+html:root[data-look="material"] body .run-h { font-size: 14px; font-weight: 500; color: var(--md-primary); opacity: 1; }
+html:root[data-look="material"] body .runchip { border-radius: 16px; background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container); box-shadow: none !important; padding: 12px 14px; }
+html:root[data-look="material"] body .runchip.idle { background: color-mix(in srgb, var(--md-on-surface) 6%, transparent) !important; color: var(--md-on-surface-variant); }
+html:root[data-look="material"] body .runchip span { opacity: .8; }
+html:root[data-look="material"] body .ag { border-radius: 20px; height: 96px; font-weight: 500; }
+html:root[data-look="material"] body .ag-disc { width: 40px; height: 40px; border-radius: 50%; background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+html:root[data-look="material"] body .ag[aria-pressed="true"] { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+html:root[data-look="material"] body :is(.ag-glow, .lglow) { display: none; }
+html:root[data-look="material"] body .wxpill { border-radius: 28px; height: 72px; }
+html:root[data-look="material"] body .wx-go { color: var(--md-primary); font-weight: 500; opacity: 1; }
+html:root[data-look="material"] body .estrip { border-radius: 28px; }
+
+/* ---- Lights: each light a tile, yellow while it is on; a room's switch and All on / All off as a button group ---- */
+html:root[data-look="material"] body .lp { --acc: 251,188,4; border-radius: 20px; }
+html:root[data-look="material"] body .lpw { border-radius: 20px; }
+html:root[data-look="material"] body .lp-badge { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); color: var(--md-on-surface-variant); box-shadow: none !important; }
+html:root[data-look="material"] body .lp-name { font-weight: 500; }
+html:root[data-look="material"] body .rb-name { font-size: 22px; font-weight: 400; }
+html:root[data-look="material"] body .rb-disc.on { background: rgb(251,188,4) !important; color: #1F1F1F !important; }
+html:root[data-look="material"] body .hsplit { background: transparent; gap: 2px; height: 56px; overflow: visible; }
+html:root[data-look="material"] body .hs-hair { display: none; }
+html:root[data-look="material"] body .hs-half { opacity: 1; font-weight: 500; background: var(--md-surface); color: var(--md-on-surface-variant); border-radius: 8px; }
+html:root[data-look="material"] body .hs-half:first-child { border-radius: 28px 8px 8px 28px; }
+html:root[data-look="material"] body .hs-half:last-child { border-radius: 8px 28px 28px 8px; }
+html:root[data-look="material"] body .hs-half.lit { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+html:root[data-look="material"] body .rowi .ic { border-radius: 50%; background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+
+/* ---- Thermostats: the targets in Material's display type, their arrows as buttons ---- */
+html:root[data-look="material"] body .tb-tg b { font-weight: 400; letter-spacing: -.5px; }
+html:root[data-look="material"] body .tb-chev { opacity: 1; width: 48px; height: 32px; border-radius: 16px; background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); color: var(--md-on-surface-variant); }
+html:root[data-look="material"] body :is(.tb-tg small, .tb-in small) { font-weight: 500; color: var(--md-on-surface-variant); opacity: 1; }
+
+/* ---- Security: the picture 20 round inside its tile, its labels as chips ---- */
+html:root[data-look="material"] body .camcard { padding: 8px 8px 12px; }
+html:root[data-look="material"] body .snap { border-radius: 20px; }
+html:root[data-look="material"] body :is(.cbadge, .livebtn) { border-radius: 8px; font-weight: 500; box-shadow: none; }
+
+/* ---- Energy ---- */
+html:root[data-look="material"] body .en { border-radius: 28px; padding: 16px 18px 12px; }
+html:root[data-look="material"] body .en.big { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+html:root[data-look="material"] body .en.big .en-ic { background: var(--md-primary); color: var(--md-on-primary); }
+
+/* ---- Automations and rows ---- */
+html:root[data-look="material"] body .group { border-radius: 20px; }
+html:root[data-look="material"] body .rowi + .rowi { border-top-color: color-mix(in srgb, var(--md-outline-variant) 55%, transparent); }
+html:root[data-look="material"] body .au-row .k, html:root[data-look="material"] body .au-open { font-weight: 400; }
+@media (prefers-reduced-motion: reduce) { html:root[data-look="material"] body :is(.pwr, .disc, .rb-disc, .sw::after) { transition: none; } }

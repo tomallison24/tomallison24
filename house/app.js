@@ -160,10 +160,15 @@ const store = {
 // vintage[k] where vintage has it (else glass[k]), at the moment it is read; so a palette made with
 // it changes with the design, and render() (on 'aos:design', below) draws it again.
 const vintageLook = () => (window.aosDesign ? aosDesign.get() : 'vintage') !== 'glass';
+// Material (Material 3, as Google Home): the Retro colours a device is drawn in become the ones Google Home gives each
+// meaning - yellow for a light that is on, orange for heat, blue for cooling, green for holding - so no table needs a third column
+const MATERIAL_RGB = { '227,167,47': '251,188,4', '216,87,42': '232,113,10', '255,174,122': '232,113,10', '31,111,107': '26,115,232', '47,140,134': '26,115,232', '126,140,52': '30,142,62',
+  '184,69,43': '217,48,37', '255,122,89': '232,113,10', '165,150,128': '116,119,117', '154,145,130': '116,119,117', '196,170,120': '116,119,117', '198,196,204': '116,119,117', '224,90,156': '197,34,110' };
+const materialLook = () => (window.aosDesign ? aosDesign.get() : 'vintage') === 'material';
 function dual(glass, vintage) {
   const o = {};
   for (const k of new Set([...Object.keys(glass), ...Object.keys(vintage)])) {
-    Object.defineProperty(o, k, { enumerable: true, get: () => (vintageLook() && k in vintage ? vintage : glass)[k] });
+    Object.defineProperty(o, k, { enumerable: true, get: () => { const v = (vintageLook() && k in vintage ? vintage : glass)[k]; return materialLook() && typeof v === 'string' && MATERIAL_RGB[v] || v; } });
   }
   return o;
 }
@@ -763,6 +768,7 @@ function renderDehums() {
     put(R('tgt'), tgtHTML(u, r));
     card.classList.toggle('offline', r.mood === 'offline');
     card.style.boxShadow = `0 18px 40px -16px rgba(${u.accents[r.mood] || '190,194,204'},0.26)`;
+    card.style.setProperty('--acc', u.accents[r.mood] || '190,194,204'); card.dataset.mood = r.mood || '';   // Material tints the card itself with it (devices.css)
   }
   dehumSum = running ? running + ' running' : 'Off';
 }
@@ -1215,6 +1221,7 @@ function renderThermos() {
     put(R('tgt'), tTargetHTML(t, r, tLine(t, r)));
     card.classList.toggle('offline', r.offline);
     card.style.boxShadow = `0 18px 40px -16px rgba(${T_ACC[r.mood] || T_ACC.idle},0.26)`;
+    card.style.setProperty('--acc', T_ACC[r.mood] || T_ACC.idle); card.dataset.mood = r.mood || '';
     }
   }
   thermoSum = [h ? h + ' heating' : '', c ? c + ' cooling' : ''].filter(Boolean).join(' · ') || 'Idle';
