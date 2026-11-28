@@ -494,7 +494,7 @@ await step('Settings > Design: the first section of Settings; Standard and back,
   assert.equal(await page.$eval('#bkBody > :first-child .st-lbl', e => e.textContent), 'Design', 'Design is the first section');
   assert.deepEqual(await page.$$eval('#bkBody > .st-sec > .st-lbl', ls => ls.map(l => l.textContent)), ['Design', 'AI helper', 'Notifications', 'Your data'], 'then AI helper (Use Claude in Notes), Notifications and Your data, in the standard order');
   assert.ok(await page.isVisible('#backupSheet .sheethead .okbtn[data-close][aria-label="Done"]'), 'Settings closes with a Done tick');
-  assert.equal(await page.$$eval('#bkBody > :first-child [data-design]', bs => bs.map(b => b.dataset.design + ':' + b.getAttribute('aria-checked')).join(' ')), 'vintage:true glass:false layers:false grid:false');
+  assert.equal(await page.$$eval('#bkBody > :first-child [data-design]', bs => bs.map(b => b.dataset.design + ':' + b.getAttribute('aria-checked')).join(' ')), 'vintage:true glass:false layers:false grid:false material:false');
   assert.equal(await page.$('#bkBody > :first-child .st-hint, #bkBody > :first-child .hint'), null, 'no explanation under Design');
   await shot(page, 'settings-vintage-light');
   await page.click('#bkDesign [data-design="glass"]'); await page.waitForTimeout(250);
