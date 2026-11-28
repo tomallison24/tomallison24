@@ -257,7 +257,7 @@ function sampleStates() {
     'climate.windmill_ac': e('cool', { hvac_modes: ['off', 'cool', 'auto', 'fan_only'], current_temperature: 76, temperature: 72,
       fan_mode: 'Auto', fan_modes: ['Auto', 'Low', 'Medium', 'High'], min_temp: 60, max_temp: 86 }),
     'input_boolean.thermostat_eco': e('off'),   // Home Assistant's house-wide Eco: on while everyone is out
-    'input_boolean.thermostat_vacation': e('off'),   // the Vacation switch: both Nests at 55 / 90
+    'input_boolean.thermostat_vacation': e('off'),   // the Vacation switch: both Nests at 55 / 85
     'sensor.living_room_ac_runtime_today': e(0.75, { unit_of_measurement: 'h' }),
     'sensor.office_ac_runtime_today': e(2.4, { unit_of_measurement: 'h' }),
     'sensor.windmill_ac_runtime_today': e(1.15, { unit_of_measurement: 'h' }),
@@ -922,13 +922,13 @@ const T_LO = 50, T_HI = 90, T_GAP = 3, T_HOLD = 20000;
 // listens, so a change to the automations needs no change here.
 const AWAY_FLAG = 'input_boolean.thermostat_eco';
 // VACATION: Home Assistant's input_boolean.thermostat_vacation, house-wide. While
-// it is on, script.thermostat_apply holds BOTH Nests in Auto at 55 heat / 90 cool
+// it is on, script.thermostat_apply holds BOTH Nests in Auto at 55 heat / 85 cool (90 until 2026-11-27: the Nests never took it)
 // (it beats the schedule, Eco and the sitter hold); off, they go back to the
 // schedule, or Eco if the house is empty ("Thermostat - vacation" runs it on
 // every change). The switch is in a Nest's popup, not on the card, so the card
 // stays clean; while it is on the card says so with a small chip. Signal's
 // Nest cards have the same switch (ha-config, tf_card `vac`).
-const VAC_FLAG = 'input_boolean.thermostat_vacation', VAC = { id: 'house', name: 'Vacation' }, VAC_SET = [55, 90];
+const VAC_FLAG = 'input_boolean.thermostat_vacation', VAC = { id: 'house', name: 'Vacation' }, VAC_SET = [55, 85];
 const vacOn = () => held(VAC, 'vac', (st(VAC_FLAG) || {}).state) === 'on';
 const T_SKY = {
   heat: 'linear-gradient(160deg, #221E19 0%, #382E24 50%, #5C4A36 100%)',   // amber, not red (light mode made red read as pink)
@@ -975,7 +975,7 @@ function tread(t) {
   const canEco = t.kind === 'nest' && Array.isArray(A.preset_modes) && A.preset_modes.includes('eco');
   const eco = canEco && !offline && s !== 'off' && held(t, 'preset', A.preset_mode) === 'eco';
   const away = t.kind === 'nest' && !offline && s !== 'off' && isOn(AWAY_FLAG);   // the house is empty: Home Assistant has both Nests in Eco
-  const vac = t.kind === 'nest' && vacOn();   // the Vacation switch: both Nests at 55 / 90
+  const vac = t.kind === 'nest' && vacOn();   // the Vacation switch: both Nests at 55 / 85
   const mood = offline ? 'offline' : s === 'off' ? 'off' : act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : (act === 'fan' || fm === 'on') ? 'fan' : (eco || away) ? 'eco' : 'idle';  // Eco resting has its own look (the Nest's own, or the house's); heating or cooling in Eco shows as that
   return { e, A, s, fm, temp, lo, hi, cur, act, mood, offline, missing: !e, min, max, range: s === 'heat_cool', single: s === 'heat' || s === 'cool' || s === 'auto', canEco, eco, away, vac };
 }

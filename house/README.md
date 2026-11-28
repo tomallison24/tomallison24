@@ -188,11 +188,13 @@ the same rules:
   the card, so the card stays clean. It is Home Assistant's
   `input_boolean.thermostat_vacation`, one for the house: turned on, "Thermostat -
   vacation" runs `script.thermostat_apply`, which puts both Nests in Auto at 55 heat /
-  90 cool and keeps them there (it beats the schedule, Eco and the sitter hold) until
+  85 cool and keeps them there (it beats the schedule, Eco and the sitter hold) until
   it is turned off, when they go back to the schedule (or Eco if the house is empty).
-  While it is on, both Nest cards have a **Vacation · 55–90°** chip. The Windmill has
+  While it is on, both Nest cards have a **Vacation · 55–85°** chip. The Windmill has
   no switch. Signal's Nest cards have the same switch, under the chevron on the
-  Climate view (ha-config, tf_card `vac`).
+  Climate view (ha-config, tf_card `vac`). It was 90 cool until 2026-11-27, but
+  the Nests never applied it (90° is 32.2°C, past their cool limit) and the script
+  carries on past a refused setpoint without saying so.
 - **Away, the house's Eco** (the Living Room and Office Nests): Home Assistant has
   its own Eco, a flag of the house, `input_boolean.thermostat_eco`: it turns on
   five minutes after the last person leaves ("Away - everyone out" starts

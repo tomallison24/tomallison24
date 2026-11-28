@@ -125,7 +125,7 @@
         'Pearl: the app icons on aOS Home are a quarter bigger',
         'Pearl: the weather and calendar cards on aOS Home are a fifth taller',
         'Pearl: the family card at the top of Today is drawn in light now, like the app icons, a line drawing of the family with a heart, in place of the mid-century picture',
-        'Home: a Vacation switch in the Living Room and Office thermostats\' popups. On, both thermostats hold 55° heat and 90° cool, whatever the schedule says, until you turn it off; their cards say Vacation while it is on',
+        'Home: a Vacation switch in the Living Room and Office thermostats\' popups. On, both thermostats hold 55° heat and 85° cool, whatever the schedule says, until you turn it off; their cards say Vacation while it is on',
         'News in Pearl at night: the chosen News, Scores or Table (and topic) is drawn in light in its ring, where it had gone dark and couldn\'t be seen',
         'Travel: Airbnb stays read better: a message from your host no longer makes a second stay, a request that wasn\'t accepted isn\'t a stay, and a stay read from the email\'s words has its listing, its city and the right checkout time',
         'Home: Vacation lighting, a switch on the Lights view. While nobody is home, the lights go on and off through the evening as if someone is, a little differently each night, in place of the usual light automations. It turns itself off when someone is home',

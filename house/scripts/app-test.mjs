@@ -239,13 +239,13 @@ for (const [design, scheme] of [['vintage', 'dark'], ['vintage', 'light'], ['gla
     const sw = page.locator('#thermoWrap [data-s="vac"] [data-a="tvac"]');
     assert.ok(await sw.isVisible(), 'the popup has the Vacation switch');
     assert.equal(await sw.getAttribute('aria-checked'), 'false');
-    assert.match(await page.textContent('#thermoWrap [data-s="vacWrap"] .tnote'), /55° heat and 90° cool/);
+    assert.match(await page.textContent('#thermoWrap [data-s="vacWrap"] .tnote'), /55° heat and 85° cool/);
     await sw.click();
     await page.waitForFunction(() => document.querySelector('#thermoWrap [data-a="tvac"]')?.getAttribute('aria-checked') === 'true');
     assert.equal(await page.evaluate(() => (ents['input_boolean.thermostat_vacation'] || {}).state), 'on', 'Home Assistant\'s flag is turned on');
     if (SHOTS) { await sw.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, `home-vacation-${design}-${scheme}.png`) }); }
     await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
-    for (const id of ['lr', 'of']) assert.match(await card(id).locator('.alert.vac').textContent(), /Vacation · 55–90°/, id + ': the chip');
+    for (const id of ['lr', 'of']) assert.match(await card(id).locator('.alert.vac').textContent(), /Vacation · 55–85°/, id + ': the chip');
     await page.evaluate(() => openThermo('wm'));
     assert.ok(await page.locator('#thermoWrap [data-s="vacWrap"]').isHidden(), 'no Vacation for the Windmill');
     await page.evaluate(() => { document.querySelector('#thermoWrap [data-close]')?.click(); });
