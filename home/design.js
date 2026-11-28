@@ -7,7 +7,8 @@
 //
 //   - Vintage is the page's <style id="vintage"> block; Standard is that block switched off, the
 //     Sea glass styles above it showing as they are; Layers and Tron keep the Vintage block on
-//     (its shapes) and switch on their own block after it, <style id="layers"> or <style id="grid">,
+//     (its shapes) and switch on their own block after it, <style id="layers">, <style id="grid"> or <style id="material">
+//     (Material: Material 3 Expressive, as in Google Home),
 //     which repaints it (generated from it by aOS/scripts/make-looks.mjs);
 //   - data-look="vintage" | "glass" | "layers" | "grid" on <html>: sky.js draws the day and night sky
 //     only in Vintage, and an app's own CSS or script can tell them apart by it (every look but
@@ -45,8 +46,8 @@
   const APP = data.app || '';
   const KEY = 'design.' + APP;
   const root = document.documentElement;
-  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], grid: ['#050608', '#050608'] };
-  const LOOKS = ['vintage', 'glass', 'layers', 'grid'];
+  const GROUND = { vintage: ['#F4ECDD', '#241E1A'], grid: ['#050608', '#050608'], material: ['#F0F4F9', '#131314'] };
+  const LOOKS = ['vintage', 'glass', 'layers', 'grid', 'material'];
   const ok = v => v === 'neon' ? 'layers' : LOOKS.includes(v) ? v : 'vintage';
   // Pearl's bar colours (aOS/scripts/looks.mjs, SKIES): one ground all day; still keyed by the time of day, as Layers' skies were
   const tod = (h = new Date().getHours()) => h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night';
@@ -125,7 +126,7 @@
     if (look === 'grid') root.setAttribute('data-theme', 'dark'); else if (root.getAttribute('data-theme') === 'dark' && root.dataset.tron) root.removeAttribute('data-theme');   // Tron is dark only, as in the car (welcome.js keeps it so, and puts your own back after)
     if (look === 'grid') root.dataset.tron = '1'; else delete root.dataset.tron;
     const v = document.getElementById('vintage'); if (v) v.media = look === 'glass' ? 'not all' : 'all';
-    for (const id of ['layers', 'grid']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
+    for (const id of ['layers', 'grid', 'material']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
     for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
       if (!m.dataset.glass) m.dataset.glass = m.content;
       const dark = /dark/.test(m.dataset.media || m.getAttribute('media') || '');   // welcome.js keeps the original media there
@@ -135,7 +136,7 @@
     if (bar) { if (!bar.dataset.glass) bar.dataset.glass = bar.content; bar.content = look === 'glass' ? bar.dataset.glass : 'default'; }   // black-translucent's white clock would vanish on the cream
     for (const l of document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]')) {
       const h = l.getAttribute('href') || '';
-      l.setAttribute('href', h.replace(/icon(?:-(?:glass|neon|layers|grid))?-(\d+)\.png/, look === 'vintage' ? 'icon-$1.png' : `icon-${look}-$1.png`));
+      l.setAttribute('href', h.replace(/icon(?:-(?:glass|neon|layers|grid|material))?-(\d+)\.png/, look === 'vintage' ? 'icon-$1.png' : `icon-${look}-$1.png`));
     }
     if (look === 'layers') pearl();
     return look;
@@ -158,6 +159,7 @@
 .aos-design .sw.glass{background:linear-gradient(135deg,#6FA597,#8193BC 40%,#BE918F 70%,#BC9C68)}
 .aos-design .sw.layers{background:radial-gradient(circle at 50% 50%,transparent 0 9px,#F2FAFF 10px 11px,rgba(150,205,255,.5) 12px,transparent 15px),radial-gradient(80% 70% at 50% 45%,#0B1A37,#02050C 80%)}
 .aos-design .sw.grid{background:radial-gradient(circle,#FF2A2A 0 12%,#08090B 13% 38%,#FF2A2A 39% 49%,#08090B 50% 70%,#E9EDF1 71% 76%,#08090B 77%)}
+.aos-design .sw.material{background:conic-gradient(#0B57D0 0 25%,#C2E7FF 0 50%,#D3E3FD 0 75%,#F0F4F9 0)}
 .aos-design .sw.grid{position:relative}
 .aos-design .sw.grid::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;background:conic-gradient(transparent 0 70%,rgba(255,42,42,.25) 80%,#FF2A2A 92%,#fff 95%,transparent 96%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2.5px));filter:drop-shadow(0 0 3px #FF2A2A);animation:aosSeSpin 1.8s linear infinite}
 .aos-design .se{display:inline-block;margin-left:7px;padding:2px 7px 1px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.5;vertical-align:2px;white-space:nowrap;color:#fff;background:linear-gradient(100deg,#9E0A14 0%,#FF2A2A 38%,#FF8F8F 50%,#FF2A2A 62%,#9E0A14 100%) 0 0/260% 100%;box-shadow:0 0 8px rgba(255,42,42,.6);text-shadow:0 1px 2px rgba(90,0,0,.55);animation:aosSeShine 2.6s linear infinite}
@@ -178,6 +180,7 @@
     ['glass', 'Standard', 'Sea glass: frosted glass in the AllisonOS colors'],
     ['layers', 'Pearl', 'Light in the dust: lines of light on near-black, carbon on cream by day'],
     ['grid', 'Tron Special Edition', 'Light cycles: red light on a black grid, as in Tron: Ares'],
+    ['material', 'Material', 'Material 3 Expressive, as in Google Home: tonal cards, round buttons, Google Sans'],
   ];
   const picker = () => '<div class="aos-design" role="radiogroup" aria-label="Design">' + ROWS.map(([id, name, note]) =>
     `<button type="button" role="radio" data-design="${id}" aria-checked="${id === look}"><span class="sw ${id}" aria-hidden="true"></span><span class="grow"><b>${id === 'grid' ? SE : name}</b><small>${note}</small></span>${TICK}</button>`).join('') + '</div>';

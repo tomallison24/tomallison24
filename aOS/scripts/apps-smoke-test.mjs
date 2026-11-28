@@ -37,9 +37,9 @@ const BASE = 'http://localhost:' + server.address().port;
 
 const browser = await chromium.launch();
 let failed = 0;
-// light and dark in the default design (Vintage), then Layers, light and dark (it follows the phone), and Tron (dark only)
-const RUNS = [['light', null], ['dark', null], ['light', 'layers'], ['dark', 'layers'], ['dark', 'grid']];
-const label = (scheme, look) => scheme + (look ? ', ' + { layers: 'Layers', grid: 'Tron' }[look] : '');
+// light and dark in the default design (Vintage), then Layers, light and dark (it follows the phone), Tron (dark only), and Material, light and dark
+const RUNS = [['light', null], ['dark', null], ['light', 'layers'], ['dark', 'layers'], ['dark', 'grid'], ['light', 'material'], ['dark', 'material']];
+const label = (scheme, look) => scheme + (look ? ', ' + { layers: 'Layers', grid: 'Tron', material: 'Material' }[look] : '');
 for (const id of ids) {
   for (const [scheme, look] of RUNS) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme });

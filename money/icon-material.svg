@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Material: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <circle cx="248" cy="276" r="150" fill="#fff"/>
+      <path d="M300 222c-10-20-30-30-52-30-30 0-50 16-50 40 0 58 106 32 106 92 0 26-22 44-56 44-24 0-46-11-58-33M248 162v228" fill="none" stroke="#000" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#FFDBE5"/>
+  <rect width="512" height="512" fill="#50092D" mask="url(#cut)"/>
+</svg>

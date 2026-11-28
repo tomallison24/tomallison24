@@ -1,6 +1,6 @@
 // The pictures in the aOS design charter (DESIGN.md), drawn from the apps themselves into docs/design/.
 // Each is cropped to the part that shows its rule, at iPhone size (390 points wide); a rule about the
-// looks shows Vintage, Standard, Pearl and Tron side by side. A "Don't" is drawn from a small snippet
+// looks shows Vintage, Standard, Pearl, Tron and Material side by side. A "Don't" is drawn from a small snippet
 // of the old pattern here, never from an app, so it stays the same after every app is fixed.
 //
 // Run it again whenever an app or a shared part (home/settings.js, home/design.js, home/welcome.js)
@@ -44,7 +44,7 @@ const browser = await chromium.launch();
 
 const NOW = new Date('2026-10-14T14:00:00-06:00');   // a Wednesday afternoon in Denver
 const TZ = 'America/Denver';
-const LOOKS = [['vintage', 'Vintage'], ['glass', 'Standard'], ['layers', 'Pearl'], ['grid', 'Tron']];   // Pearl keeps Layers' id
+const LOOKS = [['vintage', 'Vintage'], ['glass', 'Standard'], ['layers', 'Pearl'], ['grid', 'Tron'], ['material', 'Material']];   // Pearl keeps Layers' id
 const MAGICK = (() => { try { execFileSync('convert', ['-version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
 const made = [];
 
@@ -456,7 +456,7 @@ if (want('targets')) {
 // 10. Icons: each app's in the four looks (icon-*.png, drawn from icon.svg by make-icons and make-looks)
 if (want('icons')) {
   const apps = APPS.filter(a => fs.existsSync(path.join(ROOT, a, 'icon-glass-180.png'))).slice(0, 8);
-  const file = { vintage: 'icon-180.png', glass: 'icon-glass-180.png', layers: 'icon-layers-180.png', grid: 'icon-grid-180.png' };
+  const file = { vintage: 'icon-180.png', glass: 'icon-glass-180.png', layers: 'icon-layers-180.png', grid: 'icon-grid-180.png', material: 'icon-material-180.png' };
   const pg = await browser.newPage({ viewport: { width: 900, height: 400 }, deviceScaleFactor: 2 });
   await pg.setContent(`<!doctype html><style>body{margin:0;font:600 12px/1.2 -apple-system,system-ui,sans-serif;color:#7A8086}
     table{border-spacing:12px 10px;padding:4px}th{text-align:left;font-weight:700;padding-right:6px}img{display:block;width:58px;height:58px;border-radius:13px}</style>

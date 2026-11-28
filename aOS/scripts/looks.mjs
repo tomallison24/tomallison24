@@ -101,6 +101,26 @@ export const LOOKS = {
     display: '"Orbitron","Exo 2","Avenir Next",system-ui,sans-serif',
     ground: ['#F3F4F5', '#08090B'],
   },
+  material: {
+    // Material: Google's Material 3 Expressive, as the Google Home app wears it. Grounds and inks are Google's own static
+    // scheme (surface container #F0F4F9 with white cards by day; #131314 with #1E1F20 cards at night); the accent is its
+    // blue (primary #0B57D0 / #A8C7FA). The other families keep their roles in Google's colours, as Home gives each a
+    // meaning: yellow (a light that's on), orange-red (heating), green, violet and pink.
+    name: 'Material',
+    light: {
+      neutral: { L: [[0.2, 0.2], [0.27, 0.235], [0.55, 0.5], [0.92, 0.945], [0.94, 0.965], [0.97, 1], [1, 1]], h: 255, C: L => (L > 0.6 ? Math.min(0.012, (1 - L) * 0.25) : 0.003) },
+      orange: { h: 38, C: 1.1, dL: 0 }, mustard: { h: 88, C: 1.05, dL: 0.03 }, olive: { h: 150, C: 1.25, dL: 0 },
+      teal: { h: 262, C: 2.3, dL: 0 }, blue: { h: 292, C: 1.1, dL: 0 }, pink: { h: 355, C: 1.0, dL: 0 },
+    },
+    dark: {
+      neutral: { L: [[0.2, 0.15], [0.245, 0.185], [0.29, 0.24], [0.335, 0.285], [0.36, 0.31], [0.6, 0.62], [0.94, 0.915], [1, 1]], h: 255, C: L => (L < 0.5 ? 0.004 : 0.003) },
+      orange: { h: 40, C: 0.95, dL: 0.05 }, mustard: { h: 88, C: 0.9, dL: 0.04 }, olive: { h: 150, C: 1.1, dL: 0.06 },
+      teal: { h: 258, C: 1.05, dL: 0.07 }, blue: { h: 292, C: 1.0, dL: 0.06 }, pink: { h: 355, C: 0.9, dL: 0.05 },
+    },
+    font: '"Google Sans Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif',
+    display: '"Google Sans Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif',
+    ground: ['#F0F4F9', '#131314'],
+  },
 };
 
 export function mapRgb(look, rgb, dark) {
@@ -183,7 +203,7 @@ export function lookBlock(look, css) {
     const prop = decl.slice(0, k).trim(), val = decl.slice(k + 1).trim();
     if (/^font-family$/i.test(prop) || /^--[\w-]*font[\w-]*$/i.test(prop)) return VFONT.test(val) ? `${prop}:${L.font}${/!important/.test(val) ? ' !important' : ''}` : null;
     if (/^font$/i.test(prop) && VFONT.test(val)) return `${prop}:${val.replace(/(["']?Futura[\s\S]*)$/, L.font)}`;
-    if (look === 'layers' && BARS.test(val)) return `${prop}:none`;   // Vintage's three little bars under a title: Pearl has its light strip instead
+    if ((look === 'layers' || look === 'material') && BARS.test(val)) return `${prop}:none`;   // Vintage's three little bars under a title: Pearl has its light strip instead
     return hasColor(val) ? `${prop}:${mapColor(look, val, dark)}` : null;
   };
   // Light or Dark: a rule in a prefers-color-scheme block, or for [data-theme], is that mode's; any other follows
@@ -371,5 +391,119 @@ ${BAND}::after{content:'';position:absolute;left:-30%;right:-30%;top:62%;height:
 :is(.fab,.okbtn){box-shadow:0 0 calc(var(--tr-glow) * 16px) color-mix(in srgb,var(--tr-line) 70%,transparent)}
 `;
   }
+  if (look === 'material') return material(app);
   return '';
+}
+
+// ---- Material (Material 3 Expressive, as Google Home wears it) ----
+// Google's static scheme as tokens (--md-*), then the app's own tokens pointed at them, then the components every app
+// shares (cards, buttons, the FAB, chips, the selectors, bars, sheets, menus, fields) in Material's shapes: fully round
+// buttons that square off a little while pressed, tonal cards with no edge or shadow, a secondary-container pill under
+// what is picked. Sparkle Kingdom keeps its own style (the owner's call): it takes the colours and the type only.
+const MATERIAL_OWN = ['sparkle'];
+function material(app) {
+  const M = 'html:root[data-look="material"]';
+  const LAT = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+  const dark = body => darkBoth(body).replace(/:root/g, M);
+  const F = LOOKS.material.font;
+  const LIGHT = '--md-primary:#0B57D0;--md-on-primary:#FFFFFF;--md-primary-container:#D3E3FD;--md-on-primary-container:#041E49;--md-secondary-container:#C2E7FF;--md-on-secondary-container:#001D35;'
+    + '--md-ground:#F0F4F9;--md-surface:#FFFFFF;--md-low:#F8FAFD;--md-container:#E9EEF6;--md-highest:#DDE3EA;--md-sheet:#F0F4F9;--md-sheet-card:#FFFFFF;'
+    + '--md-on-surface:#1F1F1F;--md-on-surface-variant:#444746;--md-outline:#747775;--md-outline-variant:#C4C7C5;--md-error:#B3261E;--md-error-container:#F9DEDC;'
+    + '--md-inverse-surface:#303030;--md-inverse-on-surface:#F2F2F2;--md-scrim:rgba(0,0,0,.32);'
+    + '--md-elev1:0 1px 2px rgba(0,0,0,.3),0 1px 3px 1px rgba(0,0,0,.15);--md-elev2:0 1px 2px rgba(0,0,0,.3),0 2px 6px 2px rgba(0,0,0,.15);--md-elev3:0 1px 3px rgba(0,0,0,.3),0 4px 8px 3px rgba(0,0,0,.15)';
+  const DARK = '--md-primary:#A8C7FA;--md-on-primary:#062E6F;--md-primary-container:#0842A0;--md-on-primary-container:#D3E3FD;--md-secondary-container:#004A77;--md-on-secondary-container:#C2E7FF;'
+    + '--md-ground:#131314;--md-surface:#1E1F20;--md-low:#1B1B1B;--md-container:#282A2C;--md-highest:#333537;--md-sheet:#1E1F20;--md-sheet-card:#282A2C;'
+    + '--md-on-surface:#E3E3E3;--md-on-surface-variant:#C4C7C5;--md-outline:#8E918F;--md-outline-variant:#444746;--md-error:#F2B8B5;--md-error-container:#8C1D18;'
+    + '--md-inverse-surface:#E3E3E3;--md-inverse-on-surface:#303030;--md-scrim:rgba(0,0,0,.5)';
+  const head = `/* Material: Google's Material 3 Expressive, as the Google Home app wears it. Google Sans Flex for every word (SIL
+   Open Font License, ../home/fonts); Google's static colour scheme as --md-* tokens. Vintage's disc, dot and pill behind
+   the title go, and the three little bars under it. */
+@font-face{font-family:"Google Sans Flex";font-style:normal;font-weight:100 1000;font-display:swap;src:url("../home/fonts/google-sans-flex-latin.woff2") format("woff2");unicode-range:${LAT}}
+${M}{${LIGHT}}
+${dark(DARK)}${HEADS}{font-family:${LOOKS.material.display};font-style:normal;font-weight:500;letter-spacing:-.015em}
+${M} body{font-family:${F}}
+${SHAPE(1)},${SHAPE(2)},${SHAPE(3)},:root .aos-sky-cap{display:none}
+`;
+  if (MATERIAL_OWN.includes(app)) return head;
+  const PICKED = `${M} :is(.seg:not(.slides) button[aria-pressed="true"],.seg button[aria-checked="true"],.tabs:not(.slides) .tab[aria-selected="true"],.chip.on,.chip[aria-pressed="true"],.chip[aria-selected="true"],.fchip[aria-pressed="true"],.opt[aria-checked="true"],.opt[aria-pressed="true"],.pillbtn[aria-pressed="true"],.frow .unit button[aria-pressed="true"]),${M} :not(.slides) > .seg[aria-selected="true"]`;
+  const CARDS = ':is(.card,.rgroup,.group,.box,.obox,.ocard,.trip,.tcard,.upcard,.lead,.chartcard,.kpis,.sum,.notice,.stats,.addbox,.banner)';
+  return head + `/* ---- the rulebook, the same in every app (Sparkle Kingdom aside) ---- */
+${M}{--bg:var(--md-ground);--accent:var(--md-primary);--accent-text:var(--md-primary);--accent-ink:var(--md-primary);--on-accent:var(--md-on-primary);--icon:var(--md-primary);
+  --cta:var(--md-primary);--cta-ink:var(--md-on-primary);--seg-thumb:var(--md-secondary-container);--sel-ink:var(--md-on-secondary-container);--mc-on-mustard:var(--md-on-secondary-container);
+  --mc-card:var(--md-surface);--mc-card-2:var(--md-container);--glass:var(--md-surface);--glass-2:var(--md-container);--tile:var(--md-surface);--pill:var(--md-container);
+  --mc-edge:transparent;--gb-edge:transparent;--tile-edge:transparent;--bar-rim:transparent;--lg-rim:0 0 #0000;--lgs-edge:transparent;--lgs-rim:transparent;--gb-shadow:none;
+  --hair:var(--md-outline-variant);--hair-2:color-mix(in srgb,var(--md-outline-variant) 55%,transparent);--fill:color-mix(in srgb,var(--md-on-surface) 8%,transparent);
+  --sheet:var(--md-sheet);--toast:var(--md-inverse-surface);--scrim:var(--md-scrim);--lgs-scrim:var(--md-scrim);--grab:color-mix(in srgb,var(--md-on-surface-variant) 40%,transparent);--ring:var(--md-outline);
+  --bar-top:var(--md-ground);--bar-bottom:var(--md-ground);--bar-solid:var(--md-ground);--lg-bg:var(--md-container);--lgs-top:var(--md-sheet);--lgs-bottom:var(--md-sheet);--lgs-field:var(--md-container);
+  --danger:var(--md-error);--danger-text:var(--md-error);--danger-ink:var(--md-error);
+  --md-state:color-mix(in srgb,var(--md-on-surface) 10%,transparent);--md-ease:cubic-bezier(.2,0,0,1)}
+/* no capitals or tracking anywhere: Material's labels are sentence case (the Special Edition badge aside) */
+${M} body :where(*):not(.se){text-transform:none !important;letter-spacing:normal !important}
+/* a sheet is one step up, so what sits on it is a step up again */
+${M} :is(.sheet,.st-sheet){--mc-card:var(--md-sheet-card);--glass:var(--md-sheet-card);--tile:var(--md-sheet-card)}
+/* section titles: Material's label, in the primary colour, as Android's Settings has them; no capitals or tracking */
+${M} :is(.sechead,.label,.sect,.vsec-h){font-size:14px;font-weight:500;letter-spacing:.006em;text-transform:none;color:var(--md-primary)}
+${M} :is(.sechead,.label) span{letter-spacing:0}
+/* cards: a tonal surface, 20 round (large increased), no edge, no shadow */
+${M} ${CARDS}{border-radius:20px;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+${M} :is(.sheet,.st-sheet) ${CARDS}{border-radius:16px}
+/* buttons: fully round; while pressed the corners square off a little (Expressive's shape change). Filled is the
+   primary; the quiet one outlined; a destructive one outlined in the error colour */
+${M} :is(.btn,.ctabtn,.okbtn,.send,.textbtn,.banner button){border-radius:999px;font-weight:500;letter-spacing:.006em;text-transform:none;transition:border-radius .2s var(--md-ease),background-color .2s,transform .18s}
+${M} :is(.btn,.ctabtn,.okbtn):active{border-radius:14px;filter:none}
+${M} .btn.quiet:not(.danger){background:transparent;color:var(--md-primary);box-shadow:inset 0 0 0 1px var(--md-outline-variant)}
+${M} :is(.btn.danger,.btn.warn,.btn.quiet.danger){background:transparent;color:var(--md-error);box-shadow:inset 0 0 0 1px var(--md-outline-variant)}
+${M} .textbtn:not(.danger){color:var(--md-primary)}
+${M} .empty > .btn{display:flex;width:fit-content;margin-left:auto;margin-right:auto}
+/* the floating action button: a rounded square in the primary container, lifted */
+${M} .fab{border-radius:16px;background:var(--md-primary-container) !important;color:var(--md-on-primary-container) !important;box-shadow:var(--md-elev3) !important;transition:border-radius .2s var(--md-ease),transform .18s}
+${M} .fab.small{border-radius:12px}
+${M} .fab:active{border-radius:28px}
+${M} .fab svg{stroke:currentColor}
+/* icon buttons: no container; a state layer while pressed */
+${M} .iconbtn{background:transparent;box-shadow:none;color:var(--md-on-surface-variant)}
+${M} .iconbtn:active{background:var(--md-state);color:var(--md-on-surface)}
+${M} .iconbtn[aria-pressed="true"]{background:var(--md-secondary-container);color:var(--md-on-secondary-container)}
+/* search: a full pill in a higher surface, no edge */
+${M} :is(.search,.sbox,.askipsy){background:var(--md-container) !important;box-shadow:none !important;border-color:transparent !important;border-radius:999px}
+${M} :is(.search,.sbox,.askipsy):focus-within{box-shadow:inset 0 0 0 2px var(--md-primary) !important}
+/* chips: 8 round with a thin outline; picked, the secondary container and no outline */
+${M} :is(.chip,.fchip,.opt,.pillbtn,.morebtn){border-radius:8px;background:transparent;color:var(--md-on-surface-variant);font-weight:500;box-shadow:inset 0 0 0 1px var(--md-outline-variant);border-color:transparent}
+/* picked: the secondary container under it (the sliding thumb, or the button itself where nothing slides) */
+${M} :is(.slthumb,.vt-thumb){background:var(--md-secondary-container) !important;box-shadow:none !important;border-radius:999px}
+${PICKED}{background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important;box-shadow:none !important}
+${M} :is(.seg,.slides,.tabs) :is(button,.tab)[aria-pressed="true"],${M} :is(.seg,.slides,.tabs) :is(button,.tab)[aria-selected="true"],${M} :is(.seg,.slides,.tabs) :is(button,.tab)[aria-checked="true"],${M} .seg[aria-selected="true"]{color:var(--md-on-secondary-container) !important}
+${M} :is(.tabs,.seg,.slides) :is(.tab[aria-selected="true"],button[aria-pressed="true"],button[aria-selected="true"]) svg{color:var(--md-on-secondary-container) !important}
+/* the selectors: a tonal track, fully round */
+${M} :is(.seg,.segmented,.modes):not(button){background:var(--md-container);border-color:transparent;box-shadow:none;border-radius:24px}
+${M} :is(.seg,.segmented,.modes) > button{border-radius:20px}
+/* bars that float over the page (tab bars, a dock's tabs, a view picker): Expressive's floating toolbar, a pill in a
+   higher surface, lifted */
+${M} :is(.tabs,.tabbar,.dock > .tabs){background:var(--md-container) !important;box-shadow:var(--md-elev2) !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-color:transparent}
+${M} .tabs:has(> .seg){background:transparent !important;box-shadow:none !important}   /* a strip of tabs in the header (Meals), not a floating bar */
+${M} .tabs :is(button,.tab){font-weight:500}
+${M} .tabs :is(button,.tab):not([aria-selected="true"]):not([aria-pressed="true"]){color:var(--md-on-surface-variant) !important}
+${M} .tagbtn{background:var(--md-container) !important;color:var(--md-on-surface) !important;box-shadow:var(--md-elev2) !important;font-weight:500}
+${M} .tagbtn .tb-ic{background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important}
+${M} .tagbtn .tb-chev{color:var(--md-on-surface-variant) !important}
+${M} :is(.vbar,.vtop)::before{background:var(--md-container) !important;box-shadow:var(--md-elev2) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+${M} :is(.vbar,.vtop) > button{color:var(--md-on-surface) !important;text-transform:none;letter-spacing:.006em;font-weight:500}
+${M} :is(.vbar .vb-ic,.vtop .vt-ic){background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important}
+${M} .vbar .vb-chev svg{color:var(--md-on-surface-variant) !important}
+/* sheets: 28 round at the top, a short handle; menus 16 round, lifted; the toast is a snackbar on the inverse surface */
+${M} .sheet:not(.page){border-radius:28px 28px 0 0;box-shadow:none;background:var(--md-sheet) !important}
+${M} .sheet.page::before{display:none}
+${M} .grab{width:32px;height:4px}
+${M} :is(.dmenu,.menu,.popover,.viewmenu,.pmenu,.tagmenu){border-radius:16px;background:var(--md-low) !important;box-shadow:var(--md-elev2) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+${M} :is(.dmenu,.menu,.popover,.viewmenu,.pmenu,.tagmenu) button{border-radius:12px}
+${M} :is(.viewmenu,.pmenu) .ic{background:var(--md-secondary-container) !important;color:var(--md-on-secondary-container) !important}
+${M} :is(.toast,#toast){background:var(--md-inverse-surface) !important;color:var(--md-inverse-on-surface) !important;border-radius:12px;box-shadow:var(--md-elev3) !important}
+/* fields: outlined, 4 round as Material's text fields; the outline thicker and primary while you type */
+${M} :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not([type="file"]),textarea,select):not(.search *):not(.sbox *):not(.askipsy *):not(.st-field){border-radius:4px;box-shadow:inset 0 0 0 1px var(--md-outline);border-color:transparent;background:transparent}
+${M} :is(input,textarea,select):not(.search *):not(.sbox *):not(.askipsy *):focus{box-shadow:inset 0 0 0 2px var(--md-primary);outline:none}
+${M} :is(.search,.sbox,.askipsy) :is(input,textarea){box-shadow:none;background:transparent}
+/* today, in a calendar or a list of days: its number on the primary */
+${M} :is(.mday.today .n,.drow.today .dn b,.tghead .dh.today b,.ygrid .today){background:var(--md-primary) !important;color:var(--md-on-primary) !important;box-shadow:none !important}
+@media (prefers-reduced-motion:reduce){${M} :is(.btn,.ctabtn,.okbtn,.fab){transition:none}}
+`;
 }

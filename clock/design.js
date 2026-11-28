@@ -22,6 +22,7 @@
     glass: { ground: ['#EEF2F0', '#0D1213'], icon: ['icon-glass-180.png?v=1', 'icon-glass-512.png?v=1'], bar: 'black-translucent' },
     layers: { ground: null, icon: ['icon-layers-180.png?v=2', 'icon-layers-512.png?v=2'], bar: 'default' },   // ground: the sky's top, SKY_TOP
     grid: { ground: ['#050608', '#050608'], icon: ['icon-grid-180.png?v=2', 'icon-grid-512.png?v=2'], bar: 'default' },
+    material: { ground: ['#F0F4F9', '#131314'], icon: ['icon-material-180.png?v=1', 'icon-material-512.png?v=1'], bar: 'default' },
   };
   const tod = (h = new Date().getHours()) => h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night';
   const SKY_TOP = { morning: ['#F7F3EC', '#02050C'], afternoon: ['#F7F3EC', '#02050C'], evening: ['#F7F3EC', '#02050C'], night: ['#F7F3EC', '#02050C'] };
@@ -39,7 +40,7 @@
     if (look === 'grid') root.setAttribute('data-theme', 'dark'); else if (root.getAttribute('data-theme') === 'dark' && root.dataset.tron) root.removeAttribute('data-theme');   // Tron is dark only, as in the car (welcome.js keeps it so, and puts your own back after)
     if (look === 'grid') root.dataset.tron = '1'; else delete root.dataset.tron;
     const v = document.getElementById('vintage'); if (v) v.media = look === 'glass' ? 'not all' : 'all';
-    for (const id of ['layers', 'grid']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
+    for (const id of ['layers', 'grid', 'material']) { const b = document.getElementById(id); if (b) b.media = look === id ? 'all' : 'not all'; }
     for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = (s.ground || SKY_TOP[root.dataset.tod])[/dark/.test(m.dataset.media || m.media) ? 1 : 0];   // welcome.js keeps the original media there
     const bar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]'); if (bar) bar.content = s.bar;
     const touch = document.querySelector('link[rel="apple-touch-icon"]'); if (touch) touch.href = s.icon[0];

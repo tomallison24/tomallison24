@@ -186,12 +186,37 @@ html[data-look="grid"]{--st-card:#FAFCFE;--st-edge:rgba(23,27,32,.14);--st-text:
 html[data-look="grid"]:not([data-theme="light"]){--st-card:#0D0F11;--st-edge:rgba(238,240,242,.14);--st-text:#EEF0F2;--st-muted:#C8CACD;--st-rule:rgba(238,240,242,.12);--st-accent:#FFA39B;--st-danger:#FE9185;--st-on:#FFA39B;--st-off:rgba(238,240,242,.5);--st-knob:#F8FAFC;--st-glow:rgba(255,163,155,.35);--st-seg:rgba(238,240,242,.08);--st-seg-on:#1E2023;--st-press:rgba(238,240,242,.06)}
 }
 html[data-look="grid"][data-theme="dark"]{--st-card:#0D0F11;--st-edge:rgba(238,240,242,.14);--st-text:#EEF0F2;--st-muted:#C8CACD;--st-rule:rgba(238,240,242,.12);--st-accent:#FFA39B;--st-danger:#FE9185;--st-on:#FFA39B;--st-off:rgba(238,240,242,.5);--st-knob:#F8FAFC;--st-glow:rgba(255,163,155,.35);--st-seg:rgba(238,240,242,.08);--st-seg-on:#1E2023;--st-press:rgba(238,240,242,.06)}
+html[data-look="material"]{--st-card:#FFFFFF;--st-edge:rgba(29,30,31,.14);--st-text:#1D1E1F;--st-muted:#414244;--st-rule:rgba(29,30,31,.12);--st-accent:#255AC1;--st-danger:#A33407;--st-on:#255AC1;--st-off:rgba(29,30,31,.42);--st-knob:#FFFFFF;--st-glow:rgba(37,90,193,.35);--st-seg:rgba(29,30,31,.07);--st-seg-on:#FFFFFF;--st-press:rgba(29,30,31,.06)}
+@media (prefers-color-scheme: dark){
+html[data-look="material"]:not([data-theme="light"]){--st-card:#1E2022;--st-edge:rgba(228,229,231,.14);--st-text:#E4E5E7;--st-muted:#BFC0C2;--st-rule:rgba(228,229,231,.12);--st-accent:#8FB8F5;--st-danger:#FBA486;--st-on:#8FB8F5;--st-off:rgba(228,229,231,.5);--st-knob:#F5F6F8;--st-glow:rgba(143,184,245,.35);--st-seg:rgba(228,229,231,.08);--st-seg-on:#333537;--st-press:rgba(228,229,231,.06)}
+}
+html[data-look="material"][data-theme="dark"]{--st-card:#1E2022;--st-edge:rgba(228,229,231,.14);--st-text:#E4E5E7;--st-muted:#BFC0C2;--st-rule:rgba(228,229,231,.12);--st-accent:#8FB8F5;--st-danger:#FBA486;--st-on:#8FB8F5;--st-off:rgba(228,229,231,.5);--st-knob:#F5F6F8;--st-glow:rgba(143,184,245,.35);--st-seg:rgba(228,229,231,.08);--st-seg-on:#333537;--st-press:rgba(228,229,231,.06)}
 /* generated: end */
 /* Pearl (id 'layers'), the rulebook: Settings' rows sit on the sheet's ground, a hairline between them, not a box each
    (written by hand, after the generated colours, and outranking them) */
 html:root[data-look="layers"]:is(:not([data-theme]),[data-theme]){--st-card:transparent;--st-edge:transparent}
 html[data-look="layers"] .st-sec.st-fold > summary.st-lbl{border-radius:0;box-shadow:inset 0 -1px 0 var(--st-rule)}
 html[data-look="layers"] .st-group{border-radius:0;-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Material (Material 3 Expressive), by hand after the generated colours: Google's own scheme (the page's --md-* tokens,
+   aOS/scripts/looks.mjs), tonal cards with no edge, Material's switch (a 52 by 32 track, the handle growing as it turns
+   on) and a secondary-container pill under the picked choice */
+html:root[data-look="material"]:is(:not([data-theme]),[data-theme]){--st-card:var(--md-sheet-card,#FFFFFF);--st-edge:transparent;--st-text:var(--md-on-surface,#1F1F1F);--st-muted:var(--md-on-surface-variant,#444746);
+  --st-rule:color-mix(in srgb,var(--md-outline-variant,#C4C7C5) 55%,transparent);--st-accent:var(--md-primary,#0B57D0);--st-danger:var(--md-error,#B3261E);--st-on:var(--md-primary,#0B57D0);
+  --st-seg:var(--md-container,#E9EEF6);--st-seg-on:var(--md-secondary-container,#C2E7FF);--st-press:color-mix(in srgb,var(--md-on-surface,#1F1F1F) 8%,transparent)}
+html[data-look="material"] .st-group{border-radius:20px;-webkit-backdrop-filter:none;backdrop-filter:none}
+html[data-look="material"] .st-lbl{color:var(--st-accent)}
+html[data-look="material"] .st-seg button{font-weight:500}
+html[data-look="material"] .st-seg button[aria-checked="true"]{box-shadow:none;color:var(--md-on-secondary-container,#001D35)}
+html[data-look="material"] .st-sw{width:52px;height:32px;background:var(--md-highest,#DDE3EA);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 2px var(--md-outline,#747775)}
+html[data-look="material"] .st-sw::after{top:8px;left:8px;width:16px;height:16px;background:var(--md-outline,#747775);box-shadow:none;transition:translate .25s cubic-bezier(.2,0,0,1),scale .25s cubic-bezier(.2,0,0,1),background .2s}
+html[data-look="material"] .st-sw::before,html[data-look="material"] .st-sw > i{display:none}
+html[data-look="material"] [aria-checked="true"] > .st-sw,html[data-look="material"] .st-sw[aria-checked="true"]{background:var(--md-primary,#0B57D0);box-shadow:none}
+html[data-look="material"] [aria-checked="true"] > .st-sw::after,html[data-look="material"] .st-sw[aria-checked="true"]::after{transform:none;translate:20px 0;scale:1.5;background:var(--md-on-primary,#FFFFFF)}
+html[data-look="material"] .st-switch:not(:disabled):active > .st-sw::after,html[data-look="material"] button.st-sw:not(:disabled):active::after{scale:1.75}
+html[data-look="material"] .st-ask-card{border-radius:28px;box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px 3px rgba(0,0,0,.15);-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--md-sheet,#F0F4F9)}
+html[data-look="material"] .st-ask-btns button{border-radius:999px;font-weight:500;background:transparent;color:var(--st-accent);box-shadow:inset 0 0 0 1px var(--md-outline-variant,#C4C7C5)}
+html[data-look="material"] .st-ask-btns .st-yes{background:var(--st-accent);color:var(--md-on-primary,#FFFFFF);box-shadow:none}
+html[data-look="material"] .st-ask-btns .st-yes.st-bad{background:var(--st-danger);color:var(--md-on-primary,#FFFFFF)}
 `;
   if (!document.getElementById('aos-settings')) { const el = document.createElement('style'); el.id = 'aos-settings'; el.textContent = CSS; document.head.appendChild(el); }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
