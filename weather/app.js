@@ -1042,14 +1042,16 @@ function radarSync() {
 const pearlDark = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); };
 function rampOf(m) {
   const f = (m.entity.attributes.temperature_unit || '').indexOf('F') >= 0;
-  const stops = {
+  const all = {
     vintage: [[0, [47, 128, 138]], [10, [64, 152, 134]], [18, [137, 152, 48]], [25, [227, 167, 47]], [32, [216, 87, 42]]],
     layers: pearlDark()   // Pearl: quiet - ice blue, through white (carbon by day), to a soft amber
       ? [[0, [126, 168, 255]], [10, [150, 200, 238]], [18, [214, 226, 240]], [25, [240, 210, 162]], [32, [240, 164, 132]]]
       : [[0, [62, 104, 186]], [10, [72, 124, 156]], [18, [92, 98, 110]], [25, [166, 124, 64]], [32, [176, 88, 64]]],
     grid: [[0, [96, 125, 160]], [10, [140, 160, 185]], [18, [168, 174, 184]], [25, [251, 96, 73]], [32, [228, 31, 36]]],   // cold steel to hot red
     glass: [[0, [122, 184, 255]], [10, [90, 200, 250]], [18, [126, 217, 87]], [25, [255, 214, 10]], [32, [255, 159, 10]]],
-  }[look()] || [];
+    material: [[0, [66, 133, 244]], [10, [36, 193, 224]], [18, [52, 168, 83]], [25, [251, 188, 4]], [32, [234, 67, 53]]],   // Google's blue, through green and yellow, to its red
+  };
+  const stops = all[look()] || all.vintage;   // a look with no ramp of its own takes Vintage's, never none
   return t => {
     const c = f ? (t - 32) * 5 / 9 : t;
     if (c <= stops[0][0]) return `rgb(${stops[0][1]})`;

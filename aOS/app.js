@@ -547,6 +547,7 @@
   // Tron: the mid-century one, repainted (aOS/scripts/looks.mjs)
   const FAMILY_PAINT = {
     layers: { '#1F6F6B': '#306E61', '#A9D3C7': '#ACD2C8', '#B9C6E0': '#C2C5CA', '#D8572A': '#CF5C59', '#E3A72F': '#D8AB63', '#E3C5C3': '#CBCED3', '#E9D6B4': '#E6D6BF', '#FBF5E9': '#F9FBFE' },
+    material: { '#1F6F6B': '#0B57D0', '#A9D3C7': '#D3E3FD', '#B9C6E0': '#D3E3FD', '#D8572A': '#0B57D0', '#E3A72F': '#0B57D0', '#E3C5C3': '#C2E7FF', '#E9D6B4': '#C2E7FF', '#FBF5E9': '#FFFFFF' },   // Material: Google's blue, the sun and the pill gone into the ground
     grid: { '#1F6F6B': '#973835', '#A9D3C7': '#F2AEA8', '#B9C6E0': '#C4C7CA', '#D8572A': '#E41F24', '#E3A72F': '#FB6049', '#E3C5C3': '#CDD0D3', '#E9D6B4': '#E9AEA3', '#FBF5E9': '#FAFCFE' },
   };
   const familyIcon = () => { const l = aosLook.get(); return l === 'glass' ? FAMILY_ICON_GLASS : l === 'layers' ? FAMILY_ICON_PEARL : FAMILY_PAINT[l] ? FAMILY_ICON_VINTAGE.replace(/#[0-9A-F]{6}/g, c => FAMILY_PAINT[l][c] || c) : FAMILY_ICON_VINTAGE; };

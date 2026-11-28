@@ -427,6 +427,28 @@ for (const scheme of ['light', 'dark']) {
 }
 
 for (const scheme of ['light', 'dark']) {
+  // Material: the whole forecast is drawn (a look with no temperature colours of its own once stopped the page), on
+  // Material's ground whatever the weather, with none of Vintage's dot or pill
+  const { ctx, page, problems } = await newPage(scheme, { design: 'material' });
+  await page.goto(BASE + '/weather/');
+  await step(scheme + ' Material: the hero, the hours and the 7 days are all drawn, on Material\'s ground, no Vintage dot or pill, no errors', async () => {
+    await page.waitForSelector('#days [data-day], #days .dcol, #days > *', { timeout: 10000 });
+    const st = await page.evaluate(() => { const root = document.documentElement, cs = getComputedStyle(root);
+      return { look: root.dataset.look, hero: document.querySelector('#hero').children.length, hours: document.querySelector('#hours').children.length, days: document.querySelector('#days').children.length,
+        temps: (document.querySelector('#days').textContent.match(/\d+°/g) || []).length, ground: cs.backgroundColor, want: cs.getPropertyValue('--md-ground').trim(),
+        pill: getComputedStyle(document.querySelector('#sky'), '::before').display, dot: getComputedStyle(document.querySelector('#sky'), '::after').display }; });
+    assert.equal(st.look, 'material');
+    assert.ok(st.hero && st.hours && st.days, 'the hero, the hours and the days: ' + JSON.stringify(st));
+    assert.ok(st.temps >= 14, 'a high and a low for each of 7 days: ' + st.temps);
+    const hex = c => '#' + c.match(/\d+/g).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    assert.equal(hex(st.ground), st.want.toUpperCase(), 'Material\'s ground, not the weather\'s tint');
+    assert.equal(st.pill, 'none', 'no pill'); assert.equal(st.dot, 'none', 'no dot');
+    assert.deepEqual(problems, []);
+  });
+  await ctx.close();
+}
+
+for (const scheme of ['light', 'dark']) {
   // Pearl (id 'layers'): the weather in lines of light - none of Vintage's disc, pill, dot or flat shapes, Pearl's ground
   // whatever the weather, line icons in the hero, the hours and the days, and the thumb a ring of light, not mustard
   const { ctx, page, problems } = await newPage(scheme, { design: 'layers' });

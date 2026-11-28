@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Material: generated from icon.svg by aOS/scripts/make-looks.mjs - don't edit by hand -->
   <rect width="512" height="512" fill="#255AC1"/>
-  <circle cx="404" cy="92" r="112" fill="#E5B52B"/>
+  <circle cx="404" cy="92" r="112" fill="#A8D5FD"/>
   <g fill="none" stroke="#FFFFFF" stroke-width="28">
     <circle cx="112" cy="315" r="36"/>
     <path d="M148 265V365"/>
